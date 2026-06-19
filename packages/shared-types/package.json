@@ -7,7 +7,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "gen:types": "echo 'TODO: openapi-typescript (D2-T1)' && exit 0",
+    "gen:types": "openapi-typescript ../api-contract/openapi.yaml -o src/api-types.ts",
     "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
   }
 }
