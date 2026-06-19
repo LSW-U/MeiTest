@@ -18,6 +18,24 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  apps/admin-web: {}
+
+  apps/api: {}
+
+  apps/client-app: {}
+
+  apps/rider-app: {}
+
+  packages/api-contract: {}
+
+  packages/shared-locales: {}
+
+  packages/shared-types: {}
+
+  packages/shared-utils: {}
+
+  packages/ui-kit: {}
+
 packages:
 
   '@turbo/darwin-64@2.9.18':
