@@ -14,5 +14,10 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "turbo": "^2.9.18",
+    "typescript": "^6.0.3"
   }
 }
