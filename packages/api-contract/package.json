@@ -10,5 +10,8 @@
     "gen:openapi": "echo 'TODO: tsx scripts/gen-openapi.ts (D1-T6)' && exit 0",
     "mock": "echo 'TODO: prism mock (D6-T4)' && exit 0",
     "clean": "rm -rf dist .turbo openapi.yaml"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
