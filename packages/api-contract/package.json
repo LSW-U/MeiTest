@@ -7,11 +7,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "gen:openapi": "echo 'TODO: tsx scripts/gen-openapi.ts (D1-T6)' && exit 0",
+    "gen:openapi": "tsx scripts/gen-openapi.ts",
     "mock": "echo 'TODO: prism mock (D6-T4)' && exit 0",
     "clean": "rm -rf dist .turbo openapi.yaml"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4",
+    "yaml": "^2.9.0"
   }
 }

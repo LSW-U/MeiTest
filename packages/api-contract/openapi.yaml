@@ -1,0 +1,1759 @@
+openapi: 3.0.3
+info:
+  title: MeiMart API
+  version: "0.3"
+  description: MeiMart 三端统一后端 API（契约 v0.2 基础 + v0.3 决策覆盖）
+servers:
+  - url: http://localhost:3000/api/v1
+    description: dev
+  - url: https://staging-api.meimart.xxx/api/v1
+    description: staging
+tags:
+  - name: auth
+    description: 认证模块
+  - name: user
+    description: 用户资料
+  - name: shop
+    description: 商家（单一）
+  - name: warehouse
+    description: 仓库（多）
+  - name: order
+    description: 订单
+components:
+  schemas:
+    JwtPayload:
+      type: object
+      properties:
+        sub:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: &a1
+            - super_admin
+            - customer
+            - rider
+            - warehouse_staff
+            - customer_service
+        deviceType:
+          type: string
+          enum:
+            - client_app
+            - rider_app
+            - admin_web
+        iat:
+          type: integer
+        exp:
+          type: integer
+        jti:
+          type: string
+          format: uuid
+      required:
+        - sub
+        - role
+        - deviceType
+        - iat
+        - exp
+        - jti
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties:
+                nullable: true
+          required:
+            - code
+            - message
+      required:
+        - success
+        - error
+    LoginRequest:
+      type: object
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+        - identifier
+        - password
+    LoginResponseData:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            role:
+              type: string
+              enum: *a1
+            phone:
+              type: string
+              nullable: true
+            email:
+              type: string
+              nullable: true
+            name:
+              type: string
+              nullable: true
+            avatarUrl:
+              type: string
+              nullable: true
+            status:
+              type: string
+              enum: &a7
+                - ACTIVE
+                - SUSPENDED
+                - DELETED
+          required:
+            - id
+            - role
+            - phone
+            - email
+            - name
+            - avatarUrl
+            - status
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required:
+        - user
+        - accessToken
+        - refreshToken
+    RegisterRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          pattern: "[a-zA-Z]"
+        name:
+          type: string
+        smsCode:
+          type: string
+      required:
+        - phone
+        - email
+        - password
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+      required:
+        - refreshToken
+    RefreshResponseData:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required:
+        - accessToken
+        - refreshToken
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+      required:
+        - refreshToken
+    SendSmsRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: &a8
+            - REGISTER
+            - LOGIN
+            - RESET_PASSWORD
+      required:
+        - phone
+        - type
+    SendSmsResponseData:
+      type: object
+      properties:
+        expireIn:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+      required:
+        - expireIn
+    ResetPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+          pattern: "[a-zA-Z]"
+      required:
+        - email
+        - code
+        - newPassword
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+          format: email
+        name:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: *a1
+        status:
+          type: string
+          enum: &a9
+            - ACTIVE
+            - SUSPENDED
+            - DELETED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - phone
+        - email
+        - name
+        - avatarUrl
+        - role
+        - status
+        - createdAt
+        - updatedAt
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        avatarUrl:
+          type: string
+          format: uri
+    ChangePasswordRequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+          pattern: "[a-zA-Z]"
+      required:
+        - oldPassword
+        - newPassword
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        logoUrl:
+          type: string
+          nullable: true
+          format: uri
+        phone:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+          enum: &a2
+            - ACTIVE
+            - INACTIVE
+        businessHours:
+          type: string
+          nullable: true
+        announcement:
+          type: object
+          additionalProperties:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - logoUrl
+        - phone
+        - address
+        - status
+        - businessHours
+        - createdAt
+        - updatedAt
+    UpdateShopRequest:
+      type: object
+      properties:
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        logoUrl:
+          type: string
+          nullable: true
+          format: uri
+        phone:
+          type: string
+        address:
+          type: string
+        status:
+          type: string
+          enum: *a2
+        businessHours:
+          type: string
+          nullable: true
+        announcement:
+          type: object
+          additionalProperties:
+            type: string
+    Warehouse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^W\d{2}$
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        coverageArea:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum:
+                - Polygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+          required:
+            - type
+            - coordinates
+        centerPoint:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum:
+                - Point
+            coordinates:
+              type: array
+              items:
+                type: number
+              minItems: 2
+              maxItems: 2
+          required:
+            - type
+            - coordinates
+        centerLat:
+          type: number
+          nullable: true
+        centerLng:
+          type: number
+          nullable: true
+        address:
+          type: string
+        operatingHours:
+          type: object
+          nullable: true
+          properties:
+            mon: &a3
+              type: object
+              properties:
+                open:
+                  type: string
+                  pattern: ^\d{2}:\d{2}$
+                close:
+                  type: string
+                  pattern: ^\d{2}:\d{2}$
+              required:
+                - open
+                - close
+            tue: *a3
+            wed: *a3
+            thu: *a3
+            fri: *a3
+            sat: *a3
+            sun: *a3
+        deliveryFee:
+          type: integer
+          minimum: 0
+          default: 0
+        isActive:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - code
+        - name
+        - coverageArea
+        - centerPoint
+        - centerLat
+        - centerLng
+        - address
+        - operatingHours
+        - createdAt
+        - updatedAt
+    UpsertWarehouseRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: ^W\d{2}$
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        coverageArea:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum:
+                - Polygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+          required:
+            - type
+            - coordinates
+        centerLat:
+          type: number
+        centerLng:
+          type: number
+        address:
+          type: string
+        operatingHours:
+          type: object
+          nullable: true
+          properties:
+            mon: &a4
+              type: object
+              properties:
+                open:
+                  type: string
+                  pattern: ^\d{2}:\d{2}$
+                close:
+                  type: string
+                  pattern: ^\d{2}:\d{2}$
+              required:
+                - open
+                - close
+            tue: *a4
+            wed: *a4
+            thu: *a4
+            fri: *a4
+            sat: *a4
+            sun: *a4
+        deliveryFee:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+      required:
+        - name
+        - coverageArea
+        - centerLat
+        - centerLng
+        - address
+        - operatingHours
+        - deliveryFee
+        - isActive
+    MatchWarehouseRequest:
+      type: object
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+      required:
+        - lat
+        - lng
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNo:
+          type: string
+          pattern: ^MM\d{14}$
+        userId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: &a6
+            - PENDING_PAYMENT
+            - PENDING_CONFIRM
+            - CONFIRMED
+            - PICKED
+            - OUT_FOR_DELIVERY
+            - DELIVERED_PAID
+            - DELIVERED
+            - DELIVERED_UNPAID
+            - COMPLETED
+            - CANCELLED
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              productId:
+                type: string
+                format: uuid
+              skuId:
+                type: string
+                format: uuid
+              productName:
+                type: string
+              productImage:
+                type: string
+              skuName:
+                type: string
+              unitPrice:
+                type: integer
+                minimum: 0
+              quantity:
+                type: integer
+                minimum: 0
+                exclusiveMinimum: true
+              subtotal:
+                type: integer
+                minimum: 0
+            required:
+              - id
+              - productId
+              - skuId
+              - productName
+              - productImage
+              - skuName
+              - unitPrice
+              - quantity
+              - subtotal
+        totalAmount:
+          type: integer
+          minimum: 0
+        deliveryFee:
+          type: integer
+          minimum: 0
+        discountAmount:
+          type: integer
+          minimum: 0
+          default: 0
+        payableAmount:
+          type: integer
+          minimum: 0
+        deliveryAddress:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            detail:
+              type: string
+            lat:
+              type: number
+              nullable: true
+            lng:
+              type: number
+              nullable: true
+          required:
+            - name
+            - phone
+            - detail
+            - lat
+            - lng
+        remark:
+          type: string
+          nullable: true
+        riderId:
+          type: string
+          nullable: true
+          format: uuid
+        paymentMethod:
+          type: string
+          enum: &a5
+            - COD
+            - BANK_TRANSFER
+            - WECHAT
+            - PAYPAL
+            - STRIPE
+        paymentStatus:
+          type: string
+          enum: &a12
+            - UNPAID
+            - PAID
+            - REFUNDED
+        paidAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        confirmedAt:
+          type: string
+          nullable: true
+          format: date-time
+        pickedAt:
+          type: string
+          nullable: true
+          format: date-time
+        deliveringAt:
+          type: string
+          nullable: true
+          format: date-time
+        deliveredAt:
+          type: string
+          nullable: true
+          format: date-time
+        cancelledAt:
+          type: string
+          nullable: true
+          format: date-time
+        cancelReason:
+          type: string
+          nullable: true
+      required:
+        - id
+        - orderNo
+        - userId
+        - warehouseId
+        - status
+        - items
+        - totalAmount
+        - deliveryFee
+        - payableAmount
+        - deliveryAddress
+        - remark
+        - riderId
+        - paymentMethod
+        - paymentStatus
+        - paidAt
+        - createdAt
+        - confirmedAt
+        - pickedAt
+        - deliveringAt
+        - deliveredAt
+        - cancelledAt
+        - cancelReason
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        skuId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        productImage:
+          type: string
+        skuName:
+          type: string
+        unitPrice:
+          type: integer
+          minimum: 0
+        quantity:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        subtotal:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - productId
+        - skuId
+        - productName
+        - productImage
+        - skuName
+        - unitPrice
+        - quantity
+        - subtotal
+    CreateOrderRequest:
+      type: object
+      properties:
+        addressId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 0
+                exclusiveMinimum: true
+            required:
+              - skuId
+              - quantity
+          minItems: 1
+        remark:
+          type: string
+          maxLength: 200
+        paymentMethod:
+          type: string
+          enum: *a5
+      required:
+        - addressId
+        - items
+        - paymentMethod
+    CancelOrderRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - reason
+    OrderNo:
+      type: string
+      pattern: ^MM\d{14}$
+    PaymentMethod:
+      type: string
+      enum: *a5
+    OrderStatus:
+      type: string
+      enum: *a6
+  parameters: {}
+paths:
+  /api/v1/common/auth/login-password:
+    post:
+      tags:
+        - auth
+      description: 密码登录（v0.3：deviceType 由前端 App 配置写死）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identifier:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - identifier
+                - password
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        enum: *a1
+                      phone:
+                        type: string
+                        nullable: true
+                      email:
+                        type: string
+                        nullable: true
+                      name:
+                        type: string
+                        nullable: true
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum: *a7
+                    required:
+                      - id
+                      - role
+                      - phone
+                      - email
+                      - name
+                      - avatarUrl
+                      - status
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                required:
+                  - user
+                  - accessToken
+                  - refreshToken
+        "401":
+          description: LOGIN_FAILED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/register:
+    post:
+      tags:
+        - auth
+      description: 注册（v0.3 冲突 11：smsCode 可选，W6 强制）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  pattern: "[a-zA-Z]"
+                name:
+                  type: string
+                smsCode:
+                  type: string
+              required:
+                - phone
+                - email
+                - password
+      responses:
+        "200":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        enum: *a1
+                      phone:
+                        type: string
+                        nullable: true
+                      email:
+                        type: string
+                        nullable: true
+                      name:
+                        type: string
+                        nullable: true
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum: *a7
+                    required:
+                      - id
+                      - role
+                      - phone
+                      - email
+                      - name
+                      - avatarUrl
+                      - status
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                required:
+                  - user
+                  - accessToken
+                  - refreshToken
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/refresh:
+    post:
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  minLength: 1
+              required:
+                - refreshToken
+      responses:
+        "200":
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                required:
+                  - accessToken
+                  - refreshToken
+        "401":
+          description: REFRESH_TOKEN_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/logout:
+    post:
+      tags:
+        - auth
+      description: v0.3 决策 F：必传 refreshToken，服务端加 Redis 黑名单
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  minLength: 1
+              required:
+                - refreshToken
+      responses:
+        "200":
+          description: 登出成功
+  /api/v1/common/auth/send-sms:
+    post:
+      tags:
+        - auth
+      description: SMS stub（固定 123456，标 [SMS_STUB]），W6 切东帝汶本地
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 1
+                type:
+                  type: string
+                  enum: *a8
+              required:
+                - phone
+                - type
+      responses:
+        "200":
+          description: 已发送（stub）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expireIn:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                required:
+                  - expireIn
+        "429":
+          description: SMS_RATE_LIMIT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/profile:
+    get:
+      tags:
+        - user
+      responses:
+        "200":
+          description: 获取个人信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                    nullable: true
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a9
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - createdAt
+                  - updatedAt
+  /api/v1/common/shop:
+    get:
+      tags:
+        - shop
+      responses:
+        "200":
+          description: 获取店铺信息（单一商家）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  logoUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  phone:
+                    type: string
+                  address:
+                    type: string
+                  status:
+                    type: string
+                    enum: *a2
+                  businessHours:
+                    type: string
+                    nullable: true
+                  announcement:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - name
+                  - logoUrl
+                  - phone
+                  - address
+                  - status
+                  - businessHours
+                  - createdAt
+                  - updatedAt
+  /api/v1/common/warehouses:
+    get:
+      tags:
+        - warehouse
+      responses:
+        "200":
+          description: 仓库列表（多仓库 5-10 个）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                      pattern: ^W\d{2}$
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    coverageArea:
+                      type: object
+                      nullable: true
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - Polygon
+                        coordinates:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: array
+                              items:
+                                type: number
+                      required:
+                        - type
+                        - coordinates
+                    centerPoint:
+                      type: object
+                      nullable: true
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - Point
+                        coordinates:
+                          type: array
+                          items:
+                            type: number
+                          minItems: 2
+                          maxItems: 2
+                      required:
+                        - type
+                        - coordinates
+                    centerLat:
+                      type: number
+                      nullable: true
+                    centerLng:
+                      type: number
+                      nullable: true
+                    address:
+                      type: string
+                    operatingHours:
+                      type: object
+                      nullable: true
+                      properties:
+                        mon: &a10
+                          type: object
+                          properties:
+                            open:
+                              type: string
+                              pattern: ^\d{2}:\d{2}$
+                            close:
+                              type: string
+                              pattern: ^\d{2}:\d{2}$
+                          required:
+                            - open
+                            - close
+                        tue: *a10
+                        wed: *a10
+                        thu: *a10
+                        fri: *a10
+                        sat: *a10
+                        sun: *a10
+                    deliveryFee:
+                      type: integer
+                      minimum: 0
+                      default: 0
+                    isActive:
+                      type: boolean
+                      default: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - code
+                    - name
+                    - coverageArea
+                    - centerPoint
+                    - centerLat
+                    - centerLng
+                    - address
+                    - operatingHours
+                    - createdAt
+                    - updatedAt
+  /api/v1/common/warehouses/match:
+    post:
+      tags:
+        - warehouse
+      description: 按经纬度匹配最近仓库（PostGIS ST_Within）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lat:
+                  type: number
+                lng:
+                  type: number
+              required:
+                - lat
+                - lng
+      responses:
+        "200":
+          description: 匹配成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                    pattern: ^W\d{2}$
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  coverageArea:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Polygon
+                      coordinates:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                    required:
+                      - type
+                      - coordinates
+                  centerPoint:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Point
+                      coordinates:
+                        type: array
+                        items:
+                          type: number
+                        minItems: 2
+                        maxItems: 2
+                    required:
+                      - type
+                      - coordinates
+                  centerLat:
+                    type: number
+                    nullable: true
+                  centerLng:
+                    type: number
+                    nullable: true
+                  address:
+                    type: string
+                  operatingHours:
+                    type: object
+                    nullable: true
+                    properties:
+                      mon: &a11
+                        type: object
+                        properties:
+                          open:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                          close:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                        required:
+                          - open
+                          - close
+                      tue: *a11
+                      wed: *a11
+                      thu: *a11
+                      fri: *a11
+                      sat: *a11
+                      sun: *a11
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  isActive:
+                    type: boolean
+                    default: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - code
+                  - name
+                  - coverageArea
+                  - centerPoint
+                  - centerLat
+                  - centerLng
+                  - address
+                  - operatingHours
+                  - createdAt
+                  - updatedAt
+        "404":
+          description: OUT_OF_DELIVERY_RANGE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/orders:
+    post:
+      tags:
+        - order
+      description: 创建订单（同步事务 MVP，自动匹配仓库 + orderNo 16 位）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                addressId:
+                  type: string
+                  format: uuid
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      skuId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                    required:
+                      - skuId
+                      - quantity
+                  minItems: 1
+                remark:
+                  type: string
+                  maxLength: 200
+                paymentMethod:
+                  type: string
+                  enum: *a5
+              required:
+                - addressId
+                - items
+                - paymentMethod
+      responses:
+        "200":
+          description: 订单创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  orderNo:
+                    type: string
+                    pattern: ^MM\d{14}$
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: *a6
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        subtotal:
+                          type: integer
+                          minimum: 0
+                      required:
+                        - id
+                        - productId
+                        - skuId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - subtotal
+                  totalAmount:
+                    type: integer
+                    minimum: 0
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                  discountAmount:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  payableAmount:
+                    type: integer
+                    minimum: 0
+                  deliveryAddress:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      phone:
+                        type: string
+                      detail:
+                        type: string
+                      lat:
+                        type: number
+                        nullable: true
+                      lng:
+                        type: number
+                        nullable: true
+                    required:
+                      - name
+                      - phone
+                      - detail
+                      - lat
+                      - lng
+                  remark:
+                    type: string
+                    nullable: true
+                  riderId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  paymentMethod:
+                    type: string
+                    enum: *a5
+                  paymentStatus:
+                    type: string
+                    enum: *a12
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  confirmedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  pickedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  deliveringAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  deliveredAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  cancelledAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  cancelReason:
+                    type: string
+                    nullable: true
+                required:
+                  - id
+                  - orderNo
+                  - userId
+                  - warehouseId
+                  - status
+                  - items
+                  - totalAmount
+                  - deliveryFee
+                  - payableAmount
+                  - deliveryAddress
+                  - remark
+                  - riderId
+                  - paymentMethod
+                  - paymentStatus
+                  - paidAt
+                  - createdAt
+                  - confirmedAt
+                  - pickedAt
+                  - deliveringAt
+                  - deliveredAt
+                  - cancelledAt
+                  - cancelReason
+        "400":
+          description: STOCK_NOT_ENOUGH
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
