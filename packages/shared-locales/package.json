@@ -1,0 +1,10 @@
+{
+  "name": "@meimart/shared-locales",
+  "version": "0.1.0",
+  "private": true,
+  "files": ["en", "id", "zh", "pt"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .turbo"
+  }
+}

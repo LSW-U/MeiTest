@@ -1,0 +1,11 @@
+{
+  "name": "@meimart/admin-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'TODO: next dev (D2-T6)' && exit 0",
+    "build": "echo 'TODO: next build' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo"
+  }
+}

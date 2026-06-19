@@ -1,0 +1,11 @@
+{
+  "name": "@meimart/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'TODO: nest start --watch (D4-T1)' && exit 0",
+    "build": "echo 'TODO: nest build' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  }
+}

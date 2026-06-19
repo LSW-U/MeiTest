@@ -1,0 +1,10 @@
+{
+  "name": "@meimart/rider-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'TODO: expo start (D2-T6)' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .expo .turbo"
+  }
+}
