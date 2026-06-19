@@ -1,0 +1,930 @@
+// ============================================================================
+// MeiMart Backend — Prisma Schema 草稿(v0.3 同步版,2026-06-19)
+// ----------------------------------------------------------------------------
+// ⚠️ 这是 Obsidian 下的参考草稿,**不是项目正式 schema**。
+//    正式 schema 由 W1-D2-T3 任务在以下位置生成:
+//    /Users/linsuwei/code/Work/MeiMart/apps/api/prisma/schema.prisma
+//
+// 本草稿用途:
+//   1. 给 W1-D2-T3 任务提供 v0.3 决策落地的字段命名/索引风格参考
+//   2. 提前暴露 PostGIS 适配 / GIST 索引 / Unsupported 字段的坑
+//   3. 让新 Claude 在 D2-T3 起手时不需要从零设计
+//
+// 与 v0.3 决策对齐(冲突处以此为准):
+//   - 7 歧义点(A-G)+ 11 硬冲突 + SMS 反转 全部应用
+//   - W1 基线 16 张表(User/UserRole/Shop/Warehouse/Product/Sku/Stock/StockLog/
+//     Order/OrderItem/OrderEvent/AuditLog/PaymentIntent/IdempotencyKey/
+//     RiderLocation/RiderLocationHistory)
+// ============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/prisma/client"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis(map: "postgis")]
+}
+
+// ============================================================================
+// Enums(v0.3 锁定)
+// ============================================================================
+
+/// 用户角色 5 个(v0.3 决策:删 MERCHANT/ADMIN,改为 super_admin + 4 个真实角色)
+/// super_admin 同一 JWT,前端切 5 视角(平台/商家/仓库/客服/骑手管理)
+enum Role {
+  SUPER_ADMIN // 平台超管(后台 web,可切 5 视角)
+  CUSTOMER // 客户端 App 用户
+  RIDER // 骑手 App 用户
+  WAREHOUSE_STAFF // 仓库管理员
+  CUSTOMER_SERVICE // 客服
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+/// 设备类型(v0.3 决策 C:JWT 删 clientType,只看 deviceType)
+/// 由前端 App 配置写死,后端用于审计 + token 策略 + push 推送
+enum DeviceType {
+  CLIENT_APP // 客户端 RN + Expo
+  RIDER_APP // 骑手端 RN + Expo
+  ADMIN_WEB // 后台 Next.js
+}
+
+/// 视角(仅前端用,后端只通过 X-Perspective header 写 AuditLog,RBAC 不感知)
+/// 没建 enum 表,用 String 存;此处注释供参考
+// type Perspective = 'platform' | 'merchant' | 'warehouse' | 'support' | 'rider-mgmt'
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum SkuStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// 订单状态机(v0.3 决策:加 PENDING_PAYMENT 给预付,DELIVERED_PAID/DELIVERED_UNPAID 给 COD)
+/// 状态流转:
+///   CART → PENDING_PAYMENT(预付:WECHAT/PAYPAL/STRIPE)
+///        → PENDING_CONFIRM(COD/BANK_TRANSFER)
+///   PENDING_PAYMENT → CONFIRMED(支付成功)/ CANCELLED(超时或失败)
+///   PENDING_CONFIRM → CONFIRMED(admin 接单)→ PICKED → OUT_FOR_DELIVERY
+///   OUT_FOR_DELIVERY → DELIVERED_PAID(COD 收款成功)/ DELIVERED(预付)
+///                    → DELIVERED_UNPAID(COD 拒付)→ COMPLETED
+///   任意 → CANCELLED
+enum OrderStatus {
+  PENDING_PAYMENT // 预付起点(WECHAT/PAYPAL/STRIPE)
+  PENDING_CONFIRM // 待商家确认(COD/BANK_TRANSFER 起点)
+  CONFIRMED // 已确认,待拣货
+  PICKED // 仓库已拣货,待骑手取货
+  OUT_FOR_DELIVERY // 骑手配送中
+  DELIVERED_PAID // COD 送达 + 已收款
+  DELIVERED_UNPAID // COD 送达 + 拒付(人工跟进)
+  DELIVERED // 预付订单已送达
+  COMPLETED // 已完成
+  CANCELLED // 已取消
+}
+
+/// 订单事件类型(状态机事件,OrderEvent 表用)
+enum OrderEventType {
+  CREATED // 下单
+  PAYMENT_SUCCESS // 支付成功
+  PAYMENT_FAILED // 支付失败
+  PAYMENT_TIMEOUT // 支付超时
+  CONFIRMED // 商家接单
+  PICKED // 拣货完成
+  OUT_FOR_DELIVERY // 骑手取货出发
+  DELIVERED // 送达
+  CANCELLED // 取消
+  REFUND_REQUESTED // 申请退款
+  REFUNDED // 已退款
+}
+
+/// 支付方式(v0.3 决策 D:全预留 5 枚举,2 真实 + 3 mock/stub)
+enum PaymentMethod {
+  COD // ✅ 真实:骑手送达收款
+  BANK_TRANSFER // ✅ 真实:凭证上传 + 人工对账
+  WECHAT // 🟡 mock:返回支付成功假数据
+  PAYPAL // 🟡 stub:返回 mock URL
+  STRIPE // 🟡 stub:返回 mock client_secret
+}
+
+/// 支付状态
+enum PaymentStatus {
+  PENDING // 待支付
+  PROCESSING // 处理中(预付回调前)
+  PAID // 已支付
+  FAILED // 支付失败
+  REFUNDED // 已退款
+  CANCELLED // 已取消
+}
+
+/// 库存变更类型(StockLog 用)
+enum StockChangeType {
+  INBOUND // 入库
+  OUTBOUND // 出库(下单扣减)
+  RELEASE // 释放(订单取消回滚)
+  ADJUST // 手动调整
+  RETURN // 退货入库
+}
+
+/// 骑手状态
+enum RiderStatus {
+  OFFLINE
+  ONLINE // 在线待单
+  BUSY // 配送中
+}
+
+/// 骑手位置上报来源(WS 主 + 轮询兜底)
+enum LocationSource {
+  WEBSOCKET // Socket.IO 推送
+  HTTP_POLLING // HTTP 上报兜底
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  BICYCLE
+  CAR
+}
+
+enum ShopStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WarehouseStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// 站内信类型（v0.3-D2-T3 决策：String → enum，更严格）
+enum NotificationType {
+  ORDER_UPDATE
+  PROMOTION
+  SYSTEM
+}
+
+// ============================================================================
+// 1. User + UserRole(v0.3:5 角色 + deviceType + email + phone)
+// ============================================================================
+
+model User {
+  id             String      @id @default(uuid())
+  phone          String      @unique @db.VarChar(20) // +670XXXXXXXX
+  email          String?     @unique @db.VarChar(255) // 邮箱 OTP 找回密码必需
+  password       String // bcrypt hash(密码主登录)
+  name           String?
+  avatarUrl      String?     @map("avatar_url")
+  role           Role        @default(CUSTOMER)
+  status         UserStatus  @default(ACTIVE)
+  phoneVerified  Boolean     @default(false) @map("phone_verified") // SMS 验证状态
+  emailVerified  Boolean     @default(false) @map("email_verified")
+  lastDeviceType DeviceType? @map("last_device_type") // 最近一次登录设备
+  lastLoginAt    DateTime?   @map("last_login_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  // 关联
+  cart            Cart?
+  orders          Order[]
+  addresses       Address[]
+  favorites       Favorite[]
+  auditLogs       AuditLog[]
+  refreshTokens   RefreshToken[]
+  riderProfile    RiderProfile?
+  warehouseStaff  WarehouseStaff?
+  customerService CustomerService?
+
+  @@index([role, status])
+  @@map("users")
+}
+
+/// 客服表(super_admin 之外的客服角色扩展信息)
+model CustomerService {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  employeeId String   @unique @map("employee_id") // 工号
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("customer_services")
+}
+
+// ============================================================================
+// 2. RefreshToken(v0.3 决策 F:logout 加 Redis 黑名单 blacklist:{jti})
+//    此表可选 — dev 期可只用 Redis,prod 期加表方便审计
+// ============================================================================
+
+model RefreshToken {
+  id         String     @id @default(uuid())
+  userId     String     @map("user_id")
+  jti        String     @unique // JWT ID,logout 黑名单 key
+  tokenHash  String     @unique @map("token_hash") // SHA256 of refresh JWT
+  deviceType DeviceType @map("device_type")
+  expiresAt  DateTime   @map("expires_at")
+  revokedAt  DateTime?  @map("revoked_at") // 不为 null = 已注销
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// 3. Shop(v0.3:单一商家 1 条预置,多语言 JSON)
+// ============================================================================
+
+model Shop {
+  id            String     @id @default(uuid())
+  /// 多语言名称 Record<string, string>,例 {"en":"MeiMart","zh":"美超市","id":"MeiMart","pt":"MeiMart"}
+  name          Json
+  /// 多语言公告
+  announcement  Json?
+  logoUrl       String?    @map("logo_url")
+  phone         String
+  address       String
+  lat           Decimal    @db.Decimal(10, 7)
+  lng           Decimal    @db.Decimal(10, 7)
+  status        ShopStatus @default(ACTIVE)
+  /// 多语言营业时间 JSON: {"mon":{"open":"08:00","close":"22:00"}, ...}
+  businessHours Json?
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  products   Product[]
+  warehouses Warehouse[]
+
+  @@map("shops")
+}
+
+// ============================================================================
+// 4. Warehouse(v0.3 核心:PostGIS coverageArea + GIST 索引)
+//    5-10 个仓库,按地理位置覆盖,PostGIS 匹配最近仓库
+// ============================================================================
+
+model Warehouse {
+  id             String                                  @id @default(uuid())
+  /// 仓库代码 2 位,W01-W10,用于 orderNo 16 位生成
+  code           String                                  @unique @db.VarChar(4)
+  /// 多语言名称 Record<string, string>
+  name           Json
+  shopId         String                                  @map("shop_id")
+  address        String
+  centerLat      Decimal                                 @map("center_lat") @db.Decimal(10, 7)
+  centerLng      Decimal                                 @map("center_lng") @db.Decimal(10, 7)
+  /// 仓库中心点 PostGIS — Prisma 用 Unsupported,需要 raw SQL 写入
+  centerPoint    Unsupported("geometry(Point, 4326)")?
+  /// 覆盖区域多边形 — 下单时 ST_Within 判断收货地址是否在覆盖范围
+  coverageArea   Unsupported("geometry(Polygon, 4326)")?
+  /// 多语言营业时间 JSON
+  operatingHours Json?
+  deliveryFee    Int                                     @default(0) @map("delivery_fee")
+  status         WarehouseStatus                         @default(ACTIVE)
+  createdAt      DateTime                                @default(now()) @map("created_at")
+  updatedAt      DateTime                                @updatedAt @map("updated_at")
+
+  shop          Shop             @relation(fields: [shopId], references: [id])
+  stocks        Stock[]
+  stockLogs     StockLog[]
+  orders        Order[]
+  deliveryTasks DeliveryTask[]
+  carts         Cart[]
+  staff         WarehouseStaff[]
+
+  // ⚠️ GIST 索引必须走 raw SQL migration(prisma schema 不支持空间索引语法)
+  // 在 W1-D2-T4 第一次迁移时,用以下流程:
+  //   1. prisma migrate dev --create-only --name init
+  //   2. 手改 migration.sql,在 CREATE TABLE 后加:
+  //      CREATE INDEX idx_warehouses_coverage_gist ON "warehouses" USING GIST ("coverage_area");
+  //      CREATE INDEX idx_warehouses_center_gist ON "warehouses" USING GIST ("center_point");
+  //   3. prisma migrate dev 应用
+
+  @@index([shopId])
+  @@index([status])
+  @@map("warehouses")
+}
+
+/// 仓库员工表(WAREHOUSE_STAFF 角色扩展)
+model WarehouseStaff {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  warehouseId String   @map("warehouse_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@index([warehouseId])
+  @@map("warehouse_staff")
+}
+
+// ============================================================================
+// 5. Product(v0.3:多语言 JSON 字段 + 多仓库通过 Stock 关联)
+// ============================================================================
+
+model Product {
+  id          String        @id @default(uuid())
+  shopId      String        @map("shop_id")
+  categoryId  String?       @map("category_id")
+  /// 多语言名称 Record<string, string>,例 {"en":"Milk","zh":"牛奶","id":"Susu","pt":"Leite"}
+  name        Json
+  /// 多语言描述
+  description Json?
+  mainImage   String        @map("main_image")
+  images      String[]
+  status      ProductStatus @default(ACTIVE)
+  /// 多语言销售单位例 {"en":"bag","zh":"袋"}
+  unit        Json
+  /// 最低价(分),由 SKU 聚合更新
+  priceMin    Int           @map("price_min")
+  salesCount  Int           @default(0) @map("sales_count")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  shop      Shop       @relation(fields: [shopId], references: [id])
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  skus      Sku[]
+  favorites Favorite[]
+
+  @@index([shopId, status])
+  @@index([categoryId, status])
+  @@index([status, salesCount])
+  @@map("products")
+}
+
+model Sku {
+  id         String    @id @default(uuid())
+  productId  String    @map("product_id")
+  /// 多语言 SKU 名称例 {"en":"500g / Red","zh":"500g / 红色"}
+  name       Json
+  attributes Json // SkuAttribute[] 结构化
+  price      Int // 单价(分)
+  imageUrl   String?   @map("image_url")
+  status     SkuStatus @default(ACTIVE)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  // ⚠️ v0.3:不在此表存 stock,拆到 Stock 表(warehouse × sku 维度)
+
+  product    Product     @relation(fields: [productId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  stocks     Stock[]
+  stockLogs  StockLog[]
+
+  @@index([productId, status])
+  @@map("skus")
+}
+
+model Category {
+  id        String  @id @default(uuid())
+  /// 多语言分类名 Record<string, string>
+  name      Json
+  iconUrl   String  @map("icon_url")
+  parentId  String? @map("parent_id")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@map("categories")
+}
+
+// ============================================================================
+// 6. Stock + StockLog(v0.3 核心:warehouse × sku 维度,行锁防超卖)
+// ============================================================================
+
+model Stock {
+  id          String   @id @default(uuid())
+  warehouseId String   @map("warehouse_id")
+  skuId       String   @map("sku_id")
+  quantity    Int      @default(0)
+  /// 安全库存阈值,低于此值预警
+  safetyStock Int      @default(0) @map("safety_stock")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  sku       Sku       @relation(fields: [skuId], references: [id])
+
+  // 行锁防超卖:SELECT ... WHERE warehouse_id=? AND sku_id=? AND quantity>=? FOR UPDATE
+  @@unique([warehouseId, skuId])
+  @@index([warehouseId])
+  @@map("stocks")
+}
+
+model StockLog {
+  id            String          @id @default(uuid())
+  warehouseId   String          @map("warehouse_id")
+  skuId         String          @map("sku_id")
+  changeType    StockChangeType @map("change_type")
+  changeQty     Int             @map("change_qty") // 正=入库,负=出库
+  beforeQty     Int             @map("before_qty")
+  afterQty      Int             @map("after_qty")
+  reason        String?
+  /// 操作来源:orderId(下单扣减)/ userId(手动调整)/ null(初始入库)
+  referenceType String?         @map("reference_type")
+  referenceId   String?         @map("reference_id")
+  operatorId    String?         @map("operator_id")
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  sku       Sku       @relation(fields: [skuId], references: [id])
+
+  @@index([warehouseId, skuId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("stock_logs")
+}
+
+// ============================================================================
+// 7. Order + OrderItem + OrderEvent
+//    v0.3:含 warehouseId,orderNo 16 位 MM+yyyyMMdd+wh2+seq4
+// ============================================================================
+
+model Order {
+  id          String      @id @default(uuid())
+  /// 订单号 16 位:MM + yyyyMMdd + warehouseId(2位) + 序号(4位)
+  /// 例 MM2026061901000234 = 2026-06-19 W01 当日第 234 单
+  /// 序号由 Redis INCR order:seq:{date}:{whCode} 生成,2 天过期
+  orderNo     String      @unique @map("order_no") @db.VarChar(16)
+  userId      String      @map("user_id")
+  /// v0.3 必加:下单时 PostGIS 匹配最近仓库
+  warehouseId String      @map("warehouse_id")
+  status      OrderStatus @default(PENDING_CONFIRM)
+
+  // 金额(整数,单位:分)
+  totalAmount    Int @map("total_amount")
+  deliveryFee    Int @default(0) @map("delivery_fee")
+  discountAmount Int @default(0) @map("discount_amount")
+  payableAmount  Int @map("payable_amount")
+
+  // 地址快照(下单时拷贝)
+  deliveryAddress Json @map("delivery_address")
+
+  remark String?
+
+  // 配送
+  riderId String? @map("rider_id")
+
+  // 支付(v0.3:5 枚举)
+  paymentMethod PaymentMethod @map("payment_method")
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+  paidAt        DateTime?     @map("paid_at")
+
+  // 时间线
+  createdAt    DateTime  @default(now()) @map("created_at")
+  confirmedAt  DateTime? @map("confirmed_at")
+  pickedAt     DateTime? @map("picked_at")
+  deliveringAt DateTime? @map("delivering_at")
+  deliveredAt  DateTime? @map("delivered_at")
+  completedAt  DateTime? @map("completed_at")
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @map("cancel_reason")
+
+  // 关联
+  user           User            @relation(fields: [userId], references: [id])
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
+  items          OrderItem[]
+  events         OrderEvent[]
+  rider          RiderProfile?   @relation(fields: [riderId], references: [id])
+  deliveryTask   DeliveryTask?
+  paymentIntent  PaymentIntent?
+  review         Review?
+  cashCollection CashCollection?
+
+  @@index([userId, createdAt])
+  @@index([warehouseId, status])
+  @@index([status])
+  @@index([riderId])
+  @@index([orderNo])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String @id @default(uuid())
+  orderId      String @map("order_id")
+  productId    String @map("product_id")
+  skuId        String @map("sku_id")
+  /// 多语言快照(下单时拷贝)
+  productName  Json   @map("product_name")
+  productImage String @map("product_image")
+  /// 多语言 SKU 名快照
+  skuName      Json   @map("sku_name")
+  unitPrice    Int    @map("unit_price") // 下单时价格快照(分)
+  quantity     Int
+  subtotal     Int // = unitPrice * quantity(分)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku   Sku   @relation(fields: [skuId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// 订单事件流(状态机每次变更都写一条,审计用)
+model OrderEvent {
+  id          String         @id @default(uuid())
+  orderId     String         @map("order_id")
+  eventType   OrderEventType @map("event_type")
+  fromStatus  OrderStatus?   @map("from_status")
+  toStatus    OrderStatus    @map("to_status")
+  /// 操作人 userId(system 表示自动)
+  operatorId  String?        @map("operator_id")
+  /// 操作设备类型(审计字段)
+  deviceType  DeviceType?    @map("device_type")
+  /// 操作视角(super_admin 切视角时记录)
+  perspective String?
+  metadata    Json? // 附加数据,如支付流水号、取消原因详情
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
+}
+
+// ============================================================================
+// 8. PaymentIntent + IdempotencyKey(v0.3:5 支付枚举 + 幂等防重)
+// ============================================================================
+
+model PaymentIntent {
+  id              String        @id @default(uuid())
+  orderId         String        @unique @map("order_id")
+  method          PaymentMethod @map("method")
+  status          PaymentStatus @default(PENDING)
+  /// 应付金额(分)
+  amount          Int
+  /// 第三方流水号(WECHAT/PAYPAL/STRIPE 返回的;COD/BANK_TRANSFER 是后端生成)
+  transactionId   String?       @unique @map("transaction_id")
+  /// mock/stub 标识:MOCK_xxx 或 STUB_xxx,生产环境切真后此字段保留真实流水号
+  mockFlag        Boolean       @default(false) @map("mock_flag")
+  /// 银行转账凭证 URL(BANK_TRANSFER 专用)
+  receiptUrl      String?       @map("receipt_url")
+  /// 第三方回调原始 payload(审计)
+  providerPayload Json?         @map("provider_payload")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  paidAt          DateTime?     @map("paid_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([method, status])
+  @@map("payment_intents")
+}
+
+/// 幂等键表(支付回调、推送回调、订单创建等防重)
+model IdempotencyKey {
+  id              String   @id @default(uuid())
+  /// 业务场景:PAYMENT_CALLBACK / ORDER_CREATE / PUSH_SEND 等
+  scene           String
+  /// 客户端传入的幂等键(UUID)
+  key             String
+  /// 首次请求的响应(缓存返回给重试请求)
+  responsePayload Json?    @map("response_payload")
+  /// 状态:PENDING(处理中)/ SUCCESS / FAILED
+  status          String   @default("PENDING")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([scene, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// ============================================================================
+// 9. AuditLog(v0.3:含 perspective + deviceType,记录所有写操作)
+// ============================================================================
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id") // 未登录场景为 null
+  /// 操作类型:CREATE / UPDATE / DELETE / LOGIN / LOGOUT 等
+  action       String
+  /// 资源类型:Order / Product / Stock / User 等
+  resourceType String      @map("resource_type")
+  resourceId   String?     @map("resource_id")
+  /// 操作前快照(JSON)
+  beforeData   Json?       @map("before_data")
+  /// 操作后快照(JSON)
+  afterData    Json?       @map("after_data")
+  /// 操作设备(v0.3 决策 C:JWT 含 deviceType,审计记录)
+  deviceType   DeviceType? @map("device_type")
+  /// 操作视角(v0.3:super_admin 切视角时,X-Perspective header 记录)
+  perspective  String?
+  /// 客户端 IP
+  ip           String?
+  /// User-Agent
+  userAgent    String?     @map("user_agent")
+  /// 请求 trace_id(Sentry 贯穿)
+  traceId      String?     @map("trace_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// 10. RiderLocation + RiderLocationHistory(v0.3:WS+轮询双轨,历史轨迹回放)
+// ============================================================================
+
+/// 骑手当前位置(高频 UPSERT,WS 每 5s 推)
+model RiderLocation {
+  riderId   String         @id @map("rider_id")
+  lat       Decimal        @db.Decimal(10, 7)
+  lng       Decimal        @db.Decimal(10, 7)
+  heading   Decimal?       @db.Decimal(5, 2) // 方向 0-360
+  speed     Decimal?       @db.Decimal(5, 2) // 速度 km/h
+  source    LocationSource @default(WEBSOCKET) // 上报来源
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  rider RiderProfile @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@map("rider_locations")
+}
+
+/// 骑手历史轨迹(每个订单一份,完成时归档;用于轨迹回放和纠纷仲裁)
+model RiderLocationHistory {
+  id         String         @id @default(uuid())
+  riderId    String         @map("rider_id")
+  orderId    String?        @map("order_id") // 配送中的订单,完成后保留
+  lat        Decimal        @db.Decimal(10, 7)
+  lng        Decimal        @db.Decimal(10, 7)
+  heading    Decimal?       @db.Decimal(5, 2)
+  speed      Decimal?       @db.Decimal(5, 2)
+  source     LocationSource @default(WEBSOCKET)
+  recordedAt DateTime       @default(now()) @map("recorded_at")
+
+  rider RiderProfile @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, recordedAt])
+  @@index([riderId, recordedAt])
+  @@map("rider_location_histories")
+}
+
+// ============================================================================
+// 辅助表:RiderProfile / DeliveryTask / CashCollection
+// ============================================================================
+
+model RiderProfile {
+  id              String      @id @default(uuid())
+  userId          String      @unique @map("user_id")
+  riderName       String      @map("rider_name")
+  phone           String
+  vehicleType     VehicleType @default(MOTORCYCLE) @map("vehicle_type")
+  vehiclePlate    String?     @map("vehicle_plate")
+  status          RiderStatus @default(OFFLINE)
+  totalDeliveries Int         @default(0) @map("total_deliveries")
+  rating          Decimal     @default(5.0) @db.Decimal(3, 2)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // v0.3:不在此表存 currentLat/currentLng,拆到 RiderLocation 表
+
+  user              User                   @relation(fields: [userId], references: [id])
+  orders            Order[]
+  deliveryTasks     DeliveryTask[]
+  cashCollections   CashCollection[]
+  currentLocation   RiderLocation?
+  locationHistories RiderLocationHistory[]
+
+  @@map("rider_profiles")
+}
+
+model DeliveryTask {
+  id             String             @id @default(uuid())
+  orderId        String             @unique @map("order_id") // 1:1 订单
+  riderId        String?            @map("rider_id")
+  warehouseId    String             @map("warehouse_id") // 取货仓库
+  status         DeliveryTaskStatus @default(PENDING_ASSIGN)
+  pickupAddress  String             @map("pickup_address")
+  pickupLat      Decimal            @map("pickup_lat") @db.Decimal(10, 7)
+  pickupLng      Decimal            @map("pickup_lng") @db.Decimal(10, 7)
+  dropoffAddress String             @map("dropoff_address")
+  dropoffLat     Decimal            @map("dropoff_lat") @db.Decimal(10, 7)
+  dropoffLng     Decimal            @map("dropoff_lng") @db.Decimal(10, 7)
+  assignedAt     DateTime?          @map("assigned_at")
+  pickedUpAt     DateTime?          @map("picked_up_at")
+  deliveredAt    DateTime?          @map("delivered_at")
+  note           String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  order     Order         @relation(fields: [orderId], references: [id])
+  rider     RiderProfile? @relation(fields: [riderId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+
+  @@index([riderId, status])
+  @@index([warehouseId, status])
+  @@map("delivery_tasks")
+}
+
+enum DeliveryTaskStatus {
+  PENDING_ASSIGN
+  ASSIGNED
+  PICKED_UP
+  DELIVERING
+  DELIVERED
+  FAILED
+}
+
+model CashCollection {
+  id              String   @id @default(uuid())
+  orderId         String   @unique @map("order_id")
+  riderId         String   @map("rider_id")
+  collectedAmount Int      @map("collected_amount") // 实收(分)
+  /// 收款结果:PAID(成功) / UNPAID(拒付) / SHORT(少收)
+  result          String
+  note            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  order Order        @relation(fields: [orderId], references: [id])
+  rider RiderProfile @relation(fields: [riderId], references: [id])
+
+  @@map("cash_collections")
+}
+
+// ============================================================================
+// 辅助表:Cart / Address / Favorite / Review / Notification / Banner
+// ============================================================================
+
+model Cart {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  /// 仓库 ID(客户端 App 选择收货地址后,自动匹配最近仓库,购物车按仓库展示库存)
+  warehouseId String?  @map("warehouse_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id           String   @id @default(uuid())
+  cartId       String   @map("cart_id")
+  skuId        String   @map("sku_id")
+  productId    String   @map("product_id")
+  /// 多语言快照(购物车展示用)
+  productName  Json     @map("product_name")
+  productImage String   @map("product_image")
+  skuName      Json     @map("sku_name")
+  unitPrice    Int      @map("unit_price")
+  quantity     Int
+  isSelected   Boolean  @default(true) @map("is_selected")
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  sku  Sku  @relation(fields: [skuId], references: [id])
+
+  @@unique([cartId, skuId])
+  @@map("cart_items")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  phone     String
+  /// 多语言区域(来自 GET /common/regions)
+  region    Json
+  detail    String
+  lat       Decimal? @db.Decimal(10, 7)
+  lng       Decimal? @db.Decimal(10, 7)
+  isDefault Boolean  @default(false) @map("is_default")
+  tag       String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @map("order_id")
+  userId    String   @map("user_id")
+  userName  String   @map("user_name")
+  avatarUrl String?  @map("avatar_url")
+  rating    Int // 1-5
+  /// 多语言评论文本(用户输入语言为 key)
+  content   Json
+  images    String[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  /// 多语言标题
+  title     Json
+  /// 多语言内容
+  content   Json
+  isRead    Boolean          @default(false) @map("is_read")
+  data      Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  imageUrl  String   @map("image_url")
+  /// 多语言 alt 文本
+  alt       Json?
+  linkType  String // PRODUCT / CATEGORY / URL / NONE
+  linkValue String?  @map("link_value")
+  sortOrder Int      @default(0) @map("sort_order")
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
+
+// ============================================================================
+// 文档说明 — W1-D2-T3 任务执行时的注意事项
+// ----------------------------------------------------------------------------
+// 1. PostGIS extension:
+//    datasource 已加 extensions = [postgis(map: "postgis")]
+//    需要 Prisma 5.10+ 才支持 previewFeatures = ["postgresqlExtensions"]
+//
+// 2. Unsupported geometry 字段:
+//    Warehouse.centerPoint / coverageArea 用 Unsupported("geometry(..., 4326)")
+//    Prisma 客户端无法直接读写,需要走 prisma.$queryRaw + ST_SetSRID/ST_MakePoint/ST_Within
+//    封装到 apps/api/src/shared/db/postgis-helpers.ts
+//
+// 3. GIST 索引(W1-D2-T4 第一次迁移必做):
+//    prisma schema 不支持空间索引语法,流程:
+//    a. pnpm --filter @meimart/api exec prisma migrate dev --create-only --name init
+//    b. 手改生成的 migration.sql,在 CREATE TABLE warehouses 后加:
+//       CREATE INDEX IF NOT EXISTS idx_warehouses_coverage_gist
+//         ON "warehouses" USING GIST ("coverage_area");
+//       CREATE INDEX IF NOT EXISTS idx_warehouses_center_gist
+//         ON "warehouses" USING GIST ("center_point");
+//    c. pnpm --filter @meimart/api exec prisma migrate dev 应用
+//    d. EXPLAIN 验证走索引
+//
+// 4. PostGIS helper 函数(W1-D2-T3 同步实现):
+//    - createPoint(lon, lat): ST_SetSRID(ST_MakePoint(?, ?), 4326)
+//    - createPolygon(coords[][]): ST_GeomFromGeoJSON(...)
+//    - findWarehouseByPoint(point): SELECT * FROM warehouses
+//        WHERE ST_Within(?, coverage_area) AND status = 'ACTIVE'
+//        ORDER BY ST_Distance(center_point, ?) LIMIT 1
+//    - 单测必须用 testcontainers postgis/postgis:16-3.4 真实容器
+//      禁止 mock PostGIS 函数,否则看不出真实查询行为
+//
+// 5. orderNo 生成器(W1-D2-T2 工具集实现):
+//    Redis INCR order:seq:{date}:{whCode},2 天过期,跨日重置
+//    格式 MM + yyyyMMdd + warehouseCode(2位) + seq(4位) = 16 位
+//
+// 6. logout 黑名单(v0.3 决策 F):
+//    依赖 Redis,W1-D3-T2 shared-cache 封装时加 setBlacklist(jti, ttl) 方法
+//    JWT verify 中间件先查 Redis blacklist:{jti} 是否存在
+//
+// 7. 多语言字段查询(所有 Json 字段):
+//    后端 helper: getFieldByLang(jsonField, lang, fallback='en')
+//    fallback 链:lang → en → ""
+// ============================================================================
