@@ -34,7 +34,10 @@ export class DeviceTypeGuard implements CanActivate {
 
     // 只检查写操作 + 鉴权后的请求（GET / 公共资源不限制）
     // 实际生产可按需调整，MVP 默认全请求检查（避免漏检）
-    const matchedRule = ROUTE_DEVICE_MAP.find((r) => url.startsWith(r.prefix));
+    // 精确边界匹配：避免 /api/v1/clientXYZ 误匹配 /api/v1/client
+    const matchedRule = ROUTE_DEVICE_MAP.find(
+      (r) => url === r.prefix || url.startsWith(r.prefix + '/') || url.startsWith(r.prefix + '?'),
+    );
     if (!matchedRule) {
       // common / health / docs 等不限制
       return true;

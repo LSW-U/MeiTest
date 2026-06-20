@@ -5,14 +5,14 @@
  *
  * 关键 API：
  *   - signAccessToken(userId, role, deviceType): { token, expiresIn }
- *   - signRefreshToken(userId, deviceType): { token, jti, expiresIn }（写入 RefreshToken 表 + Redis 白名单）
+ *   - signRefreshToken(userId, deviceType): { token, jti, expiresIn }
  *   - verifyAccessToken(token): JwtPayload
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
 import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { v4 as uuidv4 } from 'uuid';
+import { genId } from '@meimart/shared-utils';
 import type { Role, DeviceType } from '@meimart/api-contract';
 import {
   JwtPayload,
@@ -22,12 +22,26 @@ import {
 } from './auth.types';
 import { blacklistJti, isBlacklisted } from '../../shared/cache';
 
+/** Refresh token payload（不含 role，避免权限长期暴露） */
+interface RefreshPayload {
+  sub: string;
+  deviceType: DeviceType;
+  jti: string;
+  /** JWT 标准字段，verify 时由 jsonwebtoken 注入 */
+  iat?: number;
+  exp?: number;
+}
+
 @Injectable()
 export class AuthService {
   constructor(@Inject(JwtService) private readonly jwt: JwtService) {}
 
   /** 签发 access token（短 TTL，按 deviceType） */
-  async signAccessToken(userId: string, role: Role, deviceType: DeviceType): Promise<{ token: string; expiresIn: number }> {
+  async signAccessToken(
+    userId: string,
+    role: Role,
+    deviceType: DeviceType,
+  ): Promise<{ token: string; expiresIn: number }> {
     const expiresIn = ACCESS_TTL_SECONDS[deviceType];
     const payload: JwtPayload = { sub: userId, role, deviceType };
     const token = await this.jwt.signAsync(payload, {
@@ -38,14 +52,14 @@ export class AuthService {
   }
 
   /** 签发 refresh token（统一 60d，含 jti 用于 logout 黑名单） */
-  async signRefreshToken(userId: string, deviceType: DeviceType): Promise<{ token: string; jti: string; expiresIn: number }> {
-    const jti = uuidv4();
+  async signRefreshToken(
+    userId: string,
+    deviceType: DeviceType,
+  ): Promise<{ token: string; jti: string; expiresIn: number }> {
+    const jti = genId();
     const expiresIn = REFRESH_TTL_SECONDS;
-    const payload: JwtPayload & { jti: string } = { sub: userId, deviceType, role: undefined as never, jti };
-    // refresh token 不含 role（避免权限长期暴露），verify 时从 DB 查最新 role
-    const { role: _role, ...refreshPayload } = payload;
-    void _role;
-    const token = await this.jwt.signAsync(refreshPayload, {
+    const payload: RefreshPayload = { sub: userId, deviceType, jti };
+    const token = await this.jwt.signAsync(payload, {
       secret: this.refreshSecret,
       expiresIn,
     });
@@ -53,7 +67,11 @@ export class AuthService {
   }
 
   /** 签发完整 token pair（登录 / refresh 流程用） */
-  async signTokenPair(userId: string, role: Role, deviceType: DeviceType): Promise<TokenPair> {
+  async signTokenPair(
+    userId: string,
+    role: Role,
+    deviceType: DeviceType,
+  ): Promise<TokenPair> {
     const access = await this.signAccessToken(userId, role, deviceType);
     const refresh = await this.signRefreshToken(userId, deviceType);
     const now = Math.floor(Date.now() / 1000);
@@ -70,7 +88,10 @@ export class AuthService {
     try {
       return await this.jwt.verifyAsync<JwtPayload>(token, { secret: this.accessSecret });
     } catch {
-      throw new UnauthorizedException({ code: 'E-AUTH-TOKEN-EXPIRED', message: 'Access token expired or invalid' });
+      throw new UnauthorizedException({
+        code: 'E-AUTH-TOKEN-EXPIRED',
+        message: 'Access token expired or invalid',
+      });
     }
   }
 
@@ -79,18 +100,27 @@ export class AuthService {
    *
    * 返回 jti 用于后续逻辑（如续签时新生成 jti）
    */
-  async verifyRefreshToken(token: string): Promise<{ payload: JwtPayload; jti: string }> {
-    let payload: JwtPayload;
+  async verifyRefreshToken(token: string): Promise<{ payload: RefreshPayload; jti: string }> {
+    let payload: RefreshPayload;
     try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(token, { secret: this.refreshSecret });
+      payload = await this.jwt.verifyAsync<RefreshPayload>(token, { secret: this.refreshSecret });
     } catch {
-      throw new UnauthorizedException({ code: 'E-AUTH-REFRESH-TOKEN-INVALID', message: 'Refresh token invalid or expired' });
+      throw new UnauthorizedException({
+        code: 'E-AUTH-REFRESH-TOKEN-INVALID',
+        message: 'Refresh token invalid or expired',
+      });
     }
     if (!payload.jti) {
-      throw new UnauthorizedException({ code: 'E-AUTH-REFRESH-TOKEN-INVALID', message: 'Refresh token missing jti' });
+      throw new UnauthorizedException({
+        code: 'E-AUTH-REFRESH-TOKEN-INVALID',
+        message: 'Refresh token missing jti',
+      });
     }
     if (await isBlacklisted(payload.jti)) {
-      throw new UnauthorizedException({ code: 'E-AUTH-REFRESH-TOKEN-REVOKED', message: 'Refresh token has been revoked' });
+      throw new UnauthorizedException({
+        code: 'E-AUTH-REFRESH-TOKEN-REVOKED',
+        message: 'Refresh token has been revoked',
+      });
     }
     return { payload, jti: payload.jti };
   }
@@ -99,13 +129,12 @@ export class AuthService {
    * Logout：把 refresh token 的 jti 加入黑名单
    *
    * accessToken 自然过期（不能服务端 revoke，等过期或 refresh）。
-   *
-   * @param refreshToken 客户端传入的 refresh JWT
-   * @returns jti（用于审计）
    */
   async logout(refreshToken: string): Promise<string> {
     const { payload, jti } = await this.verifyRefreshToken(refreshToken);
-    const ttlSeconds = payload.exp ? payload.exp - Math.floor(Date.now() / 1000) : REFRESH_TTL_SECONDS;
+    const ttlSeconds = payload.exp
+      ? payload.exp - Math.floor(Date.now() / 1000)
+      : REFRESH_TTL_SECONDS;
     if (ttlSeconds > 0) {
       await blacklistJti(jti, ttlSeconds);
     }

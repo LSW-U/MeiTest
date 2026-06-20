@@ -3,28 +3,43 @@
  *
  * 默认行为（不显式 @Audit）：所有 POST/PUT/PATCH/DELETE 自动审计
  * 用 @Audit({ skip: true }) 跳过审计（如高频内部 API）
- * 用 @Audit({ resource: 'Order' }) 显式指定 resource 类型（默认从 controller 类名推断）
+ *
+ * resource 必填（不传时报 'Unknown'，minified 后不可靠，要求显式声明）
+ *   @Audit({ resource: 'Order' })
+ *
+ * resourceIdParam 指定从 request.params 哪个字段取 ID（默认 'id'）
+ *   @Audit({ resource: 'Cart', resourceIdParam: 'cartId' })
  */
 import { SetMetadata } from '@nestjs/common';
 
 export interface AuditOptions {
   /** 是否跳过审计（默认 false） */
   skip?: boolean;
-  /** 资源类型（如 Order / Product / Stock）；不传则从 controller 类名推断 */
+  /** 资源类型（如 Order / Product / Stock）；建议必填，否则记为 'Unknown' */
   resource?: string;
-  /** 需要从 response 中 mask 的字段（默认 password / token / secret / authorization） */
+  /** 从 request.params 哪个字段取 ID（默认 'id'） */
+  resourceIdParam?: string;
+  /** 需要从 response 中 mask 的字段（在 DEFAULT_MASK_FIELDS 之上追加） */
   maskFields?: string[];
 }
 
 export const AUDIT_KEY = 'audit';
 export const Audit = (options: AuditOptions = {}) => SetMetadata(AUDIT_KEY, options);
 
-/** 默认 mask 的敏感字段（小写匹配） */
+/**
+ * 默认 mask 的敏感字段（精确小写匹配，避免 includes 误杀 tokenType/secretQuestion 等）
+ *
+ * 注意：必须用全等比较，不能 includes。比如 'token' includes 会误杀 tokenType。
+ */
 export const DEFAULT_MASK_FIELDS = [
   'password',
-  'token',
+  'accesstoken',
+  'refreshtoken',
   'authorization',
   'secret',
   'apikey',
   'clientsecret',
+  'idcard',
+  'creditcard',
+  'cvv',
 ];

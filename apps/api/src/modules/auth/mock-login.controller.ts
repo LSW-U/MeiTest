@@ -1,35 +1,25 @@
 /**
- * Mock 登录端点（仅 dev/staging，prod 返回 404）
+ * Mock 登录端点（仅 dev/staging，prod 时 AuthModule 不注册此 controller）
  *
  * 决策依据：W1-D4-T6 — 三端 mock 登录测试用
  *   - 跳过密码校验
  *   - 接受任意 role + deviceType 组合，发对应权限的 token
  *   - 默认 userId = seed super_admin（保证 DB 有 user，业务接口能调通）
- *   - prod NODE_ENV === 'production' 时返回 404
+ *   - 非常规组合（如 super_admin + client_app）记 warning 便于排查
+ *
+ * Prod 安全：auth.module.ts 按 NODE_ENV === 'production' 条件注册（路由根本不存在）
  *
  * 路径：POST /api/v1/common/auth/mock-login
- *
- * body:
- *   {
- *     role: 'super_admin' | 'customer' | 'rider' | 'warehouse_staff' | 'customer_service',
- *     deviceType: 'client_app' | 'rider_app' | 'admin_web',
- *     userId?: string  // 可选，默认用 seed admin
- *   }
- *
- * response:
- *   {
- *     success: true,
- *     data: {
- *       user: { id, role, deviceType, phone, email, name },
- *       accessToken, refreshToken, accessExpiresAt, refreshExpiresAt
- *     }
- *   }
  */
-import { Controller, Post, Body, HttpException, HttpStatus, Logger, Inject } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Inject } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from './auth.service';
 import { db } from '../../shared/db';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
+import { logger } from '../../shared/logger/logger';
+import { Public } from '../../shared/decorators/public.decorator';
+import { Audit } from '../../shared/decorators/audit.decorator';
+import type { Role, DeviceType } from '@meimart/api-contract';
 
 const MockLoginRequest = z.object({
   role: z.enum(['super_admin', 'customer', 'rider', 'warehouse_staff', 'customer_service']),
@@ -41,24 +31,25 @@ type MockLoginRequestType = z.infer<typeof MockLoginRequest>;
 /** Seed super_admin phone（与 seed.ts 一致） */
 const SEED_ADMIN_PHONE = '+670999999999';
 
+/** 正常 role × deviceType 组合（用于检测非常规组合并 warning） */
+const NORMAL_COMBINATIONS: Record<Role, DeviceType[]> = {
+  super_admin: ['admin_web'],
+  customer: ['client_app'],
+  rider: ['rider_app'],
+  warehouse_staff: ['admin_web'],
+  customer_service: ['admin_web'],
+};
+
 @Controller('api/v1/common/auth')
 export class MockLoginController {
-  private readonly logger = new Logger(MockLoginController.name);
-
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
+  @Public()
+  @Audit({ resource: 'MockLogin' })
   @Post('mock-login')
   async mockLogin(
     @Body(new ZodValidationPipe(MockLoginRequest)) body: MockLoginRequestType,
   ) {
-    // prod 强制 404（防止误部署）
-    if (process.env.NODE_ENV === 'production') {
-      throw new HttpException(
-        { code: 'E-COMMON-NOT-FOUND', message: 'Not Found' },
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
     // 找 user：优先 userId（调用方指定），其次按 phone 找 seed admin
     const user = body.userId
       ? await db.user.findUnique({ where: { id: body.userId } })
@@ -74,16 +65,27 @@ export class MockLoginController {
       );
     }
 
+    // 非常规组合记 warning（不强制拒绝，mock 工具保留灵活性）
+    if (!NORMAL_COMBINATIONS[body.role].includes(body.deviceType)) {
+      logger.warn({
+        msg: 'MOCK_LOGIN_UNUSUAL_COMBINATION',
+        userId: user.id,
+        role: body.role,
+        deviceType: body.deviceType,
+        note: 'Allowing unusual role×deviceType combination for testing',
+      });
+    }
+
     // 签发 token（role 用客户端传的，不强制 DB 一致 — mock 测试灵活性）
     const tokenPair = await this.auth.signTokenPair(user.id, body.role, body.deviceType);
 
-    this.logger.warn({
+    logger.warn({
       msg: 'MOCK_LOGIN_USED',
       userId: user.id,
       role: body.role,
       deviceType: body.deviceType,
       phone: user.phone,
-      note: 'PROD MUST DISABLE — check NODE_ENV guard',
+      note: 'PROD MUST DISABLE — auth.module.ts should not register this controller',
     });
 
     return {
