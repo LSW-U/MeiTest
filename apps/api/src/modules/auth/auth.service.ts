@@ -10,7 +10,7 @@
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -24,7 +24,7 @@ import { blacklistJti, isBlacklisted } from '../../shared/cache';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(@Inject(JwtService) private readonly jwt: JwtService) {}
 
   /** 签发 access token（短 TTL，按 deviceType） */
   async signAccessToken(userId: string, role: Role, deviceType: DeviceType): Promise<{ token: string; expiresIn: number }> {

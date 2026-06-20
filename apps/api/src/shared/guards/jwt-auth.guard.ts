@@ -9,7 +9,7 @@
  * 或全局：
  *   APP_GUARD: JwtAuthGuard（所有端点默认需要登录，公开端点用 @Public()）
  */
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../../shared/decorators/public.decorator';
@@ -17,7 +17,7 @@ import type { RequestUser } from '../../modules/auth/strategies/jwt.strategy';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  constructor(private reflector: Reflector) {
+  constructor(@Inject(Reflector) private reflector: Reflector) {
     super();
   }
 

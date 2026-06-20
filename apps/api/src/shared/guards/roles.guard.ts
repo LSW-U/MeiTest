@@ -7,7 +7,7 @@
  *   @UseGuards(JwtAuthGuard, RolesGuard)
  *   @Roles('super_admin')
  */
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import type { RequestUser } from '../../modules/auth/strategies/jwt.strategy';
@@ -15,7 +15,7 @@ import type { Role } from '@meimart/api-contract';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(@Inject(Reflector) private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
