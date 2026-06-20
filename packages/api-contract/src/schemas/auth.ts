@@ -20,9 +20,11 @@ export const Role = z.enum([
   'warehouse_staff',
   'customer_service',
 ]);
+export type Role = z.infer<typeof Role>;
 
 /** 设备类型（3 端，前端 App 配置写死，服务端用于审计 + token 策略） */
 export const DeviceType = z.enum(['client_app', 'rider_app', 'admin_web']);
+export type DeviceType = z.infer<typeof DeviceType>;
 
 /** 后台视角（仅审计字段，后端 RBAC 不感知） */
 export const Perspective = z.enum([
@@ -32,6 +34,7 @@ export const Perspective = z.enum([
   'support',
   'rider-mgmt',
 ]);
+export type Perspective = z.infer<typeof Perspective>;
 
 /** JWT payload（无 clientType） */
 export const JwtPayload = z.object({
