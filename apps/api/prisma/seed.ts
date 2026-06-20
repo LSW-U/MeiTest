@@ -82,7 +82,7 @@ async function main() {
   // ===== 1. super_admin =====
   const admin = await prisma.user.upsert({
     where: { phone: '+670999999999' },
-    update: {},
+    update: { password: SEED_PASSWORD_HASH }, // dev 每次重 hash，确保用最新 BCRYPT_COST
     create: {
       phone: '+670999999999',
       email: 'admin@meimart.dev',
