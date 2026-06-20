@@ -1,0 +1,110 @@
+# MeiMart 本地全栈（dev）
+#
+# 一键启动：docker compose up -d
+# 验证：    docker compose ps（全部 healthy）
+# 关闭：    docker compose down（保留数据卷）
+# 重置：    docker compose down -v（删除数据卷，dev reset 用）
+#
+# 服务端口：
+#   postgres  : 5432（DATABASE_URL 见 apps/api/.env）
+#   redis     : 6379
+#   minio     : 9000（API）+ 9001（Web Console）
+#   mailhog   : 1025（SMTP）+ 8025（Web UI 看邮件）
+#
+# 决策依据：CLAUDE.md §技术栈 + 本地化清单 §八
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: meimart-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: meimart
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d meimart']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: meimart-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  minio:
+    image: minio/minio:latest
+    container_name: meimart-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000' # S3 API
+      - '9001:9001' # Web Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: meimart-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP（apps/api .env SMTP_PORT=1025）
+      - '8025:8025' # Web UI（浏览器看邮件）
+
+  # pg_dump 定时备份（每小时整点 + 每天 02:00 全量）
+  # 失败 → exit code != 0，D6-T5 接 Sentry alert
+  backup:
+    image: postgres:16-alpine
+    container_name: meimart-backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: dev
+      PGDATABASE: meimart
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups
+    entrypoint: |
+      sh -c "
+        echo 'Backup cron started: hourly + daily 02:00 (Asia/Dili UTC+9)';
+        echo '0 0 * * * * pg_dump -Fc meimart > /backups/hourly_$$(date +\\%Y\\%m\\%d\\%H\\%M).dump 2>&1' > /etc/crontabs/root;
+        echo '0 18 * * * pg_dump -Fc meimart > /backups/daily_$$(date +\\%Y\\%m\\%d).dump 2>&1' >> /etc/crontabs/root;
+        # 7 天前的 hourly 自动清理
+        echo '30 0 * * * find /backups -name \"hourly_*\" -mtime +7 -delete' >> /etc/crontabs/root;
+        # 30 天前的 daily 自动清理
+        echo '0 19 * * * find /backups -name \"daily_*\" -mtime +30 -delete' >> /etc/crontabs/root;
+        crond -f -l 2
+      "
+
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
