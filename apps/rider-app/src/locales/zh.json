@@ -1,0 +1,16 @@
+{
+  "login": {
+    "title": "骑手登录 - MeiMart",
+    "identifier": "手机号或邮箱",
+    "identifierPlaceholder": "+670XXXXXXXX 或 you@example.com",
+    "password": "密码",
+    "passwordPlaceholder": "至少 8 位，含字母 + 数字",
+    "submit": "登录",
+    "submitting": "登录中…",
+    "devsStubNoBackend": "后端登录接口尚未接入（D4-T6）。",
+    "seedAccountHint": "开发种子账号：手机 +670999999999 / 密码 admin12345"
+  },
+  "common": {
+    "changeLanguage": "切换语言"
+  }
+}

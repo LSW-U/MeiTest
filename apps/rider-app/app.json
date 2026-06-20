@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "MeiMart Rider",
+    "slug": "meimart-rider",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a5dc2",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.meimart.rider"
+    },
+    "android": {
+      "package": "com.meimart.rider",
+      "adaptiveIcon": {
+        "backgroundColor": "#1a5dc2"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "TODO_FILL_AT_EAS_BUILD"
+      }
+    }
+  }
+}

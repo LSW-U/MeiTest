@@ -1,0 +1,16 @@
+{
+  "common": {
+    "changeLanguage": "Ganti bahasa"
+  },
+  "login": {
+    "title": "Masuk ke MeiMart Admin",
+    "identifier": "Telepon atau Email",
+    "identifierPlaceholder": "+670XXXXXXXX atau you@example.com",
+    "password": "Kata sandi",
+    "passwordPlaceholder": "Min 8 karakter dengan huruf + angka",
+    "submit": "Masuk",
+    "submitting": "Memproses…",
+    "devsStubNoBackend": "Endpoint login backend belum dihubungkan (D4-T6).",
+    "seedAccountHint": "Akun dev: telepon +670999999999 / kata sandi admin12345"
+  }
+}

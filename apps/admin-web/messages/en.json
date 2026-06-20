@@ -1,0 +1,16 @@
+{
+  "common": {
+    "changeLanguage": "切换语言"
+  },
+  "login": {
+    "title": "Sign in to MeiMart Admin",
+    "identifier": "Phone or Email",
+    "identifierPlaceholder": "+670XXXXXXXX or you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 chars with letter + digit",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "devsStubNoBackend": "Backend login endpoint not wired yet (D4-T6).",
+    "seedAccountHint": "Dev seed: phone +670999999999 / password admin12345"
+  }
+}

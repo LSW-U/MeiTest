@@ -1,0 +1,16 @@
+{
+  "login": {
+    "title": "Entrar no MeiMart",
+    "identifier": "Telefone ou Email",
+    "identifierPlaceholder": "+670XXXXXXXX ou you@example.com",
+    "password": "Senha",
+    "passwordPlaceholder": "Mínimo 8 caracteres com letra + número",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "devsStubNoBackend": "Endpoint de login não conectado ainda (D4-T6).",
+    "seedAccountHint": "Conta dev: telefone +670999999999 / senha admin12345"
+  },
+  "common": {
+    "changeLanguage": "Mudar idioma"
+  }
+}

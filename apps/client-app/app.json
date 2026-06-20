@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "MeiMart Client",
+    "slug": "meimart-client",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a5dc2",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.meimart.client"
+    },
+    "android": {
+      "package": "com.meimart.client",
+      "adaptiveIcon": {
+        "backgroundColor": "#1a5dc2"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "TODO_FILL_AT_EAS_BUILD"
+      }
+    }
+  }
+}
