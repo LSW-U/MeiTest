@@ -1,0 +1,52 @@
+/**
+ * 银行转账支付策略 — 真实流程（凭证上传 + 人工对账）
+ *
+ * 决策依据：契约 v0.3 决策 D + CLAUDE.md §测试阶段支付方案
+ *   - 客户转账后上传凭证到 OSS
+ *   - 后端存凭证 URL，PaymentIntent.status=PENDING
+ *   - admin-web 仓库视角手动确认 → 订单进 CONFIRMED
+ */
+import { v4 as uuidv4 } from 'uuid';
+import type {
+  PaymentStrategy,
+  CreatePaymentInput,
+  PaymentIntent,
+  QueryPaymentInput,
+  PaymentStatusResult,
+  RefundInput,
+  RefundResult,
+} from './payment-strategy';
+
+export class BankTransferStrategy implements PaymentStrategy {
+  readonly method = 'BANK_TRANSFER' as const;
+  readonly isMock = false;
+
+  async createPayment(input: CreatePaymentInput): Promise<PaymentIntent> {
+    return {
+      id: uuidv4(),
+      orderId: input.orderId,
+      method: 'BANK_TRANSFER',
+      status: 'PENDING', // 等用户上传凭证 + admin 确认
+      amount: input.amount,
+      transactionId: `BANK_${input.orderNo}`,
+      mockFlag: false,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  async queryPayment(input: QueryPaymentInput): Promise<PaymentStatusResult> {
+    return {
+      transactionId: input.transactionId,
+      status: 'PENDING', // 实际状态从 DB 读
+    };
+  }
+
+  async refund(input: RefundInput): Promise<RefundResult> {
+    // 线下退款（手工打款回原账户）
+    return {
+      refundTransactionId: `BANK_REFUND_${uuidv4()}`,
+      status: 'SUCCESS',
+      amount: input.amount,
+    };
+  }
+}
