@@ -18,6 +18,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@meimart/shared-utils": "workspace:*",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "ioredis": "^5.11.1",

@@ -7,6 +7,7 @@
  *   - 验证码 6 位随机数，Redis 存 10 分钟
  */
 import nodemailer from 'nodemailer';
+import { randomInt } from 'node:crypto';
 import { redis } from '../../shared/cache';
 import type {
   OtpStrategy,
@@ -19,11 +20,9 @@ import type {
 const CODE_TTL_SECONDS = 10 * 60; // 10 分钟
 const KEY_PREFIX = 'otp:email:';
 
+/** 生成 6 位密码学安全验证码（randomInt 上界 exclusive，[100000, 1000000)） */
 function gen6DigitCode(): string {
-  // crypto-strong 6 位数字
-  const min = 100_000;
-  const max = 999_999;
-  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+  return String(randomInt(100_000, 1_000_000));
 }
 
 export class EmailStrategy implements OtpStrategy {

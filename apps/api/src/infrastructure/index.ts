@@ -9,8 +9,16 @@
 // 支付（5 策略：2 真 + 3 mock/stub）
 export * from './payment/payment.factory';
 
-// OTP（4 策略：2 真 + 2 mock/stub）
+// OTP（3 策略：1 真 + 2 mock/stub）
 export * from './otp/otp.factory';
+
+// 密码策略（独立 export，不实现 OtpStrategy，LSP 修复）
+export {
+  passwordStrategy,
+  PasswordStrategy,
+  PasswordPolicyError,
+  BCRYPT_COST,
+} from './otp/password.strategy';
 
 // 地图（stub，W6 切真）
 export { mapClient } from './map/google-maps';

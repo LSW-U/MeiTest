@@ -2,15 +2,17 @@
  * OTP 策略抽象（v0.3 决策 + CLAUDE.md §测试阶段 OTP 完整方案）
  *
  * 决策依据：
- * - 密码（主登录）— 真实，bcrypt 哈希
  * - SMS（手机验证）— 测试 stub 固定 123456，W6 切东帝汶本地 Timor Telecom/Telkomcel
  * - 邮箱（找回密码）— 真实，nodemailer + MailHog dev / SendGrid prod
  * - WhatsApp（预留）— stub 123456，W6 申请 Business API
  *
+ * 注意：密码策略（PasswordStrategy）不在此抽象中，因为它的语义不同
+ *      （不需要 sendCode/verifyCode 的"验证码"模式），单独从 password.strategy.ts import
+ *
  * mock/stub 实现日志标 [SMS_STUB] / [WA_STUB]
  */
 
-export type OtpChannel = 'PASSWORD' | 'SMS' | 'EMAIL' | 'WHATSAPP';
+export type OtpChannel = 'SMS' | 'EMAIL' | 'WHATSAPP';
 
 export type OtpScene = 'REGISTER' | 'LOGIN' | 'RESET_PASSWORD' | 'BIND_PHONE';
 

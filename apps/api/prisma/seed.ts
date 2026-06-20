@@ -18,8 +18,9 @@ import { setWarehouseGeometry, buildBoxPolygon } from '../src/shared/db/postgis-
 
 const prisma = new PrismaClient();
 
-/** 测试密码：admin12345（dev only，密码强度 ≥ 8 位 + 字母 + 数字） */
-const SEED_PASSWORD_HASH = bcrypt.hashSync('admin12345', 10);
+/** 测试密码：admin12345（dev only，密码强度 ≥ 8 位 + 字母 + 数字）
+ *  bcrypt cost=12（OWASP 2023 推荐 ≥12） */
+const SEED_PASSWORD_HASH = bcrypt.hashSync('admin12345', 12);
 
 /** i18n 助手：构造 4 语言字段 */
 function i18n(en: string, zh: string, id: string, pt: string): Record<string, string> {

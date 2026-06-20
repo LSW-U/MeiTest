@@ -3,59 +3,54 @@
  *
  * 决策依据：CLAUDE.md §测试阶段 OTP 完整方案
  *   - 密码 ≥ 8 位 + 字母 + 数字
- *   - bcrypt hash 存储（10 轮 cost）
- *   - sendCode 在密码策略中无意义（密码不需要发送验证码）
- *   - verifyCode 用 bcrypt.compare
+ *   - bcrypt hash 存储（OWASP 2023 推荐 cost=12）
+ *
+ * 设计：不实现 OtpStrategy 接口（密码不需要 sendCode/verifyCode 的"验证码"语义）
+ *      业务调用方单独 import passwordStrategy 单例，调 hashPassword/verifyPassword
+ *      避免工厂拿到的实例调用时抛错（LSP 违反）
  */
 import bcrypt from 'bcryptjs';
-import type {
-  OtpStrategy,
-  OtpSendInput,
-  OtpSendOutput,
-  OtpVerifyInput,
-  OtpVerifyOutput,
-} from './otp-strategy';
 
-export class PasswordStrategy implements OtpStrategy {
-  readonly channel = 'PASSWORD' as const;
-  readonly isMock = false;
+/** bcrypt cost（OWASP 2023 推荐 ≥12） */
+export const BCRYPT_COST = 12;
 
+/** 密码策略错误码 */
+export class PasswordPolicyError extends Error {
+  constructor() {
+    super('PASSWORD_POLICY: ≥8 位 + 字母 + 数字');
+    this.name = 'PasswordPolicyError';
+  }
+}
+
+export class PasswordStrategy {
   /**
-   * 密码策略的 "sendCode" 实际是 hash 操作（注册 / 改密时用）
+   * 密码哈希（注册 / 改密时用）
    *
-   * @returns hash 后的密码（调用方负责存 DB）
+   * @param plain 明文密码（≥8 位 + 字母 + 数字）
+   * @returns bcrypt hash（cost=12，dev 约 200ms）
    */
   async hashPassword(plain: string): Promise<string> {
     if (plain.length < 8 || !/[a-zA-Z]/.test(plain) || !/\d/.test(plain)) {
-      throw new Error('PASSWORD_POLICY: ≥8 位 + 字母 + 数字');
+      throw new PasswordPolicyError();
     }
-    return bcrypt.hash(plain, 10);
-  }
-
-  async sendCode(_input: OtpSendInput): Promise<OtpSendOutput> {
-    throw new Error('PASSWORD_STRATEGY_NO_SEND_CODE: 密码策略不需要发送验证码');
+    return bcrypt.hash(plain, BCRYPT_COST);
   }
 
   /**
-   * @param input.code 明文密码
-   * @param input.target 此字段在密码策略中是 hash，但接口要求 target 类型统一；
-   *                     实际 hash 应作为额外参数传入，调用方用 verifyPassword(hash, plain)
-   */
-  async verifyCode(input: OtpVerifyInput): Promise<OtpVerifyOutput> {
-    // 密码策略的 verifyCode 不通过 target 拿 hash（hash 在 DB）
-    // 调用方应改用 verifyPassword 方法
-    throw new Error(
-      `PASSWORD_STRATEGY_USE_VERIFY_PASSWORD: 不要用 verifyCode，用 verifyPassword(hash, plain)。input=${JSON.stringify(input)}`,
-    );
-  }
-
-  /**
-   * 验证密码（业务调用方用）
+   * 验证密码（登录时用）
    *
-   * @param hash DB 中存的 bcrypt hash
+   * @param hash DB 中存的 bcrypt hash（含 cost 信息，不依赖当前 BCRYPT_COST）
    * @param plain 用户输入的明文
    */
   async verifyPassword(hash: string, plain: string): Promise<boolean> {
     return bcrypt.compare(plain, hash);
   }
+}
+
+/** 单例（dev hot reload 安全） */
+const globalForPassword = globalThis as unknown as { passwordStrategy?: PasswordStrategy };
+export const passwordStrategy: PasswordStrategy =
+  globalForPassword.passwordStrategy ?? new PasswordStrategy();
+if (process.env.NODE_ENV !== 'production') {
+  globalForPassword.passwordStrategy = passwordStrategy;
 }

@@ -6,15 +6,14 @@
  *   - 骑手送达时收款（CashCollection 表，骑手调用 /rider/orders/:orderId/collect-cash）
  *   - 订单状态机：DELIVERED_PAID（成功） / DELIVERED_UNPAID（拒付）
  *
- * createPayment 实际只是创建 PaymentIntent 记录（status=PENDING），等骑手收款
+ * 注意：createPayment 只构造 PaymentIntent 对象，调用方负责持久化（D4+ 各流程接入时 DB PaymentIntent 写入）
+ *      COD 无第三方支付，不实现 queryPayment（P1-#2 optional 化）
  */
-import { v4 as uuidv4 } from 'uuid';
+import { genId } from '@meimart/shared-utils';
 import type {
   PaymentStrategy,
   CreatePaymentInput,
   PaymentIntent,
-  QueryPaymentInput,
-  PaymentStatusResult,
   RefundInput,
   RefundResult,
 } from './payment-strategy';
@@ -24,9 +23,9 @@ export class CodStrategy implements PaymentStrategy {
   readonly isMock = false;
 
   async createPayment(input: CreatePaymentInput): Promise<PaymentIntent> {
-    // COD 无第三方流水号，用本地 ID 标识
+    // COD 无第三方流水号，用 orderNo 派生可读标识
     return {
-      id: uuidv4(),
+      id: genId(),
       orderId: input.orderId,
       method: 'COD',
       status: 'PENDING',
@@ -37,18 +36,10 @@ export class CodStrategy implements PaymentStrategy {
     };
   }
 
-  async queryPayment(input: QueryPaymentInput): Promise<PaymentStatusResult> {
-    // COD 状态由骑手 collect-cash 端点更新，这里返回 PENDING（实际从 DB PaymentIntent 读）
-    return {
-      transactionId: input.transactionId,
-      status: 'PENDING',
-    };
-  }
-
   async refund(input: RefundInput): Promise<RefundResult> {
     // COD 退款线下操作（骑手已收现金 → 商家手工退），系统只记流水
     return {
-      refundTransactionId: `COD_REFUND_${uuidv4()}`,
+      refundTransactionId: `COD_REFUND_${genId()}`,
       status: 'SUCCESS',
       amount: input.amount,
     };

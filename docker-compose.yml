@@ -76,8 +76,10 @@ services:
       - '1025:1025' # SMTP（apps/api .env SMTP_PORT=1025）
       - '8025:8025' # Web UI（浏览器看邮件）
 
-  # pg_dump 定时备份（每小时整点 + 每天 02:00 全量）
-  # 失败 → exit code != 0，D6-T5 接 Sentry alert
+  # pg_dump 定时备份（每小时整点 + 每天 02:00 Asia/Dili 全量）
+  # - stdout 和 stderr 分开，避免 stderr 写进 dump 文件导致静默失败
+  # - 失败时显式记录到 failed.log + exit 1（D6-T5 接 Sentry alert）
+  # - cron 容器装 tzdata + TZ=Asia/Dili 让 cron 跑在本地时区
   backup:
     image: postgres:16-alpine
     container_name: meimart-backup
@@ -87,6 +89,7 @@ services:
       PGUSER: postgres
       PGPASSWORD: dev
       PGDATABASE: meimart
+      TZ: Asia/Dili
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,13 +97,16 @@ services:
       - ./backups:/backups
     entrypoint: |
       sh -c "
-        echo 'Backup cron started: hourly + daily 02:00 (Asia/Dili UTC+9)';
-        echo '0 0 * * * * pg_dump -Fc meimart > /backups/hourly_$$(date +\\%Y\\%m\\%d\\%H\\%M).dump 2>&1' > /etc/crontabs/root;
-        echo '0 18 * * * pg_dump -Fc meimart > /backups/daily_$$(date +\\%Y\\%m\\%d).dump 2>&1' >> /etc/crontabs/root;
-        # 7 天前的 hourly 自动清理
-        echo '30 0 * * * find /backups -name \"hourly_*\" -mtime +7 -delete' >> /etc/crontabs/root;
-        # 30 天前的 daily 自动清理
-        echo '0 19 * * * find /backups -name \"daily_*\" -mtime +30 -delete' >> /etc/crontabs/root;
+        apk add --no-cache tzdata && cp /usr/share/zoneinfo/Asia/Dili /etc/localtime && echo 'Asia/Dili' > /etc/timezone
+        echo 'Backup cron started: hourly (every hour) + daily 02:00 Asia/Dili'
+        # hourly：每小时整点（0 * * * *），stdout 进 dump / stderr 进 cron_error.log
+        echo '0 * * * * pg_dump -Fc meimart > /backups/hourly_$$(date +\\%Y\\%m\\%d\\%H\\%M).dump 2>>/backups/cron_error.log && touch /backups/.last_success_hourly || echo \"[FAIL] $$(date) hourly\" >> /backups/failed.log' > /etc/crontabs/root
+        # daily：每天 02:00 Asia/Dili（容器 TZ 已设，cron 直接 0 2 * * *）
+        echo '0 2 * * * pg_dump -Fc meimart > /backups/daily_$$(date +\\%Y\\%m\\%d).dump 2>>/backups/cron_error.log && touch /backups/.last_success_daily || echo \"[FAIL] $$(date) daily\" >> /backups/failed.log' >> /etc/crontabs/root
+        # 7 天前的 hourly 自动清理（每天 02:30 跑）
+        echo '30 2 * * * find /backups -name \"hourly_*\" -mtime +7 -delete' >> /etc/crontabs/root
+        # 30 天前的 daily 自动清理（每天 02:35 跑）
+        echo '35 2 * * * find /backups -name \"daily_*\" -mtime +30 -delete' >> /etc/crontabs/root
         crond -f -l 2
       "
 

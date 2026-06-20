@@ -51,8 +51,9 @@ export async function uploadFile(
   const bucketExists = await minio.bucketExists(DEFAULT_BUCKET);
   if (!bucketExists) {
     await minio.makeBucket(DEFAULT_BUCKET, 'us-east-1');
-    // dev 环境开放匿名读（方便前端访问）
-    if (process.env.NODE_ENV !== 'production') {
+    // 仅 development 开放匿名读（方便前端 <Image src> 直接加载）
+    // staging / prod 不开放（公网暴露信息泄漏风险）
+    if (process.env.NODE_ENV === 'development') {
       await minio.setBucketPolicy(
         DEFAULT_BUCKET,
         JSON.stringify({
