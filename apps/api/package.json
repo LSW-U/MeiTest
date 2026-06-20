@@ -9,15 +9,21 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:create": "prisma migrate dev --create-only",
-    "db:seed": "echo 'TODO: tsx prisma/seed.ts (D2-T5)' && exit 0",
+    "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "clean": "rm -rf dist .turbo src/prisma/client"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
-    "prisma": "^5.22.0"
+    "@types/bcryptjs": "^3.0.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.22.4"
   }
 }

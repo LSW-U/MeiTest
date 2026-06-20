@@ -57,15 +57,15 @@ export async function findWarehouseByPoint(
       name,
       delivery_fee,
       ST_Distance(
-        center_point,
+        "centerPoint",
         ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
       ) AS distance
     FROM "warehouses"
     WHERE status = 'ACTIVE'
-      AND coverage_area IS NOT NULL
+      AND "coverageArea" IS NOT NULL
       AND ST_Within(
         ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326),
-        coverage_area
+        "coverageArea"
       )
     ORDER BY distance ASC
     LIMIT 1
@@ -90,7 +90,7 @@ export async function setWarehouseCenter(
 ): Promise<void> {
   await prisma.$executeRaw`
     UPDATE "warehouses"
-    SET center_point = ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
+    SET "centerPoint" = ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
     WHERE id = ${warehouseId}
   `;
 }
@@ -104,7 +104,7 @@ export async function setWarehouseCoverage(
   const geojsonStr = JSON.stringify(geojson);
   await prisma.$executeRaw`
     UPDATE "warehouses"
-    SET coverage_area = ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326)
+    SET "coverageArea" = ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326)
     WHERE id = ${warehouseId}
   `;
 }
@@ -120,8 +120,8 @@ export async function setWarehouseGeometry(
   await prisma.$executeRaw`
     UPDATE "warehouses"
     SET
-      center_point = ST_SetSRID(ST_MakePoint(${center.lon}, ${center.lat}), 4326),
-      coverage_area = ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326)
+      "centerPoint" = ST_SetSRID(ST_MakePoint(${center.lon}, ${center.lat}), 4326),
+      "coverageArea" = ST_SetSRID(ST_GeomFromGeoJSON(${geojsonStr}), 4326)
     WHERE id = ${warehouseId}
   `;
 }
