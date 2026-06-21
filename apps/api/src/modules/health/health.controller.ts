@@ -1,12 +1,36 @@
 /**
- * Health Controller（D4-T1 acceptance：全局过滤器/拦截器/pipe 就绪后 health 端点）
+ * Health Controller
  *
- * D6-T5 会加 /ready 端点（db/redis 依赖就绪检查）
+ * - GET /health → 进程存活（总是 200，k8s liveness probe）
+ * - GET /ready → 依赖就绪检查（db + redis，k8s readiness probe）
  *
- * @Public() 让 W2+ 全局 JwtAuthGuard 启用后 /health 仍可被 k8s probe 访问
+ * @Public() 让全局 JwtAuthGuard 启用后仍可被 k8s probe 访问
  */
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { Public } from '../../shared/decorators/public.decorator';
+import { db } from '../../shared/db';
+import { redis } from '../../shared/cache';
+
+async function checkDatabase(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const start = Date.now();
+    await db.$queryRaw`SELECT 1`;
+    return { ok: true, latencyMs: Date.now() - start };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+async function checkRedis(): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const start = Date.now();
+    const result = await redis.ping();
+    if (result !== 'PONG') throw new Error(`Unexpected redis response: ${result}`);
+    return { ok: true, latencyMs: Date.now() - start };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
 
 @Public()
 @Controller('health')
@@ -17,6 +41,34 @@ export class HealthController {
       success: true,
       data: {
         status: 'ok',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Get('ready')
+  async ready() {
+    const [dbCheck, redisCheck] = await Promise.all([checkDatabase(), checkRedis()]);
+
+    const allOk = dbCheck.ok && redisCheck.ok;
+    const status = allOk ? 'ready' : 'not_ready';
+
+    if (!allOk) {
+      throw new HttpException(
+        {
+          success: false,
+          data: { status, database: dbCheck, redis: redisCheck },
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    return {
+      success: true,
+      data: {
+        status,
+        database: dbCheck,
+        redis: redisCheck,
         timestamp: new Date().toISOString(),
       },
     };

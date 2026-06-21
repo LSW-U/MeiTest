@@ -25,6 +25,7 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { detectLanguage } from '@meimart/shared-utils';
 import { errorBundles, DEFAULT_LOCALE, type Locale } from '@meimart/shared-locales';
 import { logger } from '../logger/logger';
+import { captureException } from '../monitoring/sentry';
 
 interface ErrorBody {
   success: false;
@@ -92,7 +93,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         },
       };
     } else {
-      // 未捕获异常 → 500
+      // 未捕获异常 → 500，上报 Sentry
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       const err = exception as { message?: string; stack?: string };
       logger.error({
@@ -101,6 +102,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error: err?.message ?? String(exception),
         stack: err?.stack,
       });
+      captureException(exception);
 
       body = {
         success: false,

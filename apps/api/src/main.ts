@@ -14,10 +14,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, LoggerService } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { logger as pinoLogger } from './shared/logger/logger';
+import { initSentry } from './shared/monitoring/sentry';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
 import fs from 'node:fs';
 import path from 'node:path';
+
+// Sentry 最先初始化（在 NestFactory.create 之前，确保启动错误也被捕获）
+initSentry();
 
 /** pino wrapper（适配 NestJS LoggerService 接口） */
 const nestLogger: LoggerService = {

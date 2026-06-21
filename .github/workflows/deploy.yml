@@ -1,0 +1,76 @@
+name: Deploy Staging
+
+# merge PR 到 main 后自动部署 staging（印尼雅加达）
+# 前置：GitHub Secrets 配置 STAGING_HOST / STAGING_SSH_KEY / STAGING_USER
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 手动触发
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false # 部署不取消（避免半部署状态）
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: []
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync code to staging
+        run: |
+          rsync -avz --delete \
+            --exclude node_modules \
+            --exclude .git \
+            --exclude dist \
+            --exclude .next \
+            --exclude .expo \
+            -e "ssh -i ~/.ssh/staging_key" \
+            ./ ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/opt/meimart/
+
+      - name: Install + Build + Restart on staging
+        run: |
+          ssh -i ~/.ssh/staging_key ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} '
+            cd /opt/meimart &&
+            corepack enable &&
+            pnpm install --frozen-lockfile &&
+            pnpm --filter @meimart/api-contract gen:openapi &&
+            pnpm --filter @meimart/shared-types gen:types &&
+            pnpm --filter @meimart/api build &&
+            docker compose pull &&
+            docker compose up -d &&
+            sleep 10 &&
+            pnpm --filter @meimart/api exec prisma migrate deploy &&
+            pnpm --filter @meimart/api db:seed
+          '
+
+      - name: Health check (smoke test)
+        run: |
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.STAGING_HOST }}:3000/health)
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed: HTTP $STATUS"
+            # 回滚：重启上一个版本（需要 docker image tag 管理，MVP 先报警）
+            curl -s -X POST ${{ secrets.SENTRY_RELEASE_WEBHOOK }} || true
+            exit 1
+          fi
+          READY=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.STAGING_HOST }}:3000/health/ready)
+          if [ "$READY" != "200" ]; then
+            echo "❌ Ready check failed: HTTP $READY"
+            exit 1
+          fi
+          echo "✅ Staging deployed and healthy"
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/staging_key
