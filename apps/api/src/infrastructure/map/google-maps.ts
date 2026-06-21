@@ -13,6 +13,7 @@ import type {
   ReverseGeocodeInput,
   DistanceResult,
 } from './map-client';
+import { logger } from '../../shared/logger/logger';
 
 const STUB_TAG = '[GMAPS_STUB]';
 
@@ -24,7 +25,7 @@ export class GoogleMapsStubClient implements MapClient {
   readonly isMock = true;
 
   async geocode(address: string): Promise<GeocodeResult[]> {
-    console.log(`${STUB_TAG} geocode address="${address}" → Dili center (stub)`);
+    logger.info(`${STUB_TAG} geocode address="${address}" → Dili center (stub)`);
     return [
       {
         ...DILI_CENTER,
@@ -34,7 +35,7 @@ export class GoogleMapsStubClient implements MapClient {
   }
 
   async reverseGeocode(input: ReverseGeocodeInput): Promise<GeocodeResult[]> {
-    console.log(
+    logger.info(
       `${STUB_TAG} reverseGeocode lat=${input.lat} lng=${input.lng} → formatted Dili address (stub)`,
     );
     return [
@@ -65,7 +66,7 @@ export class GoogleMapsStubClient implements MapClient {
     // 假设平均配送速度 25 km/h（≈7m/s）
     const etaSeconds = Math.round(straightMeters / 7);
 
-    console.log(
+    logger.info(
       `${STUB_TAG} estimateDistance straightMeters=${straightMeters} etaSeconds=${etaSeconds}`,
     );
     return { straightMeters, etaSeconds };

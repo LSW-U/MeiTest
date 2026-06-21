@@ -9,6 +9,7 @@
  * 注意：未配置 SMS_STUB_CODE 时所有码都验证为 123456；配置后只接受配置值
  */
 import { redis } from '../../shared/cache';
+import { logger } from "../../shared/logger/logger";
 import type {
   OtpStrategy,
   OtpSendInput,
@@ -30,7 +31,7 @@ export class SmsStrategy implements OtpStrategy {
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     await redis.set(key, stubCode, 'EX', CODE_TTL_SECONDS);
 
-    console.log(
+    logger.info(
       `${STUB_TAG} sendCode target=${input.target} scene=${input.scene} code=${stubCode} (stub)`,
     );
     return { expireIn: CODE_TTL_SECONDS };
@@ -50,7 +51,7 @@ export class SmsStrategy implements OtpStrategy {
 
     // 验证成功后删除（一次性）
     await redis.del(key);
-    console.log(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
+    logger.info(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
     return { valid: true };
   }
 }

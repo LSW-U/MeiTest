@@ -7,6 +7,7 @@
  *   - 验证码 6 位随机数，Redis 存 10 分钟
  */
 import nodemailer from 'nodemailer';
+import { logger } from "../../shared/logger/logger";
 import { randomInt } from 'node:crypto';
 import { redis } from '../../shared/cache';
 import type {
@@ -58,7 +59,7 @@ export class EmailStrategy implements OtpStrategy {
       `,
     });
 
-    console.log(`[EMAIL] sendCode to=${input.target} scene=${input.scene} code=${code}`);
+    logger.info(`[EMAIL] sendCode to=${input.target} scene=${input.scene} code=${code}`);
     return { expireIn: CODE_TTL_SECONDS };
   }
 
@@ -73,7 +74,7 @@ export class EmailStrategy implements OtpStrategy {
       return { valid: false, reason: 'WRONG_CODE' };
     }
     await redis.del(key);
-    console.log(`[EMAIL] verifyCode to=${input.target} scene=${input.scene} → PASS`);
+    logger.info(`[EMAIL] verifyCode to=${input.target} scene=${input.scene} → PASS`);
     return { valid: true };
   }
 }

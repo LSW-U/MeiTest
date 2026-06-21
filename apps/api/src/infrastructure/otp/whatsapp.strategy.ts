@@ -6,6 +6,7 @@
  *   - W6-W7：拿到主体后申请 WhatsApp Business API（接口不变）
  */
 import { redis } from '../../shared/cache';
+import { logger } from "../../shared/logger/logger";
 import type {
   OtpStrategy,
   OtpSendInput,
@@ -27,7 +28,7 @@ export class WhatsappStrategy implements OtpStrategy {
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     await redis.set(key, stubCode, 'EX', CODE_TTL_SECONDS);
 
-    console.log(
+    logger.info(
       `${STUB_TAG} sendCode target=${input.target} scene=${input.scene} code=${stubCode} (stub)`,
     );
     return { expireIn: CODE_TTL_SECONDS };
@@ -41,7 +42,7 @@ export class WhatsappStrategy implements OtpStrategy {
     if (stored !== input.code) return { valid: false, reason: 'WRONG_CODE' };
 
     await redis.del(key);
-    console.log(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
+    logger.info(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
     return { valid: true };
   }
 }

@@ -11,6 +11,7 @@
  * 日志标 [STUB_STRIPE]
  */
 import { genId } from '@meimart/shared-utils';
+import { logger } from "../../shared/logger/logger";
 import { redis } from '../../shared/cache';
 import type {
   PaymentStrategy,
@@ -41,7 +42,7 @@ export class StripeStrategy implements PaymentStrategy {
     // 明显假的 secret 格式，避免前端 Stripe SDK 正则误判
     const clientSecret = `STUB_STRIPE_SECRET_${input.orderNo}_${genId().slice(0, 8)}`;
 
-    console.log(`${STUB_TAG} createPayment orderNo=${input.orderNo} amount=${input.amount} → ${stubTransactionId}`);
+    logger.info(`${STUB_TAG} createPayment orderNo=${input.orderNo} amount=${input.amount} → ${stubTransactionId}`);
 
     return {
       id: genId(),
@@ -61,7 +62,7 @@ export class StripeStrategy implements PaymentStrategy {
     const elapsed = createdAtStr ? (Date.now() - Number(createdAtStr)) / 1000 : Infinity;
 
     if (elapsed >= PROCESSING_DELAY_SECONDS) {
-      console.log(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
+      logger.info(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
       return {
         transactionId: input.transactionId,
         status: 'PAID',
@@ -70,7 +71,7 @@ export class StripeStrategy implements PaymentStrategy {
       };
     }
 
-    console.log(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
+    logger.info(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
     return {
       transactionId: input.transactionId,
       status: 'PROCESSING',
@@ -79,7 +80,7 @@ export class StripeStrategy implements PaymentStrategy {
 
   async refund(input: RefundInput): Promise<RefundResult> {
     const refundId = `STUB_STRIPE_REFUND_${genId()}`;
-    console.log(`${STUB_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, stub 异步)`);
+    logger.info(`${STUB_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, stub 异步)`);
     return {
       refundTransactionId: refundId,
       status: 'PENDING',

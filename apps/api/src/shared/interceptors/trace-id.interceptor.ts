@@ -1,18 +1,11 @@
 /**
- * TraceId 拦截器：每个请求注入 traceId
+ * TraceId Interceptor：保留向后兼容（已迁移到 Middleware，此文件仅注入 request.traceId 给 ALS）
  *
- * 决策依据：D4-T1 acceptance — 所有请求带 X-Trace-Id header；Sentry 贯穿
- *
- * 用法（被审计/日志/Sentry 共用）：
- *   const traceId = request.headers['x-trace-id'] ?? genId();
- *   response.setHeader('X-Trace-Id', traceId);
- *   request.traceId = traceId; // 后续 logger / Sentry 直接读
+ * 决策依据：D5-T3 — Middleware 解决 Guard 抛错拿不到 traceId 问题后，
+ *          Interceptor 不再做实际工作，但保留以兼容现有引用
  */
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { genId } from '@meimart/shared-utils';
-
-const TRACE_ID_HEADER = 'x-trace-id';
 
 declare module 'http' {
   interface IncomingMessage {
@@ -22,16 +15,9 @@ declare module 'http' {
 
 @Injectable()
 export class TraceIdInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
-
-    const incoming = request.headers[TRACE_ID_HEADER];
-    const traceId = typeof incoming === 'string' && incoming.length > 0 ? incoming : genId();
-
-    request.traceId = traceId;
-    response.setHeader('X-Trace-Id', traceId);
-
+  intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    // TraceIdMiddleware 已在请求最早期注入 ALS + request.traceId
+    // 此 Interceptor 仅为兼容性保留，不做实际工作
     return next.handle();
   }
 }

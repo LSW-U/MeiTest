@@ -1,34 +1,76 @@
 /**
- * pino logger（结构化日志 + 敏感字段 mask）
+ * pino logger（结构化日志 + 敏感字段 mask + traceId 自动注入）
  *
- * 决策依据：CLAUDE.md §技术栈（监控 Sentry + pino）
+ * 决策依据：CLAUDE.md §日志规范 + §技术栈（监控 Sentry + pino）
  *
- * 后续 D5-T3 完善时统一字段：
+ * 字段规范：
  *   required: timestamp, level, traceId, userId?, action
- *   sampled:  request_body, response_body (only debug)
- *   mask:     password, token, phone(last 4), idCard(last 4)
+ *   sampled : request_body, response_body (only debug)
+ *   mask    : password/token/authorization/secret/apiKey → [REDACTED]
+ *             phone/telephone/idCard → ***1234（last 4）
+ *
+ * traceId 自动注入：mixin 调 getTraceId()（AsyncLocalStorage），无需手写
  */
-import pino, { type Logger } from 'pino';
+import pino, { type Logger, type LogFn } from 'pino';
+import { getTraceId } from './trace-context';
 
 const globalForLogger = globalThis as unknown as { __meimartLogger?: Logger };
 
-const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'secret', 'apiKey'];
-const PHONE_KEYS = ['phone', 'telephone'];
+/** 全字段 mask（password/token/secret 等） */
+const FULL_REDACT_KEYS = ['password', 'token', 'authorization', 'secret', 'apikey', 'clientsecret'];
+/** 部分脱敏（last 4 digits） */
+const LAST4_KEYS = ['phone', 'telephone', 'idcard', 'mobile'];
 
-function redactPaths(): string[] {
-  return [
-    ...SENSITIVE_KEYS.flatMap((k) => [k, `*.${k}`, `*.*.${k}`]),
-    ...PHONE_KEYS.flatMap((k) => [k, `*.${k}`]),
-  ];
+/**
+ * 递归 mask 对象（精确小写匹配，WeakSet 防循环引用）
+ */
+function maskObject(obj: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (seen.has(obj as object)) return '[Circular]';
+  seen.add(obj as object);
+
+  if (Array.isArray(obj)) {
+    return obj.map((v) => maskObject(v, seen));
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    const lowerK = k.toLowerCase();
+    if (FULL_REDACT_KEYS.includes(lowerK)) {
+      result[k] = '[REDACTED]';
+    } else if (LAST4_KEYS.includes(lowerK)) {
+      const s = String(v ?? '');
+      result[k] = s.length <= 4 ? '***' : `***${s.slice(-4)}`;
+    } else if (v !== null && typeof v === 'object') {
+      result[k] = maskObject(v, seen);
+    } else {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+
+/** 包装 pino log 方法，自动 mask 参数 */
+function wrapWithMask(baseLogger: Logger, level: 'info' | 'warn' | 'error' | 'debug' | 'trace' | 'fatal'): LogFn {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fn = (baseLogger[level] as (...args: any[]) => void).bind(baseLogger);
+  return ((objOrMsg: unknown, msgOrObj?: unknown, ...rest: unknown[]) => {
+    if (typeof objOrMsg === 'object' && objOrMsg !== null) {
+      const masked = maskObject(objOrMsg);
+      return fn(masked, msgOrObj, ...rest);
+    }
+    return fn(objOrMsg, msgOrObj, ...rest);
+  }) as LogFn;
 }
 
 function createLogger(): Logger {
   const isProd = process.env.NODE_ENV === 'production';
-  return pino({
+  const base = pino({
     level: isProd ? 'info' : 'debug',
-    redact: {
-      paths: redactPaths(),
-      censor: '[REDACTED]',
+    // 自动注入 traceId（来自 AsyncLocalStorage，跨 await/BullMQ 自动继承）
+    mixin() {
+      const traceId = getTraceId();
+      return traceId ? { traceId } : {};
     },
     transport: isProd
       ? undefined
@@ -41,9 +83,21 @@ function createLogger(): Logger {
           },
         },
   });
+
+  // 包装 logger 方法，自动 mask 敏感字段
+  return {
+    ...base,
+    info: wrapWithMask(base, 'info'),
+    warn: wrapWithMask(base, 'warn'),
+    error: wrapWithMask(base, 'error'),
+    debug: wrapWithMask(base, 'debug'),
+    trace: wrapWithMask(base, 'trace'),
+    fatal: wrapWithMask(base, 'fatal'),
+  } as Logger;
 }
 
 export const logger: Logger = globalForLogger.__meimartLogger ?? createLogger();
+
 if (process.env.NODE_ENV !== 'production') {
   globalForLogger.__meimartLogger = logger;
 }

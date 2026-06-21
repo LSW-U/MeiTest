@@ -10,6 +10,7 @@
  * 日志标 [MOCK_WECHAT]，便于排查
  */
 import { genId } from '@meimart/shared-utils';
+import { logger } from "../../shared/logger/logger";
 import { redis } from '../../shared/cache';
 import type {
   PaymentStrategy,
@@ -39,7 +40,7 @@ export class WechatStrategy implements PaymentStrategy {
       10 * 60,
     );
 
-    console.log(
+    logger.info(
       `${MOCK_TAG} createPayment orderNo=${input.orderNo} amount=${input.amount} → ${mockTransactionId} (PROCESSING → PAID after ${PROCESSING_DELAY_SECONDS}s)`,
     );
 
@@ -61,7 +62,7 @@ export class WechatStrategy implements PaymentStrategy {
     const elapsed = createdAtStr ? (Date.now() - Number(createdAtStr)) / 1000 : Infinity;
 
     if (elapsed >= PROCESSING_DELAY_SECONDS) {
-      console.log(`${MOCK_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
+      logger.info(`${MOCK_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
       return {
         transactionId: input.transactionId,
         status: 'PAID',
@@ -70,7 +71,7 @@ export class WechatStrategy implements PaymentStrategy {
       };
     }
 
-    console.log(`${MOCK_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
+    logger.info(`${MOCK_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
     return {
       transactionId: input.transactionId,
       status: 'PROCESSING',
@@ -79,7 +80,7 @@ export class WechatStrategy implements PaymentStrategy {
 
   async refund(input: RefundInput): Promise<RefundResult> {
     const refundId = `MOCK_REFUND_${genId()}`;
-    console.log(`${MOCK_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, mock 异步)`);
+    logger.info(`${MOCK_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, mock 异步)`);
     // 真实第三方退款是异步，mock 返回 PENDING 让前端能测出"退款进行中"UI
     return {
       refundTransactionId: refundId,

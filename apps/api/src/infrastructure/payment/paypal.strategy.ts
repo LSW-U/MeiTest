@@ -11,6 +11,7 @@
  * 日志标 [STUB_PAYPAL]
  */
 import { genId } from '@meimart/shared-utils';
+import { logger } from "../../shared/logger/logger";
 import { redis } from '../../shared/cache';
 import type {
   PaymentStrategy,
@@ -41,7 +42,7 @@ export class PaypalStrategy implements PaymentStrategy {
     // 用明显的 stub 域名，避免前端误访问真实 PayPal sandbox
     const checkoutUrl = `https://stub.meimart.local/paypal-checkout?token=STUB_${input.orderNo}`;
 
-    console.log(`${STUB_TAG} createPayment orderNo=${input.orderNo} amount=${input.amount} → ${stubTransactionId}`);
+    logger.info(`${STUB_TAG} createPayment orderNo=${input.orderNo} amount=${input.amount} → ${stubTransactionId}`);
 
     return {
       id: genId(),
@@ -61,7 +62,7 @@ export class PaypalStrategy implements PaymentStrategy {
     const elapsed = createdAtStr ? (Date.now() - Number(createdAtStr)) / 1000 : Infinity;
 
     if (elapsed >= PROCESSING_DELAY_SECONDS) {
-      console.log(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
+      logger.info(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PAID (after ${elapsed.toFixed(1)}s)`);
       return {
         transactionId: input.transactionId,
         status: 'PAID',
@@ -70,7 +71,7 @@ export class PaypalStrategy implements PaymentStrategy {
       };
     }
 
-    console.log(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
+    logger.info(`${STUB_TAG} queryPayment transactionId=${input.transactionId} → PROCESSING (${elapsed.toFixed(1)}s / ${PROCESSING_DELAY_SECONDS}s)`);
     return {
       transactionId: input.transactionId,
       status: 'PROCESSING',
@@ -79,7 +80,7 @@ export class PaypalStrategy implements PaymentStrategy {
 
   async refund(input: RefundInput): Promise<RefundResult> {
     const refundId = `STUB_PAYPAL_REFUND_${genId()}`;
-    console.log(`${STUB_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, stub 异步)`);
+    logger.info(`${STUB_TAG} refund transactionId=${input.transactionId} amount=${input.amount} → ${refundId} (PENDING, stub 异步)`);
     return {
       refundTransactionId: refundId,
       status: 'PENDING',

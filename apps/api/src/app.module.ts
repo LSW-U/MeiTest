@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR, HttpAdapterHost, Reflector } from '@nestjs/core';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
-import { TraceIdInterceptor } from './shared/interceptors/trace-id.interceptor';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
+import { TraceIdMiddleware } from './shared/middleware/trace-id.middleware';
 import { HealthController } from './modules/health/health.controller';
 import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,15 +16,18 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
   imports: [AuthModule],
   controllers: [HealthController, MeController],
   providers: [
-    // Guards 依赖的 Reflector 已由 NestJS core 提供
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
     DeviceTypeGuard,
-    // 全局拦截器（顺序：TraceId 先 → Logging → Audit）
-    { provide: APP_INTERCEPTOR, useClass: TraceIdInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    // 全局拦截器（顺序：Logging → Audit）
+    // TraceId 改用 Middleware（在 Guard 之前），Interceptor 仅保留兼容
+    {
+      provide: APP_INTERCEPTOR,
+      useFactory: (reflector: Reflector) => new LoggingInterceptor(reflector),
+      inject: [Reflector],
+    },
     {
       provide: APP_INTERCEPTOR,
       useFactory: (reflector: Reflector) => new AuditInterceptor(reflector),
@@ -39,4 +42,12 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  /**
+   * TraceIdMiddleware 在所有路由之前注入 ALS traceId
+   * 确保 Guard 抛错时 AllExceptionsFilter 也能拿到 traceId
+   */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(TraceIdMiddleware).forRoutes('*');
+  }
+}
