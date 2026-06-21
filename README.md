@@ -5,19 +5,22 @@
 
 ## 状态
 
-**W1 共享前置层**（D1-D3 完成，D4-D7 待续）
+**W1 共享前置层 ✅ 完成（D1-D7 全部 36 任务），可进 W2**（2026-06-21 验收通过）
 
 - ✅ Monorepo + pnpm workspace + Turborepo
-- ✅ 契约（zod + OpenAPI + TS 类型自动生成）
-- ✅ PostgreSQL 16 + PostGIS 3.4 + GIST 索引
-- ✅ 29 张基线表 + 种子数据
-- ✅ shared-utils 工具集（100% 单测覆盖）
-- ✅ shared-db / shared-cache / shared-infra 封装
-- ✅ 三端登录页 UI（admin-web 完整，client-app/rider-app typecheck 过）
-- ✅ docker compose 一键起本地全栈
-- ⏳ W2 启动剩余：鉴权（D4）+ i18n 完善（D5）+ CI/CD（D6）+ W1 验收（D7）
+- ✅ 契约（zod + OpenAPI + TS 类型自动生成 + CI 一致性强校验）
+- ✅ PostgreSQL 16 + PostGIS 3.4 + GIST 索引（init migration 已 apply）
+- ✅ 27 张基线表（v0.3 决策扩展）+ 种子数据可登录
+- ✅ shared-db / shared-cache / shared-infra 封装（5 支付 + 4 OTP + Map + OSS）
+- ✅ 三端登录页 UI + i18n 9 模块 × 5 语言（250 key/lang）
+- ✅ NestJS + 全局拦截器 + Swagger UI `/docs` + pino 日志 + Sentry
+- ✅ JWT（分端 TTL + Redis 黑名单）+ RBAC + device_type + audit 三道闸门
+- ✅ docker compose 一键起本地全栈（pg+postgis / redis / minio / mailhog / backup cron）
+- ✅ GitHub Actions CI（typecheck + test + contract + security + build）+ Deploy staging
+- ⚠️ 遗留：pnpm audit 17 high（next.js 14 升 15.5.16+ W2 处理）；staging 服务器待申请
 
-完整决策见 `CLAUDE.md` + Obsidian `04-后端记录/MeiMart-ADR-技术栈选型-20260617.md`。
+完整验收见 Obsidian `_inbox/04-后端记录/MeiMart-W1验收报告-20260621.md`。
+技术栈决策见 `CLAUDE.md` + Obsidian `04-后端记录/MeiMart-ADR-技术栈选型-20260617.md`。
 
 ## 环境要求
 
@@ -59,8 +62,8 @@ pnpm --filter @meimart/api db:seed
 
 # 6. 全栈启动（4 个 app 并行）
 pnpm dev
-# - apps/api 暂未接入 NestJS（D4-T1）→ 现在跳过
-# - apps/admin-web → http://localhost:3000
+# - apps/api → http://localhost:3000（NestJS + Swagger /docs + mock 登录）
+# - apps/admin-web → http://localhost:3001（Next.js；端口见 admin-web 配置）
 # - apps/client-app → 用 Expo Go 扫 QR
 # - apps/rider-app → 用 Expo Go 扫 QR
 ```
@@ -74,7 +77,15 @@ pnpm dev
 | Password | `admin12345` |
 | Role | `SUPER_ADMIN` |
 
-> 后端登录端点（D4-T6）才有，现在 admin-web 提交只走 console.log。
+### mock 登录端点（dev/staging 用，prod 自动隐藏）
+
+```bash
+# 三端 mock 登录（跳过密码校验，签发完整 token pair）
+curl -X POST http://localhost:3000/api/v1/common/auth/mock-login \
+  -H "Content-Type: application/json" \
+  -d '{"role":"super_admin","deviceType":"admin_web"}'
+# 返回 { user, accessToken, refreshToken, accessExpiresAt, refreshExpiresAt }
+```
 
 ## 常用命令
 
