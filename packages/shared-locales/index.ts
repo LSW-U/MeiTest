@@ -4,7 +4,7 @@
  * 三端共享 i18n 翻译资源（en/zh/id/pt/tet）。
  * - en: 完整 ~130 key（baseline）
  * - zh/id/pt: 当前用 en 内容占位，W2 各流程接入时翻译
- * - tet: 空对象 `{}`，frontend fallback 到 en
+ * - tet: 复制 en 内容（typecheck 结构一致要求；errors 在 D5-fix 补齐）
  *
  * 决策依据：CLAUDE.md L121 — packages/shared-locales/<lang>/common.json
  *          CLAUDE.md L40/L149/L242 — Tetum 留接口空翻译

@@ -15,14 +15,21 @@ import { enterTraceContext } from '../logger/trace-context';
 
 const TRACE_ID_HEADER = 'x-trace-id';
 
+// M-9: 全局扩展 Express Request 类型，避免每处访问 request.traceId 都要 as 断言
+declare module 'express' {
+  interface Request {
+    traceId?: string;
+  }
+}
+
 @Injectable()
 export class TraceIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     const incoming = req.headers[TRACE_ID_HEADER];
     const traceId = typeof incoming === 'string' && incoming.length > 0 ? incoming : genId();
 
-    // 注入 request.traceId（兼容旧代码）
-    (req as Request & { traceId: string }).traceId = traceId;
+    // 注入 request.traceId（全局类型扩展后无需 as 断言）
+    req.traceId = traceId;
     res.setHeader('X-Trace-Id', traceId);
 
     // 进入 ALS 上下文（Guard / Interceptor / Handler / Filter 都能拿 traceId）

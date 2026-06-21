@@ -10,6 +10,7 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
   zh: '中文',
   id: 'Bahasa Indonesia',
   pt: 'Português',
+  tet: 'Tetum',
 };
 
 export function LanguageSwitcher() {

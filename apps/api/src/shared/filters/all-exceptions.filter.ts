@@ -41,11 +41,12 @@ interface ErrorBody {
  * 按 Accept-Language 查错误码本地化 message
  *
  * fallback 链：lang → en → 原始 message
+ * 用 `||` 而非 `??`（空字符串也是 falsy，Tetum errors.json 空值时 fallback）
  */
 function localizeErrorMessage(code: string, originalMessage: string, acceptLanguage: string | undefined): string {
   const lang = detectLanguage(acceptLanguage) as Locale;
   const bundle = errorBundles[lang] ?? errorBundles[DEFAULT_LOCALE];
-  return bundle[code] ?? originalMessage;
+  return bundle[code] || originalMessage;
 }
 
 @Catch()
@@ -67,9 +68,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const resp = exception.getResponse();
       const isObjectResp = typeof resp === 'object' && resp !== null;
       const code = (isObjectResp && (resp as { code?: string }).code) || `E-HTTP-${status}`;
-      const originalMessage =
-        (isObjectResp && (resp as { message?: string }).message) ||
-        (typeof resp === 'string' ? resp : exception.message);
+      // M-7: ValidationPipe 多字段校验失败时 message 是 string[]，join('; ') 避免前端 alert 数组
+      const rawMessage = isObjectResp ? (resp as { message?: unknown }).message : undefined;
+      const originalMessage = Array.isArray(rawMessage)
+        ? rawMessage.join('; ')
+        : typeof rawMessage === 'string'
+          ? rawMessage
+          : typeof resp === 'string'
+            ? resp
+            : exception.message;
       const details = isObjectResp ? (resp as { details?: unknown }).details : undefined;
 
       const message = localizeErrorMessage(code, originalMessage ?? 'Request failed', acceptLanguage);
