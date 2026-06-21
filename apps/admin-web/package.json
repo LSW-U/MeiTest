@@ -10,6 +10,7 @@
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {
+    "@meimart/shared-locales": "workspace:*",
     "@meimart/shared-types": "workspace:*",
     "next": "^14.2.35",
     "next-intl": "^3.26.5",

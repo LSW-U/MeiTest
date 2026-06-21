@@ -1,0 +1,64 @@
+{
+  "order": {
+    "list": {
+      "title": "My orders",
+      "empty": "No orders yet"
+    },
+    "detail": {
+      "title": "Order detail"
+    },
+    "place": "Place order",
+    "cancel": "Cancel order",
+    "cancelReason": "Cancel reason",
+    "confirmReceive": "Confirm received",
+    "reorder": "Re-order",
+    "number": "Order number",
+    "createdAt": "Created at",
+    "warehouse": "Warehouse",
+    "remark": "Remark"
+  },
+  "status": {
+    "pendingPayment": "Pending payment",
+    "pendingConfirm": "Pending confirm",
+    "confirmed": "Confirmed",
+    "picked": "Picked",
+    "outForDelivery": "Out for delivery",
+    "deliveredPaid": "Delivered (paid)",
+    "delivered": "Delivered",
+    "deliveredUnpaid": "Delivered (unpaid)",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "items": {
+    "title": "Items",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "subtotal": "Subtotal"
+  },
+  "address": {
+    "title": "Delivery address",
+    "recipient": "Recipient",
+    "phone": "Phone",
+    "detail": "Address"
+  },
+  "amount": {
+    "total": "Total",
+    "delivery": "Delivery fee",
+    "discount": "Discount",
+    "payable": "Payable"
+  },
+  "tracking": {
+    "title": "Order tracking",
+    "rider": "Rider",
+    "riderName": "Rider name",
+    "riderPhone": "Rider phone",
+    "eta": "Estimated arrival",
+    "distance": "Distance"
+  },
+  "review": {
+    "title": "Write a review",
+    "rating": "Rating",
+    "content": "Review content",
+    "submit": "Submit review"
+  }
+}

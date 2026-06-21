@@ -1,0 +1,29 @@
+{
+  "profile": {
+    "title": "My profile",
+    "edit": "Edit profile",
+    "name": "Name",
+    "avatar": "Avatar",
+    "phone": "Phone",
+    "email": "Email"
+  },
+  "address": {
+    "title": "Addresses",
+    "add": "Add address",
+    "edit": "Edit",
+    "delete": "Delete",
+    "default": "Default",
+    "setAsDefault": "Set as default",
+    "name": "Recipient name",
+    "phone": "Recipient phone",
+    "region": "Region",
+    "detail": "Detail address",
+    "tag": "Tag (Home/Work)"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "empty": "No favorites yet"
+  }
+}

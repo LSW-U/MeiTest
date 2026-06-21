@@ -1,1 +1,23 @@
-{}
+{
+  "changeLanguage": "Switch language",
+  "languageName": {
+    "en": "English",
+    "zh": "中文",
+    "id": "Bahasa Indonesia",
+    "pt": "Português",
+    "tet": "Tetum"
+  },
+  "loading": "Loading...",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "search": "Search",
+  "noData": "No data",
+  "error": "Error",
+  "success": "Success",
+  "yes": "Yes",
+  "no": "No"
+}

@@ -1,0 +1,19 @@
+{
+  "shop": {
+    "title": "Shop",
+    "edit": "Edit shop",
+    "name": "Shop name",
+    "phone": "Phone",
+    "address": "Address",
+    "announcement": "Announcement",
+    "businessHours": "Business hours",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "category": {
+    "title": "Categories",
+    "list": "All categories"
+  }
+}

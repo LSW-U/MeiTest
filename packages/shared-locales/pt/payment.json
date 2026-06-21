@@ -1,0 +1,29 @@
+{
+  "payment": {
+    "title": "Payment",
+    "method": {
+      "title": "Payment method",
+      "cod": "Cash on delivery",
+      "bankTransfer": "Bank transfer",
+      "wechat": "WeChat Pay",
+      "paypal": "PayPal",
+      "stripe": "Stripe"
+    },
+    "processing": "Processing payment...",
+    "success": "Payment successful",
+    "failed": "Payment failed",
+    "refund": {
+      "title": "Refund",
+      "pending": "Refund processing",
+      "success": "Refund successful",
+      "failed": "Refund failed"
+    },
+    "receipt": {
+      "title": "Payment receipt",
+      "upload": "Upload receipt",
+      "preview": "Preview receipt"
+    },
+    "waiting": "Waiting for payment",
+    "cancel": "Cancel payment"
+  }
+}

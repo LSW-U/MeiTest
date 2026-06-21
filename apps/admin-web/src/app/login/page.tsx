@@ -7,7 +7,7 @@ import type { components } from '@meimart/shared-types';
 type LoginRequest = components['schemas']['LoginRequest'];
 
 export default function LoginPage() {
-  const t = useTranslations();
+  const t = useTranslations('auth');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);

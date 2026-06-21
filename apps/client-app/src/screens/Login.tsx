@@ -12,18 +12,19 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { components } from '@meimart/shared-types';
 import {
-  SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
-} from '../locales';
+  SUPPORTED_LOCALES,
+  type Locale,
+} from '@meimart/shared-locales';
 import { changeLanguage } from '../i18n';
 
 type LoginRequest = components['schemas']['LoginRequest'];
 
-const LOCALE_LABELS: Record<SupportedLanguage, string> = {
+const LOCALE_LABELS: Record<Locale, string> = {
   en: 'EN',
   zh: '中',
   id: 'ID',
   pt: 'PT',
+  tet: 'Tet',
 };
 
 export function LoginScreen() {
@@ -39,51 +40,51 @@ export function LoginScreen() {
     console.log('login payload:', body);
     setTimeout(() => {
       setSubmitting(false);
-      Alert.alert(t('login.devsStubNoBackend'));
+      Alert.alert(t('auth.login.devsStubNoBackend'));
     }, 300);
   }
 
-  function onLanguageChange(lng: SupportedLanguage) {
+  function onLanguageChange(lng: Locale) {
     changeLanguage(lng);
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>{t('login.title')}</Text>
+        <Text style={styles.title}>{t('auth.login.title')}</Text>
 
-        <Text style={styles.label}>{t('login.identifier')}</Text>
+        <Text style={styles.label}>{t('auth.login.identifier')}</Text>
         <TextInput
           style={styles.input}
           value={identifier}
           onChangeText={setIdentifier}
-          placeholder={t('login.identifierPlaceholder')}
+          placeholder={t('auth.login.identifierPlaceholder')}
           autoCapitalize="none"
           autoComplete="username"
         />
 
-        <Text style={styles.label}>{t('login.password')}</Text>
+        <Text style={styles.label}>{t('auth.login.password')}</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
-          placeholder={t('login.passwordPlaceholder')}
+          placeholder={t('auth.login.passwordPlaceholder')}
           secureTextEntry
           autoComplete="password"
         />
 
         <View style={styles.buttonWrap}>
           <Button
-            title={submitting ? t('login.submitting') : t('login.submit')}
+            title={submitting ? t('auth.login.submitting') : t('auth.login.submit')}
             onPress={onSubmit}
             disabled={submitting}
           />
         </View>
 
-        <Text style={styles.hint}>{t('login.seedAccountHint')}</Text>
+        <Text style={styles.hint}>{t('auth.login.seedAccountHint')}</Text>
 
         <View style={styles.langRow}>
-          {SUPPORTED_LANGUAGES.map((l) => (
+          {SUPPORTED_LOCALES.map((l) => (
             <Pressable
               key={l}
               onPress={() => onLanguageChange(l)}

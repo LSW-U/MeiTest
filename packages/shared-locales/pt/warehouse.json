@@ -1,0 +1,33 @@
+{
+  "warehouse": {
+    "title": "Warehouse",
+    "code": "Code",
+    "name": "Name",
+    "address": "Address",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "location": {
+    "title": "Location",
+    "scan": "Scan location"
+  },
+  "stock": {
+    "title": "Stock",
+    "in": "Inbound",
+    "out": "Outbound",
+    "adjust": "Adjust",
+    "current": "Current quantity",
+    "safety": "Safety stock",
+    "lowWarning": "Low stock warning"
+  },
+  "dispatch": {
+    "assign": "Assign order",
+    "pick": "Pick items"
+  },
+  "delivery": {
+    "fee": "Delivery fee",
+    "range": "Delivery range"
+  }
+}
