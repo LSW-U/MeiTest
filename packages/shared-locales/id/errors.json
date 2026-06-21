@@ -1,0 +1,23 @@
+{
+  "E-AUTH-001": "Jenis perangkat tidak cocok dengan endpoint ini",
+  "E-AUTH-002": "Autentikasi diperlukan",
+  "E-AUTH-003": "Sesi kedaluwarsa, silakan masuk lagi",
+  "E-AUTH-004": "Token autentikasi tidak valid",
+  "E-AUTH-005": "Token refresh tidak valid atau kedaluwarsa",
+  "E-AUTH-006": "Sesi telah dicabut, silakan masuk lagi",
+  "E-AUTH-007": "Akses dilarang",
+  "E-AUTH-008": "Kontrol akses endpoint salah konfigurasi",
+  "E-AUTH-009": "Pengguna mock tidak ditemukan (dev/staging saja)",
+  "E-AUTH-010": "Peran Anda tidak diizinkan melakukan tindakan ini",
+  "E-COMMON-001": "Parameter permintaan tidak valid",
+  "E-COMMON-002": "Kesalahan server internal, silakan coba lagi nanti",
+  "E-COMMON-003": "Sumber daya tidak ditemukan",
+  "E-COMMON-004": "Terlalu banyak permintaan, silakan perlambat",
+  "E-ORDER-001": "Alamat pengiriman di luar jangkauan layanan",
+  "E-ORDER-002": "Beberapa item kehabisan stok",
+  "E-ORDER-003": "Status pesanan tidak mengizinkan tindakan ini",
+  "E-ORDER-004": "Pesanan tidak ditemukan",
+  "E-PAYMENT-001": "Metode pembayaran tidak didukung",
+  "E-PAYMENT-002": "Pembayaran kedaluwarsa, silakan coba lagi",
+  "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode"
+}

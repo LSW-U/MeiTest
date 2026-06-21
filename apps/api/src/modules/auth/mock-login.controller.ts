@@ -58,7 +58,7 @@ export class MockLoginController {
     if (!user) {
       throw new HttpException(
         {
-          code: 'E-AUTH-MOCK-USER-NOT-FOUND',
+          code: 'E-AUTH-009',
           message: `Mock user not found (need seed admin with phone=${SEED_ADMIN_PHONE})`,
         },
         HttpStatus.NOT_FOUND,

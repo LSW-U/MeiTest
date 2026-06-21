@@ -89,7 +89,7 @@ export class AuthService {
       return await this.jwt.verifyAsync<JwtPayload>(token, { secret: this.accessSecret });
     } catch {
       throw new UnauthorizedException({
-        code: 'E-AUTH-TOKEN-EXPIRED',
+        code: 'E-AUTH-003',
         message: 'Access token expired or invalid',
       });
     }
@@ -106,19 +106,19 @@ export class AuthService {
       payload = await this.jwt.verifyAsync<RefreshPayload>(token, { secret: this.refreshSecret });
     } catch {
       throw new UnauthorizedException({
-        code: 'E-AUTH-REFRESH-TOKEN-INVALID',
+        code: 'E-AUTH-005',
         message: 'Refresh token invalid or expired',
       });
     }
     if (!payload.jti) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-REFRESH-TOKEN-INVALID',
+        code: 'E-AUTH-005',
         message: 'Refresh token missing jti',
       });
     }
     if (await isBlacklisted(payload.jti)) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-REFRESH-TOKEN-REVOKED',
+        code: 'E-AUTH-006',
         message: 'Refresh token has been revoked',
       });
     }

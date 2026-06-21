@@ -33,7 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload): Promise<RequestUser> {
     if (!payload.sub || !payload.role || !payload.deviceType) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-TOKEN-INVALID',
+        code: 'E-AUTH-004',
         message: 'Invalid token payload',
       });
     }

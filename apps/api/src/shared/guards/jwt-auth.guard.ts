@@ -34,7 +34,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   handleRequest<TUser = RequestUser>(err: unknown, user: unknown): TUser {
     if (err || !user) {
       throw err ?? new UnauthorizedException({
-        code: 'E-AUTH-UNAUTHORIZED',
+        code: 'E-AUTH-002',
         message: 'Authentication required',
       });
     }

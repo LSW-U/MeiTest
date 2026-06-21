@@ -48,6 +48,9 @@ importers:
       '@meimart/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
+      '@meimart/shared-locales':
+        specifier: workspace:*
+        version: link:../../packages/shared-locales
       '@meimart/shared-utils':
         specifier: workspace:*
         version: link:../../packages/shared-utils

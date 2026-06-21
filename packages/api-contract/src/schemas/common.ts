@@ -49,7 +49,13 @@ export function PaginatedResponse<T extends z.ZodTypeAny>(item: T) {
 export const ErrorResponse = z.object({
   success: z.literal(false),
   error: z.object({
-    code: z.string(),
+    /** 错误码格式 E-MODULE-NNN（如 E-AUTH-001）或 E-HTTP-NNN 兜底 */
+    code: z
+      .string()
+      .regex(
+        /^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$/,
+        'INVALID_ERROR_CODE_FORMAT',
+      ),
     message: z.string(),
     details: z.record(z.string(), z.unknown()).optional(),
   }),

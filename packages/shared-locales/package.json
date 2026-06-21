@@ -2,7 +2,9 @@
   "name": "@meimart/shared-locales",
   "version": "0.1.0",
   "private": true,
-  "files": ["en", "id", "zh", "pt"],
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "files": ["en", "id", "zh", "pt", "tet", "index.ts"],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo"

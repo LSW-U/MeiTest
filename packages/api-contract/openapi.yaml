@@ -67,6 +67,7 @@ components:
           properties:
             code:
               type: string
+              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
             message:
               type: string
             details:
@@ -897,6 +898,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1002,6 +1004,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1060,6 +1063,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1141,6 +1145,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1514,6 +1519,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1745,6 +1751,7 @@ paths:
                     properties:
                       code:
                         type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:

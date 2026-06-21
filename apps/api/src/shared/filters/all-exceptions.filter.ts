@@ -1,16 +1,16 @@
 /**
- * 全局异常过滤器：统一错误响应格式
+ * 全局异常过滤器：统一错误响应格式 + Accept-Language 本地化
  *
- * 决策依据：D4-T1 acceptance — 异常返回统一结构 { code, message, traceId, i18nKey }
+ * 决策依据：D4-T1 + D5-T2 — 异常返回统一结构 { code, message, traceId, i18nKey }
  *
  * 响应格式：
  *   {
  *     success: false,
  *     error: {
- *       code: "E-COMMON-001",         // 错误码（E-MODULE-NUMBER 格式）
- *       message: "面向用户的友好提示",  // 已按 Accept-Language 本地化（D5-T2 完善）
- *       traceId: "uuid",                // 贯穿 Sentry / 日志
- *       i18nKey?: "errors.E-COMMON-001" // 前端查 i18n 翻译
+ *       code: "E-AUTH-001",
+ *       message: "本地化后的友好提示",  // 按 Accept-Language 查 shared-locales/errors
+ *       traceId: "uuid",
+ *       i18nKey?: "errors.E-AUTH-001"
  *     }
  *   }
  */
@@ -20,9 +20,11 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { detectLanguage } from '@meimart/shared-utils';
+import { errorBundles, DEFAULT_LOCALE, type Locale } from '@meimart/shared-locales';
+import { logger } from '../logger/logger';
 
 interface ErrorBody {
   success: false;
@@ -35,10 +37,19 @@ interface ErrorBody {
   };
 }
 
+/**
+ * 按 Accept-Language 查错误码本地化 message
+ *
+ * fallback 链：lang → en → 原始 message
+ */
+function localizeErrorMessage(code: string, originalMessage: string, acceptLanguage: string | undefined): string {
+  const lang = detectLanguage(acceptLanguage) as Locale;
+  const bundle = errorBundles[lang] ?? errorBundles[DEFAULT_LOCALE];
+  return bundle[code] ?? originalMessage;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
-
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
@@ -46,6 +57,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest();
     const traceId = (request?.traceId as string | undefined) ?? 'no-trace';
+    const acceptLanguage = request?.headers?.['accept-language'] as string | undefined;
 
     let status: number;
     let body: ErrorBody;
@@ -55,16 +67,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const resp = exception.getResponse();
       const isObjectResp = typeof resp === 'object' && resp !== null;
       const code = (isObjectResp && (resp as { code?: string }).code) || `E-HTTP-${status}`;
-      const message =
+      const originalMessage =
         (isObjectResp && (resp as { message?: string }).message) ||
         (typeof resp === 'string' ? resp : exception.message);
       const details = isObjectResp ? (resp as { details?: unknown }).details : undefined;
+
+      const message = localizeErrorMessage(code, originalMessage ?? 'Request failed', acceptLanguage);
 
       body = {
         success: false,
         error: {
           code,
-          message: message ?? 'Request failed',
+          message,
           traceId,
           i18nKey: `errors.${code}`,
           ...(details !== undefined && { details }),
@@ -74,7 +88,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // 未捕获异常 → 500
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       const err = exception as { message?: string; stack?: string };
-      this.logger.error({
+      logger.error({
         msg: 'unhandled_exception',
         traceId,
         error: err?.message ?? String(exception),
@@ -84,10 +98,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       body = {
         success: false,
         error: {
-          code: 'E-COMMON-INTERNAL',
-          message: 'Internal server error',
+          code: 'E-COMMON-002',
+          message: localizeErrorMessage('E-COMMON-002', 'Internal server error', acceptLanguage),
           traceId,
-          i18nKey: 'errors.E-COMMON-INTERNAL',
+          i18nKey: 'errors.E-COMMON-002',
         },
       };
     }

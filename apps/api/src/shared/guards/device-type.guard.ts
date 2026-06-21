@@ -52,7 +52,7 @@ export class DeviceTypeGuard implements CanActivate {
 
     if (user.deviceType !== matchedRule.deviceType) {
       throw new ForbiddenException({
-        code: 'E-AUTH-DEVICE-TYPE-MISMATCH',
+        code: 'E-AUTH-001',
         message: `Endpoint requires deviceType='${matchedRule.deviceType}', but token has '${user.deviceType}'`,
         details: {
           urlPrefix: matchedRule.prefix,

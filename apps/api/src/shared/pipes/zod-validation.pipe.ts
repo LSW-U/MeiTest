@@ -30,7 +30,7 @@ export class ZodValidationPipe implements PipeTransform {
           code: err.code,
         }));
         throw new BadRequestException({
-          code: 'E-COMMON-VALIDATION',
+          code: 'E-COMMON-001',
           message: 'Validation failed',
           details,
         });

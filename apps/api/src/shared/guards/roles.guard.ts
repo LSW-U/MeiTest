@@ -37,7 +37,7 @@ export class RolesGuard implements CanActivate {
     // least privilege：未声明 @Roles() 默认拒绝（防业务 controller 忘加）
     if (!requiredRoles || requiredRoles.length === 0) {
       throw new ForbiddenException({
-        code: 'E-AUTH-ROLES-NOT-DECLARED',
+        code: 'E-AUTH-008',
         message: 'Endpoint must declare @Roles(...) or @Public()',
       });
     }
@@ -47,14 +47,14 @@ export class RolesGuard implements CanActivate {
 
     if (!user) {
       throw new ForbiddenException({
-        code: 'E-AUTH-FORBIDDEN',
+        code: 'E-AUTH-007',
         message: 'No authenticated user',
       });
     }
 
     if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException({
-        code: 'E-AUTH-ROLE-INSUFFICIENT',
+        code: 'E-AUTH-010',
         message: `Role '${user.role}' is not allowed. Required: ${requiredRoles.join(' | ')}`,
         details: { requiredRoles, currentRole: user.role },
       });
