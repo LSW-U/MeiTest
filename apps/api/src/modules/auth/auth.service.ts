@@ -21,6 +21,7 @@ import {
   REFRESH_TTL_SECONDS,
 } from './auth.types';
 import { blacklistJti, isBlacklisted } from '../../shared/cache';
+import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 
 /** Refresh token payload（不含 role，避免权限长期暴露） */
 interface RefreshPayload {
@@ -142,18 +143,11 @@ export class AuthService {
   }
 
   private get accessSecret(): string {
-    const s = process.env.JWT_ACCESS_SECRET;
-    if (!s || s.length < 32) {
-      throw new Error('JWT_ACCESS_SECRET must be set and >= 32 chars');
-    }
-    return s;
+    // P0-1：抽到 assertJwtSecret，与 JwtStrategy 构造函数共享校验逻辑
+    return assertJwtSecret('JWT_ACCESS_SECRET');
   }
 
   private get refreshSecret(): string {
-    const s = process.env.JWT_REFRESH_SECRET;
-    if (!s || s.length < 32) {
-      throw new Error('JWT_REFRESH_SECRET must be set and >= 32 chars');
-    }
-    return s;
+    return assertJwtSecret('JWT_REFRESH_SECRET');
   }
 }

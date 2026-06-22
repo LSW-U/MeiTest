@@ -13,6 +13,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Role, DeviceType } from '@meimart/api-contract';
 import type { JwtPayload } from '../auth.types';
+import { assertJwtSecret } from '../../../shared/auth/assert-jwt-secret';
 
 export interface RequestUser {
   sub: string;
@@ -26,7 +27,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET ?? '',
+      // P0-1：长度校验抽到 assertJwtSecret，与 AuthService getter 一致
+      // （原 `?? ''` 对空字符串无效，会 verify 静默失败）
+      secretOrKey: assertJwtSecret('JWT_ACCESS_SECRET'),
     });
   }
 

@@ -15,6 +15,7 @@ import { ValidationPipe, LoggerService } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { logger as pinoLogger } from './shared/logger/logger';
 import { initSentry } from './shared/monitoring/sentry';
+import { assertAllJwtSecrets } from './shared/auth/assert-jwt-secret';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
 import fs from 'node:fs';
@@ -22,6 +23,9 @@ import path from 'node:path';
 
 // Sentry 最先初始化（在 NestFactory.create 之前，确保启动错误也被捕获）
 initSentry();
+
+// P0-1：JWT secret 校验紧随 Sentry 之后（漏配时 fail-fast，bootstrap 直接挂）
+assertAllJwtSecrets();
 
 /** pino wrapper（适配 NestJS LoggerService 接口） */
 const nestLogger: LoggerService = {
