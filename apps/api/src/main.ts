@@ -45,9 +45,17 @@ async function bootstrap() {
   // 替换 NestJS 默认 logger 为 pino（在 listen 前注入，启动日志也走 pino）
   app.useLogger(nestLogger);
 
-  // CORS（dev/staging 不同 origin）
+  // CORS（dev/staging/prod 不同 origin 白名单）
+  // P0-3：prod 强制 CORS_ORIGIN 非空（避免漏配导致 origin=true 反射任意域名 + credentials=true 引发 CSRF）
+  //       dev 默认 true 方便本地多端口联调（admin-web 3001 / client-app 8081 等）
+  const corsOriginEnv = process.env.CORS_ORIGIN;
+  if (!corsOriginEnv && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CORS_ORIGIN must be set in production (comma-separated allowlist, e.g. https://admin.meimart.com,https://www.meimart.com)',
+    );
+  }
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+    origin: corsOriginEnv ? corsOriginEnv.split(',').map((s) => s.trim()) : true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id'],
