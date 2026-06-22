@@ -199,7 +199,6 @@ model User {
   addresses       Address[]
   favorites       Favorite[]
   auditLogs       AuditLog[]
-  refreshTokens   RefreshToken[]
   riderProfile    RiderProfile?
   warehouseStaff  WarehouseStaff?
   customerService CustomerService?
@@ -221,26 +220,12 @@ model CustomerService {
 }
 
 // ============================================================================
-// 2. RefreshToken(v0.3 决策 F:logout 加 Redis 黑名单 blacklist:{jti})
-//    此表可选 — dev 期可只用 Redis,prod 期加表方便审计
+// 2. RefreshToken 表已删除（M-1 修复，2026-06-22）
+//    原设计：DB 表 + Redis 黑名单双写，但代码只写 Redis，表永远空。
+//    风险：Redis 重启会丢失黑名单，已 logout token 复活。
+//    决策：MVP 阶段明确只依赖 Redis（单点风险接受，W7 上线前评估是否补 DB 兜底）。
+//    删表后，logout 仍然只走 Redis（auth.service.ts:133-142 行不变）。
 // ============================================================================
-
-model RefreshToken {
-  id         String     @id @default(uuid())
-  userId     String     @map("user_id")
-  jti        String     @unique // JWT ID,logout 黑名单 key
-  tokenHash  String     @unique @map("token_hash") // SHA256 of refresh JWT
-  deviceType DeviceType @map("device_type")
-  expiresAt  DateTime   @map("expires_at")
-  revokedAt  DateTime?  @map("revoked_at") // 不为 null = 已注销
-  createdAt  DateTime   @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("refresh_tokens")
-}
 
 // ============================================================================
 // 3. Shop(v0.3:单一商家 1 条预置,多语言 JSON)
