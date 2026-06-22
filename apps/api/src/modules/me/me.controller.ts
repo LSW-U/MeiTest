@@ -5,20 +5,19 @@
  *
  * 用途：D4-T7 e2e 验证 JwtAuthGuard + DeviceTypeGuard + RolesGuard 三道闸门
  *
+ * P0-2：APP_GUARD 已全局注册，controller 无需 @UseGuards(...)，
+ *      只声明 @Roles(...) 即可（least privilege 防线在 RolesGuard 兜底）
+ *
  * W2 替换：
  *   - /api/v1/admin/me → modules/profile/profile.controller.ts AdminProfileController（后台用户资料）
  *   - /api/v1/client/me → modules/profile/profile.controller.ts ClientProfileController（客户端用户资料）
  *   - /api/v1/rider/me → modules/rider/rider.controller.ts RiderController.profile（骑手资料）
  * 替换后此文件删除。
  */
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
-import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
-import { DeviceTypeGuard } from '../../shared/guards/device-type.guard';
-import { RolesGuard } from '../../shared/guards/roles.guard';
+import { Controller, Get, Request } from '@nestjs/common';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
-@UseGuards(JwtAuthGuard, DeviceTypeGuard, RolesGuard)
 @Controller('api/v1')
 export class MeController {
   @Get('admin/me')

@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR, HttpAdapterHost, Reflector } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD, HttpAdapterHost, Reflector } from '@nestjs/core';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
@@ -21,6 +21,14 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     JwtAuthGuard,
     RolesGuard,
     DeviceTypeGuard,
+    // P0-2：APP_GUARD 全局注册三道闸门（顺序：Jwt → DeviceType → Roles）
+    //   - JwtAuthGuard：默认所有端点需要登录，公开端点显式 @Public()
+    //   - DeviceTypeGuard：拒跨端调用（client/rider/admin 前缀对应 deviceType）
+    //   - RolesGuard：least privilege，未声明 @Roles() 默认拒（防业务 controller 忘加）
+    // 避免每个 controller 手动 @UseGuards，新增 controller 一忘加就裸奔
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: DeviceTypeGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     // 全局拦截器（顺序：Logging → Audit）
     // TraceId 改用 Middleware（在 Guard 之前），Interceptor 仅保留兼容
     {
