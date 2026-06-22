@@ -59,7 +59,14 @@ export class EmailStrategy implements OtpStrategy {
       `,
     });
 
-    logger.info(`[EMAIL] sendCode to=${input.target} scene=${input.scene} code=${code}`);
+    logger.info({
+      msg: '[EMAIL] sendCode',
+      email: input.target,
+      scene: input.scene,
+      // M-5：不输出 code 原文（dev 看 MailHog，prod 看 SendGrid 后台）
+      // 显式 SMS_STUB_CODE 时才打印（仅 dev debug）
+      ...(process.env.OTP_DEBUG_CODE === '1' ? { codeDebug: code } : {}),
+    });
     return { expireIn: CODE_TTL_SECONDS };
   }
 
@@ -74,7 +81,7 @@ export class EmailStrategy implements OtpStrategy {
       return { valid: false, reason: 'WRONG_CODE' };
     }
     await redis.del(key);
-    logger.info(`[EMAIL] verifyCode to=${input.target} scene=${input.scene} → PASS`);
+    logger.info({ msg: '[EMAIL] verifyCode', email: input.target, scene: input.scene, result: 'PASS' });
     return { valid: true };
   }
 }

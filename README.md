@@ -10,7 +10,7 @@
 - ✅ Monorepo + pnpm workspace + Turborepo
 - ✅ 契约（zod + OpenAPI + TS 类型自动生成 + CI 一致性强校验）
 - ✅ PostgreSQL 16 + PostGIS 3.4 + GIST 索引（init migration 已 apply）
-- ✅ 27 张基线表（v0.3 决策扩展）+ 种子数据可登录
+- ✅ 29 张基线表（v0.3 决策扩展）+ 种子数据可登录
 - ✅ shared-db / shared-cache / shared-infra 封装（5 支付 + 4 OTP + Map + OSS）
 - ✅ 三端登录页 UI + i18n 9 模块 × 5 语言（250 key/lang）
 - ✅ NestJS + 全局拦截器 + Swagger UI `/docs` + pino 日志 + Sentry

@@ -50,9 +50,10 @@ jobs:
             docker compose pull &&
             docker compose up -d &&
             sleep 10 &&
-            pnpm --filter @meimart/api exec prisma migrate deploy &&
-            pnpm --filter @meimart/api db:seed
+            pnpm --filter @meimart/api exec prisma migrate deploy
           '
+        # M-7：删除 db:seed（seed.ts 用 deleteMany 清表，每次部署会清空 staging 数据，
+        #      QA 测试数据被覆盖）。需要重置 staging 数据时手动跑 seed-staging workflow
 
       - name: Health check (smoke test)
         run: |

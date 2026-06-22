@@ -1,0 +1,48 @@
+name: Seed Staging
+
+# 手动触发：重置 staging 数据为 seed 初始状态
+# （deploy.yml 不再自动跑 db:seed，避免每次部署清空 QA 测试数据）
+#
+# 使用场景：
+#   1. 首次部署后初始化数据
+#   2. staging 数据被污染需要重置
+#   3. QA 测试需要回到已知状态
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '确认清空 staging 数据并重新 seed？(yes/no)'
+        required: true
+        default: 'no'
+
+jobs:
+  seed:
+    name: Seed Staging Database
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Guard against accidental runs
+        if: ${{ github.event.inputs.confirm != 'yes' }}
+        run: |
+          echo "❌ Confirm input must be 'yes' to proceed. Got: ${{ github.event.inputs.confirm }}"
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run db:seed on staging
+        run: |
+          ssh -i ~/.ssh/staging_key ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} '
+            cd /opt/meimart &&
+            pnpm --filter @meimart/api db:seed
+          '
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/staging_key

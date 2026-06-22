@@ -18,7 +18,6 @@ import type {
   OtpVerifyOutput,
 } from './otp-strategy';
 
-const STUB_TAG = '[SMS_STUB]';
 const CODE_TTL_SECONDS = 5 * 60; // 5 分钟
 const KEY_PREFIX = 'otp:sms:';
 
@@ -31,9 +30,14 @@ export class SmsStrategy implements OtpStrategy {
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     await redis.set(key, stubCode, 'EX', CODE_TTL_SECONDS);
 
-    logger.info(
-      `${STUB_TAG} sendCode target=${input.target} scene=${input.scene} code=${stubCode} (stub)`,
-    );
+    logger.info({
+      msg: '[SMS_STUB] sendCode',
+      phone: input.target,
+      scene: input.scene,
+      // M-5：不输出 code 原文。OTP_DEBUG_CODE=1 时显式打开（仅 dev debug）
+      ...(process.env.OTP_DEBUG_CODE === '1' ? { codeDebug: stubCode } : {}),
+      note: 'stub code in Redis (SMS_STUB_CODE env or default 123456)',
+    });
     return { expireIn: CODE_TTL_SECONDS };
   }
 
@@ -51,7 +55,7 @@ export class SmsStrategy implements OtpStrategy {
 
     // 验证成功后删除（一次性）
     await redis.del(key);
-    logger.info(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
+    logger.info({ msg: '[SMS_STUB] verifyCode', phone: input.target, scene: input.scene, result: 'PASS' });
     return { valid: true };
   }
 }

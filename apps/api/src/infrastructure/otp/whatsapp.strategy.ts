@@ -15,7 +15,6 @@ import type {
   OtpVerifyOutput,
 } from './otp-strategy';
 
-const STUB_TAG = '[WA_STUB]';
 const CODE_TTL_SECONDS = 5 * 60;
 const KEY_PREFIX = 'otp:wa:';
 
@@ -28,9 +27,14 @@ export class WhatsappStrategy implements OtpStrategy {
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     await redis.set(key, stubCode, 'EX', CODE_TTL_SECONDS);
 
-    logger.info(
-      `${STUB_TAG} sendCode target=${input.target} scene=${input.scene} code=${stubCode} (stub)`,
-    );
+    logger.info({
+      msg: '[WA_STUB] sendCode',
+      phone: input.target,
+      scene: input.scene,
+      // M-5：不输出 code 原文。OTP_DEBUG_CODE=1 时显式打开（仅 dev debug）
+      ...(process.env.OTP_DEBUG_CODE === '1' ? { codeDebug: stubCode } : {}),
+      note: 'stub code in Redis (WA_STUB_CODE env or default 123456)',
+    });
     return { expireIn: CODE_TTL_SECONDS };
   }
 
@@ -42,7 +46,7 @@ export class WhatsappStrategy implements OtpStrategy {
     if (stored !== input.code) return { valid: false, reason: 'WRONG_CODE' };
 
     await redis.del(key);
-    logger.info(`${STUB_TAG} verifyCode target=${input.target} scene=${input.scene} → PASS`);
+    logger.info({ msg: '[WA_STUB] verifyCode', phone: input.target, scene: input.scene, result: 'PASS' });
     return { valid: true };
   }
 }

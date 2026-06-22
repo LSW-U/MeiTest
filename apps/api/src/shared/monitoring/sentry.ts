@@ -9,6 +9,11 @@
  *   - traceId 通过 Sentry.setTag('traceId', getTraceId()) 自动贯穿
  *
  * 无 SENTRY_DSN 时跳过初始化（dev 不上报）
+ *
+ * 采样率（M-8 修复）：
+ *   - dev 默认 0.0（避免本地调试耗尽 Sentry 免费配额 5k events/月）
+ *   - prod 默认 1.0（生产全采样，便于追踪问题）
+ *   - 显式 SENTRY_TRACES_SAMPLE_RATE 覆盖
  */
 import * as Sentry from '@sentry/node';
 import { getTraceId } from '../logger/trace-context';
@@ -21,11 +26,14 @@ export function initSentry(): void {
     return;
   }
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV ?? 'development',
-    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? '1.0'),
-    profilesSampleRate: 1.0,
+    // M-8：dev 默认 0.0（防止本地调试耗尽 Sentry 免费配额），prod 默认 1.0
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? (isProd ? '1.0' : '0.0')),
+    profilesSampleRate: isProd ? 1.0 : 0.0,
     integrations: [],
     beforeSend(event) {
       // 自动注入 traceId 到 Sentry 事件（与 pino 日志关联）
@@ -37,7 +45,11 @@ export function initSentry(): void {
     },
   });
 
-  logger.info({ msg: 'sentry_initialized', env: process.env.NODE_ENV });
+  logger.info({
+    msg: 'sentry_initialized',
+    env: process.env.NODE_ENV,
+    tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ?? (isProd ? 1.0 : 0.0),
+  });
 }
 
 /**

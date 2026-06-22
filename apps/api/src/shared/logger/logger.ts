@@ -18,8 +18,13 @@ const globalForLogger = globalThis as unknown as { __meimartLogger?: Logger };
 
 /** 全字段 mask（password/token/secret 等） */
 const FULL_REDACT_KEYS = ['password', 'token', 'authorization', 'secret', 'apikey', 'clientsecret'];
-/** 部分脱敏（last 4 digits） */
-const LAST4_KEYS = ['phone', 'telephone', 'idcard', 'mobile'];
+/**
+ * 部分脱敏（last 4 digits/chars）
+ *
+ * 含 email：邮箱地址同属 PII，按 last-4 mask（不完美但避免原文写日志）
+ * 完整邮箱脱敏（***@domain.com）按需后续优化
+ */
+const LAST4_KEYS = ['phone', 'telephone', 'idcard', 'mobile', 'email'];
 
 /**
  * 递归 mask 对象（精确小写匹配，WeakSet 防循环引用）
