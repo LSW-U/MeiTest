@@ -24,5 +24,7 @@
   "E-ORDER-004": "Encomenda não encontrada",
   "E-PAYMENT-001": "Método de pagamento não suportado",
   "E-PAYMENT-002": "Pagamento expirou, tente novamente",
-  "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método"
+  "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método",
+  "E-WAREHOUSE-001": "Código de armazém já existe",
+  "E-WAREHOUSE-002": "Fora da área de entrega"
 }

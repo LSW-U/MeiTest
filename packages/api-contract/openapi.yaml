@@ -924,7 +924,7 @@ components:
             - STRIPE
         paymentStatus:
           type: string
-          enum: &a13
+          enum: &a19
             - UNPAID
             - PAID
             - REFUNDED
@@ -2495,6 +2495,735 @@ paths:
                     - operatingHours
                     - createdAt
                     - updatedAt
+  /api/v1/admin/warehouses:
+    get:
+      tags:
+        - warehouse
+      responses:
+        "200":
+          description: 后台仓库列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    code:
+                      type: string
+                      pattern: ^W\d{2}$
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    coverageArea:
+                      type: object
+                      nullable: true
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - Polygon
+                        coordinates:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: array
+                              items:
+                                type: number
+                      required:
+                        - type
+                        - coordinates
+                    centerPoint:
+                      type: object
+                      nullable: true
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - Point
+                        coordinates:
+                          type: array
+                          items:
+                            type: number
+                          minItems: 2
+                          maxItems: 2
+                      required:
+                        - type
+                        - coordinates
+                    centerLat:
+                      type: number
+                      nullable: true
+                    centerLng:
+                      type: number
+                      nullable: true
+                    address:
+                      type: string
+                    operatingHours:
+                      type: object
+                      nullable: true
+                      properties:
+                        mon: &a12
+                          type: object
+                          properties:
+                            open:
+                              type: string
+                              pattern: ^\d{2}:\d{2}$
+                            close:
+                              type: string
+                              pattern: ^\d{2}:\d{2}$
+                          required:
+                            - open
+                            - close
+                        tue: *a12
+                        wed: *a12
+                        thu: *a12
+                        fri: *a12
+                        sat: *a12
+                        sun: *a12
+                    deliveryFee:
+                      type: integer
+                      minimum: 0
+                      default: 0
+                    isActive:
+                      type: boolean
+                      default: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - code
+                    - name
+                    - coverageArea
+                    - centerPoint
+                    - centerLat
+                    - centerLng
+                    - address
+                    - operatingHours
+                    - createdAt
+                    - updatedAt
+    post:
+      tags:
+        - warehouse
+      description: 创建仓库（写 PostGIS center + coverage）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  pattern: ^W\d{2}$
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                coverageArea:
+                  type: object
+                  nullable: true
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Polygon
+                    coordinates:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                  required:
+                    - type
+                    - coordinates
+                centerLat:
+                  type: number
+                centerLng:
+                  type: number
+                address:
+                  type: string
+                operatingHours:
+                  type: object
+                  nullable: true
+                  properties:
+                    mon: &a13
+                      type: object
+                      properties:
+                        open:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                        close:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                      required:
+                        - open
+                        - close
+                    tue: *a13
+                    wed: *a13
+                    thu: *a13
+                    fri: *a13
+                    sat: *a13
+                    sun: *a13
+                deliveryFee:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+              required:
+                - name
+                - coverageArea
+                - centerLat
+                - centerLng
+                - address
+                - operatingHours
+                - deliveryFee
+                - isActive
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                    pattern: ^W\d{2}$
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  coverageArea:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Polygon
+                      coordinates:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                    required:
+                      - type
+                      - coordinates
+                  centerPoint:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Point
+                      coordinates:
+                        type: array
+                        items:
+                          type: number
+                        minItems: 2
+                        maxItems: 2
+                    required:
+                      - type
+                      - coordinates
+                  centerLat:
+                    type: number
+                    nullable: true
+                  centerLng:
+                    type: number
+                    nullable: true
+                  address:
+                    type: string
+                  operatingHours:
+                    type: object
+                    nullable: true
+                    properties:
+                      mon: &a14
+                        type: object
+                        properties:
+                          open:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                          close:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                        required:
+                          - open
+                          - close
+                      tue: *a14
+                      wed: *a14
+                      thu: *a14
+                      fri: *a14
+                      sat: *a14
+                      sun: *a14
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  isActive:
+                    type: boolean
+                    default: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - code
+                  - name
+                  - coverageArea
+                  - centerPoint
+                  - centerLat
+                  - centerLng
+                  - address
+                  - operatingHours
+                  - createdAt
+                  - updatedAt
+        "409":
+          description: WAREHOUSE_CODE_DUPLICATE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/warehouses/{id}:
+    get:
+      tags:
+        - warehouse
+      responses:
+        "200":
+          description: 仓库详情（含 coverageArea GeoJSON）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                    pattern: ^W\d{2}$
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  coverageArea:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Polygon
+                      coordinates:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                    required:
+                      - type
+                      - coordinates
+                  centerPoint:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Point
+                      coordinates:
+                        type: array
+                        items:
+                          type: number
+                        minItems: 2
+                        maxItems: 2
+                    required:
+                      - type
+                      - coordinates
+                  centerLat:
+                    type: number
+                    nullable: true
+                  centerLng:
+                    type: number
+                    nullable: true
+                  address:
+                    type: string
+                  operatingHours:
+                    type: object
+                    nullable: true
+                    properties:
+                      mon: &a15
+                        type: object
+                        properties:
+                          open:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                          close:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                        required:
+                          - open
+                          - close
+                      tue: *a15
+                      wed: *a15
+                      thu: *a15
+                      fri: *a15
+                      sat: *a15
+                      sun: *a15
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  isActive:
+                    type: boolean
+                    default: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - code
+                  - name
+                  - coverageArea
+                  - centerPoint
+                  - centerLat
+                  - centerLng
+                  - address
+                  - operatingHours
+                  - createdAt
+                  - updatedAt
+        "404":
+          description: WAREHOUSE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    patch:
+      tags:
+        - warehouse
+      description: 更新仓库（普通字段 + 可选 PostGIS）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  pattern: ^W\d{2}$
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                coverageArea:
+                  type: object
+                  nullable: true
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Polygon
+                    coordinates:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                  required:
+                    - type
+                    - coordinates
+                centerLat:
+                  type: number
+                centerLng:
+                  type: number
+                address:
+                  type: string
+                operatingHours:
+                  type: object
+                  nullable: true
+                  properties:
+                    mon: &a16
+                      type: object
+                      properties:
+                        open:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                        close:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                      required:
+                        - open
+                        - close
+                    tue: *a16
+                    wed: *a16
+                    thu: *a16
+                    fri: *a16
+                    sat: *a16
+                    sun: *a16
+                deliveryFee:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+              required:
+                - name
+                - coverageArea
+                - centerLat
+                - centerLng
+                - address
+                - operatingHours
+                - deliveryFee
+                - isActive
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                    pattern: ^W\d{2}$
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  coverageArea:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Polygon
+                      coordinates:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                    required:
+                      - type
+                      - coordinates
+                  centerPoint:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Point
+                      coordinates:
+                        type: array
+                        items:
+                          type: number
+                        minItems: 2
+                        maxItems: 2
+                    required:
+                      - type
+                      - coordinates
+                  centerLat:
+                    type: number
+                    nullable: true
+                  centerLng:
+                    type: number
+                    nullable: true
+                  address:
+                    type: string
+                  operatingHours:
+                    type: object
+                    nullable: true
+                    properties:
+                      mon: &a17
+                        type: object
+                        properties:
+                          open:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                          close:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                        required:
+                          - open
+                          - close
+                      tue: *a17
+                      wed: *a17
+                      thu: *a17
+                      fri: *a17
+                      sat: *a17
+                      sun: *a17
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  isActive:
+                    type: boolean
+                    default: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - code
+                  - name
+                  - coverageArea
+                  - centerPoint
+                  - centerLat
+                  - centerLng
+                  - address
+                  - operatingHours
+                  - createdAt
+                  - updatedAt
+    delete:
+      tags:
+        - warehouse
+      responses:
+        "200":
+          description: 删除成功
+        "404":
+          description: WAREHOUSE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/warehouses/{id}/coverage:
+    patch:
+      tags:
+        - warehouse
+      description: 单独更新配送范围多边形（地图编辑器调）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coverageArea:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Polygon
+                    coordinates:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                  required:
+                    - type
+                    - coordinates
+              required:
+                - coverageArea
+      responses:
+        "200":
+          description: 更新成功
   /api/v1/common/warehouses/match:
     post:
       tags:
@@ -2579,7 +3308,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a12
+                      mon: &a18
                         type: object
                         properties:
                           open:
@@ -2591,12 +3320,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a12
-                      wed: *a12
-                      thu: *a12
-                      fri: *a12
-                      sat: *a12
-                      sun: *a12
+                      tue: *a18
+                      wed: *a18
+                      thu: *a18
+                      fri: *a18
+                      sat: *a18
+                      sun: *a18
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -2800,7 +3529,7 @@ paths:
                     enum: *a5
                   paymentStatus:
                     type: string
-                    enum: *a13
+                    enum: *a19
                   paidAt:
                     type: string
                     nullable: true

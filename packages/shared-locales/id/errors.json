@@ -24,5 +24,7 @@
   "E-ORDER-004": "Pesanan tidak ditemukan",
   "E-PAYMENT-001": "Metode pembayaran tidak didukung",
   "E-PAYMENT-002": "Pembayaran kedaluwarsa, silakan coba lagi",
-  "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode"
+  "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode",
+  "E-WAREHOUSE-001": "Kode gudang sudah ada",
+  "E-WAREHOUSE-002": "Di luar jangkauan pengiriman"
 }

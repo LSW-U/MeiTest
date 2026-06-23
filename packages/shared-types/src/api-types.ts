@@ -1332,6 +1332,564 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 后台仓库列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 创建仓库（写 PostGIS center + coverage） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code?: string;
+                        name: {
+                            [key: string]: string;
+                        };
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        } | null;
+                        centerLat: number;
+                        centerLng: number;
+                        address: string;
+                        operatingHours: {
+                            mon?: {
+                                open: string;
+                                close: string;
+                            };
+                            tue?: {
+                                open: string;
+                                close: string;
+                            };
+                            wed?: {
+                                open: string;
+                                close: string;
+                            };
+                            thu?: {
+                                open: string;
+                                close: string;
+                            };
+                            fri?: {
+                                open: string;
+                                close: string;
+                            };
+                            sat?: {
+                                open: string;
+                                close: string;
+                            };
+                            sun?: {
+                                open: string;
+                                close: string;
+                            };
+                        } | null;
+                        deliveryFee: number;
+                        isActive: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description WAREHOUSE_CODE_DUPLICATE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/warehouses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 仓库详情（含 coverageArea GeoJSON） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description WAREHOUSE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WAREHOUSE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 更新仓库（普通字段 + 可选 PostGIS） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code?: string;
+                        name: {
+                            [key: string]: string;
+                        };
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        } | null;
+                        centerLat: number;
+                        centerLng: number;
+                        address: string;
+                        operatingHours: {
+                            mon?: {
+                                open: string;
+                                close: string;
+                            };
+                            tue?: {
+                                open: string;
+                                close: string;
+                            };
+                            wed?: {
+                                open: string;
+                                close: string;
+                            };
+                            thu?: {
+                                open: string;
+                                close: string;
+                            };
+                            fri?: {
+                                open: string;
+                                close: string;
+                            };
+                            sat?: {
+                                open: string;
+                                close: string;
+                            };
+                            sun?: {
+                                open: string;
+                                close: string;
+                            };
+                        } | null;
+                        deliveryFee: number;
+                        isActive: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/warehouses/{id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 单独更新配送范围多边形（地图编辑器调） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/common/warehouses/match": {
         parameters: {
             query?: never;

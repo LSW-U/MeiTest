@@ -430,6 +430,87 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/warehouses',
+  tags: ['warehouse'],
+  responses: {
+    200: {
+      description: '后台仓库列表',
+      content: { 'application/json': { schema: Warehouse.array() } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/warehouses/{id}',
+  tags: ['warehouse'],
+  responses: {
+    200: {
+      description: '仓库详情（含 coverageArea GeoJSON）',
+      content: { 'application/json': { schema: Warehouse } },
+    },
+    404: { description: 'WAREHOUSE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/warehouses',
+  tags: ['warehouse'],
+  description: '创建仓库（写 PostGIS center + coverage）',
+  request: {
+    body: { content: { 'application/json': { schema: UpsertWarehouseRequest } } },
+  },
+  responses: {
+    200: {
+      description: '创建成功',
+      content: { 'application/json': { schema: Warehouse } },
+    },
+    409: { description: 'WAREHOUSE_CODE_DUPLICATE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/warehouses/{id}',
+  tags: ['warehouse'],
+  description: '更新仓库（普通字段 + 可选 PostGIS）',
+  request: {
+    body: { content: { 'application/json': { schema: UpsertWarehouseRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: Warehouse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/warehouses/{id}/coverage',
+  tags: ['warehouse'],
+  description: '单独更新配送范围多边形（地图编辑器调）',
+  request: {
+    body: { content: { 'application/json': { schema: z.object({ coverageArea: UpsertWarehouseRequest.shape.coverageArea.unwrap() }) } } },
+  },
+  responses: {
+    200: { description: '更新成功' },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/warehouses/{id}',
+  tags: ['warehouse'],
+  responses: {
+    200: { description: '删除成功' },
+    404: { description: 'WAREHOUSE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/api/v1/common/warehouses/match',
   tags: ['warehouse'],

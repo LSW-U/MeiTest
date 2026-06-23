@@ -24,5 +24,7 @@
   "E-ORDER-004": "Order not found",
   "E-PAYMENT-001": "Payment method not supported",
   "E-PAYMENT-002": "Payment timed out, please retry",
-  "E-PAYMENT-003": "Payment failed, please retry or change method"
+  "E-PAYMENT-003": "Payment failed, please retry or change method",
+  "E-WAREHOUSE-001": "Warehouse code already exists",
+  "E-WAREHOUSE-002": "Out of delivery range"
 }
