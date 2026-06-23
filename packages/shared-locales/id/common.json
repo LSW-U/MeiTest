@@ -19,5 +19,13 @@
   "error": "Error",
   "success": "Success",
   "yes": "Yes",
-  "no": "No"
+  "no": "No",
+  "perspective": {
+    "title": "Perspektif",
+    "platform": "Platform",
+    "merchant": "Pedagang",
+    "warehouse": "Gudang",
+    "support": "Dukungan",
+    "rider-mgmt": "Manajemen Rider"
+  }
 }

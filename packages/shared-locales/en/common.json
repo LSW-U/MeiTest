@@ -19,5 +19,13 @@
   "error": "Error",
   "success": "Success",
   "yes": "Yes",
-  "no": "No"
+  "no": "No",
+  "perspective": {
+    "title": "Perspective",
+    "platform": "Platform",
+    "merchant": "Merchant",
+    "warehouse": "Warehouse",
+    "support": "Support",
+    "rider-mgmt": "Rider Management"
+  }
 }
