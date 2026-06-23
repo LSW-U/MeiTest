@@ -11,13 +11,14 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { UserModule } from './modules/user/user.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
 
 @Module({
-  imports: [AuthModule, RealtimeModule, UserModule, ShopModule, WarehouseModule],
+  imports: [AuthModule, RealtimeModule, UserModule, ShopModule, WarehouseModule, CatalogModule],
   controllers: [HealthController, MeController],
   providers: [
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）

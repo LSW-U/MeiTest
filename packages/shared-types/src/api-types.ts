@@ -2010,6 +2010,775 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品列表（客户端公开浏览，默认只看 ACTIVE） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 商品列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                            }[];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                            hasMore: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 商品详情（含 SKU） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description PRODUCT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 推荐商品（按销量 top N） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 推荐列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            mainImage: string;
+                            priceMin: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            salesCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 搜索商品（按多语言 name 匹配） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 搜索结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            mainImage: string;
+                            priceMin: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            salesCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 分类列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            iconUrl: string;
+                            /** Format: uuid */
+                            parentId: string | null;
+                            sortOrder: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Banner 列表（仅 ACTIVE） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            imageUrl: string;
+                            alt: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                            linkValue: string | null;
+                            sortOrder: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 创建商品 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        categoryId?: string | null;
+                        name: {
+                            [key: string]: string;
+                        };
+                        description?: {
+                            [key: string]: string;
+                        } | null;
+                        mainImage: string;
+                        /** @default [] */
+                        images?: string[];
+                        unit: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        categoryId?: string | null;
+                        name?: {
+                            [key: string]: string;
+                        };
+                        description?: {
+                            [key: string]: string;
+                        } | null;
+                        mainImage?: string;
+                        /** @default [] */
+                        images?: string[];
+                        unit?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 商品上下架 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/skus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 创建 SKU（自动重算 product.priceMin） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: {
+                            [key: string]: string;
+                        };
+                        attributes: {
+                            [key: string]: unknown;
+                        };
+                        price: number;
+                        imageUrl?: string | null;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            attributes: {
+                                [key: string]: unknown;
+                            };
+                            price: number;
+                            imageUrl: string | null;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: {
+                            [key: string]: string;
+                        };
+                        iconUrl: string;
+                        /** Format: uuid */
+                        parentId?: string | null;
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            iconUrl: string;
+                            /** Format: uuid */
+                            parentId: string | null;
+                            sortOrder: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        imageUrl: string;
+                        alt?: {
+                            [key: string]: string;
+                        } | null;
+                        /** @enum {string} */
+                        linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                        linkValue?: string | null;
+                        sortOrder?: number;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            imageUrl: string;
+                            alt: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                            linkValue: string | null;
+                            sortOrder: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders": {
         parameters: {
             query?: never;
@@ -2488,6 +3257,200 @@ export interface components {
         MatchWarehouseRequest: {
             lat: number;
             lng: number;
+        };
+        Product: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            shopId: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            name: {
+                [key: string]: string;
+            };
+            description: {
+                [key: string]: string;
+            } | null;
+            mainImage: string;
+            images: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+            unit: {
+                [key: string]: string;
+            };
+            priceMin: number;
+            salesCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProductSummary: {
+            /** Format: uuid */
+            id: string;
+            name: {
+                [key: string]: string;
+            };
+            mainImage: string;
+            priceMin: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+            salesCount: number;
+        };
+        CreateProductRequest: {
+            /** Format: uuid */
+            categoryId?: string | null;
+            name: {
+                [key: string]: string;
+            };
+            description?: {
+                [key: string]: string;
+            } | null;
+            mainImage: string;
+            /** @default [] */
+            images: string[];
+            unit: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        UpdateProductRequest: {
+            /** Format: uuid */
+            categoryId?: string | null;
+            name?: {
+                [key: string]: string;
+            };
+            description?: {
+                [key: string]: string;
+            } | null;
+            mainImage?: string;
+            /** @default [] */
+            images: string[];
+            unit?: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        UpdateProductStatusRequest: {
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        Sku: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            name: {
+                [key: string]: string;
+            };
+            attributes: {
+                [key: string]: unknown;
+            };
+            price: number;
+            imageUrl: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateSkuRequest: {
+            name: {
+                [key: string]: string;
+            };
+            attributes: {
+                [key: string]: unknown;
+            };
+            price: number;
+            imageUrl?: string | null;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateSkuRequest: {
+            name?: {
+                [key: string]: string;
+            };
+            attributes?: {
+                [key: string]: unknown;
+            };
+            price?: number;
+            imageUrl?: string | null;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        Category: {
+            /** Format: uuid */
+            id: string;
+            name: {
+                [key: string]: string;
+            };
+            iconUrl: string;
+            /** Format: uuid */
+            parentId: string | null;
+            sortOrder: number;
+        };
+        CreateCategoryRequest: {
+            name: {
+                [key: string]: string;
+            };
+            iconUrl: string;
+            /** Format: uuid */
+            parentId?: string | null;
+            sortOrder?: number;
+        };
+        UpdateCategoryRequest: {
+            name?: {
+                [key: string]: string;
+            };
+            iconUrl?: string;
+            /** Format: uuid */
+            parentId?: string | null;
+            sortOrder?: number;
+        };
+        Banner: {
+            /** Format: uuid */
+            id: string;
+            imageUrl: string;
+            alt: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue: string | null;
+            sortOrder: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateBannerRequest: {
+            imageUrl: string;
+            alt?: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue?: string | null;
+            sortOrder?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateBannerRequest: {
+            imageUrl?: string;
+            alt?: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType?: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue?: string | null;
+            sortOrder?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
         };
         Order: {
             /** Format: uuid */

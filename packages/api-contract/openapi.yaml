@@ -23,6 +23,14 @@ tags:
     description: 商家（单一）
   - name: warehouse
     description: 仓库（多）
+  - name: product
+    description: 商品
+  - name: sku
+    description: 商品规格 SKU
+  - name: category
+    description: 商品分类
+  - name: banner
+    description: 首页 Banner
   - name: order
     description: 订单
 components:
@@ -148,7 +156,7 @@ components:
               nullable: true
             status:
               type: string
-              enum: &a7
+              enum: &a12
                 - ACTIVE
                 - SUSPENDED
                 - DELETED
@@ -237,7 +245,7 @@ components:
           minLength: 1
         scene:
           type: string
-          enum: &a8
+          enum: &a13
             - REGISTER
             - LOGIN
             - RESET_PASSWORD
@@ -311,7 +319,7 @@ components:
           enum: *a1
         status:
           type: string
-          enum: &a9
+          enum: &a14
             - ACTIVE
             - SUSPENDED
             - DELETED
@@ -511,7 +519,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: &a10
+          enum: &a15
             - ORDER_UPDATE
             - PROMOTION
             - SYSTEM
@@ -805,6 +813,410 @@ components:
       required:
         - lat
         - lng
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shopId:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          nullable: true
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        description:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        mainImage:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: &a5
+            - ACTIVE
+            - INACTIVE
+            - OUT_OF_STOCK
+        unit:
+          type: object
+          additionalProperties:
+            type: string
+        priceMin:
+          type: integer
+          minimum: 0
+        salesCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - shopId
+        - categoryId
+        - name
+        - description
+        - mainImage
+        - images
+        - status
+        - unit
+        - priceMin
+        - salesCount
+        - createdAt
+        - updatedAt
+    ProductSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        mainImage:
+          type: string
+        priceMin:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: *a5
+        salesCount:
+          type: integer
+      required:
+        - id
+        - name
+        - mainImage
+        - priceMin
+        - status
+        - salesCount
+    CreateProductRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          nullable: true
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        description:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        mainImage:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+          default: &a6 []
+        unit:
+          type: object
+          additionalProperties:
+            type: string
+        status:
+          type: string
+          enum: *a5
+      required:
+        - name
+        - mainImage
+        - unit
+    UpdateProductRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          nullable: true
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        description:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        mainImage:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+          default: *a6
+        unit:
+          type: object
+          additionalProperties:
+            type: string
+        status:
+          type: string
+          enum: *a5
+    UpdateProductStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: *a5
+      required:
+        - status
+    Sku:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        attributes:
+          type: object
+          additionalProperties:
+            nullable: true
+        price:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: &a7
+            - ACTIVE
+            - INACTIVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productId
+        - name
+        - attributes
+        - price
+        - imageUrl
+        - status
+        - createdAt
+        - updatedAt
+    CreateSkuRequest:
+      type: object
+      properties:
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        attributes:
+          type: object
+          additionalProperties:
+            nullable: true
+        price:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: *a7
+      required:
+        - name
+        - attributes
+        - price
+    UpdateSkuRequest:
+      type: object
+      properties:
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        attributes:
+          type: object
+          additionalProperties:
+            nullable: true
+        price:
+          type: integer
+          minimum: 0
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: *a7
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        iconUrl:
+          type: string
+        parentId:
+          type: string
+          nullable: true
+          format: uuid
+        sortOrder:
+          type: integer
+      required:
+        - id
+        - name
+        - iconUrl
+        - parentId
+        - sortOrder
+    CreateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        iconUrl:
+          type: string
+        parentId:
+          type: string
+          nullable: true
+          format: uuid
+        sortOrder:
+          type: integer
+      required:
+        - name
+        - iconUrl
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        iconUrl:
+          type: string
+        parentId:
+          type: string
+          nullable: true
+          format: uuid
+        sortOrder:
+          type: integer
+    Banner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+        alt:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        linkType:
+          type: string
+          enum: &a24
+            - PRODUCT
+            - CATEGORY
+            - URL
+            - NONE
+        linkValue:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum: &a25
+            - ACTIVE
+            - INACTIVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - imageUrl
+        - alt
+        - linkType
+        - linkValue
+        - sortOrder
+        - status
+        - createdAt
+        - updatedAt
+    CreateBannerRequest:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+        alt:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        linkType:
+          type: string
+          enum: &a8
+            - PRODUCT
+            - CATEGORY
+            - URL
+            - NONE
+        linkValue:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum: &a9
+            - ACTIVE
+            - INACTIVE
+      required:
+        - imageUrl
+        - linkType
+    UpdateBannerRequest:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+        alt:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        linkType:
+          type: string
+          enum: *a8
+        linkValue:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum: *a9
     Order:
       type: object
       properties:
@@ -822,7 +1234,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: &a6
+          enum: &a11
             - PENDING_PAYMENT
             - PENDING_CONFIRM
             - CONFIRMED
@@ -916,7 +1328,7 @@ components:
           format: uuid
         paymentMethod:
           type: string
-          enum: &a5
+          enum: &a10
             - COD
             - BANK_TRANSFER
             - WECHAT
@@ -924,7 +1336,7 @@ components:
             - STRIPE
         paymentStatus:
           type: string
-          enum: &a19
+          enum: &a26
             - UNPAID
             - PAID
             - REFUNDED
@@ -1046,7 +1458,7 @@ components:
           maxLength: 200
         paymentMethod:
           type: string
-          enum: *a5
+          enum: *a10
       required:
         - addressId
         - items
@@ -1065,10 +1477,10 @@ components:
       pattern: ^MM\d{14}$
     PaymentMethod:
       type: string
-      enum: *a5
+      enum: *a10
     OrderStatus:
       type: string
-      enum: *a6
+      enum: *a11
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -1122,7 +1534,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a7
+                        enum: *a12
                     required:
                       - id
                       - role
@@ -1219,7 +1631,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a7
+                        enum: *a12
                     required:
                       - id
                       - role
@@ -1281,7 +1693,7 @@ paths:
                   minLength: 1
                 scene:
                   type: string
-                  enum: *a8
+                  enum: *a13
                   default: LOGIN
               required:
                 - phone
@@ -1473,7 +1885,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a7
+                        enum: *a12
                     required:
                       - id
                       - role
@@ -1630,7 +2042,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a9
+                    enum: *a14
                   createdAt:
                     type: string
                     format: date-time
@@ -1691,7 +2103,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a9
+                    enum: *a14
                   createdAt:
                     type: string
                     format: date-time
@@ -2117,7 +2529,7 @@ paths:
                       format: uuid
                     type:
                       type: string
-                      enum: *a10
+                      enum: *a15
                     title:
                       type: object
                       additionalProperties:
@@ -2452,7 +2864,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a11
+                        mon: &a16
                           type: object
                           properties:
                             open:
@@ -2464,12 +2876,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a11
-                        wed: *a11
-                        thu: *a11
-                        fri: *a11
-                        sat: *a11
-                        sun: *a11
+                        tue: *a16
+                        wed: *a16
+                        thu: *a16
+                        fri: *a16
+                        sat: *a16
+                        sun: *a16
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -2567,7 +2979,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a12
+                        mon: &a17
                           type: object
                           properties:
                             open:
@@ -2579,12 +2991,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a12
-                        wed: *a12
-                        thu: *a12
-                        fri: *a12
-                        sat: *a12
-                        sun: *a12
+                        tue: *a17
+                        wed: *a17
+                        thu: *a17
+                        fri: *a17
+                        sat: *a17
+                        sun: *a17
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -2656,7 +3068,7 @@ paths:
                   type: object
                   nullable: true
                   properties:
-                    mon: &a13
+                    mon: &a18
                       type: object
                       properties:
                         open:
@@ -2668,12 +3080,12 @@ paths:
                       required:
                         - open
                         - close
-                    tue: *a13
-                    wed: *a13
-                    thu: *a13
-                    fri: *a13
-                    sat: *a13
-                    sun: *a13
+                    tue: *a18
+                    wed: *a18
+                    thu: *a18
+                    fri: *a18
+                    sat: *a18
+                    sun: *a18
                 deliveryFee:
                   type: integer
                   minimum: 0
@@ -2754,7 +3166,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a14
+                      mon: &a19
                         type: object
                         properties:
                           open:
@@ -2766,12 +3178,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a14
-                      wed: *a14
-                      thu: *a14
-                      fri: *a14
-                      sat: *a14
-                      sun: *a14
+                      tue: *a19
+                      wed: *a19
+                      thu: *a19
+                      fri: *a19
+                      sat: *a19
+                      sun: *a19
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -2896,7 +3308,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a15
+                      mon: &a20
                         type: object
                         properties:
                           open:
@@ -2908,12 +3320,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a15
-                      wed: *a15
-                      thu: *a15
-                      fri: *a15
-                      sat: *a15
-                      sun: *a15
+                      tue: *a20
+                      wed: *a20
+                      thu: *a20
+                      fri: *a20
+                      sat: *a20
+                      sun: *a20
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -3014,7 +3426,7 @@ paths:
                   type: object
                   nullable: true
                   properties:
-                    mon: &a16
+                    mon: &a21
                       type: object
                       properties:
                         open:
@@ -3026,12 +3438,12 @@ paths:
                       required:
                         - open
                         - close
-                    tue: *a16
-                    wed: *a16
-                    thu: *a16
-                    fri: *a16
-                    sat: *a16
-                    sun: *a16
+                    tue: *a21
+                    wed: *a21
+                    thu: *a21
+                    fri: *a21
+                    sat: *a21
+                    sun: *a21
                 deliveryFee:
                   type: integer
                   minimum: 0
@@ -3112,7 +3524,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a17
+                      mon: &a22
                         type: object
                         properties:
                           open:
@@ -3124,12 +3536,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a17
-                      wed: *a17
-                      thu: *a17
-                      fri: *a17
-                      sat: *a17
-                      sun: *a17
+                      tue: *a22
+                      wed: *a22
+                      thu: *a22
+                      fri: *a22
+                      sat: *a22
+                      sun: *a22
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -3308,7 +3720,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a18
+                      mon: &a23
                         type: object
                         properties:
                           open:
@@ -3320,12 +3732,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a18
-                      wed: *a18
-                      thu: *a18
-                      fri: *a18
-                      sat: *a18
-                      sun: *a18
+                      tue: *a23
+                      wed: *a23
+                      thu: *a23
+                      fri: *a23
+                      sat: *a23
+                      sun: *a23
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -3380,6 +3792,829 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/products:
+    get:
+      tags:
+        - product
+      description: 商品列表（客户端公开浏览，默认只看 ACTIVE）
+      responses:
+        "200":
+          description: 商品列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        mainImage:
+                          type: string
+                        priceMin:
+                          type: integer
+                          minimum: 0
+                        status:
+                          type: string
+                          enum: *a5
+                        salesCount:
+                          type: integer
+                      required:
+                        - id
+                        - name
+                        - mainImage
+                        - priceMin
+                        - status
+                        - salesCount
+                  total:
+                    type: number
+                  page:
+                    type: number
+                  pageSize:
+                    type: number
+                  hasMore:
+                    type: boolean
+                required:
+                  - items
+                  - total
+                  - page
+                  - pageSize
+                  - hasMore
+  /api/v1/client/products/{id}:
+    get:
+      tags:
+        - product
+      responses:
+        "200":
+          description: 商品详情（含 SKU）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  shopId:
+                    type: string
+                    format: uuid
+                  categoryId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  description:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  mainImage:
+                    type: string
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum: *a5
+                  unit:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  priceMin:
+                    type: integer
+                    minimum: 0
+                  salesCount:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - shopId
+                  - categoryId
+                  - name
+                  - description
+                  - mainImage
+                  - images
+                  - status
+                  - unit
+                  - priceMin
+                  - salesCount
+                  - createdAt
+                  - updatedAt
+        "404":
+          description: PRODUCT_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/products/recommendations:
+    get:
+      tags:
+        - product
+      description: 推荐商品（按销量 top N）
+      responses:
+        "200":
+          description: 推荐列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    mainImage:
+                      type: string
+                    priceMin:
+                      type: integer
+                      minimum: 0
+                    status:
+                      type: string
+                      enum: *a5
+                    salesCount:
+                      type: integer
+                  required:
+                    - id
+                    - name
+                    - mainImage
+                    - priceMin
+                    - status
+                    - salesCount
+  /api/v1/client/products/search:
+    get:
+      tags:
+        - product
+      description: 搜索商品（按多语言 name 匹配）
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    mainImage:
+                      type: string
+                    priceMin:
+                      type: integer
+                      minimum: 0
+                    status:
+                      type: string
+                      enum: *a5
+                    salesCount:
+                      type: integer
+                  required:
+                    - id
+                    - name
+                    - mainImage
+                    - priceMin
+                    - status
+                    - salesCount
+  /api/v1/client/categories:
+    get:
+      tags:
+        - category
+      responses:
+        "200":
+          description: 分类列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    iconUrl:
+                      type: string
+                    parentId:
+                      type: string
+                      nullable: true
+                      format: uuid
+                    sortOrder:
+                      type: integer
+                  required:
+                    - id
+                    - name
+                    - iconUrl
+                    - parentId
+                    - sortOrder
+  /api/v1/client/banners:
+    get:
+      tags:
+        - banner
+      responses:
+        "200":
+          description: Banner 列表（仅 ACTIVE）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    imageUrl:
+                      type: string
+                    alt:
+                      type: object
+                      nullable: true
+                      additionalProperties:
+                        type: string
+                    linkType:
+                      type: string
+                      enum: *a24
+                    linkValue:
+                      type: string
+                      nullable: true
+                    sortOrder:
+                      type: integer
+                    status:
+                      type: string
+                      enum: *a25
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - imageUrl
+                    - alt
+                    - linkType
+                    - linkValue
+                    - sortOrder
+                    - status
+                    - createdAt
+                    - updatedAt
+  /api/v1/admin/products:
+    post:
+      tags:
+        - product
+      description: 创建商品
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  nullable: true
+                  format: uuid
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                description:
+                  type: object
+                  nullable: true
+                  additionalProperties:
+                    type: string
+                mainImage:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                  default: *a6
+                unit:
+                  type: object
+                  additionalProperties:
+                    type: string
+                status:
+                  type: string
+                  enum: *a5
+              required:
+                - name
+                - mainImage
+                - unit
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  shopId:
+                    type: string
+                    format: uuid
+                  categoryId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  description:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  mainImage:
+                    type: string
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum: *a5
+                  unit:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  priceMin:
+                    type: integer
+                    minimum: 0
+                  salesCount:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - shopId
+                  - categoryId
+                  - name
+                  - description
+                  - mainImage
+                  - images
+                  - status
+                  - unit
+                  - priceMin
+                  - salesCount
+                  - createdAt
+                  - updatedAt
+  /api/v1/admin/products/{id}:
+    patch:
+      tags:
+        - product
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  nullable: true
+                  format: uuid
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                description:
+                  type: object
+                  nullable: true
+                  additionalProperties:
+                    type: string
+                mainImage:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                  default: *a6
+                unit:
+                  type: object
+                  additionalProperties:
+                    type: string
+                status:
+                  type: string
+                  enum: *a5
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  shopId:
+                    type: string
+                    format: uuid
+                  categoryId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  description:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  mainImage:
+                    type: string
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum: *a5
+                  unit:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  priceMin:
+                    type: integer
+                    minimum: 0
+                  salesCount:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - shopId
+                  - categoryId
+                  - name
+                  - description
+                  - mainImage
+                  - images
+                  - status
+                  - unit
+                  - priceMin
+                  - salesCount
+                  - createdAt
+                  - updatedAt
+    delete:
+      tags:
+        - product
+      responses:
+        "200":
+          description: 删除成功
+  /api/v1/admin/products/{id}/status:
+    patch:
+      tags:
+        - product
+      description: 商品上下架
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: *a5
+              required:
+                - status
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  shopId:
+                    type: string
+                    format: uuid
+                  categoryId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  description:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  mainImage:
+                    type: string
+                  images:
+                    type: array
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum: *a5
+                  unit:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  priceMin:
+                    type: integer
+                    minimum: 0
+                  salesCount:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - shopId
+                  - categoryId
+                  - name
+                  - description
+                  - mainImage
+                  - images
+                  - status
+                  - unit
+                  - priceMin
+                  - salesCount
+                  - createdAt
+                  - updatedAt
+  /api/v1/admin/products/{id}/skus:
+    post:
+      tags:
+        - sku
+      description: 创建 SKU（自动重算 product.priceMin）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                attributes:
+                  type: object
+                  additionalProperties:
+                    nullable: true
+                price:
+                  type: integer
+                  minimum: 0
+                imageUrl:
+                  type: string
+                  nullable: true
+                status:
+                  type: string
+                  enum: *a7
+              required:
+                - name
+                - attributes
+                - price
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  productId:
+                    type: string
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  attributes:
+                    type: object
+                    additionalProperties:
+                      nullable: true
+                  price:
+                    type: integer
+                    minimum: 0
+                  imageUrl:
+                    type: string
+                    nullable: true
+                  status:
+                    type: string
+                    enum: *a7
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - productId
+                  - name
+                  - attributes
+                  - price
+                  - imageUrl
+                  - status
+                  - createdAt
+                  - updatedAt
+  /api/v1/admin/categories:
+    post:
+      tags:
+        - category
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                iconUrl:
+                  type: string
+                parentId:
+                  type: string
+                  nullable: true
+                  format: uuid
+                sortOrder:
+                  type: integer
+              required:
+                - name
+                - iconUrl
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  iconUrl:
+                    type: string
+                  parentId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  sortOrder:
+                    type: integer
+                required:
+                  - id
+                  - name
+                  - iconUrl
+                  - parentId
+                  - sortOrder
+  /api/v1/admin/banners:
+    post:
+      tags:
+        - banner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imageUrl:
+                  type: string
+                alt:
+                  type: object
+                  nullable: true
+                  additionalProperties:
+                    type: string
+                linkType:
+                  type: string
+                  enum: *a8
+                linkValue:
+                  type: string
+                  nullable: true
+                sortOrder:
+                  type: integer
+                status:
+                  type: string
+                  enum: *a9
+              required:
+                - imageUrl
+                - linkType
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  imageUrl:
+                    type: string
+                  alt:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  linkType:
+                    type: string
+                    enum: *a24
+                  linkValue:
+                    type: string
+                    nullable: true
+                  sortOrder:
+                    type: integer
+                  status:
+                    type: string
+                    enum: *a25
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - imageUrl
+                  - alt
+                  - linkType
+                  - linkValue
+                  - sortOrder
+                  - status
+                  - createdAt
+                  - updatedAt
   /api/v1/client/orders:
     post:
       tags:
@@ -3415,7 +4650,7 @@ paths:
                   maxLength: 200
                 paymentMethod:
                   type: string
-                  enum: *a5
+                  enum: *a10
               required:
                 - addressId
                 - items
@@ -3442,7 +4677,7 @@ paths:
                     format: uuid
                   status:
                     type: string
-                    enum: *a6
+                    enum: *a11
                   items:
                     type: array
                     items:
@@ -3526,10 +4761,10 @@ paths:
                     format: uuid
                   paymentMethod:
                     type: string
-                    enum: *a5
+                    enum: *a10
                   paymentStatus:
                     type: string
-                    enum: *a19
+                    enum: *a26
                   paidAt:
                     type: string
                     nullable: true

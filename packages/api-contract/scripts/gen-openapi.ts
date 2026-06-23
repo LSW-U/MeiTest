@@ -51,6 +51,21 @@ import {
   Warehouse,
   UpsertWarehouseRequest,
   MatchWarehouseRequest,
+  // catalog
+  Product,
+  ProductSummary,
+  CreateProductRequest,
+  UpdateProductRequest,
+  UpdateProductStatusRequest,
+  Sku,
+  CreateSkuRequest,
+  UpdateSkuRequest,
+  Category,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+  Banner,
+  CreateBannerRequest,
+  UpdateBannerRequest,
   // order
   Order,
   OrderItem,
@@ -100,6 +115,21 @@ registry.register('UpdateShopRequest', UpdateShopRequest);
 registry.register('Warehouse', Warehouse);
 registry.register('UpsertWarehouseRequest', UpsertWarehouseRequest);
 registry.register('MatchWarehouseRequest', MatchWarehouseRequest);
+
+registry.register('Product', Product);
+registry.register('ProductSummary', ProductSummary);
+registry.register('CreateProductRequest', CreateProductRequest);
+registry.register('UpdateProductRequest', UpdateProductRequest);
+registry.register('UpdateProductStatusRequest', UpdateProductStatusRequest);
+registry.register('Sku', Sku);
+registry.register('CreateSkuRequest', CreateSkuRequest);
+registry.register('UpdateSkuRequest', UpdateSkuRequest);
+registry.register('Category', Category);
+registry.register('CreateCategoryRequest', CreateCategoryRequest);
+registry.register('UpdateCategoryRequest', UpdateCategoryRequest);
+registry.register('Banner', Banner);
+registry.register('CreateBannerRequest', CreateBannerRequest);
+registry.register('UpdateBannerRequest', UpdateBannerRequest);
 
 registry.register('Order', Order);
 registry.register('OrderItem', OrderItem);
@@ -528,6 +558,140 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products',
+  tags: ['product'],
+  description: '商品列表（客户端公开浏览，默认只看 ACTIVE）',
+  responses: {
+    200: {
+      description: '商品列表',
+      content: { 'application/json': { schema: z.object({ items: ProductSummary.array(), total: z.number(), page: z.number(), pageSize: z.number(), hasMore: z.boolean() }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/{id}',
+  tags: ['product'],
+  responses: {
+    200: {
+      description: '商品详情（含 SKU）',
+      content: { 'application/json': { schema: Product } },
+    },
+    404: { description: 'PRODUCT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/recommendations',
+  tags: ['product'],
+  description: '推荐商品（按销量 top N）',
+  responses: {
+    200: { description: '推荐列表', content: { 'application/json': { schema: ProductSummary.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/search',
+  tags: ['product'],
+  description: '搜索商品（按多语言 name 匹配）',
+  responses: {
+    200: { description: '搜索结果', content: { 'application/json': { schema: ProductSummary.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/categories',
+  tags: ['category'],
+  responses: {
+    200: { description: '分类列表', content: { 'application/json': { schema: Category.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/banners',
+  tags: ['banner'],
+  responses: {
+    200: { description: 'Banner 列表（仅 ACTIVE）', content: { 'application/json': { schema: Banner.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/products',
+  tags: ['product'],
+  description: '创建商品',
+  request: { body: { content: { 'application/json': { schema: CreateProductRequest } } } },
+  responses: {
+    200: { description: '创建成功', content: { 'application/json': { schema: Product } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/products/{id}',
+  tags: ['product'],
+  request: { body: { content: { 'application/json': { schema: UpdateProductRequest } } } },
+  responses: {
+    200: { description: '更新成功', content: { 'application/json': { schema: Product } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/products/{id}/status',
+  tags: ['product'],
+  description: '商品上下架',
+  request: { body: { content: { 'application/json': { schema: UpdateProductStatusRequest } } } },
+  responses: {
+    200: { description: '更新成功', content: { 'application/json': { schema: Product } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/products/{id}',
+  tags: ['product'],
+  responses: { 200: { description: '删除成功' } },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/products/{id}/skus',
+  tags: ['sku'],
+  description: '创建 SKU（自动重算 product.priceMin）',
+  request: { body: { content: { 'application/json': { schema: CreateSkuRequest } } } },
+  responses: {
+    200: { description: '创建成功', content: { 'application/json': { schema: Sku } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/categories',
+  tags: ['category'],
+  request: { body: { content: { 'application/json': { schema: CreateCategoryRequest } } } },
+  responses: {
+    200: { description: '创建成功', content: { 'application/json': { schema: Category } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/banners',
+  tags: ['banner'],
+  request: { body: { content: { 'application/json': { schema: CreateBannerRequest } } } },
+  responses: {
+    200: { description: '创建成功', content: { 'application/json': { schema: Banner } } },
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/api/v1/client/orders',
   tags: ['order'],
@@ -565,6 +729,10 @@ const openapi = generator.generateDocument({
     { name: 'notification', description: '站内通知' },
     { name: 'shop', description: '商家（单一）' },
     { name: 'warehouse', description: '仓库（多）' },
+    { name: 'product', description: '商品' },
+    { name: 'sku', description: '商品规格 SKU' },
+    { name: 'category', description: '商品分类' },
+    { name: 'banner', description: '首页 Banner' },
     { name: 'order', description: '订单' },
   ],
 });
