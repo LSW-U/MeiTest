@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client（src/prisma/client 被 gitignore，CI 必须生成）
+        run: pnpm --filter @meimart/api exec prisma generate
       - name: Typecheck all workspaces
         run: pnpm -r typecheck
       - name: Run all tests
@@ -41,6 +43,8 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client（contract job 也需要）
+        run: pnpm --filter @meimart/api exec prisma generate
       - name: Regenerate OpenAPI from zod
         run: pnpm --filter @meimart/api-contract gen:openapi
       - name: Regenerate TS types from OpenAPI
@@ -85,6 +89,8 @@ jobs:
           node-version: 22
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client（build 也需要类型）
+        run: pnpm --filter @meimart/api exec prisma generate
       - name: Build API (NestJS)
         run: pnpm --filter @meimart/api build
       - name: Build admin-web (Next.js)
