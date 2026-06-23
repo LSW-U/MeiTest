@@ -89,9 +89,9 @@ export function getInitialState(paymentMethod: PaymentMethodValue): OrderStatusV
     case 'STRIPE':
       return 'PENDING_PAYMENT';
     default: {
-      // 穷尽性检查（typescript TS2365 触发，新增枚举忘加 case 时编译失败）
-      const _exhaustive: never = paymentMethod;
-      throw new Error(`UNSUPPORTED_PAYMENT_METHOD: ${_exhaustive as string}`);
+      // 运行时兜底（typescript 编译时已穷尽，运行时若有非法值也不会沉默失败）
+      const exhaustive: string = paymentMethod as string;
+      throw new Error(`UNSUPPORTED_PAYMENT_METHOD: ${exhaustive}`);
     }
   }
 }

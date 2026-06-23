@@ -8,13 +8,17 @@ import { HealthController } from './modules/health/health.controller';
 import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { CartModule } from './modules/cart/cart.module';
+import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
 
 @Module({
-  imports: [AuthModule, RealtimeModule],
+  // 字母序：Auth → Cart → Order → Payment → Realtime（避免三流程 merge 时 imports 数组顺序冲突）
+  imports: [AuthModule, CartModule, OrderModule, PaymentModule, RealtimeModule],
   controllers: [HealthController, MeController],
   providers: [
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）

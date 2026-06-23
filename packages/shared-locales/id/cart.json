@@ -1,0 +1,18 @@
+{
+  "cart": {
+    "title": "Keranjang Belanja",
+    "empty": "Keranjang Anda kosong",
+    "selected": "Dipilih",
+    "selectAll": "Pilih Semua",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Biaya Pengiriman",
+    "payable": "Total Dibayar",
+    "checkout": "Bayar",
+    "checkoutPreview": "Pratinjau Pesanan",
+    "addItem": "Ditambahkan ke keranjang",
+    "updateQty": "Jumlah diperbarui",
+    "removeItem": "Dihapus dari keranjang",
+    "outOfRange": "Alamat di luar jangkauan pengiriman",
+    "emptySelection": "Silakan pilih minimal satu item"
+  }
+}

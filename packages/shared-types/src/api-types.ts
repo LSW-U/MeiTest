@@ -656,7 +656,85 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description 客户端订单列表（按状态筛选 + 游标分页） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderNo: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** @enum {string} */
+                            status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                productName: string;
+                                productImage: string;
+                                skuName: string;
+                                unitPrice: number;
+                                quantity: number;
+                                subtotal: number;
+                            }[];
+                            totalAmount: number;
+                            deliveryFee: number;
+                            /** @default 0 */
+                            discountAmount: number;
+                            payableAmount: number;
+                            deliveryAddress: {
+                                name: string;
+                                phone: string;
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                            };
+                            remark: string | null;
+                            /** Format: uuid */
+                            riderId: string | null;
+                            /** @enum {string} */
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            confirmedAt: string | null;
+                            /** Format: date-time */
+                            pickedAt: string | null;
+                            /** Format: date-time */
+                            deliveringAt: string | null;
+                            /** Format: date-time */
+                            deliveredAt: string | null;
+                            /** Format: date-time */
+                            cancelledAt: string | null;
+                            cancelReason: string | null;
+                        }[];
+                    };
+                };
+            };
+        };
         put?: never;
         /** @description 创建订单（同步事务 MVP，自动匹配仓库 + orderNo 16 位） */
         post: {
@@ -752,6 +830,795 @@ export interface paths {
                 };
                 /** @description STOCK_NOT_ENOUGH */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 订单详情（含 items + events） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderNo: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** @enum {string} */
+                            status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                productName: string;
+                                productImage: string;
+                                skuName: string;
+                                unitPrice: number;
+                                quantity: number;
+                                subtotal: number;
+                            }[];
+                            totalAmount: number;
+                            deliveryFee: number;
+                            /** @default 0 */
+                            discountAmount: number;
+                            payableAmount: number;
+                            deliveryAddress: {
+                                name: string;
+                                phone: string;
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                            };
+                            remark: string | null;
+                            /** Format: uuid */
+                            riderId: string | null;
+                            /** @enum {string} */
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            confirmedAt: string | null;
+                            /** Format: date-time */
+                            pickedAt: string | null;
+                            /** Format: date-time */
+                            deliveringAt: string | null;
+                            /** Format: date-time */
+                            deliveredAt: string | null;
+                            /** Format: date-time */
+                            cancelledAt: string | null;
+                            cancelReason: string | null;
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 取消订单（用户自助，PENDING_* / CONFIRMED 可取消） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 取消成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ORDER_STATUS_NOT_CANCELLABLE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取购物车（按用户 1 份，含 items + 选中金额汇总） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 购物车详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 加购（同 sku 累加数量 + 刷新价格快照） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        skuId: string;
+                        quantity: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 加购后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+                /** @description SKU_INACTIVE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart/items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 删除购物车项 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 修改购物车项数量 / 选中状态 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        quantity?: number;
+                        isSelected?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 修改后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/cart/checkout-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 结算前预览（按地址匹配仓库 + 库存/价格校验 + 金额汇总） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        addressId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 结算预览 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            warehouseMatch: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                deliveryFee: number;
+                            } | null;
+                            itemsSubtotal: number;
+                            deliveryFee: number;
+                            payableAmount: number;
+                            warnings: string[];
+                        };
+                    };
+                };
+                /** @description NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 查询订单支付状态（含 mock/stub 标识） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PaymentIntent 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** @enum {string} */
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            status: "UNPAID" | "PAID" | "REFUNDED";
+                            amount: number;
+                            transactionId: string | null;
+                            clientSecret: string | null;
+                            /** Format: uri */
+                            receiptUrl: string | null;
+                            mockFlag: boolean;
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description PAYMENT_INTENT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/mock-callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description dev/staging 模拟第三方支付成功回调（仅 WECHAT/PAYPAL/STRIPE） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 回调成功，订单自动进 CONFIRMED */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description METHOD_NOT_ALLOWED / DISABLED_IN_PROD */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 银行转账凭证上传（BANK_TRANSFER 专用） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        receiptUrl: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 凭证已上传，状态进 PROCESSING 等审核 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** @enum {string} */
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            status: "UNPAID" | "PAID" | "REFUNDED";
+                            amount: number;
+                            transactionId: string | null;
+                            clientSecret: string | null;
+                            /** Format: uri */
+                            receiptUrl: string | null;
+                            mockFlag: boolean;
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户端轮询查到 PAID 后触发订单确认 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单已确认 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PAYMENT_NOT_PAID */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1120,6 +1987,127 @@ export interface components {
         PaymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
         /** @enum {string} */
         OrderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+        Cart: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            warehouseId: string | null;
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                skuId: string;
+                /** Format: uuid */
+                productId: string;
+                productName: {
+                    [key: string]: string;
+                };
+                productImage: string;
+                skuName: {
+                    [key: string]: string;
+                };
+                unitPrice: number;
+                quantity: number;
+                isSelected: boolean;
+                /** Format: date-time */
+                addedAt: string;
+            }[];
+            selectedSubtotal: number;
+            totalSubtotal: number;
+        };
+        CartItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            skuId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: {
+                [key: string]: string;
+            };
+            productImage: string;
+            skuName: {
+                [key: string]: string;
+            };
+            unitPrice: number;
+            quantity: number;
+            isSelected: boolean;
+            /** Format: date-time */
+            addedAt: string;
+        };
+        AddCartItemRequest: {
+            /** Format: uuid */
+            skuId: string;
+            quantity: number;
+        };
+        UpdateCartItemRequest: {
+            quantity?: number;
+            isSelected?: boolean;
+        };
+        CheckoutPreviewRequest: {
+            /** Format: uuid */
+            addressId: string;
+        };
+        CheckoutPreview: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                skuId: string;
+                /** Format: uuid */
+                productId: string;
+                productName: {
+                    [key: string]: string;
+                };
+                productImage: string;
+                skuName: {
+                    [key: string]: string;
+                };
+                unitPrice: number;
+                quantity: number;
+                isSelected: boolean;
+                /** Format: date-time */
+                addedAt: string;
+            }[];
+            warehouseMatch: {
+                /** Format: uuid */
+                id: string;
+                code: string;
+                deliveryFee: number;
+            } | null;
+            itemsSubtotal: number;
+            deliveryFee: number;
+            payableAmount: number;
+            warnings: string[];
+        };
+        PaymentIntent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** @enum {string} */
+            status: "UNPAID" | "PAID" | "REFUNDED";
+            amount: number;
+            transactionId: string | null;
+            clientSecret: string | null;
+            /** Format: uri */
+            receiptUrl: string | null;
+            mockFlag: boolean;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UploadReceiptRequest: {
+            /** Format: uri */
+            receiptUrl: string;
+        };
     };
     responses: never;
     parameters: never;

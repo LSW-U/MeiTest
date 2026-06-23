@@ -118,7 +118,7 @@ components:
               nullable: true
             status:
               type: string
-              enum: &a7
+              enum: &a8
                 - ACTIVE
                 - SUSPENDED
                 - DELETED
@@ -193,7 +193,7 @@ components:
           minLength: 1
         type:
           type: string
-          enum: &a8
+          enum: &a9
             - REGISTER
             - LOGIN
             - RESET_PASSWORD
@@ -250,7 +250,7 @@ components:
           enum: *a1
         status:
           type: string
-          enum: &a9
+          enum: &a10
             - ACTIVE
             - SUSPENDED
             - DELETED
@@ -667,7 +667,7 @@ components:
             - STRIPE
         paymentStatus:
           type: string
-          enum: &a12
+          enum: &a7
             - UNPAID
             - PAID
             - REFUNDED
@@ -812,6 +812,301 @@ components:
     OrderStatus:
       type: string
       enum: *a6
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          nullable: true
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              skuId:
+                type: string
+                format: uuid
+              productId:
+                type: string
+                format: uuid
+              productName:
+                type: object
+                additionalProperties:
+                  type: string
+              productImage:
+                type: string
+              skuName:
+                type: object
+                additionalProperties:
+                  type: string
+              unitPrice:
+                type: integer
+                minimum: 0
+              quantity:
+                type: integer
+                minimum: 0
+                exclusiveMinimum: true
+              isSelected:
+                type: boolean
+              addedAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - skuId
+              - productId
+              - productName
+              - productImage
+              - skuName
+              - unitPrice
+              - quantity
+              - isSelected
+              - addedAt
+        selectedSubtotal:
+          type: integer
+          minimum: 0
+        totalSubtotal:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - userId
+        - warehouseId
+        - items
+        - selectedSubtotal
+        - totalSubtotal
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        skuId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: object
+          additionalProperties:
+            type: string
+        productImage:
+          type: string
+        skuName:
+          type: object
+          additionalProperties:
+            type: string
+        unitPrice:
+          type: integer
+          minimum: 0
+        quantity:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        isSelected:
+          type: boolean
+        addedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - skuId
+        - productId
+        - productName
+        - productImage
+        - skuName
+        - unitPrice
+        - quantity
+        - isSelected
+        - addedAt
+    AddCartItemRequest:
+      type: object
+      properties:
+        skuId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+      required:
+        - skuId
+        - quantity
+    UpdateCartItemRequest:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        isSelected:
+          type: boolean
+    CheckoutPreviewRequest:
+      type: object
+      properties:
+        addressId:
+          type: string
+          format: uuid
+      required:
+        - addressId
+    CheckoutPreview:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              skuId:
+                type: string
+                format: uuid
+              productId:
+                type: string
+                format: uuid
+              productName:
+                type: object
+                additionalProperties:
+                  type: string
+              productImage:
+                type: string
+              skuName:
+                type: object
+                additionalProperties:
+                  type: string
+              unitPrice:
+                type: integer
+                minimum: 0
+              quantity:
+                type: integer
+                minimum: 0
+                exclusiveMinimum: true
+              isSelected:
+                type: boolean
+              addedAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - skuId
+              - productId
+              - productName
+              - productImage
+              - skuName
+              - unitPrice
+              - quantity
+              - isSelected
+              - addedAt
+        warehouseMatch:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            code:
+              type: string
+            deliveryFee:
+              type: integer
+              minimum: 0
+          required:
+            - id
+            - code
+            - deliveryFee
+        itemsSubtotal:
+          type: integer
+          minimum: 0
+        deliveryFee:
+          type: integer
+          minimum: 0
+        payableAmount:
+          type: integer
+          minimum: 0
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - items
+        - warehouseMatch
+        - itemsSubtotal
+        - deliveryFee
+        - payableAmount
+        - warnings
+    PaymentIntent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        method:
+          type: string
+          enum: *a5
+        status:
+          type: string
+          enum: *a7
+        amount:
+          type: integer
+          minimum: 0
+        transactionId:
+          type: string
+          nullable: true
+        clientSecret:
+          type: string
+          nullable: true
+        receiptUrl:
+          type: string
+          nullable: true
+          format: uri
+        mockFlag:
+          type: boolean
+        paidAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - method
+        - status
+        - amount
+        - transactionId
+        - clientSecret
+        - receiptUrl
+        - mockFlag
+        - paidAt
+        - createdAt
+        - updatedAt
+    UploadReceiptRequest:
+      type: object
+      properties:
+        receiptUrl:
+          type: string
+          format: uri
+      required:
+        - receiptUrl
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -865,7 +1160,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a7
+                        enum: *a8
                     required:
                       - id
                       - role
@@ -971,7 +1266,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a7
+                        enum: *a8
                     required:
                       - id
                       - role
@@ -1111,7 +1406,7 @@ paths:
                   minLength: 1
                 type:
                   type: string
-                  enum: *a8
+                  enum: *a9
               required:
                 - phone
                 - type
@@ -1191,7 +1486,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a9
+                    enum: *a10
                   createdAt:
                     type: string
                     format: date-time
@@ -1333,7 +1628,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a10
+                        mon: &a11
                           type: object
                           properties:
                             open:
@@ -1345,12 +1640,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a10
-                        wed: *a10
-                        thu: *a10
-                        fri: *a10
-                        sat: *a10
-                        sun: *a10
+                        tue: *a11
+                        wed: *a11
+                        thu: *a11
+                        fri: *a11
+                        sat: *a11
+                        sun: *a11
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -1460,7 +1755,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a11
+                      mon: &a12
                         type: object
                         properties:
                           open:
@@ -1472,12 +1767,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a11
-                      wed: *a11
-                      thu: *a11
-                      fri: *a11
-                      sat: *a11
-                      sun: *a11
+                      tue: *a12
+                      wed: *a12
+                      thu: *a12
+                      fri: *a12
+                      sat: *a12
+                      sun: *a12
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -1681,7 +1976,7 @@ paths:
                     enum: *a5
                   paymentStatus:
                     type: string
-                    enum: *a12
+                    enum: *a7
                   paidAt:
                     type: string
                     nullable: true
@@ -1737,6 +2032,1185 @@ paths:
                   - cancelReason
         "400":
           description: STOCK_NOT_ENOUGH
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    get:
+      tags:
+        - order
+      description: 客户端订单列表（按状态筛选 + 游标分页）
+      responses:
+        "200":
+          description: 订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    orderNo:
+                      type: string
+                      pattern: ^MM\d{14}$
+                    userId:
+                      type: string
+                      format: uuid
+                    warehouseId:
+                      type: string
+                      format: uuid
+                    status:
+                      type: string
+                      enum: *a6
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          productId:
+                            type: string
+                            format: uuid
+                          skuId:
+                            type: string
+                            format: uuid
+                          productName:
+                            type: string
+                          productImage:
+                            type: string
+                          skuName:
+                            type: string
+                          unitPrice:
+                            type: integer
+                            minimum: 0
+                          quantity:
+                            type: integer
+                            minimum: 0
+                            exclusiveMinimum: true
+                          subtotal:
+                            type: integer
+                            minimum: 0
+                        required:
+                          - id
+                          - productId
+                          - skuId
+                          - productName
+                          - productImage
+                          - skuName
+                          - unitPrice
+                          - quantity
+                          - subtotal
+                    totalAmount:
+                      type: integer
+                      minimum: 0
+                    deliveryFee:
+                      type: integer
+                      minimum: 0
+                    discountAmount:
+                      type: integer
+                      minimum: 0
+                      default: 0
+                    payableAmount:
+                      type: integer
+                      minimum: 0
+                    deliveryAddress:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                      required:
+                        - name
+                        - phone
+                        - detail
+                        - lat
+                        - lng
+                    remark:
+                      type: string
+                      nullable: true
+                    riderId:
+                      type: string
+                      nullable: true
+                      format: uuid
+                    paymentMethod:
+                      type: string
+                      enum: *a5
+                    paymentStatus:
+                      type: string
+                      enum: *a7
+                    paidAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    createdAt:
+                      type: string
+                      format: date-time
+                    confirmedAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    pickedAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    deliveringAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    deliveredAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    cancelledAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    cancelReason:
+                      type: string
+                      nullable: true
+                  required:
+                    - id
+                    - orderNo
+                    - userId
+                    - warehouseId
+                    - status
+                    - items
+                    - totalAmount
+                    - deliveryFee
+                    - payableAmount
+                    - deliveryAddress
+                    - remark
+                    - riderId
+                    - paymentMethod
+                    - paymentStatus
+                    - paidAt
+                    - createdAt
+                    - confirmedAt
+                    - pickedAt
+                    - deliveringAt
+                    - deliveredAt
+                    - cancelledAt
+                    - cancelReason
+  /api/v1/client/orders/{id}:
+    get:
+      tags:
+        - order
+      description: 订单详情（含 items + events）
+      responses:
+        "200":
+          description: 订单详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  orderNo:
+                    type: string
+                    pattern: ^MM\d{14}$
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: *a6
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        subtotal:
+                          type: integer
+                          minimum: 0
+                      required:
+                        - id
+                        - productId
+                        - skuId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - subtotal
+                  totalAmount:
+                    type: integer
+                    minimum: 0
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                  discountAmount:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  payableAmount:
+                    type: integer
+                    minimum: 0
+                  deliveryAddress:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      phone:
+                        type: string
+                      detail:
+                        type: string
+                      lat:
+                        type: number
+                        nullable: true
+                      lng:
+                        type: number
+                        nullable: true
+                    required:
+                      - name
+                      - phone
+                      - detail
+                      - lat
+                      - lng
+                  remark:
+                    type: string
+                    nullable: true
+                  riderId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  paymentMethod:
+                    type: string
+                    enum: *a5
+                  paymentStatus:
+                    type: string
+                    enum: *a7
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  confirmedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  pickedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  deliveringAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  deliveredAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  cancelledAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  cancelReason:
+                    type: string
+                    nullable: true
+                required:
+                  - id
+                  - orderNo
+                  - userId
+                  - warehouseId
+                  - status
+                  - items
+                  - totalAmount
+                  - deliveryFee
+                  - payableAmount
+                  - deliveryAddress
+                  - remark
+                  - riderId
+                  - paymentMethod
+                  - paymentStatus
+                  - paidAt
+                  - createdAt
+                  - confirmedAt
+                  - pickedAt
+                  - deliveringAt
+                  - deliveredAt
+                  - cancelledAt
+                  - cancelReason
+        "404":
+          description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/orders/{id}/cancel:
+    post:
+      tags:
+        - order
+      description: 取消订单（用户自助，PENDING_* / CONFIRMED 可取消）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+              required:
+                - reason
+      responses:
+        "200":
+          description: 取消成功
+        "409":
+          description: ORDER_STATUS_NOT_CANCELLABLE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/cart:
+    get:
+      tags:
+        - cart
+      description: 获取购物车（按用户 1 份，含 items + 选中金额汇总）
+      responses:
+        "200":
+          description: 购物车详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        isSelected:
+                          type: boolean
+                        addedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - skuId
+                        - productId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - isSelected
+                        - addedAt
+                  selectedSubtotal:
+                    type: integer
+                    minimum: 0
+                  totalSubtotal:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - userId
+                  - warehouseId
+                  - items
+                  - selectedSubtotal
+                  - totalSubtotal
+  /api/v1/client/cart/items:
+    post:
+      tags:
+        - cart
+      description: 加购（同 sku 累加数量 + 刷新价格快照）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skuId:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+              required:
+                - skuId
+                - quantity
+      responses:
+        "200":
+          description: 加购后的购物车
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        isSelected:
+                          type: boolean
+                        addedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - skuId
+                        - productId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - isSelected
+                        - addedAt
+                  selectedSubtotal:
+                    type: integer
+                    minimum: 0
+                  totalSubtotal:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - userId
+                  - warehouseId
+                  - items
+                  - selectedSubtotal
+                  - totalSubtotal
+        "409":
+          description: SKU_INACTIVE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/cart/items/{id}:
+    patch:
+      tags:
+        - cart
+      description: 修改购物车项数量 / 选中状态
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                isSelected:
+                  type: boolean
+      responses:
+        "200":
+          description: 修改后的购物车
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        isSelected:
+                          type: boolean
+                        addedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - skuId
+                        - productId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - isSelected
+                        - addedAt
+                  selectedSubtotal:
+                    type: integer
+                    minimum: 0
+                  totalSubtotal:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - userId
+                  - warehouseId
+                  - items
+                  - selectedSubtotal
+                  - totalSubtotal
+    delete:
+      tags:
+        - cart
+      description: 删除购物车项
+      responses:
+        "200":
+          description: 删除后的购物车
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        isSelected:
+                          type: boolean
+                        addedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - skuId
+                        - productId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - isSelected
+                        - addedAt
+                  selectedSubtotal:
+                    type: integer
+                    minimum: 0
+                  totalSubtotal:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - userId
+                  - warehouseId
+                  - items
+                  - selectedSubtotal
+                  - totalSubtotal
+  /api/v1/client/cart/checkout-preview:
+    post:
+      tags:
+        - cart
+      description: 结算前预览（按地址匹配仓库 + 库存/价格校验 + 金额汇总）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                addressId:
+                  type: string
+                  format: uuid
+              required:
+                - addressId
+      responses:
+        "200":
+          description: 结算预览
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        skuId:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        productImage:
+                          type: string
+                        skuName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        unitPrice:
+                          type: integer
+                          minimum: 0
+                        quantity:
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                        isSelected:
+                          type: boolean
+                        addedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - skuId
+                        - productId
+                        - productName
+                        - productImage
+                        - skuName
+                        - unitPrice
+                        - quantity
+                        - isSelected
+                        - addedAt
+                  warehouseMatch:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      code:
+                        type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
+                    required:
+                      - id
+                      - code
+                      - deliveryFee
+                  itemsSubtotal:
+                    type: integer
+                    minimum: 0
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                  payableAmount:
+                    type: integer
+                    minimum: 0
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                required:
+                  - items
+                  - warehouseMatch
+                  - itemsSubtotal
+                  - deliveryFee
+                  - payableAmount
+                  - warnings
+        "409":
+          description: NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/payments/{orderId}:
+    get:
+      tags:
+        - payment
+      description: 查询订单支付状态（含 mock/stub 标识）
+      responses:
+        "200":
+          description: PaymentIntent 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  orderId:
+                    type: string
+                    format: uuid
+                  method:
+                    type: string
+                    enum: *a5
+                  status:
+                    type: string
+                    enum: *a7
+                  amount:
+                    type: integer
+                    minimum: 0
+                  transactionId:
+                    type: string
+                    nullable: true
+                  clientSecret:
+                    type: string
+                    nullable: true
+                  receiptUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  mockFlag:
+                    type: boolean
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - orderId
+                  - method
+                  - status
+                  - amount
+                  - transactionId
+                  - clientSecret
+                  - receiptUrl
+                  - mockFlag
+                  - paidAt
+                  - createdAt
+                  - updatedAt
+        "404":
+          description: PAYMENT_INTENT_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/payments/{orderId}/mock-callback:
+    post:
+      tags:
+        - payment
+      description: dev/staging 模拟第三方支付成功回调（仅 WECHAT/PAYPAL/STRIPE）
+      responses:
+        "200":
+          description: 回调成功，订单自动进 CONFIRMED
+        "409":
+          description: METHOD_NOT_ALLOWED / DISABLED_IN_PROD
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/payments/{orderId}/receipt:
+    post:
+      tags:
+        - payment
+      description: 银行转账凭证上传（BANK_TRANSFER 专用）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                receiptUrl:
+                  type: string
+                  format: uri
+              required:
+                - receiptUrl
+      responses:
+        "200":
+          description: 凭证已上传，状态进 PROCESSING 等审核
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  orderId:
+                    type: string
+                    format: uuid
+                  method:
+                    type: string
+                    enum: *a5
+                  status:
+                    type: string
+                    enum: *a7
+                  amount:
+                    type: integer
+                    minimum: 0
+                  transactionId:
+                    type: string
+                    nullable: true
+                  clientSecret:
+                    type: string
+                    nullable: true
+                  receiptUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  mockFlag:
+                    type: boolean
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - orderId
+                  - method
+                  - status
+                  - amount
+                  - transactionId
+                  - clientSecret
+                  - receiptUrl
+                  - mockFlag
+                  - paidAt
+                  - createdAt
+                  - updatedAt
+  /api/v1/client/payments/{orderId}/confirm:
+    post:
+      tags:
+        - payment
+      description: 客户端轮询查到 PAID 后触发订单确认
+      responses:
+        "200":
+          description: 订单已确认
+        "409":
+          description: PAYMENT_NOT_PAID
           content:
             application/json:
               schema:

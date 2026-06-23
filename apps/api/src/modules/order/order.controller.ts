@@ -35,7 +35,6 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { CreateOrderInput, PaymentMethodValue, OrderStatusValue } from './order.types';
-import type { PaymentMethod } from '@meimart/api-contract';
 
 const ListOrdersQuery = z.object({
   status: z
@@ -91,7 +90,7 @@ export class OrderController {
       addressId: body.addressId,
       items: body.items.map((i) => ({ skuId: i.skuId, quantity: i.quantity })),
       remark: body.remark,
-      paymentMethod: body.paymentMethod as PaymentMethod as PaymentMethodValue,
+      paymentMethod: body.paymentMethod as PaymentMethodValue,
       deviceType: user.deviceType,
       perspective,
     };

@@ -30,6 +30,7 @@
  *   3. （预付场景）W5 接入 RefundService：触发 refund，标 PaymentIntent.REFUNDED
  */
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../../prisma/client';
 import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
@@ -41,7 +42,9 @@ import type {
   OrderStatusValue,
   PaymentMethodValue,
   OrderEventContext,
+  ContractDeviceType,
 } from './order.types';
+import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
 
 /** Order 查询结果（含 items + events） */
@@ -150,7 +153,7 @@ export class OrderService {
       });
     }
     // 任意 product 已下架
-    if (skus.some((s) => s.product.status !== 'ACTIVE')) {
+    if (skus.some((s: { product: { status: string } }) => s.product.status !== 'ACTIVE')) {
       throw new ConflictException({
         code: 'E-ORDER-005',
         message: 'Some products are inactive',
@@ -158,12 +161,11 @@ export class OrderService {
     }
 
     // ===== Step 4: 计算金额（整数分） =====
-    const skuMap = new Map(skus.map((s) => [s.id, s]));
     const qtyMap = new Map(input.items.map((i) => [i.skuId, i.quantity]));
 
     let itemsSubtotal = 0;
     const orderItemData = skus.map((sku) => {
-      const qty = qtyMap.get(sku.id)!;
+      const qty = qtyMap.get(sku.id) ?? 0;
       const unitPrice = sku.price;
       const subtotal = unitPrice * qty;
       itemsSubtotal += subtotal;
@@ -217,9 +219,19 @@ export class OrderService {
           },
         });
 
-        // 6.2 批量创建 OrderItem
+        // 6.2 批量创建 OrderItem（多语言 JSON 字段强转 InputJsonValue）
         await tx.orderItem.createMany({
-          data: orderItemData.map((item) => ({ ...item, orderId: order.id })),
+          data: orderItemData.map((item) => ({
+            orderId: order.id,
+            productId: item.productId,
+            skuId: item.skuId,
+            productName: item.productName as Prisma.InputJsonValue,
+            productImage: item.productImage,
+            skuName: item.skuName as Prisma.InputJsonValue,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+          })),
         });
 
         // 6.3 行锁扣库存（任一失败 throw → 自动回滚）
@@ -246,13 +258,13 @@ export class OrderService {
             fromStatus: null,
             toStatus: initialStatus,
             operatorId: input.userId,
-            deviceType: input.deviceType,
+            deviceType: toPrismaDeviceType(input.deviceType),
             perspective: input.perspective ?? null,
             metadata: {
               warehouseCode: warehouse.code,
               itemCount: orderItemData.length,
               paymentMethod: input.paymentMethod,
-            },
+            } as Prisma.InputJsonValue,
           },
         });
 
@@ -374,7 +386,12 @@ export class OrderService {
    */
   async cancelOrderInternal(
     orderId: string,
-    ctx: { operatorId?: string; deviceType?: import('../../prisma/client').DeviceType; perspective?: string; reason: string },
+    ctx: {
+      operatorId?: string;
+      deviceType?: ContractDeviceType;
+      perspective?: string;
+      reason: string;
+    },
   ): Promise<void> {
     await withTransaction(async (tx: Tx) => {
       const order = await tx.order.findUnique({
@@ -415,9 +432,9 @@ export class OrderService {
           fromStatus: order.status,
           toStatus: 'CANCELLED',
           operatorId: ctx.operatorId ?? null,
-          deviceType: ctx.deviceType ?? null,
+          deviceType: toPrismaDeviceType(ctx.deviceType),
           perspective: ctx.perspective ?? null,
-          metadata: { reason: ctx.reason },
+          metadata: { reason: ctx.reason } as Prisma.InputJsonValue,
         },
       });
 
@@ -477,9 +494,9 @@ export class OrderService {
           fromStatus: order.status,
           toStatus: 'CONFIRMED',
           operatorId: eventCtx.operatorId ?? null,
-          deviceType: eventCtx.deviceType ?? null,
+          deviceType: toPrismaDeviceType(eventCtx.deviceType),
           perspective: eventCtx.perspective ?? null,
-          metadata: eventCtx.metadata ?? null,
+          metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
         },
       });
     });
@@ -492,7 +509,7 @@ export class OrderService {
     const order = await db.order.findUnique({
       where: { id: orderId },
       include: {
-        items: { orderBy: { createdAt: 'asc' } },
+        items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
       },
     });
@@ -524,7 +541,7 @@ export class OrderService {
       take: limit + 1,
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
       include: {
-        items: { orderBy: { createdAt: 'asc' } },
+        items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
       },
     });
@@ -533,8 +550,8 @@ export class OrderService {
     const items = hasMore ? orders.slice(0, limit) : orders;
 
     return {
-      items: items.map((o) => this.toOrderWithRelations(o)),
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o)),
+      nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
       hasMore,
     };
   }

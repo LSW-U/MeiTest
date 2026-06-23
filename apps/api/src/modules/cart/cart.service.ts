@@ -13,6 +13,7 @@
  *   - SKU 下架后 add 拒绝，已加购的 item 显示但标 inactive
  */
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 
@@ -124,9 +125,9 @@ export class CartService {
         cartId: cart.id,
         skuId: sku.id,
         productId: sku.productId,
-        productName: sku.product.name,
+        productName: sku.product.name as Prisma.InputJsonValue,
         productImage: sku.product.mainImage,
-        skuName: sku.name,
+        skuName: sku.name as Prisma.InputJsonValue,
         unitPrice: sku.price,
         quantity: input.quantity,
         isSelected: true,

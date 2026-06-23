@@ -23,7 +23,7 @@ import {
   getPaymentStrategy,
   type PaymentIntent as StrategyPaymentIntent,
   type PaymentMethodCode,
-} from '../../infrastructure/payment';
+} from '../../infrastructure';
 import type { PaymentMethodValue } from '../order/order.types';
 
 /** createIntentForOrder 入参 */
@@ -37,7 +37,7 @@ export interface CreateIntentInput {
 /** createIntentForOrder 出参（OrderService 拼到 CreatedOrder.paymentClientSecret） */
 export interface CreatedIntent {
   intentId: string;
-  status: 'PENDING' | 'PROCESSING';
+  status: 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
   clientSecret?: string;
   mockFlag: boolean;
 }
@@ -79,7 +79,7 @@ export class PaymentService {
       return {
         intentId: existing.id,
         status: existing.status,
-        clientSecret: null,
+        clientSecret: undefined,
         mockFlag: existing.mockFlag,
       };
     }
