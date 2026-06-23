@@ -37,6 +37,13 @@ import {
   User,
   UpdateProfileRequest,
   ChangePasswordRequest,
+  Address,
+  CreateAddressRequest,
+  UpdateAddressRequest,
+  FavoriteToggleRequest,
+  FavoriteToggleResponse,
+  NotificationItem,
+  MarkNotificationReadResponse,
   // shop
   Shop,
   UpdateShopRequest,
@@ -79,6 +86,13 @@ registry.register('PasswordResetRequest', PasswordResetRequest);
 registry.register('User', User);
 registry.register('UpdateProfileRequest', UpdateProfileRequest);
 registry.register('ChangePasswordRequest', ChangePasswordRequest);
+registry.register('Address', Address);
+registry.register('CreateAddressRequest', CreateAddressRequest);
+registry.register('UpdateAddressRequest', UpdateAddressRequest);
+registry.register('FavoriteToggleRequest', FavoriteToggleRequest);
+registry.register('FavoriteToggleResponse', FavoriteToggleResponse);
+registry.register('NotificationItem', NotificationItem);
+registry.register('MarkNotificationReadResponse', MarkNotificationReadResponse);
 
 registry.register('Shop', Shop);
 registry.register('UpdateShopRequest', UpdateShopRequest);
@@ -210,12 +224,155 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
-  path: '/api/v1/client/profile',
+  path: '/api/v1/client/user/profile',
   tags: ['user'],
   responses: {
     200: {
       description: '获取个人信息',
       content: { 'application/json': { schema: User } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/user/profile',
+  tags: ['user'],
+  request: {
+    body: { content: { 'application/json': { schema: UpdateProfileRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: User } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/addresses',
+  tags: ['address'],
+  responses: {
+    200: {
+      description: '收货地址列表',
+      content: { 'application/json': { schema: Address.array() } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/addresses',
+  tags: ['address'],
+  request: {
+    body: { content: { 'application/json': { schema: CreateAddressRequest } } },
+  },
+  responses: {
+    200: {
+      description: '创建成功',
+      content: { 'application/json': { schema: Address } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/addresses/{id}',
+  tags: ['address'],
+  request: {
+    body: { content: { 'application/json': { schema: UpdateAddressRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: Address } },
+    },
+    404: { description: 'ADDRESS_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/addresses/{id}',
+  tags: ['address'],
+  responses: {
+    200: { description: '删除成功' },
+    404: { description: 'ADDRESS_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/favorites',
+  tags: ['favorite'],
+  responses: {
+    200: {
+      description: '收藏列表',
+      content: { 'application/json': { schema: FavoriteToggleResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/favorites/toggle',
+  tags: ['favorite'],
+  request: {
+    body: { content: { 'application/json': { schema: FavoriteToggleRequest } } },
+  },
+  responses: {
+    200: {
+      description: '切换成功',
+      content: { 'application/json': { schema: FavoriteToggleResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/notifications',
+  tags: ['notification'],
+  responses: {
+    200: {
+      description: '通知列表（最新 100 条）',
+      content: { 'application/json': { schema: NotificationItem.array() } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/notifications/unread-count',
+  tags: ['notification'],
+  responses: {
+    200: {
+      description: '未读数量',
+      content: { 'application/json': { schema: z.object({ count: z.number() }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/notifications/{id}/read',
+  tags: ['notification'],
+  responses: {
+    200: {
+      description: '标记已读',
+      content: { 'application/json': { schema: MarkNotificationReadResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/notifications/read-all',
+  tags: ['notification'],
+  responses: {
+    200: {
+      description: '全部标记已读',
+      content: { 'application/json': { schema: MarkNotificationReadResponse } },
     },
   },
 });
@@ -294,6 +451,9 @@ const openapi = generator.generateDocument({
   tags: [
     { name: 'auth', description: '认证模块' },
     { name: 'user', description: '用户资料' },
+    { name: 'address', description: '收货地址' },
+    { name: 'favorite', description: '收藏' },
+    { name: 'notification', description: '站内通知' },
     { name: 'shop', description: '商家（单一）' },
     { name: 'warehouse', description: '仓库（多）' },
     { name: 'order', description: '订单' },

@@ -13,6 +13,12 @@ tags:
     description: 认证模块
   - name: user
     description: 用户资料
+  - name: address
+    description: 收货地址
+  - name: favorite
+    description: 收藏
+  - name: notification
+    description: 站内通知
   - name: shop
     description: 商家（单一）
   - name: warehouse
@@ -347,6 +353,202 @@ components:
       required:
         - oldPassword
         - newPassword
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        region:
+          type: object
+          properties:
+            province:
+              type: string
+            city:
+              type: string
+            district:
+              type: string
+          required:
+            - province
+            - city
+        detail:
+          type: string
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
+        isDefault:
+          type: boolean
+        tag:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - phone
+        - region
+        - detail
+        - lat
+        - lng
+        - isDefault
+        - tag
+        - createdAt
+        - updatedAt
+    CreateAddressRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+        region:
+          type: object
+          properties:
+            province:
+              type: string
+            city:
+              type: string
+            district:
+              type: string
+          required:
+            - province
+            - city
+        detail:
+          type: string
+          minLength: 1
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
+        isDefault:
+          type: boolean
+        tag:
+          type: string
+          nullable: true
+      required:
+        - name
+        - phone
+        - region
+        - detail
+    UpdateAddressRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+        region:
+          type: object
+          properties:
+            province:
+              type: string
+            city:
+              type: string
+            district:
+              type: string
+          required:
+            - province
+            - city
+        detail:
+          type: string
+          minLength: 1
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
+        isDefault:
+          type: boolean
+        tag:
+          type: string
+          nullable: true
+    FavoriteToggleRequest:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+      required:
+        - productId
+    FavoriteToggleResponse:
+      type: object
+      properties:
+        isFavorite:
+          type: boolean
+      required:
+        - isFavorite
+    NotificationItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: &a10
+            - ORDER_UPDATE
+            - PROMOTION
+            - SYSTEM
+        title:
+          type: object
+          additionalProperties:
+            type: string
+        content:
+          type: object
+          additionalProperties:
+            type: string
+        isRead:
+          type: boolean
+        data:
+          type: object
+          nullable: true
+          additionalProperties:
+            nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - type
+        - title
+        - content
+        - isRead
+        - data
+        - createdAt
+    MarkNotificationReadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
     Shop:
       type: object
       properties:
@@ -722,7 +924,7 @@ components:
             - STRIPE
         paymentStatus:
           type: string
-          enum: &a12
+          enum: &a13
             - UNPAID
             - PAID
             - REFUNDED
@@ -1395,7 +1597,7 @@ paths:
       responses:
         "200":
           description: 登出成功
-  /api/v1/client/profile:
+  /api/v1/client/user/profile:
     get:
       tags:
         - user
@@ -1445,6 +1647,552 @@ paths:
                   - status
                   - createdAt
                   - updatedAt
+    patch:
+      tags:
+        - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                avatarUrl:
+                  type: string
+                  format: uri
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                    nullable: true
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a9
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - createdAt
+                  - updatedAt
+  /api/v1/client/addresses:
+    get:
+      tags:
+        - address
+      responses:
+        "200":
+          description: 收货地址列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    userId:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    phone:
+                      type: string
+                    region:
+                      type: object
+                      properties:
+                        province:
+                          type: string
+                        city:
+                          type: string
+                        district:
+                          type: string
+                      required:
+                        - province
+                        - city
+                    detail:
+                      type: string
+                    lat:
+                      type: number
+                      nullable: true
+                    lng:
+                      type: number
+                      nullable: true
+                    isDefault:
+                      type: boolean
+                    tag:
+                      type: string
+                      nullable: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - userId
+                    - name
+                    - phone
+                    - region
+                    - detail
+                    - lat
+                    - lng
+                    - isDefault
+                    - tag
+                    - createdAt
+                    - updatedAt
+    post:
+      tags:
+        - address
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                phone:
+                  type: string
+                  minLength: 1
+                region:
+                  type: object
+                  properties:
+                    province:
+                      type: string
+                    city:
+                      type: string
+                    district:
+                      type: string
+                  required:
+                    - province
+                    - city
+                detail:
+                  type: string
+                  minLength: 1
+                lat:
+                  type: number
+                  nullable: true
+                lng:
+                  type: number
+                  nullable: true
+                isDefault:
+                  type: boolean
+                tag:
+                  type: string
+                  nullable: true
+              required:
+                - name
+                - phone
+                - region
+                - detail
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  phone:
+                    type: string
+                  region:
+                    type: object
+                    properties:
+                      province:
+                        type: string
+                      city:
+                        type: string
+                      district:
+                        type: string
+                    required:
+                      - province
+                      - city
+                  detail:
+                    type: string
+                  lat:
+                    type: number
+                    nullable: true
+                  lng:
+                    type: number
+                    nullable: true
+                  isDefault:
+                    type: boolean
+                  tag:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - userId
+                  - name
+                  - phone
+                  - region
+                  - detail
+                  - lat
+                  - lng
+                  - isDefault
+                  - tag
+                  - createdAt
+                  - updatedAt
+  /api/v1/client/addresses/{id}:
+    patch:
+      tags:
+        - address
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                phone:
+                  type: string
+                  minLength: 1
+                region:
+                  type: object
+                  properties:
+                    province:
+                      type: string
+                    city:
+                      type: string
+                    district:
+                      type: string
+                  required:
+                    - province
+                    - city
+                detail:
+                  type: string
+                  minLength: 1
+                lat:
+                  type: number
+                  nullable: true
+                lng:
+                  type: number
+                  nullable: true
+                isDefault:
+                  type: boolean
+                tag:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  userId:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  phone:
+                    type: string
+                  region:
+                    type: object
+                    properties:
+                      province:
+                        type: string
+                      city:
+                        type: string
+                      district:
+                        type: string
+                    required:
+                      - province
+                      - city
+                  detail:
+                    type: string
+                  lat:
+                    type: number
+                    nullable: true
+                  lng:
+                    type: number
+                    nullable: true
+                  isDefault:
+                    type: boolean
+                  tag:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - userId
+                  - name
+                  - phone
+                  - region
+                  - detail
+                  - lat
+                  - lng
+                  - isDefault
+                  - tag
+                  - createdAt
+                  - updatedAt
+        "404":
+          description: ADDRESS_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    delete:
+      tags:
+        - address
+      responses:
+        "200":
+          description: 删除成功
+        "404":
+          description: ADDRESS_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/favorites:
+    get:
+      tags:
+        - favorite
+      responses:
+        "200":
+          description: 收藏列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isFavorite:
+                    type: boolean
+                required:
+                  - isFavorite
+  /api/v1/client/favorites/toggle:
+    post:
+      tags:
+        - favorite
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                  format: uuid
+              required:
+                - productId
+      responses:
+        "200":
+          description: 切换成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isFavorite:
+                    type: boolean
+                required:
+                  - isFavorite
+  /api/v1/client/notifications:
+    get:
+      tags:
+        - notification
+      responses:
+        "200":
+          description: 通知列表（最新 100 条）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    userId:
+                      type: string
+                      format: uuid
+                    type:
+                      type: string
+                      enum: *a10
+                    title:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    content:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    isRead:
+                      type: boolean
+                    data:
+                      type: object
+                      nullable: true
+                      additionalProperties:
+                        nullable: true
+                    createdAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - userId
+                    - type
+                    - title
+                    - content
+                    - isRead
+                    - data
+                    - createdAt
+  /api/v1/client/notifications/unread-count:
+    get:
+      tags:
+        - notification
+      responses:
+        "200":
+          description: 未读数量
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: number
+                required:
+                  - count
+  /api/v1/client/notifications/{id}/read:
+    patch:
+      tags:
+        - notification
+      responses:
+        "200":
+          description: 标记已读
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+  /api/v1/client/notifications/read-all:
+    post:
+      tags:
+        - notification
+      responses:
+        "200":
+          description: 全部标记已读
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
   /api/v1/common/shop:
     get:
       tags:
@@ -1570,7 +2318,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a10
+                        mon: &a11
                           type: object
                           properties:
                             open:
@@ -1582,12 +2330,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a10
-                        wed: *a10
-                        thu: *a10
-                        fri: *a10
-                        sat: *a10
-                        sun: *a10
+                        tue: *a11
+                        wed: *a11
+                        thu: *a11
+                        fri: *a11
+                        sat: *a11
+                        sun: *a11
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -1697,7 +2445,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a11
+                      mon: &a12
                         type: object
                         properties:
                           open:
@@ -1709,12 +2457,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a11
-                      wed: *a11
-                      thu: *a11
-                      fri: *a11
-                      sat: *a11
-                      sun: *a11
+                      tue: *a12
+                      wed: *a12
+                      thu: *a12
+                      fri: *a12
+                      sat: *a12
+                      sun: *a12
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -1918,7 +2666,7 @@ paths:
                     enum: *a5
                   paymentStatus:
                     type: string
-                    enum: *a12
+                    enum: *a13
                   paidAt:
                     type: string
                     nullable: true
