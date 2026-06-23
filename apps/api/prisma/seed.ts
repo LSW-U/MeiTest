@@ -217,6 +217,134 @@ async function main() {
   }
   console.log(`  ✅ ${PRODUCTS.length} products × 2 SKUs × ${warehouses.length} warehouses = ${PRODUCTS.length * 2 * warehouses.length} stock records`);
 
+  // ===== 7. W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / 分类 / Banner =====
+  console.log('\n📦 W 流程扩展数据...');
+
+  const adminUser = await prisma.user.findUnique({ where: { phone: SEED_ADMIN_PHONE } });
+  const allProducts = await prisma.product.findMany({ take: 5 });
+  if (adminUser && allProducts.length > 0) {
+    // 7.1 收货地址（2 条，1 默认）
+    await prisma.address.deleteMany({ where: { userId: adminUser.id } });
+    await prisma.address.create({
+      data: {
+        userId: adminUser.id,
+        name: 'Alice Home',
+        phone: '+67077777777',
+        region: { province: 'Dili', city: 'Dili', district: 'Vera Cruz' },
+        detail: 'Rua dos Martires da Patria, No. 12',
+        lat: -8.5568,
+        lng: 125.56,
+        isDefault: true,
+        tag: 'home',
+      },
+    });
+    await prisma.address.create({
+      data: {
+        userId: adminUser.id,
+        name: 'Office',
+        phone: '+67077777777',
+        region: { province: 'Dili', city: 'Dili', district: 'Colmera' },
+        detail: 'Avenida Bispo de Medeiros, Edificio 3',
+        lat: -8.5485,
+        lng: 125.5725,
+        isDefault: false,
+        tag: 'work',
+      },
+    });
+
+    // 7.2 收藏（前 3 个商品）
+    await prisma.favorite.deleteMany({ where: { userId: adminUser.id } });
+    for (const p of allProducts.slice(0, 3)) {
+      await prisma.favorite.create({ data: { userId: adminUser.id, productId: p.id } });
+    }
+
+    // 7.3 通知（2 条未读）
+    await prisma.notification.deleteMany({ where: { userId: adminUser.id } });
+    await prisma.notification.create({
+      data: {
+        userId: adminUser.id,
+        type: 'SYSTEM',
+        title: { en: 'Welcome to MeiMart!', zh: '欢迎来到美超市!' },
+        content: {
+          en: 'Enjoy your shopping.',
+          zh: '祝您购物愉快。',
+        },
+        isRead: false,
+      },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: adminUser.id,
+        type: 'PROMOTION',
+        title: { en: 'Free delivery this week', zh: '本周免配送费' },
+        content: {
+          en: 'On orders over 5000 cents.',
+          zh: '订单满 50 元免配送费。',
+        },
+        isRead: false,
+      },
+    });
+
+    console.log('  ✅ 2 addresses + 3 favorites + 2 notifications');
+  }
+
+  // 7.4 分类（一级 3 个）
+  await prisma.category.deleteMany();
+  const categories = await Promise.all([
+    prisma.category.create({
+      data: {
+        name: i18n('Drinks', '饮品', 'Minuman', 'Bebidas'),
+        iconUrl: 'https://example.com/cat-drinks.png',
+        sortOrder: 1,
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: i18n('Food', '食品', 'Makanan', 'Comida'),
+        iconUrl: 'https://example.com/cat-food.png',
+        sortOrder: 2,
+      },
+    }),
+    prisma.category.create({
+      data: {
+        name: i18n('Household', '家居', 'Rumah Tangga', 'Casa'),
+        iconUrl: 'https://example.com/cat-household.png',
+        sortOrder: 3,
+      },
+    }),
+  ]);
+  // 把现有 products 关联到 Drinks（前 5 个）
+  if (allProducts.length > 0) {
+    await prisma.product.updateMany({
+      where: { id: { in: allProducts.map((p) => p.id) } },
+      data: { categoryId: categories[0].id },
+    });
+    console.log(`  ✅ 3 categories + linked ${allProducts.length} products`);
+  }
+
+  // 7.5 Banner（2 个 ACTIVE）
+  await prisma.banner.deleteMany();
+  await prisma.banner.create({
+    data: {
+      imageUrl: 'https://example.com/banner-promo-1.png',
+      alt: { en: 'Summer Sale', zh: '夏季大促' },
+      linkType: 'PRODUCT',
+      linkValue: allProducts[0]?.id ?? null,
+      sortOrder: 1,
+      status: 'ACTIVE',
+    },
+  });
+  await prisma.banner.create({
+    data: {
+      imageUrl: 'https://example.com/banner-free-delivery.png',
+      alt: { en: 'Free Delivery', zh: '免配送费' },
+      linkType: 'NONE',
+      sortOrder: 2,
+      status: 'ACTIVE',
+    },
+  });
+  console.log('  ✅ 2 banners');
+
   console.log('\n🎉 Seed completed!');
   console.log(`   Login: phone=+670999999999, password=admin12345`);
 }
