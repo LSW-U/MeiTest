@@ -17,7 +17,8 @@
 - ✅ JWT（分端 TTL + Redis 黑名单）+ RBAC + device_type + audit 三道闸门
 - ✅ docker compose 一键起本地全栈（pg+postgis / redis / minio / mailhog / backup cron）
 - ✅ GitHub Actions CI（typecheck + test + contract + security + build）+ Deploy staging
-- ⚠️ 遗留：pnpm audit 17 high（next.js 14 升 15.5.16+ W2 处理）；staging 服务器待申请
+- ✅ **Socket.IO WS 通道打通**（骑手位置推送链路，`/realtime` namespace + JWT handshake 鉴权）
+- ⚠️ 遗留：pnpm audit 18 high（next.js 14 升 15.5.16+ W2 处理）；staging 服务器待申请
 
 完整验收见 Obsidian `_inbox/04-后端记录/MeiMart-W1验收报告-20260621.md`。
 技术栈决策见 `CLAUDE.md` + Obsidian `04-后端记录/MeiMart-ADR-技术栈选型-20260617.md`。

@@ -331,7 +331,7 @@ pnpm --filter @meimart/api-contract mock
 □ PaymentStrategy 抽象完成,5 策略(2 真+3 mock/stub)全到位
 □ OtpStrategy 抽象完成,密码 + SMS(stub) + 邮箱全到位
 □ Google Maps SDK 封装(用真实个人 key)
-□ Socket.IO WS 通道打通(骑手位置推送链路)
+□ Socket.IO WS 通道打通(骑手位置推送链路) ✅ 2026-06-23
 □ orderNo 生成器单测覆盖(16 位格式)
 □ logout 接口能精准 invalidate refresh token
 □ CI 全绿,merge to main 自动部署 staging(印尼雅加达)
