@@ -1,0 +1,75 @@
+{
+  "perspective": {
+    "label": "Perspektiva",
+    "switchedToast": "Muda ba perspektiva {{name}}",
+    "platform": "Plataforma",
+    "merchant": "Komérsiu",
+    "warehouse": "Armazéng",
+    "support": "Atendimentu Kliente",
+    "riderMgmt": "Manejamentu Rider"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "auditLogs": "Log Auditoria",
+    "systemConfig": "Konfigurasaun Sistema",
+    "im": "Mensajen",
+    "settle": "Settlement"
+  },
+  "dashboard": {
+    "title": "Dashboard Plataforma",
+    "gmv": "GMV",
+    "orderCount": "Order",
+    "onlineRiders": "Rider Online",
+    "abnormalOrders": "Order Anormal",
+    "growth": "vs períodu antes",
+    "range": {
+      "today": "Ohin",
+      "week": "Semana ne'e",
+      "month": "Fulan ne'e"
+    },
+    "trendTitle": "Tendénsia GMV / Order",
+    "warehouseBreakdownTitle": "Distribuisaun tuir Armazéng",
+    "warehouseName": "Armazéng",
+    "abnormalCount": "Anormal"
+  },
+  "audit": {
+    "title": "Log Auditoria",
+    "filters": {
+      "userId": "ID Uzuáriu",
+      "resourceType": "Tipu Rekursu",
+      "action": "Aksaun",
+      "perspective": "Perspektiva",
+      "from": "Husi",
+      "to": "To'o"
+    },
+    "columns": {
+      "time": "Tempu",
+      "user": "Uzuáriu",
+      "action": "Aksaun",
+      "resource": "Rekursu",
+      "perspective": "Perspektiva",
+      "ip": "IP"
+    },
+    "detail": {
+      "title": "Detalle Log Auditoria",
+      "before": "Antes",
+      "after": "Depois",
+      "userAgent": "User Agent",
+      "traceId": "Trace ID"
+    },
+    "export": "Esporta CSV",
+    "empty": "La iha log auditoria ne'ebé at"
+  },
+  "config": {
+    "title": "Konfigurasaun Sistema",
+    "key": "Chave",
+    "value": "Valor",
+    "description": "Deskrisaun",
+    "updatedAt": "Atualiza iha",
+    "updatedBy": "Atualiza husi",
+    "edit": "Edita",
+    "saveSuccess": "Konfigurasaun salva ona",
+    "commissionRate": "Taxa komisaun plataforma (%)",
+    "deliveryBaseFee": "Taxa baze entrega (séntavu)"
+  }
+}

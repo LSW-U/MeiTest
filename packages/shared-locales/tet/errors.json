@@ -19,5 +19,8 @@
   "E-ORDER-004": "Order not found",
   "E-PAYMENT-001": "Payment method not supported",
   "E-PAYMENT-002": "Payment timed out, please retry",
-  "E-PAYMENT-003": "Payment failed, please retry or change method"
+  "E-PAYMENT-003": "Payment failed, please retry or change method",
+  "E-PLATFORM-001": "Invalid dashboard time range",
+  "E-PLATFORM-002": "System config key not found",
+  "E-AUDIT-001": "Audit log not found"
 }

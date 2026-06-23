@@ -19,5 +19,8 @@
   "E-ORDER-004": "Encomenda não encontrada",
   "E-PAYMENT-001": "Método de pagamento não suportado",
   "E-PAYMENT-002": "Pagamento expirou, tente novamente",
-  "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método"
+  "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método",
+  "E-PLATFORM-001": "Intervalo de tempo do painel inválido",
+  "E-PLATFORM-002": "Chave de configuração do sistema não encontrada",
+  "E-AUDIT-001": "Registo de auditoria não encontrado"
 }

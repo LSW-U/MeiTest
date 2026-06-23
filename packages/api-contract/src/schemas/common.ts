@@ -53,7 +53,7 @@ export const ErrorResponse = z.object({
     code: z
       .string()
       .regex(
-        /^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$/,
+        /^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT)-\d{3}$|^E-HTTP-\d{3}$/,
         'INVALID_ERROR_CODE_FORMAT',
       ),
     message: z.string(),

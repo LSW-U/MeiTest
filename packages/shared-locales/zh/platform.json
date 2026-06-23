@@ -1,0 +1,75 @@
+{
+  "perspective": {
+    "label": "视角",
+    "switchedToast": "已切换到 {{name}} 视角",
+    "platform": "平台",
+    "merchant": "商家",
+    "warehouse": "仓库",
+    "support": "客服",
+    "riderMgmt": "骑手管理"
+  },
+  "menu": {
+    "dashboard": "数据看板",
+    "auditLogs": "审计日志",
+    "systemConfig": "系统配置",
+    "im": "消息",
+    "settle": "结算"
+  },
+  "dashboard": {
+    "title": "平台数据看板",
+    "gmv": "成交额",
+    "orderCount": "订单数",
+    "onlineRiders": "在线骑手",
+    "abnormalOrders": "异常订单",
+    "growth": "较上周期",
+    "range": {
+      "today": "今日",
+      "week": "本周",
+      "month": "本月"
+    },
+    "trendTitle": "GMV / 订单趋势",
+    "warehouseBreakdownTitle": "仓库维度钻取",
+    "warehouseName": "仓库",
+    "abnormalCount": "异常数"
+  },
+  "audit": {
+    "title": "审计日志",
+    "filters": {
+      "userId": "用户 ID",
+      "resourceType": "资源类型",
+      "action": "操作",
+      "perspective": "视角",
+      "from": "起始时间",
+      "to": "结束时间"
+    },
+    "columns": {
+      "time": "时间",
+      "user": "用户",
+      "action": "操作",
+      "resource": "资源",
+      "perspective": "视角",
+      "ip": "IP"
+    },
+    "detail": {
+      "title": "审计日志详情",
+      "before": "变更前",
+      "after": "变更后",
+      "userAgent": "User Agent",
+      "traceId": "Trace ID"
+    },
+    "export": "导出 CSV",
+    "empty": "没有符合条件的审计日志"
+  },
+  "config": {
+    "title": "系统配置",
+    "key": "键",
+    "value": "值",
+    "description": "说明",
+    "updatedAt": "更新时间",
+    "updatedBy": "更新人",
+    "edit": "编辑",
+    "saveSuccess": "配置已保存",
+    "commissionRate": "平台抽成比例 (%)",
+    "deliveryBaseFee": "配送基础费（分）"
+  }
+}

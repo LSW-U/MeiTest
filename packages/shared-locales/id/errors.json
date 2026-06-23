@@ -19,5 +19,8 @@
   "E-ORDER-004": "Pesanan tidak ditemukan",
   "E-PAYMENT-001": "Metode pembayaran tidak didukung",
   "E-PAYMENT-002": "Pembayaran kedaluwarsa, silakan coba lagi",
-  "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode"
+  "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode",
+  "E-PLATFORM-001": "Rentang waktu dasbor tidak valid",
+  "E-PLATFORM-002": "Kunci konfigurasi sistem tidak ditemukan",
+  "E-AUDIT-001": "Log audit tidak ditemukan"
 }

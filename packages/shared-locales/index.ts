@@ -23,6 +23,7 @@ import enWarehouse from './en/warehouse.json';
 import enOrder from './en/order.json';
 import enPayment from './en/payment.json';
 import enCatalog from './en/catalog.json';
+import enPlatform from './en/platform.json';
 import enErrors from './en/errors.json';
 
 import zhCommon from './zh/common.json';
@@ -33,6 +34,7 @@ import zhWarehouse from './zh/warehouse.json';
 import zhOrder from './zh/order.json';
 import zhPayment from './zh/payment.json';
 import zhCatalog from './zh/catalog.json';
+import zhPlatform from './zh/platform.json';
 import zhErrors from './zh/errors.json';
 
 import idCommon from './id/common.json';
@@ -43,6 +45,7 @@ import idWarehouse from './id/warehouse.json';
 import idOrder from './id/order.json';
 import idPayment from './id/payment.json';
 import idCatalog from './id/catalog.json';
+import idPlatform from './id/platform.json';
 import idErrors from './id/errors.json';
 
 import ptCommon from './pt/common.json';
@@ -53,6 +56,7 @@ import ptWarehouse from './pt/warehouse.json';
 import ptOrder from './pt/order.json';
 import ptPayment from './pt/payment.json';
 import ptCatalog from './pt/catalog.json';
+import ptPlatform from './pt/platform.json';
 import ptErrors from './pt/errors.json';
 
 import tetCommon from './tet/common.json';
@@ -63,6 +67,7 @@ import tetWarehouse from './tet/warehouse.json';
 import tetOrder from './tet/order.json';
 import tetPayment from './tet/payment.json';
 import tetCatalog from './tet/catalog.json';
+import tetPlatform from './tet/platform.json';
 import tetErrors from './tet/errors.json';
 
 export const SUPPORTED_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
@@ -79,6 +84,7 @@ export interface MessagesBundle {
   order: typeof enOrder;
   payment: typeof enPayment;
   catalog: typeof enCatalog;
+  platform: typeof enPlatform;
   errors: typeof enErrors;
 }
 
@@ -93,6 +99,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: enOrder,
     payment: enPayment,
     catalog: enCatalog,
+    platform: enPlatform,
     errors: enErrors,
   },
   zh: {
@@ -104,6 +111,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: zhOrder,
     payment: zhPayment,
     catalog: zhCatalog,
+    platform: zhPlatform,
     errors: zhErrors,
   },
   id: {
@@ -115,6 +123,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: idOrder,
     payment: idPayment,
     catalog: idCatalog,
+    platform: idPlatform,
     errors: idErrors,
   },
   pt: {
@@ -126,6 +135,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: ptOrder,
     payment: ptPayment,
     catalog: ptCatalog,
+    platform: ptPlatform,
     errors: ptErrors,
   },
   tet: {
@@ -137,6 +147,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: tetOrder,
     payment: tetPayment,
     catalog: tetCatalog,
+    platform: tetPlatform,
     errors: tetErrors,
   },
 };

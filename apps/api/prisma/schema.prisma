@@ -870,6 +870,84 @@ model Banner {
 }
 
 // ============================================================================
+// 流程 M（治理/财务）扩展表 — W2 起，按 W-M-C-T 任务推进逐个启用
+// ----------------------------------------------------------------------------
+
+/// 平台系统配置（key-value，Redis 缓存）
+/// W2 流程 M：抽成比例 / 配送费基础规则 / 起送价 / 各种业务开关
+model SystemConfig {
+  /// 配置键，如 platform.commission_rate / delivery.base_fee
+  key         String   @id
+  /// 配置值（统一字符串存储，业务方自行反序列化）
+  value       String
+  description String?
+  /// 最后更新人（super_admin user id）
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_configs")
+}
+
+/// 结算单（W3 启用：T+1 定时任务聚合订单生成）
+model Settlement {
+  id           String    @id @default(uuid())
+  /// 结算周期 YYYY-MM-DD（按日聚合）
+  periodDate   DateTime  @map("period_date") @db.Date
+  /// 结算对象类型：MERCHANT（单一商家 MVP）/ RIDER
+  subjectType  String    @map("subject_type")
+  /// 结算对象 ID（merchant=shopId / rider=riderId）
+  subjectId    String    @map("subject_id")
+  warehouseId  String?   @map("warehouse_id")
+  /// 订单数
+  orderCount   Int       @default(0) @map("order_count")
+  /// 总交易额（分）
+  grossAmount  Int       @default(0) @map("gross_amount")
+  /// 平台抽成（分）
+  commission   Int       @default(0)
+  /// 应结金额（分）= gross - commission - refund
+  netAmount    Int       @default(0) @map("net_amount")
+  /// 已退款金额（分）
+  refundAmount Int       @default(0) @map("refund_amount")
+  /// PENDING / CONFIRMED / PAID / DISPUTED
+  status       String    @default("PENDING")
+  confirmedAt  DateTime? @map("confirmed_at")
+  paidAt       DateTime? @map("paid_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([periodDate, subjectType, subjectId])
+  @@index([subjectType, status])
+  @@index([periodDate])
+  @@map("settlements")
+}
+
+/// 提现申请（W3 启用：商家/骑手发起 → 平台审核 → 线下打款）
+model WithdrawalRequest {
+  id              String    @id @default(uuid())
+  /// 申请方类型：MERCHANT / RIDER
+  requesterType   String    @map("requester_type")
+  requesterId     String    @map("requester_id")
+  amount          Int // 申请金额（分）
+  /// PENDING / APPROVED / REJECTED / PAID / FAILED
+  status          String    @default("PENDING")
+  /// 收款账户 JSON（银行账号/支付宝/微信等）
+  payoutAccount   Json      @map("payout_account")
+  rejectReason    String?   @map("reject_reason")
+  /// 线下打款凭证（流水号、备注等）
+  payoutReference String?   @map("payout_reference")
+  reviewedBy      String?   @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  paidAt          DateTime? @map("paid_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([requesterType, status])
+  @@index([status, createdAt])
+  @@map("withdrawal_requests")
+}
+
+// ============================================================================
 // 文档说明 — W1-D2-T3 任务执行时的注意事项
 // ----------------------------------------------------------------------------
 // 1. PostGIS extension:

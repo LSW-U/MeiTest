@@ -48,6 +48,18 @@ import {
   OrderNo,
   PaymentMethod,
   OrderStatus,
+  // platform
+  DashboardSummary,
+  DashboardTimeRange,
+  AuditLogListItem,
+  AuditLogDetail,
+  AuditLogQuery,
+  AuditLogListResponse,
+  AuditLogDetailResponse,
+  SystemConfigItem,
+  SystemConfigListResponse,
+  SystemConfigResponse,
+  UpdateSystemConfigRequest,
   // common
   ErrorResponse,
 } from '../src/index.js';
@@ -86,6 +98,15 @@ registry.register('CancelOrderRequest', CancelOrderRequest);
 registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
 registry.register('OrderStatus', OrderStatus);
+
+registry.register('DashboardSummary', DashboardSummary);
+registry.register('DashboardTimeRange', DashboardTimeRange);
+registry.register('AuditLogListItem', AuditLogListItem);
+registry.register('AuditLogDetail', AuditLogDetail);
+registry.register('AuditLogQuery', AuditLogQuery);
+registry.register('SystemConfigItem', SystemConfigItem);
+registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
+// Response 包装 schema 不注册到 components（gen-openapi 直接 inline 即可）
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
 registry.registerPath({
@@ -235,6 +256,94 @@ registry.registerPath({
       content: { 'application/json': { schema: Order } },
     },
     400: { description: 'STOCK_NOT_ENOUGH', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== platform paths（流程 M） =====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/platform/dashboard/summary',
+  tags: ['platform'],
+  description: '平台 dashboard 汇总（GMV / 订单数 / 在线骑手 / 异常订单 / 仓库钻取）',
+  request: {
+    query: z.object({ range: DashboardTimeRange.default('today') }),
+  },
+  responses: {
+    200: {
+      description: '汇总数据',
+      content: { 'application/json': { schema: DashboardSummary } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/platform/audit-logs',
+  tags: ['platform'],
+  description: '审计日志列表（按 user/resource/action/perspective/时间筛选，游标分页）',
+  request: { query: AuditLogQuery },
+  responses: {
+    200: {
+      description: '审计日志列表',
+      content: { 'application/json': { schema: AuditLogListResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/platform/audit-logs/{id}',
+  tags: ['platform'],
+  description: '审计日志详情（含 before/after 快照）',
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: '审计日志详情',
+      content: { 'application/json': { schema: AuditLogDetailResponse } },
+    },
+    404: { description: 'AUDIT_LOG_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/platform/audit-logs/export',
+  tags: ['platform'],
+  description: '审计日志导出 CSV（同 query 参数，最多 10000 行）',
+  request: { query: AuditLogQuery },
+  responses: {
+    200: { description: 'CSV 流（text/csv）' },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/platform/system-configs',
+  tags: ['platform'],
+  description: '系统配置列表（抽成比例 / 配送费基础规则等 key-value）',
+  responses: {
+    200: {
+      description: '配置列表',
+      content: { 'application/json': { schema: SystemConfigListResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/admin/platform/system-configs/{key}',
+  tags: ['platform'],
+  description: '更新系统配置（变更审计自动写 AuditLog，Redis 缓存失效）',
+  request: {
+    params: z.object({ key: z.string() }),
+    body: { content: { 'application/json': { schema: UpdateSystemConfigRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: SystemConfigResponse } },
+    },
+    404: { description: 'CONFIG_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

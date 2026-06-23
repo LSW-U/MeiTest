@@ -1,0 +1,75 @@
+{
+  "perspective": {
+    "label": "Perspektif",
+    "switchedToast": "Beralih ke perspektif {{name}}",
+    "platform": "Platform",
+    "merchant": "Pedagang",
+    "warehouse": "Gudang",
+    "support": "Layanan Pelanggan",
+    "riderMgmt": "Manajemen Kurir"
+  },
+  "menu": {
+    "dashboard": "Dasbor",
+    "auditLogs": "Log Audit",
+    "systemConfig": "Konfigurasi Sistem",
+    "im": "Pesan",
+    "settle": "Penyelesaian"
+  },
+  "dashboard": {
+    "title": "Dasbor Platform",
+    "gmv": "GMV",
+    "orderCount": "Pesanan",
+    "onlineRiders": "Kurir Online",
+    "abnormalOrders": "Pesanan Abnormal",
+    "growth": "vs periode lalu",
+    "range": {
+      "today": "Hari Ini",
+      "week": "Minggu Ini",
+      "month": "Bulan Ini"
+    },
+    "trendTitle": "Tren GMV / Pesanan",
+    "warehouseBreakdownTitle": "Rincian per Gudang",
+    "warehouseName": "Gudang",
+    "abnormalCount": "Abnormal"
+  },
+  "audit": {
+    "title": "Log Audit",
+    "filters": {
+      "userId": "ID Pengguna",
+      "resourceType": "Tipe Sumber Daya",
+      "action": "Aksi",
+      "perspective": "Perspektif",
+      "from": "Dari",
+      "to": "Sampai"
+    },
+    "columns": {
+      "time": "Waktu",
+      "user": "Pengguna",
+      "action": "Aksi",
+      "resource": "Sumber Daya",
+      "perspective": "Perspektif",
+      "ip": "IP"
+    },
+    "detail": {
+      "title": "Detail Log Audit",
+      "before": "Sebelum",
+      "after": "Sesudah",
+      "userAgent": "User Agent",
+      "traceId": "Trace ID"
+    },
+    "export": "Ekspor CSV",
+    "empty": "Tidak ada log audit yang cocok"
+  },
+  "config": {
+    "title": "Konfigurasi Sistem",
+    "key": "Kunci",
+    "value": "Nilai",
+    "description": "Deskripsi",
+    "updatedAt": "Diperbarui Pada",
+    "updatedBy": "Diperbarui Oleh",
+    "edit": "Edit",
+    "saveSuccess": "Konfigurasi disimpan",
+    "commissionRate": "Tarif komisi platform (%)",
+    "deliveryBaseFee": "Biaya pengiriman dasar (sen)"
+  }
+}

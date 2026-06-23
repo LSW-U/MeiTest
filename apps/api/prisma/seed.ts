@@ -217,6 +217,66 @@ async function main() {
   }
   console.log(`  ✅ ${PRODUCTS.length} products × 2 SKUs × ${warehouses.length} warehouses = ${PRODUCTS.length * 2 * warehouses.length} stock records`);
 
+  // === FLOW M === 平台系统配置（流程 M 独占段，其他流程不动此段）
+  // W2-COLLABORATION.md §3.5 — seed.ts 用 FLOW 注释分段
+  const SYSTEM_CONFIGS: Array<{ key: string; value: string; description: string }> = [
+    {
+      key: 'platform.commission_rate',
+      value: '5',
+      description: 'Platform commission rate (%) — applied to merchant settlement',
+    },
+    {
+      key: 'platform.currency',
+      value: 'USD',
+      description: 'Settlement currency (ISO 4217)',
+    },
+    {
+      key: 'delivery.base_fee',
+      value: '500',
+      description: 'Delivery base fee in cents (per warehouse.surcharge added on top)',
+    },
+    {
+      key: 'delivery.per_km_fee',
+      value: '50',
+      description: 'Per-km surcharge in cents (added on top of base fee)',
+    },
+    {
+      key: 'delivery.min_order_amount',
+      value: '1000',
+      description: 'Minimum order amount in cents; below this order is rejected at checkout',
+    },
+    {
+      key: 'rider.per_order_commission',
+      value: '300',
+      description: 'Per-order rider commission in cents (distance bonus added on top)',
+    },
+    {
+      key: 'rider.per_km_bonus',
+      value: '20',
+      description: 'Per-km distance bonus in cents',
+    },
+    {
+      key: 'order.pending_timeout_min',
+      value: '15',
+      description: 'Minutes before PENDING_PAYMENT order auto-cancels (BullMQ delay)',
+    },
+    {
+      key: 'order.confirm_timeout_min',
+      value: '30',
+      description: 'Minutes before PENDING_CONFIRM order is flagged as abnormal',
+    },
+  ];
+
+  for (const cfg of SYSTEM_CONFIGS) {
+    await prisma.systemConfig.upsert({
+      where: { key: cfg.key },
+      update: {}, // 不覆盖业务方手改的值
+      create: { ...cfg, updatedBy: admin.id },
+    });
+  }
+  console.log(`  ✅ system_configs: ${SYSTEM_CONFIGS.length} keys (commission / delivery / rider / order timeouts)`);
+  // === END FLOW M ===
+
   console.log('\n🎉 Seed completed!');
   console.log(`   Login: phone=+670999999999, password=admin12345`);
 }

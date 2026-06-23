@@ -1,0 +1,75 @@
+{
+  "perspective": {
+    "label": "Perspetiva",
+    "switchedToast": "Mudou para a perspetiva {{name}}",
+    "platform": "Plataforma",
+    "merchant": "Comerciante",
+    "warehouse": "Armazém",
+    "support": "Atendimento ao Cliente",
+    "riderMgmt": "Gestão de Estafetas"
+  },
+  "menu": {
+    "dashboard": "Painel",
+    "auditLogs": "Registos de Auditoria",
+    "systemConfig": "Configuração do Sistema",
+    "im": "Mensagens",
+    "settle": "Liquidação"
+  },
+  "dashboard": {
+    "title": "Painel da Plataforma",
+    "gmv": "GMV",
+    "orderCount": "Encomendas",
+    "onlineRiders": "Estafetas Online",
+    "abnormalOrders": "Encomendas Anormais",
+    "growth": "vs período anterior",
+    "range": {
+      "today": "Hoje",
+      "week": "Esta Semana",
+      "month": "Este Mês"
+    },
+    "trendTitle": "Tendência GMV / Encomendas",
+    "warehouseBreakdownTitle": "Distribuição por Armazém",
+    "warehouseName": "Armazém",
+    "abnormalCount": "Anormal"
+  },
+  "audit": {
+    "title": "Registos de Auditoria",
+    "filters": {
+      "userId": "ID do Utilizador",
+      "resourceType": "Tipo de Recurso",
+      "action": "Ação",
+      "perspective": "Perspetiva",
+      "from": "De",
+      "to": "Até"
+    },
+    "columns": {
+      "time": "Hora",
+      "user": "Utilizador",
+      "action": "Ação",
+      "resource": "Recurso",
+      "perspective": "Perspetiva",
+      "ip": "IP"
+    },
+    "detail": {
+      "title": "Detalhe do Registo de Auditoria",
+      "before": "Antes",
+      "after": "Depois",
+      "userAgent": "User Agent",
+      "traceId": "Trace ID"
+    },
+    "export": "Exportar CSV",
+    "empty": "Sem registos de auditoria correspondentes"
+  },
+  "config": {
+    "title": "Configuração do Sistema",
+    "key": "Chave",
+    "value": "Valor",
+    "description": "Descrição",
+    "updatedAt": "Atualizado Em",
+    "updatedBy": "Atualizado Por",
+    "edit": "Editar",
+    "saveSuccess": "Configuração guardada",
+    "commissionRate": "Taxa de comissão da plataforma (%)",
+    "deliveryBaseFee": "Taxa base de entrega (cêntimos)"
+  }
+}

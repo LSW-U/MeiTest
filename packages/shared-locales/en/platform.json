@@ -1,0 +1,75 @@
+{
+  "perspective": {
+    "label": "Perspective",
+    "switchedToast": "Switched to {{name}} perspective",
+    "platform": "Platform",
+    "merchant": "Merchant",
+    "warehouse": "Warehouse",
+    "support": "Customer Service",
+    "riderMgmt": "Rider Management"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "auditLogs": "Audit Logs",
+    "systemConfig": "System Config",
+    "im": "Messages",
+    "settle": "Settlement"
+  },
+  "dashboard": {
+    "title": "Platform Dashboard",
+    "gmv": "GMV",
+    "orderCount": "Orders",
+    "onlineRiders": "Online Riders",
+    "abnormalOrders": "Abnormal Orders",
+    "growth": "vs last period",
+    "range": {
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month"
+    },
+    "trendTitle": "GMV / Order Trend",
+    "warehouseBreakdownTitle": "Warehouse Breakdown",
+    "warehouseName": "Warehouse",
+    "abnormalCount": "Abnormal"
+  },
+  "audit": {
+    "title": "Audit Logs",
+    "filters": {
+      "userId": "User ID",
+      "resourceType": "Resource Type",
+      "action": "Action",
+      "perspective": "Perspective",
+      "from": "From",
+      "to": "To"
+    },
+    "columns": {
+      "time": "Time",
+      "user": "User",
+      "action": "Action",
+      "resource": "Resource",
+      "perspective": "Perspective",
+      "ip": "IP"
+    },
+    "detail": {
+      "title": "Audit Log Detail",
+      "before": "Before",
+      "after": "After",
+      "userAgent": "User Agent",
+      "traceId": "Trace ID"
+    },
+    "export": "Export CSV",
+    "empty": "No audit logs match these filters"
+  },
+  "config": {
+    "title": "System Configuration",
+    "key": "Key",
+    "value": "Value",
+    "description": "Description",
+    "updatedAt": "Updated At",
+    "updatedBy": "Updated By",
+    "edit": "Edit",
+    "saveSuccess": "Configuration saved",
+    "commissionRate": "Platform commission rate (%)",
+    "deliveryBaseFee": "Delivery base fee (cents)"
+  }
+}

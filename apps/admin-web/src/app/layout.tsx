@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { PerspectiveSwitcher } from '@/components/PerspectiveSwitcher';
 
 export const metadata: Metadata = {
   title: 'MeiMart Admin',
@@ -33,11 +34,14 @@ export default async function RootLayout({
             style={{
               display: 'flex',
               justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 16,
               padding: '12px 24px',
               background: 'white',
               borderBottom: '1px solid #e5e5e5',
             }}
           >
+            <PerspectiveSwitcher />
             <LanguageSwitcher />
           </header>
           <main>{children}</main>
