@@ -33,6 +33,8 @@ tags:
     description: 首页 Banner
   - name: inventory
     description: 库存（含仓库匹配）
+  - name: pricing
+    description: 配送费 + 起送价
   - name: order
     description: 订单
 components:
@@ -4767,6 +4769,94 @@ paths:
       responses:
         "200":
           description: 日志列表
+  /api/v1/client/pricing/delivery-fee:
+    get:
+      tags:
+        - pricing
+      description: 计算配送费（基础费 + 距离加价）
+      responses:
+        "200":
+          description: 配送费结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  baseFee:
+                    type: number
+                  perKmFee:
+                    type: number
+                  distance:
+                    type: number
+                  deliveryFee:
+                    type: number
+                  currency:
+                    type: string
+                    enum:
+                      - USD
+                required:
+                  - warehouseId
+                  - baseFee
+                  - perKmFee
+                  - distance
+                  - deliveryFee
+                  - currency
+  /api/v1/client/pricing/min-order-check:
+    get:
+      tags:
+        - pricing
+      description: 起送价校验
+      responses:
+        "200":
+          description: 校验结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  minOrderAmount:
+                    type: number
+                  cartTotal:
+                    type: number
+                  shortfall:
+                    type: number
+                required:
+                  - ok
+                  - minOrderAmount
+                  - cartTotal
+                  - shortfall
+  /api/v1/admin/pricing/config:
+    get:
+      tags:
+        - pricing
+      description: 所有仓库的配送费配置
+      responses:
+        "200":
+          description: 配置列表
+  /api/v1/admin/pricing/warehouses/{warehouseId}/base-fee:
+    patch:
+      tags:
+        - pricing
+      description: 更新某仓库的基础配送费
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseFee:
+                  type: integer
+                  minimum: 0
+              required:
+                - baseFee
+      responses:
+        "200":
+          description: 更新成功
   /api/v1/client/orders:
     post:
       tags:

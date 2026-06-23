@@ -764,6 +764,75 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/pricing/delivery-fee',
+  tags: ['pricing'],
+  description: '计算配送费（基础费 + 距离加价）',
+  responses: {
+    200: {
+      description: '配送费结果',
+      content: {
+        'application/json': {
+          schema: z.object({
+            warehouseId: Id,
+            baseFee: z.number(),
+            perKmFee: z.number(),
+            distance: z.number(),
+            deliveryFee: z.number(),
+            currency: z.literal('USD'),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/pricing/min-order-check',
+  tags: ['pricing'],
+  description: '起送价校验',
+  responses: {
+    200: {
+      description: '校验结果',
+      content: {
+        'application/json': {
+          schema: z.object({
+            ok: z.boolean(),
+            minOrderAmount: z.number(),
+            cartTotal: z.number(),
+            shortfall: z.number(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/pricing/config',
+  tags: ['pricing'],
+  description: '所有仓库的配送费配置',
+  responses: {
+    200: { description: '配置列表' },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/pricing/warehouses/{warehouseId}/base-fee',
+  tags: ['pricing'],
+  description: '更新某仓库的基础配送费',
+  request: {
+    body: { content: { 'application/json': { schema: z.object({ baseFee: z.number().int().nonnegative() }) } } },
+  },
+  responses: {
+    200: { description: '更新成功' },
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/api/v1/client/orders',
   tags: ['order'],
@@ -806,6 +875,7 @@ const openapi = generator.generateDocument({
     { name: 'category', description: '商品分类' },
     { name: 'banner', description: '首页 Banner' },
     { name: 'inventory', description: '库存（含仓库匹配）' },
+    { name: 'pricing', description: '配送费 + 起送价' },
     { name: 'order', description: '订单' },
   ],
 });
