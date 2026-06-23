@@ -21,14 +21,18 @@ import {
   // auth
   JwtPayload,
   LoginRequest,
+  LoginPasswordRequest,
+  LoginSmsRequest,
   LoginResponseData,
   RegisterRequest,
   RefreshRequest,
   RefreshResponseData,
   LogoutRequest,
   SendSmsRequest,
+  SendSmsCodeRequest,
   SendSmsResponseData,
   ResetPasswordRequest,
+  PasswordResetRequest,
   // user
   User,
   UpdateProfileRequest,
@@ -59,14 +63,18 @@ registry.register('JwtPayload', JwtPayload);
 registry.register('ErrorResponse', ErrorResponse);
 
 registry.register('LoginRequest', LoginRequest);
+registry.register('LoginPasswordRequest', LoginPasswordRequest);
+registry.register('LoginSmsRequest', LoginSmsRequest);
 registry.register('LoginResponseData', LoginResponseData);
 registry.register('RegisterRequest', RegisterRequest);
 registry.register('RefreshRequest', RefreshRequest);
 registry.register('RefreshResponseData', RefreshResponseData);
 registry.register('LogoutRequest', LogoutRequest);
 registry.register('SendSmsRequest', SendSmsRequest);
+registry.register('SendSmsCodeRequest', SendSmsCodeRequest);
 registry.register('SendSmsResponseData', SendSmsResponseData);
 registry.register('ResetPasswordRequest', ResetPasswordRequest);
+registry.register('PasswordResetRequest', PasswordResetRequest);
 
 registry.register('User', User);
 registry.register('UpdateProfileRequest', UpdateProfileRequest);
@@ -92,9 +100,9 @@ registry.registerPath({
   method: 'post',
   path: '/api/v1/common/auth/login-password',
   tags: ['auth'],
-  description: '密码登录（v0.3：deviceType 由前端 App 配置写死）',
+  description: '密码登录（W 流程正式 endpoint，2026-06-24 加；deviceType 服务端按 role 推断）',
   request: {
-    body: { content: { 'application/json': { schema: LoginRequest } } },
+    body: { content: { 'application/json': { schema: LoginPasswordRequest } } },
   },
   responses: {
     200: {
@@ -107,9 +115,58 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
+  path: '/api/v1/common/auth/login-sms',
+  tags: ['auth'],
+  description: 'SMS 验证码登录（不存在自动注册 customer）',
+  request: {
+    body: { content: { 'application/json': { schema: LoginSmsRequest } } },
+  },
+  responses: {
+    200: {
+      description: '登录成功',
+      content: { 'application/json': { schema: LoginResponseData } },
+    },
+    401: { description: 'SMS_CODE_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/sms-code',
+  tags: ['auth'],
+  description: '发送 SMS 验证码（stub 固定 123456，标 [SMS_STUB]，W6 切东帝汶本地）',
+  request: {
+    body: { content: { 'application/json': { schema: SendSmsCodeRequest } } },
+  },
+  responses: {
+    200: {
+      description: '已发送（stub）',
+      content: { 'application/json': { schema: SendSmsResponseData } },
+    },
+    429: { description: 'SMS_RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/password-reset',
+  tags: ['auth'],
+  description: 'SMS 找回密码',
+  request: {
+    body: { content: { 'application/json': { schema: PasswordResetRequest } } },
+  },
+  responses: {
+    200: { description: '重置成功' },
+    401: { description: 'SMS_CODE_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'PHONE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
   path: '/api/v1/common/auth/register',
   tags: ['auth'],
-  description: '注册（v0.3 冲突 11：smsCode 可选，W6 强制）',
+  description: '注册（必传 smsCode，dev stub 固定 123456；email optional 走密码+SMS 主路径）',
   request: {
     body: { content: { 'application/json': { schema: RegisterRequest } } },
   },
@@ -148,23 +205,6 @@ registry.registerPath({
   },
   responses: {
     200: { description: '登出成功' },
-  },
-});
-
-registry.registerPath({
-  method: 'post',
-  path: '/api/v1/common/auth/send-sms',
-  tags: ['auth'],
-  description: 'SMS stub（固定 123456，标 [SMS_STUB]），W6 切东帝汶本地',
-  request: {
-    body: { content: { 'application/json': { schema: SendSmsRequest } } },
-  },
-  responses: {
-    200: {
-      description: '已发送（stub）',
-      content: { 'application/json': { schema: SendSmsResponseData } },
-    },
-    429: { description: 'SMS_RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

@@ -67,11 +67,11 @@ export const LoginResponseData = z.object({
   refreshToken: z.string(),
 });
 
-/** 注册请求（smsCode 可选，W6 接真实 SMS 后强制） */
+/** 注册请求（smsCode 可选，W6 接真实 SMS 后强制；email optional 走 W 流程密码+SMS 主路径） */
 export const RegisterRequest = z
   .object({
     phone: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().email().optional(),
     password: z
       .string()
       .min(8, 'PASSWORD_TOO_SHORT')
@@ -83,6 +83,39 @@ export const RegisterRequest = z
   .refine((v) => v.password.length >= 8 && /[a-zA-Z]/.test(v.password) && /\d/.test(v.password), {
     message: 'PASSWORD_POLICY: ≥8 位 + 字母 + 数字',
   });
+
+/**
+ * 密码登录请求（W 流程新增，对应 POST /api/v1/common/auth/login-password）
+ *
+ * deviceType 不在请求体（按 user.role 推断：customer→client_app, rider→rider_app, 其他→admin_web）
+ */
+export const LoginPasswordRequest = z.object({
+  phone: z.string().min(1),
+  password: z.string().min(1),
+});
+
+/** SMS 验证码登录请求（对应 POST /api/v1/common/auth/login-sms） */
+export const LoginSmsRequest = z.object({
+  phone: z.string().min(1),
+  smsCode: z.string().min(1),
+});
+
+/** 简化版发 SMS 验证码请求（不带 scene，默认 LOGIN；对应 POST /api/v1/common/auth/sms-code） */
+export const SendSmsCodeRequest = z.object({
+  phone: z.string().min(1),
+  scene: z.enum(['REGISTER', 'LOGIN', 'RESET_PASSWORD']).default('LOGIN'),
+});
+
+/** SMS 找回密码请求（对应 POST /api/v1/common/auth/password-reset） */
+export const PasswordResetRequest = z.object({
+  phone: z.string().min(1),
+  smsCode: z.string().min(1),
+  newPassword: z
+    .string()
+    .min(8, 'PASSWORD_TOO_SHORT')
+    .regex(/[a-zA-Z]/, 'PASSWORD_NEED_LETTER')
+    .regex(/\d/, 'PASSWORD_NEED_DIGIT'),
+});
 
 /** 刷新 token 请求 */
 export const RefreshRequest = z.object({

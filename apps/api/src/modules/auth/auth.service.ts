@@ -10,7 +10,7 @@
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
-import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { genId } from '@meimart/shared-utils';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -22,6 +22,11 @@ import {
 } from './auth.types';
 import { blacklistJti, isBlacklisted } from '../../shared/cache';
 import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
+import { db } from '../../shared/db';
+import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
+import { getOtpStrategy } from '../../infrastructure/otp/otp.factory';
+import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
+import { logger } from '../../shared/logger/logger';
 
 /** Refresh token payload（不含 role，避免权限长期暴露） */
 interface RefreshPayload {
@@ -149,5 +154,228 @@ export class AuthService {
 
   private get refreshSecret(): string {
     return assertJwtSecret('JWT_REFRESH_SECRET');
+  }
+
+  // ==========================================================================
+  // W 流程业务方法（密码 + SMS 登录注册，2026-06-24 加）
+  // ==========================================================================
+
+  /** 按 role 推断 deviceType（前端不传 deviceType，服务端推断更安全） */
+  inferDeviceTypeFromRole(role: Role): DeviceType {
+    switch (role) {
+      case 'customer':
+        return 'client_app';
+      case 'rider':
+        return 'rider_app';
+      case 'super_admin':
+      case 'warehouse_staff':
+      case 'customer_service':
+        return 'admin_web';
+    }
+  }
+
+  /**
+   * Prisma role（大写 enum：SUPER_ADMIN / CUSTOMER / ...）→ contract role（小写 union）
+   *
+   * W2-W 决策（2026-06-24）：DB schema 用大写 enum（Prisma 默认），contract schema 用小写
+   * （前端期望小写），在 service 边界做一次映射，所有 module 复用此 helper。
+   */
+  toContractRole(prismaRole: string): Role {
+    return prismaRole.toLowerCase() as Role;
+  }
+
+  /** 密码登录：找 user + verify password + 签 token pair */
+  async loginWithPassword(phone: string, password: string): Promise<TokenPair & { userId: string; role: Role }> {
+    const user = await db.user.findUnique({ where: { phone } });
+    if (!user) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-011',
+        message: 'Phone not registered',
+      });
+    }
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-015',
+        message: `User status is ${user.status}, login disabled`,
+      });
+    }
+    const ok = await passwordStrategy.verifyPassword(user.password, password);
+    if (!ok) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-012',
+        message: 'Wrong password',
+      });
+    }
+
+    const deviceType = this.inferDeviceTypeFromRole(this.toContractRole(user.role));
+    const role = this.toContractRole(user.role);
+    const tokenPair = await this.signTokenPair(user.id, role, deviceType);
+
+    await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+    });
+
+    logger.info({
+      msg: 'LOGIN_PASSWORD_SUCCESS',
+      userId: user.id,
+      role,
+      deviceType,
+    });
+
+    return { ...tokenPair, userId: user.id, role };
+  }
+
+  /** SMS 验证码登录：verify code + 找 user（不存在自动创建 customer）+ 签 token pair */
+  async loginWithSms(phone: string, smsCode: string): Promise<TokenPair & { userId: string; role: Role }> {
+    const verified = await this.verifySmsCode(phone, smsCode, 'LOGIN');
+    if (!verified) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-013',
+        message: 'SMS code invalid or expired',
+      });
+    }
+
+    let user = await db.user.findUnique({ where: { phone } });
+    if (!user) {
+      // SMS 登录找不到用户时自动注册（OTP-only onboarding，仅 customer 角色）
+      user = await db.user.create({
+        data: {
+          phone,
+          phoneVerified: true,
+          password: await passwordStrategy.hashPassword(genId()), // 随机密码占位
+          role: 'CUSTOMER',
+          status: 'ACTIVE',
+        },
+      });
+      logger.info({ msg: 'SMS_LOGIN_AUTO_REGISTER', userId: user.id, phone });
+    } else if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-015',
+        message: `User status is ${user.status}, login disabled`,
+      });
+    }
+
+    if (!user.phoneVerified) {
+      await db.user.update({ where: { id: user.id }, data: { phoneVerified: true } });
+    }
+
+    const role = this.toContractRole(user.role);
+    const deviceType = this.inferDeviceTypeFromRole(role);
+    const tokenPair = await this.signTokenPair(user.id, role, deviceType);
+
+    await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+    });
+
+    return { ...tokenPair, userId: user.id, role };
+  }
+
+  /** 注册：verify SMS（如传）+ 创建 user + 签 token pair */
+  async registerUser(input: {
+    phone: string;
+    password: string;
+    email?: string;
+    name?: string;
+    smsCode?: string;
+  }): Promise<TokenPair & { userId: string; role: Role }> {
+    // 校验手机号未被注册
+    const existing = await db.user.findUnique({ where: { phone: input.phone } });
+    if (existing) {
+      throw new ConflictException({
+        code: 'E-AUTH-014',
+        message: 'Phone already registered',
+      });
+    }
+    if (input.email) {
+      const existingEmail = await db.user.findUnique({ where: { email: input.email } });
+      if (existingEmail) {
+        throw new ConflictException({
+          code: 'E-AUTH-014',
+          message: 'Email already registered',
+        });
+      }
+    }
+
+    // SMS 验证码校验（必传，dev/staging stub 固定 123456）
+    if (!input.smsCode) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-013',
+        message: 'SMS code required for registration',
+      });
+    }
+    const verified = await this.verifySmsCode(input.phone, input.smsCode, 'REGISTER');
+    if (!verified) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-013',
+        message: 'SMS code invalid or expired',
+      });
+    }
+
+    const passwordHash = await passwordStrategy.hashPassword(input.password);
+    const user = await db.user.create({
+      data: {
+        phone: input.phone,
+        email: input.email ?? null,
+        name: input.name ?? null,
+        password: passwordHash,
+        phoneVerified: true,
+        role: 'CUSTOMER',
+        status: 'ACTIVE',
+      },
+    });
+
+    const role = this.toContractRole(user.role);
+    const deviceType = this.inferDeviceTypeFromRole(role);
+    const tokenPair = await this.signTokenPair(user.id, role, deviceType);
+
+    await db.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+    });
+
+    logger.info({ msg: 'REGISTER_SUCCESS', userId: user.id, phone: input.phone });
+
+    return { ...tokenPair, userId: user.id, role };
+  }
+
+  /** 发 SMS 验证码（stub：固定 123456，标 [SMS_STUB]，W6 切东帝汶本地） */
+  async sendSmsCode(phone: string, scene: OtpScene = 'LOGIN'): Promise<{ expireIn: number }> {
+    const sms = getOtpStrategy('SMS');
+    const result = await sms.sendCode({ target: phone, scene });
+    return { expireIn: result.expireIn };
+  }
+
+  /** SMS 找回密码：verify SMS + 改密 */
+  async resetPassword(input: {
+    phone: string;
+    smsCode: string;
+    newPassword: string;
+  }): Promise<void> {
+    const user = await db.user.findUnique({ where: { phone: input.phone } });
+    if (!user) {
+      throw new NotFoundException({
+        code: 'E-AUTH-011',
+        message: 'Phone not registered',
+      });
+    }
+    const verified = await this.verifySmsCode(input.phone, input.smsCode, 'RESET_PASSWORD');
+    if (!verified) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-013',
+        message: 'SMS code invalid or expired',
+      });
+    }
+    const newHash = await passwordStrategy.hashPassword(input.newPassword);
+    await db.user.update({ where: { id: user.id }, data: { password: newHash } });
+    logger.info({ msg: 'PASSWORD_RESET_SUCCESS', userId: user.id });
+  }
+
+  /** 内部 helper：包装 SmsStrategy.verifyCode 返回 boolean */
+  private async verifySmsCode(phone: string, code: string, scene: OtpScene): Promise<boolean> {
+    const sms = getOtpStrategy('SMS');
+    const result = await sms.verifyCode({ target: phone, code, scene });
+    return result.valid;
   }
 }

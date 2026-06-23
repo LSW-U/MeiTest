@@ -13,7 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 密码登录（v0.3：deviceType 由前端 App 配置写死） */
+        /** @description 密码登录（W 流程正式 endpoint，2026-06-24 加；deviceType 服务端按 role 推断） */
         post: {
             parameters: {
                 query?: never;
@@ -24,7 +24,7 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        identifier: string;
+                        phone: string;
                         password: string;
                     };
                 };
@@ -81,6 +81,231 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/auth/login-sms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SMS 验证码登录（不存在自动注册 customer） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        smsCode: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 登录成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            user: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                phone: string | null;
+                                email: string | null;
+                                name: string | null;
+                                avatarUrl: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            };
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
+                /** @description SMS_CODE_INVALID */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/sms-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 发送 SMS 验证码（stub 固定 123456，标 [SMS_STUB]，W6 切东帝汶本地） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        /**
+                         * @default LOGIN
+                         * @enum {string}
+                         */
+                        scene?: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+                    };
+                };
+            };
+            responses: {
+                /** @description 已发送（stub） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            expireIn: number;
+                        };
+                    };
+                };
+                /** @description SMS_RATE_LIMIT */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SMS 找回密码 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        smsCode: string;
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 重置成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description SMS_CODE_INVALID */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PHONE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/auth/register": {
         parameters: {
             query?: never;
@@ -90,7 +315,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 注册（v0.3 冲突 11：smsCode 可选，W6 强制） */
+        /** @description 注册（必传 smsCode，dev stub 固定 123456；email optional 走密码+SMS 主路径） */
         post: {
             parameters: {
                 query?: never;
@@ -103,7 +328,7 @@ export interface paths {
                     "application/json": {
                         phone: string;
                         /** Format: email */
-                        email: string;
+                        email?: string;
                         password: string;
                         name?: string;
                         smsCode?: string;
@@ -256,71 +481,6 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/common/auth/send-sms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description SMS stub（固定 123456，标 [SMS_STUB]），W6 切东帝汶本地 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        phone: string;
-                        /** @enum {string} */
-                        type: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
-                    };
-                };
-            };
-            responses: {
-                /** @description 已发送（stub） */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            expireIn: number;
-                        };
-                    };
-                };
-                /** @description SMS_RATE_LIMIT */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                                details?: {
-                                    [key: string]: unknown;
-                                };
-                            };
-                        };
-                    };
                 };
             };
         };
@@ -808,6 +968,14 @@ export interface components {
             identifier: string;
             password: string;
         };
+        LoginPasswordRequest: {
+            phone: string;
+            password: string;
+        };
+        LoginSmsRequest: {
+            phone: string;
+            smsCode: string;
+        };
         LoginResponseData: {
             user: {
                 /** Format: uuid */
@@ -827,7 +995,7 @@ export interface components {
         RegisterRequest: {
             phone: string;
             /** Format: email */
-            email: string;
+            email?: string;
             password: string;
             name?: string;
             smsCode?: string;
@@ -847,6 +1015,14 @@ export interface components {
             /** @enum {string} */
             type: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
         };
+        SendSmsCodeRequest: {
+            phone: string;
+            /**
+             * @default LOGIN
+             * @enum {string}
+             */
+            scene: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+        };
         SendSmsResponseData: {
             expireIn: number;
         };
@@ -854,6 +1030,11 @@ export interface components {
             /** Format: email */
             email: string;
             code: string;
+            newPassword: string;
+        };
+        PasswordResetRequest: {
+            phone: string;
+            smsCode: string;
             newPassword: string;
         };
         User: {

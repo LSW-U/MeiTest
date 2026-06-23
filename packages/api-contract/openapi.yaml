@@ -67,7 +67,7 @@ components:
           properties:
             code:
               type: string
-              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
             message:
               type: string
             details:
@@ -92,6 +92,30 @@ components:
       required:
         - identifier
         - password
+    LoginPasswordRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+        - phone
+        - password
+    LoginSmsRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        smsCode:
+          type: string
+          minLength: 1
+      required:
+        - phone
+        - smsCode
     LoginResponseData:
       type: object
       properties:
@@ -157,7 +181,6 @@ components:
           type: string
       required:
         - phone
-        - email
         - password
     RefreshRequest:
       type: object
@@ -193,13 +216,28 @@ components:
           minLength: 1
         type:
           type: string
-          enum: &a8
+          enum:
             - REGISTER
             - LOGIN
             - RESET_PASSWORD
       required:
         - phone
         - type
+    SendSmsCodeRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        scene:
+          type: string
+          enum: &a8
+            - REGISTER
+            - LOGIN
+            - RESET_PASSWORD
+          default: LOGIN
+      required:
+        - phone
     SendSmsResponseData:
       type: object
       properties:
@@ -225,6 +263,23 @@ components:
       required:
         - email
         - code
+        - newPassword
+    PasswordResetRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        smsCode:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+          pattern: "[a-zA-Z]"
+      required:
+        - phone
+        - smsCode
         - newPassword
     User:
       type: object
@@ -818,21 +873,21 @@ paths:
     post:
       tags:
         - auth
-      description: 密码登录（v0.3：deviceType 由前端 App 配置写死）
+      description: 密码登录（W 流程正式 endpoint，2026-06-24 加；deviceType 服务端按 role 推断）
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                identifier:
+                phone:
                   type: string
                   minLength: 1
                 password:
                   type: string
                   minLength: 1
               required:
-                - identifier
+                - phone
                 - password
       responses:
         "200":
@@ -898,7 +953,253 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/login-sms:
+    post:
+      tags:
+        - auth
+      description: SMS 验证码登录（不存在自动注册 customer）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 1
+                smsCode:
+                  type: string
+                  minLength: 1
+              required:
+                - phone
+                - smsCode
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                        enum: *a1
+                      phone:
+                        type: string
+                        nullable: true
+                      email:
+                        type: string
+                        nullable: true
+                      name:
+                        type: string
+                        nullable: true
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum: *a7
+                    required:
+                      - id
+                      - role
+                      - phone
+                      - email
+                      - name
+                      - avatarUrl
+                      - status
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                required:
+                  - user
+                  - accessToken
+                  - refreshToken
+        "401":
+          description: SMS_CODE_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/sms-code:
+    post:
+      tags:
+        - auth
+      description: 发送 SMS 验证码（stub 固定 123456，标 [SMS_STUB]，W6 切东帝汶本地）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 1
+                scene:
+                  type: string
+                  enum: *a8
+                  default: LOGIN
+              required:
+                - phone
+      responses:
+        "200":
+          description: 已发送（stub）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expireIn:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                required:
+                  - expireIn
+        "429":
+          description: SMS_RATE_LIMIT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/password-reset:
+    post:
+      tags:
+        - auth
+      description: SMS 找回密码
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 1
+                smsCode:
+                  type: string
+                  minLength: 1
+                newPassword:
+                  type: string
+                  minLength: 8
+                  pattern: "[a-zA-Z]"
+              required:
+                - phone
+                - smsCode
+                - newPassword
+      responses:
+        "200":
+          description: 重置成功
+        "401":
+          description: SMS_CODE_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: PHONE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -915,7 +1216,7 @@ paths:
     post:
       tags:
         - auth
-      description: 注册（v0.3 冲突 11：smsCode 可选，W6 强制）
+      description: 注册（必传 smsCode，dev stub 固定 123456；email optional 走密码+SMS 主路径）
       requestBody:
         content:
           application/json:
@@ -938,7 +1239,6 @@ paths:
                   type: string
               required:
                 - phone
-                - email
                 - password
       responses:
         "200":
@@ -1004,7 +1304,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1063,7 +1363,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1095,69 +1395,6 @@ paths:
       responses:
         "200":
           description: 登出成功
-  /api/v1/common/auth/send-sms:
-    post:
-      tags:
-        - auth
-      description: SMS stub（固定 123456，标 [SMS_STUB]），W6 切东帝汶本地
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                phone:
-                  type: string
-                  minLength: 1
-                type:
-                  type: string
-                  enum: *a8
-              required:
-                - phone
-                - type
-      responses:
-        "200":
-          description: 已发送（stub）
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expireIn:
-                    type: integer
-                    minimum: 0
-                    exclusiveMinimum: true
-                required:
-                  - expireIn
-        "429":
-          description: SMS_RATE_LIMIT
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    enum:
-                      - false
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
-                      message:
-                        type: string
-                      details:
-                        type: object
-                        additionalProperties:
-                          nullable: true
-                    required:
-                      - code
-                      - message
-                required:
-                  - success
-                  - error
   /api/v1/client/profile:
     get:
       tags:
@@ -1519,7 +1756,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1751,7 +1988,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
