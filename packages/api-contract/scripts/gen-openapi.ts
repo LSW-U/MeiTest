@@ -693,6 +693,77 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
+  path: '/api/v1/client/inventory/match-warehouse',
+  tags: ['inventory'],
+  description: '按收货地址匹配最近仓库（PostGIS ST_Within + ST_Distance）',
+  request: {
+    body: { content: { 'application/json': { schema: MatchWarehouseRequest } } },
+  },
+  responses: {
+    200: {
+      description: '匹配成功（null 表示超出配送范围）',
+      content: { 'application/json': { schema: z.object({ warehouseId: Id, code: z.string(), name: z.record(z.string(), z.string()), deliveryFee: z.number(), distance: z.number() }).nullable() } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/inventory/{skuId}',
+  tags: ['inventory'],
+  description: '切地址时刷新 SKU 在收货地址所属仓库的库存（关键 UX）',
+  responses: {
+    200: {
+      description: '库存查询结果',
+      content: {
+        'application/json': {
+          schema: z.object({
+            warehouse: z.object({ warehouseId: Id, code: z.string(), deliveryFee: z.number() }).nullable(),
+            quantity: z.number(),
+            inStock: z.boolean(),
+            outOfRange: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/inventory/stocks',
+  tags: ['inventory'],
+  description: '后台库存列表（可按 warehouseId / lowStockOnly 过滤）',
+  responses: {
+    200: { description: '库存列表', content: { 'application/json': { schema: z.array(z.object({ id: Id, warehouseId: Id, skuId: Id, quantity: z.number(), safetyStock: z.number() })) } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/inventory/stocks',
+  tags: ['inventory'],
+  description: '后台调整库存（deltaQty 正负皆可，写入 StockLog）',
+  request: {
+    body: { content: { 'application/json': { schema: z.object({ skuId: Id, deltaQty: z.number().int(), reason: z.string().optional() }) } } },
+  },
+  responses: {
+    200: { description: '调整成功' },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/inventory/logs',
+  tags: ['inventory'],
+  description: '库存变更日志（按 createdAt desc）',
+  responses: {
+    200: { description: '日志列表' },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
   path: '/api/v1/client/orders',
   tags: ['order'],
   description: '创建订单（同步事务 MVP，自动匹配仓库 + orderNo 16 位）',
@@ -733,6 +804,7 @@ const openapi = generator.generateDocument({
     { name: 'sku', description: '商品规格 SKU' },
     { name: 'category', description: '商品分类' },
     { name: 'banner', description: '首页 Banner' },
+    { name: 'inventory', description: '库存（含仓库匹配）' },
     { name: 'order', description: '订单' },
   ],
 });
