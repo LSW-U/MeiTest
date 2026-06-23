@@ -1126,6 +1126,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 后台查看店铺信息 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            /** Format: uri */
+                            logoUrl: string | null;
+                            phone: string;
+                            address: string;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            businessHours: string | null;
+                            announcement?: {
+                                [key: string]: string;
+                            };
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 后台编辑店铺信息（super_admin） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: {
+                            [key: string]: string;
+                        };
+                        /** Format: uri */
+                        logoUrl?: string | null;
+                        phone?: string;
+                        address?: string;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                        businessHours?: string | null;
+                        announcement?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            /** Format: uri */
+                            logoUrl: string | null;
+                            phone: string;
+                            address: string;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            businessHours: string | null;
+                            announcement?: {
+                                [key: string]: string;
+                            };
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/common/warehouses": {
         parameters: {
             query?: never;

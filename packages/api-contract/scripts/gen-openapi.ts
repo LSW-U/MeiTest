@@ -391,6 +391,34 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/admin/shop',
+  tags: ['shop'],
+  responses: {
+    200: {
+      description: '后台查看店铺信息',
+      content: { 'application/json': { schema: Shop } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/shop',
+  tags: ['shop'],
+  description: '后台编辑店铺信息（super_admin）',
+  request: {
+    body: { content: { 'application/json': { schema: UpdateShopRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: Shop } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/common/warehouses',
   tags: ['warehouse'],
   responses: {

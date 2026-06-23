@@ -2246,6 +2246,140 @@ paths:
                   - businessHours
                   - createdAt
                   - updatedAt
+  /api/v1/admin/shop:
+    get:
+      tags:
+        - shop
+      responses:
+        "200":
+          description: 后台查看店铺信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  logoUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  phone:
+                    type: string
+                  address:
+                    type: string
+                  status:
+                    type: string
+                    enum: *a2
+                  businessHours:
+                    type: string
+                    nullable: true
+                  announcement:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - name
+                  - logoUrl
+                  - phone
+                  - address
+                  - status
+                  - businessHours
+                  - createdAt
+                  - updatedAt
+    patch:
+      tags:
+        - shop
+      description: 后台编辑店铺信息（super_admin）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                logoUrl:
+                  type: string
+                  nullable: true
+                  format: uri
+                phone:
+                  type: string
+                address:
+                  type: string
+                status:
+                  type: string
+                  enum: *a2
+                businessHours:
+                  type: string
+                  nullable: true
+                announcement:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  logoUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  phone:
+                    type: string
+                  address:
+                    type: string
+                  status:
+                    type: string
+                    enum: *a2
+                  businessHours:
+                    type: string
+                    nullable: true
+                  announcement:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - name
+                  - logoUrl
+                  - phone
+                  - address
+                  - status
+                  - businessHours
+                  - createdAt
+                  - updatedAt
   /api/v1/common/warehouses:
     get:
       tags:
