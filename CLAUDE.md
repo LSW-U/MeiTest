@@ -84,13 +84,13 @@
 ```
 /Users/linsuwei/code/Work/MeiMart
 ├── apps/
-│   ├── api/             # NestJS
-│   ├── admin-web/       # Next.js
-│   ├── client-app/      # RN + Expo
-│   └── rider-app/       # RN + Expo
+│   ├── api/             # NestJS（后端 API）
+│   ├── admin-web/       # Next.js（后台 web，含视角切换器）
+│   ├── client-app/      # 【已迁出 MeiMart1.0】仅保留 W1 占位档案
+│   └── rider-app/       # 【已迁出 MeiMart1.0】仅保留 W1 占位档案
 ├── packages/
-│   ├── api-contract/    # zod 源 + OpenAPI + Mock Server
-│   ├── shared-types/    # 自动生成 + 错误码
+│   ├── api-contract/    # zod 源 + OpenAPI + Mock Server（前端跨 repo 同步源）
+│   ├── shared-types/    # 自动生成 + 错误码（前端跨 repo 同步源）
 │   ├── shared-utils/    # 工具 + 单测
 │   ├── shared-locales/  # i18n 翻译
 │   └── ui-kit/          # shadcn 二次封装
@@ -101,6 +101,44 @@
 ```
 
 包名统一:`@meimart/<name>`
+
+---
+
+## 🌐 跨 repo 协作（MeiMart1.0 前端）
+
+> **决策（2026-06-24）**：客户端 App + 骑手 App 独立维护在 [MeiMart1.0](https://github.com/LSW-U/MeiMart1.0)。本 repo（MeiMart）只做**后端 API + admin-web**。
+
+### 两 repo 分工
+
+| repo | 范围 | GitHub | 本地路径 |
+|---|---|---|---|
+| **MeiMart**（本 repo） | 后端 NestJS API + admin-web Next.js | https://github.com/LSW-U/MeiTest | `/Users/linsuwei/code/Work/MeiMart` |
+| **MeiMart1.0** | 客户端 RN App + 骑手 RN App | https://github.com/LSW-U/MeiMart1.0 | `/Users/linsuwei/code/Work/Temporarily-project/mei-mart-app` |
+
+### API 契约同步机制（不发 npm、不用 submodule）
+
+**纯 cp 脚本同步**：
+
+1. 后端改 schema → 跑 `pnpm --filter @meimart/api-contract gen:openapi` + `pnpm --filter @meimart/shared-types gen:types`
+2. 前端跑 `bash scripts/sync-api.sh` 从本地后端 repo copy 到 `apps/<app>/api/`
+
+**同步内容**：
+- `packages/api-contract/openapi.yaml` → 前端 `apps/<app>/api/openapi.yaml`
+- `packages/shared-types/src/generated/` → 前端 `apps/<app>/api/types/`
+
+**触发时机**：
+- 后端 PR merge 到 main 后
+- 前端开发前确保类型最新
+- 前端出现类型不匹配错误时
+
+### 向后兼容规则（后端开发者必守）
+
+| 改动类型 | 兼容性 | 要求 |
+|---|---|---|
+| 加字段 / 加 endpoint / 加新 schema 文件 | ✅ 安全 | 无 |
+| 改字段名/类型 / 删字段 / 删 endpoint | ⚠️ breaking | PR title 标 `[BREAKING]`，W2 manifest 报备 |
+
+详见 `W2-COLLABORATION.md` §3.7 跨 repo 契约同步。
 
 ---
 
