@@ -31,6 +31,8 @@ tags:
     description: 商品分类
   - name: banner
     description: 首页 Banner
+  - name: inventory
+    description: 库存（含仓库匹配）
   - name: order
     description: 订单
 components:
@@ -4615,6 +4617,156 @@ paths:
                   - status
                   - createdAt
                   - updatedAt
+  /api/v1/client/inventory/match-warehouse:
+    post:
+      tags:
+        - inventory
+      description: 按收货地址匹配最近仓库（PostGIS ST_Within + ST_Distance）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lat:
+                  type: number
+                lng:
+                  type: number
+              required:
+                - lat
+                - lng
+      responses:
+        "200":
+          description: 匹配成功（null 表示超出配送范围）
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: true
+                properties:
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  deliveryFee:
+                    type: number
+                  distance:
+                    type: number
+                required:
+                  - warehouseId
+                  - code
+                  - name
+                  - deliveryFee
+                  - distance
+  /api/v1/client/inventory/{skuId}:
+    get:
+      tags:
+        - inventory
+      description: 切地址时刷新 SKU 在收货地址所属仓库的库存（关键 UX）
+      responses:
+        "200":
+          description: 库存查询结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  warehouse:
+                    type: object
+                    nullable: true
+                    properties:
+                      warehouseId:
+                        type: string
+                        format: uuid
+                      code:
+                        type: string
+                      deliveryFee:
+                        type: number
+                    required:
+                      - warehouseId
+                      - code
+                      - deliveryFee
+                  quantity:
+                    type: number
+                  inStock:
+                    type: boolean
+                  outOfRange:
+                    type: boolean
+                required:
+                  - warehouse
+                  - quantity
+                  - inStock
+                  - outOfRange
+  /api/v1/admin/inventory/stocks:
+    get:
+      tags:
+        - inventory
+      description: 后台库存列表（可按 warehouseId / lowStockOnly 过滤）
+      responses:
+        "200":
+          description: 库存列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    warehouseId:
+                      type: string
+                      format: uuid
+                    skuId:
+                      type: string
+                      format: uuid
+                    quantity:
+                      type: number
+                    safetyStock:
+                      type: number
+                  required:
+                    - id
+                    - warehouseId
+                    - skuId
+                    - quantity
+                    - safetyStock
+    patch:
+      tags:
+        - inventory
+      description: 后台调整库存（deltaQty 正负皆可，写入 StockLog）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skuId:
+                  type: string
+                  format: uuid
+                deltaQty:
+                  type: integer
+                reason:
+                  type: string
+              required:
+                - skuId
+                - deltaQty
+      responses:
+        "200":
+          description: 调整成功
+  /api/v1/admin/inventory/logs:
+    get:
+      tags:
+        - inventory
+      description: 库存变更日志（按 createdAt desc）
+      responses:
+        "200":
+          description: 日志列表
   /api/v1/client/orders:
     post:
       tags:

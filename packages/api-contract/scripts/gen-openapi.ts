@@ -76,6 +76,7 @@ import {
   OrderStatus,
   // common
   ErrorResponse,
+  Id,
 } from '../src/index.js';
 
 const registry = new OpenAPIRegistry();
