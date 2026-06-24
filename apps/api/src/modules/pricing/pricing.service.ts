@@ -41,6 +41,8 @@ export interface MinOrderCheckResult {
   minOrderAmount: number;
   cartTotal: number;
   shortfall: number;
+  /** 未达标时的错误码（E-PRICING-001），ok=true 时为 null */
+  code: 'E-PRICING-001' | null;
 }
 
 @Injectable()
@@ -87,6 +89,7 @@ export class PricingService {
       minOrderAmount,
       cartTotal,
       shortfall: ok ? 0 : minOrderAmount - cartTotal,
+      code: ok ? null : 'E-PRICING-001',
     };
   }
 

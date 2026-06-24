@@ -19,7 +19,7 @@ export class ShopService {
     const shop = await db.shop.findFirst();
     if (!shop) {
       throw new NotFoundException({
-        code: 'E-COMMON-003',
+        code: 'E-SHOP-001',
         message: 'Shop not initialized (need seed)',
       });
     }
@@ -41,7 +41,7 @@ export class ShopService {
     const existing = await db.shop.findFirst();
     if (!existing) {
       throw new NotFoundException({
-        code: 'E-COMMON-003',
+        code: 'E-SHOP-001',
         message: 'Shop not initialized (need seed)',
       });
     }

@@ -71,7 +71,7 @@ export class CatalogService {
       include: { skus: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } } },
     });
     if (!product) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Product not found' });
+      throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     }
     return {
       ...this.toProductDTO(product),
@@ -148,7 +148,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
   }>) {
     const existing = await db.product.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Product not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
 
     const updated = await db.product.update({
       where: { id },
@@ -171,7 +171,7 @@ export class CatalogService {
 
   async deleteProduct(id: string) {
     const existing = await db.product.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Product not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     await db.product.delete({ where: { id } });
   }
 
@@ -193,7 +193,7 @@ export class CatalogService {
     status?: 'ACTIVE' | 'INACTIVE';
   }) {
     const product = await db.product.findUnique({ where: { id: productId } });
-    if (!product) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Product not found' });
+    if (!product) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
 
     const created = await db.sku.create({
       data: {
@@ -220,7 +220,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.sku.findUnique({ where: { id: skuId } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Sku not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Sku not found' });
 
     const updated = await db.sku.update({
       where: { id: skuId },
@@ -240,7 +240,7 @@ export class CatalogService {
 
   async deleteSku(skuId: string) {
     const existing = await db.sku.findUnique({ where: { id: skuId } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Sku not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Sku not found' });
     await db.sku.delete({ where: { id: skuId } });
     await this.recomputeProductPriceMin(existing.productId);
   }
@@ -300,7 +300,7 @@ export class CatalogService {
     sortOrder: number;
   }>) {
     const existing = await db.category.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Category not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
 
     const updated = await db.category.update({
       where: { id },
@@ -322,7 +322,7 @@ export class CatalogService {
 
   async deleteCategory(id: string) {
     const existing = await db.category.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Category not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
     await db.category.delete({ where: { id } });
   }
 
@@ -386,7 +386,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.banner.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Banner not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Banner not found' });
 
     const updated = await db.banner.update({
       where: { id },
@@ -414,7 +414,7 @@ export class CatalogService {
 
   async deleteBanner(id: string) {
     const existing = await db.banner.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-COMMON-003', message: 'Banner not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Banner not found' });
     await db.banner.delete({ where: { id } });
   }
 

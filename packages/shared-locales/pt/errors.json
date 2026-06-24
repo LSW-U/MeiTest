@@ -26,5 +26,11 @@
   "E-PAYMENT-002": "Pagamento expirou, tente novamente",
   "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método",
   "E-WAREHOUSE-001": "Código de armazém já existe",
-  "E-WAREHOUSE-002": "Fora da área de entrega"
+  "E-WAREHOUSE-002": "Fora da área de entrega",
+  "E-SHOP-001": "Loja não inicializada ou fechada",
+  "E-CATALOG-001": "Produto não encontrado",
+  "E-CATALOG-002": "Produto foi retirado da prateleira",
+  "E-INVENTORY-001": "Stock insuficiente",
+  "E-INVENTORY-002": "Nenhum armazém cobre este endereço",
+  "E-PRICING-001": "Total do pedido não atinge o valor mínimo"
 }

@@ -54,7 +54,13 @@ export class InventoryService {
   async getStockByAddress(skuId: string, lat: number, lng: number) {
     const warehouse = await this.matchWarehouse(lat, lng);
     if (!warehouse) {
-      return { warehouse: null, quantity: 0, inStock: false, outOfRange: true };
+      return {
+        warehouse: null,
+        quantity: 0,
+        inStock: false,
+        outOfRange: true,
+        code: 'E-INVENTORY-002' as const,
+      };
     }
     const stock = await db.stock.findUnique({
       where: { warehouseId_skuId: { warehouseId: warehouse.warehouseId, skuId } },
@@ -65,6 +71,7 @@ export class InventoryService {
       quantity,
       inStock: quantity > 0,
       outOfRange: false,
+      code: null as const,
     };
   }
 
@@ -167,7 +174,7 @@ export class InventoryService {
           operatorId: input.operatorId,
         });
         if (!ok) {
-          throw new Error('STOCK_NOT_ENOUGH');
+          throw new Error('E-INVENTORY-001: STOCK_NOT_ENOUGH');
         }
       }
 

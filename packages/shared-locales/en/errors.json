@@ -26,5 +26,11 @@
   "E-PAYMENT-002": "Payment timed out, please retry",
   "E-PAYMENT-003": "Payment failed, please retry or change method",
   "E-WAREHOUSE-001": "Warehouse code already exists",
-  "E-WAREHOUSE-002": "Out of delivery range"
+  "E-WAREHOUSE-002": "Out of delivery range",
+  "E-SHOP-001": "Shop not initialized or closed",
+  "E-CATALOG-001": "Product not found",
+  "E-CATALOG-002": "Product has been taken off shelf",
+  "E-INVENTORY-001": "Stock is not enough",
+  "E-INVENTORY-002": "No warehouse covers this address",
+  "E-PRICING-001": "Order total does not meet minimum order amount"
 }

@@ -26,5 +26,11 @@
   "E-PAYMENT-002": "Pembayaran kedaluwarsa, silakan coba lagi",
   "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode",
   "E-WAREHOUSE-001": "Kode gudang sudah ada",
-  "E-WAREHOUSE-002": "Di luar jangkauan pengiriman"
+  "E-WAREHOUSE-002": "Di luar jangkauan pengiriman",
+  "E-SHOP-001": "Toko belum diinisialisasi atau ditutup",
+  "E-CATALOG-001": "Produk tidak ditemukan",
+  "E-CATALOG-002": "Produk telah ditarik dari rak",
+  "E-INVENTORY-001": "Stok tidak cukup",
+  "E-INVENTORY-002": "Tidak ada gudang yang mencakup alamat ini",
+  "E-PRICING-001": "Total pesanan tidak memenuhi jumlah minimal"
 }
