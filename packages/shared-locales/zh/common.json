@@ -20,12 +20,14 @@
   "success": "Success",
   "yes": "Yes",
   "no": "No",
-  "perspective": {
-    "title": "视角",
-    "platform": "平台",
-    "merchant": "商家",
-    "warehouse": "仓库",
-    "support": "客服",
-    "rider-mgmt": "骑手管理"
+  "w": {
+    "perspective": {
+      "title": "视角",
+      "platform": "平台",
+      "merchant": "商家",
+      "warehouse": "仓库",
+      "support": "客服",
+      "rider-mgmt": "骑手管理"
+    }
   }
 }

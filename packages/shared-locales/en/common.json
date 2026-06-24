@@ -20,12 +20,14 @@
   "success": "Success",
   "yes": "Yes",
   "no": "No",
-  "perspective": {
-    "title": "Perspective",
-    "platform": "Platform",
-    "merchant": "Merchant",
-    "warehouse": "Warehouse",
-    "support": "Support",
-    "rider-mgmt": "Rider Management"
+  "w": {
+    "perspective": {
+      "title": "Perspective",
+      "platform": "Platform",
+      "merchant": "Merchant",
+      "warehouse": "Warehouse",
+      "support": "Support",
+      "rider-mgmt": "Rider Management"
+    }
   }
 }

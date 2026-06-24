@@ -23,7 +23,7 @@ export function PerspectiveSwitcher() {
         fontSize: 14,
       }}
     >
-      <span style={{ color: '#666' }}>{t('perspective.title')}:</span>
+      <span style={{ color: '#666' }}>{t('w.perspective.title')}:</span>
       <select
         value={perspective}
         onChange={(e) => setPerspective(e.target.value as Perspective)}

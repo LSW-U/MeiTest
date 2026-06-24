@@ -20,12 +20,14 @@
   "success": "Success",
   "yes": "Yes",
   "no": "No",
-  "perspective": {
-    "title": "Perspetiva",
-    "platform": "Plataforma",
-    "merchant": "Mercante",
-    "warehouse": "Armazém",
-    "support": "Suporte",
-    "rider-mgmt": "Gestão de Riders"
+  "w": {
+    "perspective": {
+      "title": "Perspetiva",
+      "platform": "Plataforma",
+      "merchant": "Mercante",
+      "warehouse": "Armazém",
+      "support": "Suporte",
+      "rider-mgmt": "Gestão de Riders"
+    }
   }
 }

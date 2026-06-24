@@ -20,12 +20,14 @@
   "success": "Success",
   "yes": "Yes",
   "no": "No",
-  "perspective": {
-    "title": "Perspektif",
-    "platform": "Platform",
-    "merchant": "Pedagang",
-    "warehouse": "Gudang",
-    "support": "Dukungan",
-    "rider-mgmt": "Manajemen Rider"
+  "w": {
+    "perspective": {
+      "title": "Perspektif",
+      "platform": "Platform",
+      "merchant": "Pedagang",
+      "warehouse": "Gudang",
+      "support": "Dukungan",
+      "rider-mgmt": "Manajemen Rider"
+    }
   }
 }
