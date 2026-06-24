@@ -61,15 +61,16 @@ export interface StockChangeContext {
 }
 
 /**
- * 扣库存（行锁防超卖 + StockLog 审计）— 用于下单流程
+ * 扣库存（行锁防超卖 + SKU 状态联检 + StockLog 审计）— 用于下单流程
  *
  * 决策依据：契约 v0.3 冲突 6 + schema.prisma Stock/StockLog 表
  *
  * 实现：
- *   1. UPDATE ... WHERE quantity >= ? RETURNING quantity（行锁 + 拿到更新后数量）
+ *   1. UPDATE ... WHERE quantity >= ? AND EXISTS(SKU ACTIVE) RETURNING quantity
+ *      （行锁 + 拿到更新后数量 + 防 TOCTOU：A 下单中 → B 下架 SKU → A 事务失败）
  *   2. INSERT StockLog（changeType=OUTBOUND，beforeQty / afterQty 自动计算）
  *
- * @returns true = 扣减成功 / false = 库存不足（事务继续，调用方决定是否 throw）
+ * @returns true = 扣减成功 / false = 库存不足或 SKU 已下架（事务继续，调用方决定是否 throw）
  */
 export async function deductStock(
   tx: Tx,
@@ -88,6 +89,10 @@ export async function deductStock(
     WHERE warehouse_id = ${warehouseId}
       AND sku_id = ${skuId}
       AND quantity >= ${quantity}
+      AND EXISTS (
+        SELECT 1 FROM "skus"
+        WHERE id = ${skuId} AND status = 'ACTIVE'
+      )
     RETURNING quantity
   `;
 

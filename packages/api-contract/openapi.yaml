@@ -91,7 +91,7 @@ components:
           properties:
             code:
               type: string
-              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+              pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
             message:
               type: string
             details:
@@ -720,6 +720,7 @@ components:
         deliveryFee:
           type: integer
           minimum: 0
+          maximum: 999999
           default: 0
         isActive:
           type: boolean
@@ -802,6 +803,7 @@ components:
         deliveryFee:
           type: integer
           minimum: 0
+          maximum: 999999
         isActive:
           type: boolean
       required:
@@ -864,6 +866,7 @@ components:
         priceMin:
           type: integer
           minimum: 0
+          maximum: 999999
         salesCount:
           type: integer
         createdAt:
@@ -901,6 +904,7 @@ components:
         priceMin:
           type: integer
           minimum: 0
+          maximum: 999999
         status:
           type: string
           enum: *a5
@@ -1005,6 +1009,7 @@ components:
         price:
           type: integer
           minimum: 0
+          maximum: 999999
         imageUrl:
           type: string
           nullable: true
@@ -1043,6 +1048,7 @@ components:
         price:
           type: integer
           minimum: 0
+          maximum: 999999
         imageUrl:
           type: string
           nullable: true
@@ -1067,6 +1073,7 @@ components:
         price:
           type: integer
           minimum: 0
+          maximum: 999999
         imageUrl:
           type: string
           nullable: true
@@ -1278,6 +1285,7 @@ components:
               unitPrice:
                 type: integer
                 minimum: 0
+                maximum: 999999
               quantity:
                 type: integer
                 minimum: 0
@@ -1285,6 +1293,7 @@ components:
               subtotal:
                 type: integer
                 minimum: 0
+                maximum: 999999
             required:
               - id
               - productId
@@ -1298,16 +1307,20 @@ components:
         totalAmount:
           type: integer
           minimum: 0
+          maximum: 999999
         deliveryFee:
           type: integer
           minimum: 0
+          maximum: 999999
         discountAmount:
           type: integer
           minimum: 0
+          maximum: 999999
           default: 0
         payableAmount:
           type: integer
           minimum: 0
+          maximum: 999999
         deliveryAddress:
           type: object
           properties:
@@ -1424,6 +1437,7 @@ components:
         unitPrice:
           type: integer
           minimum: 0
+          maximum: 999999
         quantity:
           type: integer
           minimum: 0
@@ -1431,6 +1445,7 @@ components:
         subtotal:
           type: integer
           minimum: 0
+          maximum: 999999
       required:
         - id
         - productId
@@ -1531,6 +1546,7 @@ components:
               unitPrice:
                 type: integer
                 minimum: 0
+                maximum: 999999
               quantity:
                 type: integer
                 minimum: 0
@@ -1554,9 +1570,11 @@ components:
         selectedSubtotal:
           type: integer
           minimum: 0
+          maximum: 999999
         totalSubtotal:
           type: integer
           minimum: 0
+          maximum: 999999
       required:
         - id
         - userId
@@ -1589,6 +1607,7 @@ components:
         unitPrice:
           type: integer
           minimum: 0
+          maximum: 999999
         quantity:
           type: integer
           minimum: 0
@@ -1669,6 +1688,7 @@ components:
               unitPrice:
                 type: integer
                 minimum: 0
+                maximum: 999999
               quantity:
                 type: integer
                 minimum: 0
@@ -1701,6 +1721,7 @@ components:
             deliveryFee:
               type: integer
               minimum: 0
+              maximum: 999999
           required:
             - id
             - code
@@ -1708,12 +1729,15 @@ components:
         itemsSubtotal:
           type: integer
           minimum: 0
+          maximum: 999999
         deliveryFee:
           type: integer
           minimum: 0
+          maximum: 999999
         payableAmount:
           type: integer
           minimum: 0
+          maximum: 999999
         warnings:
           type: array
           items:
@@ -1743,6 +1767,7 @@ components:
         amount:
           type: integer
           minimum: 0
+          maximum: 999999
         transactionId:
           type: string
           nullable: true
@@ -1804,6 +1829,7 @@ components:
         gmv:
           type: integer
           minimum: 0
+          maximum: 999999
         gmvGrowthPct:
           type: number
         orderCount:
@@ -1827,6 +1853,7 @@ components:
               gmv:
                 type: integer
                 minimum: 0
+                maximum: 999999
               orderCount:
                 type: integer
                 minimum: 0
@@ -1849,6 +1876,7 @@ components:
               gmv:
                 type: integer
                 minimum: 0
+                maximum: 999999
               orderCount:
                 type: integer
                 minimum: 0
@@ -2117,7 +2145,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2214,7 +2242,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2277,7 +2305,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2334,7 +2362,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2363,7 +2391,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2468,7 +2496,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2527,7 +2555,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2966,7 +2994,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -3001,7 +3029,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -3435,6 +3463,7 @@ paths:
                     deliveryFee:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                       default: 0
                     isActive:
                       type: boolean
@@ -3550,6 +3579,7 @@ paths:
                     deliveryFee:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                       default: 0
                     isActive:
                       type: boolean
@@ -3639,6 +3669,7 @@ paths:
                 deliveryFee:
                   type: integer
                   minimum: 0
+                  maximum: 999999
                 isActive:
                   type: boolean
               required:
@@ -3737,6 +3768,7 @@ paths:
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   isActive:
                     type: boolean
@@ -3775,7 +3807,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -3879,6 +3911,7 @@ paths:
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   isActive:
                     type: boolean
@@ -3917,7 +3950,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -3997,6 +4030,7 @@ paths:
                 deliveryFee:
                   type: integer
                   minimum: 0
+                  maximum: 999999
                 isActive:
                   type: boolean
               required:
@@ -4095,6 +4129,7 @@ paths:
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   isActive:
                     type: boolean
@@ -4139,7 +4174,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4291,6 +4326,7 @@ paths:
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   isActive:
                     type: boolean
@@ -4329,7 +4365,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4372,6 +4408,7 @@ paths:
                         priceMin:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         status:
                           type: string
                           enum: *a5
@@ -4445,6 +4482,7 @@ paths:
                   priceMin:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   salesCount:
                     type: integer
                   createdAt:
@@ -4483,7 +4521,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4523,6 +4561,7 @@ paths:
                     priceMin:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                     status:
                       type: string
                       enum: *a5
@@ -4562,6 +4601,7 @@ paths:
                     priceMin:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                     status:
                       type: string
                       enum: *a5
@@ -4745,6 +4785,7 @@ paths:
                   priceMin:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   salesCount:
                     type: integer
                   createdAt:
@@ -4847,6 +4888,7 @@ paths:
                   priceMin:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   salesCount:
                     type: integer
                   createdAt:
@@ -4934,6 +4976,7 @@ paths:
                   priceMin:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   salesCount:
                     type: integer
                   createdAt:
@@ -4978,6 +5021,7 @@ paths:
                 price:
                   type: integer
                   minimum: 0
+                  maximum: 999999
                 imageUrl:
                   type: string
                   nullable: true
@@ -5013,6 +5057,7 @@ paths:
                   price:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   imageUrl:
                     type: string
                     nullable: true
@@ -5489,6 +5534,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -5496,6 +5542,7 @@ paths:
                         subtotal:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                       required:
                         - id
                         - productId
@@ -5509,16 +5556,20 @@ paths:
                   totalAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   discountAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   payableAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   deliveryAddress:
                     type: object
                     properties:
@@ -5622,7 +5673,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -5687,6 +5738,7 @@ paths:
                           unitPrice:
                             type: integer
                             minimum: 0
+                            maximum: 999999
                           quantity:
                             type: integer
                             minimum: 0
@@ -5694,6 +5746,7 @@ paths:
                           subtotal:
                             type: integer
                             minimum: 0
+                            maximum: 999999
                         required:
                           - id
                           - productId
@@ -5707,16 +5760,20 @@ paths:
                     totalAmount:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                     deliveryFee:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                     discountAmount:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                       default: 0
                     payableAmount:
                       type: integer
                       minimum: 0
+                      maximum: 999999
                     deliveryAddress:
                       type: object
                       properties:
@@ -5837,6 +5894,7 @@ paths:
                   gmv:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   gmvGrowthPct:
                     type: number
                   orderCount:
@@ -5860,6 +5918,7 @@ paths:
                         gmv:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         orderCount:
                           type: integer
                           minimum: 0
@@ -5882,6 +5941,7 @@ paths:
                         gmv:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         orderCount:
                           type: integer
                           minimum: 0
@@ -6126,7 +6186,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6325,7 +6385,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6389,6 +6449,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -6396,6 +6457,7 @@ paths:
                         subtotal:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                       required:
                         - id
                         - productId
@@ -6409,16 +6471,20 @@ paths:
                   totalAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   discountAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                     default: 0
                   payableAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   deliveryAddress:
                     type: object
                     properties:
@@ -6522,7 +6588,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6571,7 +6637,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6634,6 +6700,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -6657,9 +6724,11 @@ paths:
                   selectedSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   totalSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                 required:
                   - id
                   - userId
@@ -6733,6 +6802,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -6756,9 +6826,11 @@ paths:
                   selectedSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   totalSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                 required:
                   - id
                   - userId
@@ -6782,7 +6854,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6857,6 +6929,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -6880,9 +6953,11 @@ paths:
                   selectedSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   totalSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                 required:
                   - id
                   - userId
@@ -6939,6 +7014,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -6962,9 +7038,11 @@ paths:
                   selectedSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   totalSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                 required:
                   - id
                   - userId
@@ -7023,6 +7101,7 @@ paths:
                         unitPrice:
                           type: integer
                           minimum: 0
+                          maximum: 999999
                         quantity:
                           type: integer
                           minimum: 0
@@ -7055,6 +7134,7 @@ paths:
                       deliveryFee:
                         type: integer
                         minimum: 0
+                        maximum: 999999
                     required:
                       - id
                       - code
@@ -7062,12 +7142,15 @@ paths:
                   itemsSubtotal:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   deliveryFee:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   payableAmount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   warnings:
                     type: array
                     items:
@@ -7095,7 +7178,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -7136,6 +7219,7 @@ paths:
                   amount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   transactionId:
                     type: string
                     nullable: true
@@ -7187,7 +7271,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -7224,7 +7308,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -7276,6 +7360,7 @@ paths:
                   amount:
                     type: integer
                     minimum: 0
+                    maximum: 999999
                   transactionId:
                     type: string
                     nullable: true
@@ -7335,7 +7420,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:

@@ -249,7 +249,19 @@ export class PaymentService {
   /**
    * 标 PaymentIntent 为 PAID（admin 审核通过银行转账时调）
    *
-   * 注意：不在此触发 OrderService.markPaid，由 controller 编排
+   * ⚠️ **W3 admin-web 接入时必须走 controller 编排**，不要直接调此方法后不调 OrderService.markPaid。
+   * 否则会留下 PaymentIntent=PAID / Order=PENDING_PAYMENT 的不一致状态。
+   *
+   * 编排路径（W3 admin-web "审核通过" 端点）：
+   *   1. paymentService.markPaidByAdmin(orderId, adminId)  ← 标 PAID
+   *   2. orderService.markPaid(orderId, { source: 'admin_confirm' })  ← 触发状态机
+   *
+   * 一致性兜底（推荐 W3 实现时加）：
+   *   - 用 withTransaction 把两步包进同一事务（PaymentService inject OrderService 会循环依赖，
+   *     改在 controller 层用 withTransaction，markPaidByAdmin 暴露 tx 版本）
+   *   - 或加 PaymentEventOutbox 表，BullMQ 消费者异步触发 markPaid（最终一致）
+   *
+   * @deprecated 不要直接调此方法。W3 写 admin endpoint 时按上面编排路径做。
    */
   async markPaidByAdmin(orderId: string, adminUserId: string): Promise<PaymentIntentView> {
     const intent = await db.paymentIntent.findUnique({ where: { orderId } });

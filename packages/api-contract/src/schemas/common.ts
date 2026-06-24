@@ -11,8 +11,8 @@ import { z } from 'zod';
 /** UUID v4 */
 export const Id = z.string().uuid();
 
-/** 金额（整数分，USD cents） */
-export const Money = z.number().int().nonnegative();
+/** 金额（整数分，USD cents，上限 9999.99 USD 防 overflow） */
+export const Money = z.number().int().nonnegative().max(99_99_99);
 
 /** ISO 8601 UTC 时间字符串 */
 export const IsoTimestamp = z.string().datetime();
@@ -53,7 +53,7 @@ export const ErrorResponse = z.object({
     code: z
       .string()
       .regex(
-        /^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$/,
+        /^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$/,
         'INVALID_ERROR_CODE_FORMAT',
       ),
     message: z.string(),
