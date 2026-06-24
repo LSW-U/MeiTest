@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { apiFetch, type Perspective } from '@/lib/api';
+import { type Perspective } from '@/lib/api';
 import type { components } from '@meimart/shared-types';
 
 type Order = components['schemas']['Order'];
@@ -51,19 +51,14 @@ const MOCK_ORDERS: Order[] = [
 export default function MerchantOrdersPage() {
   const t = useTranslations('order');
   const [filter, setFilter] = useState<string>('PENDING_CONFIRM');
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  // W2 mock 数据；W3 接 API 时改为 useState + useEffect 拉取
+  const orders: Order[] = MOCK_ORDERS;
 
   // W3+：接入真 API
   // useEffect(() => {
   //   apiFetch<{ success: true; data: Order[] }>(`/admin/orders?status=${filter}`)
   //     .then((r) => setOrders(r.data));
   // }, [filter]);
-
-  useEffect(() => {
-    void apiFetch;
-    void setOrders;
-    void filter;
-  }, [filter]);
 
   return (
     <div style={{ padding: 24 }}>
