@@ -76,14 +76,14 @@ export class OrderController {
   async createOrder(
     @Body(new ZodValidationPipe(CreateOrderRequest)) body: z.infer<typeof CreateOrderRequest>,
     @Req() req: RequestWithUser,
-    @Headers('idempotency-key') _idempotencyKey: string | undefined,
     @Headers('x-perspective') perspective: string | undefined,
   ) {
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
-    void _idempotencyKey; // TODO: W3 cart 联调接入 IdempotencyKey 防重
+
+    // W3 cart 联调时接入 IdempotencyKey 表防重复下单（header: Idempotency-Key）
 
     const input: CreateOrderInput = {
       userId: user.sub,
