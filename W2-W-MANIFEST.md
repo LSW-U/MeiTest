@@ -200,6 +200,57 @@ W 流程未建 migration。
 
 ---
 
-**Manifest 版本**：v1.0
+**Manifest 版本**：v1.1（v1.0 + 审查 fix P0/P1）
 **生成时间**：2026-06-24
 **生成者**：流程 W AI（GLM-5.2）
+
+---
+
+## 7. 审查 fix 记录（v1.0 → v1.1）
+
+主 AI 审查后要求修复 P0+P1 共 5 项，全部已修，每项独立 commit：
+
+### P0-1: i18n key 加 w 前缀（§3.6）
+- commit: `[W2-W-fix-P0-1] perspective i18n key 加 w 前缀`
+- 改动：5 语言 common.json `perspective.*` → `w.perspective.*`（嵌套 JSON）；PerspectiveSwitcher.tsx 引用同步
+
+### P0-2: E-AUTH-011~015 迁到 E-USER-001~005（§3.4）
+- commit: `[W2-W-fix-P0-2] E-AUTH-011~015 迁到 E-USER-001~005`
+- 改动：5 语言 errors.json 删 AUTH-011~015 段，加 USER-001~005 段；auth.service.ts（11 处）+ auth.controller.ts（1 处）+ auth.service.test.ts（8 处）全替换
+
+### P1-3: admin-web 路由组加括号（§2.1）
+- commit: `[W2-W-fix-P1-3] admin-web 3 路由组加括号`
+- 改动：`app/shop` → `app/(shop)`，`app/warehouse` → `app/(warehouse)`，`app/catalog` → `app/(catalog)`（git mv 保留 history，URL 不变）
+
+### P1-4: seed.ts 注释标准化（§3.5）
+- commit: `[W2-W-fix-P1-4] seed.ts 分段注释改 // === FLOW W === 标准格式`
+- 改动：`// ===== 7. W 流程扩展 =====` → `// === FLOW W === W 流程扩展（2026-06-24）`
+
+### P1-5: 4 模块加专属错误码（§3.4）
+- commit: `[W2-W-fix-P1-5] 4 模块加专属错误码`
+- 改动：6 个新错误码（E-SHOP-001 / E-CATALOG-001 / E-INVENTORY-001 / E-INVENTORY-002 / E-PRICING-001）+ 5 语言翻译 + 代码引用全替换
+
+### 最终验证
+- `pnpm -r typecheck`：apps/admin-web ✅ / apps/api 仅 TS 6.0.3 已知 deprecation（W1 遗留，不影响代码）
+- `pnpm -r test`：122 passed ✅
+- `pnpm --filter @meimart/api-contract gen:openapi`：44 paths, 51 schemas ✅
+- `pnpm --filter @meimart/shared-types gen:types`：成功 ✅
+- gen 后 `git diff --exit-code`：无变更 ✅
+
+### 错误码段最终状态（按 §3.4 分段，整合后给主 AI 参考）
+
+W 流程使用的错误码段（不在 W1 共享段）：
+- `E-USER-001~005`（W 流程：用户认证相关）
+- `E-SHOP-001`（W 流程：店铺）
+- `E-WAREHOUSE-001~002`（W 流程：仓库）
+- `E-CATALOG-001`（W 流程：商品目录）
+- `E-INVENTORY-001~002`（W 流程：库存）
+- `E-PRICING-001`（W 流程：配送费 + 起送价）
+
+W 流程**未触碰**的错误码段（其他流程独占）：
+- `E-AUTH-*`（W1 共享段，已迁出 W 流程的 5 个码）
+- `E-COMMON-*`（W1 共享段，pricing 保留 1 处 fallback）
+- `E-ORDER-*` `E-PAYMENT-*` `E-DISPATCH-*` `E-RIDER-*`（C 流程段）
+- `E-PLATFORM-*` `E-SETTLE-*` `E-IM-*` `E-AUDIT-*`（M 流程段）
+
+---
