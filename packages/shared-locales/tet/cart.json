@@ -1,0 +1,18 @@
+{
+  "cart": {
+    "title": "Sasanak Hola-Han",
+    "empty": "Sasanak mamuk",
+    "selected": "Hili ona",
+    "selectAll": "Hili Hotu",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Taxa Entrega",
+    "payable": "Total ba Halo",
+    "checkout": "Halao",
+    "checkoutPreview": "Haree Orden",
+    "addItem": "Tau iha sasanak",
+    "updateQty": "Quantidade atualizada",
+    "removeItem": "Hasai sasanak",
+    "outOfRange": "Enderesu liu entrega nia área",
+    "emptySelection": "Hili ida mínimu"
+  }
+}

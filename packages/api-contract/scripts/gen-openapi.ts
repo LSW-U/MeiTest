@@ -74,6 +74,17 @@ import {
   OrderNo,
   PaymentMethod,
   OrderStatus,
+  // cart
+  Cart,
+  CartItem,
+  AddCartItemRequest,
+  UpdateCartItemRequest,
+  CheckoutPreviewRequest,
+  CheckoutPreview,
+  // payment
+  PaymentIntent,
+  UploadReceiptRequest,
+  // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // common
   ErrorResponse,
   Id,
@@ -139,6 +150,16 @@ registry.register('CancelOrderRequest', CancelOrderRequest);
 registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
 registry.register('OrderStatus', OrderStatus);
+
+registry.register('Cart', Cart);
+registry.register('CartItem', CartItem);
+registry.register('AddCartItemRequest', AddCartItemRequest);
+registry.register('UpdateCartItemRequest', UpdateCartItemRequest);
+registry.register('CheckoutPreviewRequest', CheckoutPreviewRequest);
+registry.register('CheckoutPreview', CheckoutPreview);
+
+registry.register('PaymentIntent', PaymentIntent);
+registry.register('UploadReceiptRequest', UploadReceiptRequest);
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
 registry.registerPath({
@@ -846,6 +867,175 @@ registry.registerPath({
       content: { 'application/json': { schema: Order } },
     },
     400: { description: 'STOCK_NOT_ENOUGH', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders',
+  tags: ['order'],
+  description: '客户端订单列表（按状态筛选 + 游标分页）',
+  responses: {
+    200: {
+      description: '订单列表',
+      content: { 'application/json': { schema: Order.array() } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders/{id}',
+  tags: ['order'],
+  description: '订单详情（含 items + events）',
+  responses: {
+    200: {
+      description: '订单详情',
+      content: { 'application/json': { schema: Order } },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/orders/{id}/cancel',
+  tags: ['order'],
+  description: '取消订单（用户自助，PENDING_* / CONFIRMED 可取消）',
+  request: {
+    body: { content: { 'application/json': { schema: CancelOrderRequest } } },
+  },
+  responses: {
+    200: { description: '取消成功' },
+    409: { description: 'ORDER_STATUS_NOT_CANCELLABLE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/cart',
+  tags: ['cart'],
+  description: '获取购物车（按用户 1 份，含 items + 选中金额汇总）',
+  responses: {
+    200: {
+      description: '购物车详情',
+      content: { 'application/json': { schema: Cart } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/cart/items',
+  tags: ['cart'],
+  description: '加购（同 sku 累加数量 + 刷新价格快照）',
+  request: {
+    body: { content: { 'application/json': { schema: AddCartItemRequest } } },
+  },
+  responses: {
+    200: {
+      description: '加购后的购物车',
+      content: { 'application/json': { schema: Cart } },
+    },
+    409: { description: 'SKU_INACTIVE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/cart/items/{id}',
+  tags: ['cart'],
+  description: '修改购物车项数量 / 选中状态',
+  request: {
+    body: { content: { 'application/json': { schema: UpdateCartItemRequest } } },
+  },
+  responses: {
+    200: {
+      description: '修改后的购物车',
+      content: { 'application/json': { schema: Cart } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/cart/items/{id}',
+  tags: ['cart'],
+  description: '删除购物车项',
+  responses: {
+    200: {
+      description: '删除后的购物车',
+      content: { 'application/json': { schema: Cart } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/cart/checkout-preview',
+  tags: ['cart'],
+  description: '结算前预览（按地址匹配仓库 + 库存/价格校验 + 金额汇总）',
+  request: {
+    body: { content: { 'application/json': { schema: CheckoutPreviewRequest } } },
+  },
+  responses: {
+    200: {
+      description: '结算预览',
+      content: { 'application/json': { schema: CheckoutPreview } },
+    },
+    409: { description: 'NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/payments/{orderId}',
+  tags: ['payment'],
+  description: '查询订单支付状态（含 mock/stub 标识）',
+  responses: {
+    200: {
+      description: 'PaymentIntent 详情',
+      content: { 'application/json': { schema: PaymentIntent } },
+    },
+    404: { description: 'PAYMENT_INTENT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/payments/{orderId}/mock-callback',
+  tags: ['payment'],
+  description: 'dev/staging 模拟第三方支付成功回调（仅 WECHAT/PAYPAL/STRIPE）',
+  responses: {
+    200: { description: '回调成功，订单自动进 CONFIRMED' },
+    409: { description: 'METHOD_NOT_ALLOWED / DISABLED_IN_PROD', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/payments/{orderId}/receipt',
+  tags: ['payment'],
+  description: '银行转账凭证上传（BANK_TRANSFER 专用）',
+  request: {
+    body: { content: { 'application/json': { schema: UploadReceiptRequest } } },
+  },
+  responses: {
+    200: {
+      description: '凭证已上传，状态进 PROCESSING 等审核',
+      content: { 'application/json': { schema: PaymentIntent } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/payments/{orderId}/confirm',
+  tags: ['payment'],
+  description: '客户端轮询查到 PAID 后触发订单确认',
+  responses: {
+    200: { description: '订单已确认' },
+    409: { description: 'PAYMENT_NOT_PAID', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

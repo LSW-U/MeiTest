@@ -1,0 +1,18 @@
+{
+  "cart": {
+    "title": "购物车",
+    "empty": "购物车是空的",
+    "selected": "已选",
+    "selectAll": "全选",
+    "subtotal": "商品小计",
+    "deliveryFee": "配送费",
+    "payable": "应付总额",
+    "checkout": "去结算",
+    "checkoutPreview": "订单预览",
+    "addItem": "已加入购物车",
+    "updateQty": "数量已更新",
+    "removeItem": "已移出购物车",
+    "outOfRange": "地址超出配送范围",
+    "emptySelection": "请至少选择一件商品"
+  }
+}
