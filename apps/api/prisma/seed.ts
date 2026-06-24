@@ -217,7 +217,7 @@ async function main() {
   }
   console.log(`  ✅ ${PRODUCTS.length} products × 2 SKUs × ${warehouses.length} warehouses = ${PRODUCTS.length * 2 * warehouses.length} stock records`);
 
-  // ===== 7. W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / 分类 / Banner =====
+  // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / 分类 / Banner
   console.log('\n📦 W 流程扩展数据...');
 
   const adminUser = await prisma.user.findUnique({ where: { phone: SEED_ADMIN_PHONE } });
