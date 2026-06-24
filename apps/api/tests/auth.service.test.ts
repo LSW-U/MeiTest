@@ -182,14 +182,14 @@ describe('AuthService', () => {
       expect(result.refreshToken).toBeTruthy();
     });
 
-    it('用户不存在抛 E-AUTH-011', async () => {
+    it('用户不存在抛 E-USER-001', async () => {
       userFindUnique.mockResolvedValueOnce(null);
       await expect(service.loginWithPassword('+670000000000', 'Pass1234')).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
-    it('密码错误抛 E-AUTH-012', async () => {
+    it('密码错误抛 E-USER-002', async () => {
       const passwordHash = await passwordStrategy.hashPassword('Pass1234');
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
@@ -202,7 +202,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('SUSPENDED 用户抛 E-AUTH-015', async () => {
+    it('SUSPENDED 用户抛 E-USER-005', async () => {
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
         password: 'hash',
@@ -231,7 +231,7 @@ describe('AuthService', () => {
       expect(result.role).toBe('customer');
     });
 
-    it('SMS 错误抛 E-AUTH-013', async () => {
+    it('SMS 错误抛 E-USER-003', async () => {
       await expect(service.loginWithSms('+670999999999', '000000')).rejects.toThrow(
         UnauthorizedException,
       );
@@ -276,7 +276,7 @@ describe('AuthService', () => {
       expect(result.role).toBe('customer');
     });
 
-    it('手机号已注册抛 E-AUTH-014', async () => {
+    it('手机号已注册抛 E-USER-004', async () => {
       userFindUnique.mockResolvedValueOnce({ id: 'existing' });
       await expect(
         service.registerUser({
@@ -287,7 +287,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('SMS 必传，缺 smsCode 抛 E-AUTH-013', async () => {
+    it('SMS 必传，缺 smsCode 抛 E-USER-003', async () => {
       userFindUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
       await expect(
         service.registerUser({
@@ -322,7 +322,7 @@ describe('AuthService', () => {
       expect(userUpdate).toHaveBeenCalled();
     });
 
-    it('用户不存在抛 E-AUTH-011', async () => {
+    it('用户不存在抛 E-USER-001', async () => {
       userFindUnique.mockResolvedValueOnce(null);
       await expect(
         service.resetPassword({
@@ -333,7 +333,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('SMS 错误抛 E-AUTH-013', async () => {
+    it('SMS 错误抛 E-USER-003', async () => {
       userFindUnique.mockResolvedValueOnce({ id: 'user-1' });
       await expect(
         service.resetPassword({

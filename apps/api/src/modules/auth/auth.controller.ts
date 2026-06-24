@@ -139,7 +139,7 @@ export class AuthController {
     const user = await db.user.findUnique({ where: { id: payload.sub } });
     if (!user) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-011',
+        code: 'E-USER-001',
         message: 'User not found',
       });
     }

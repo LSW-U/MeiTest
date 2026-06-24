@@ -189,20 +189,20 @@ export class AuthService {
     const user = await db.user.findUnique({ where: { phone } });
     if (!user) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-011',
+        code: 'E-USER-001',
         message: 'Phone not registered',
       });
     }
     if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException({
-        code: 'E-AUTH-015',
+        code: 'E-USER-005',
         message: `User status is ${user.status}, login disabled`,
       });
     }
     const ok = await passwordStrategy.verifyPassword(user.password, password);
     if (!ok) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-012',
+        code: 'E-USER-002',
         message: 'Wrong password',
       });
     }
@@ -231,7 +231,7 @@ export class AuthService {
     const verified = await this.verifySmsCode(phone, smsCode, 'LOGIN');
     if (!verified) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-013',
+        code: 'E-USER-003',
         message: 'SMS code invalid or expired',
       });
     }
@@ -251,7 +251,7 @@ export class AuthService {
       logger.info({ msg: 'SMS_LOGIN_AUTO_REGISTER', userId: user.id, phone });
     } else if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException({
-        code: 'E-AUTH-015',
+        code: 'E-USER-005',
         message: `User status is ${user.status}, login disabled`,
       });
     }
@@ -284,7 +284,7 @@ export class AuthService {
     const existing = await db.user.findUnique({ where: { phone: input.phone } });
     if (existing) {
       throw new ConflictException({
-        code: 'E-AUTH-014',
+        code: 'E-USER-004',
         message: 'Phone already registered',
       });
     }
@@ -292,7 +292,7 @@ export class AuthService {
       const existingEmail = await db.user.findUnique({ where: { email: input.email } });
       if (existingEmail) {
         throw new ConflictException({
-          code: 'E-AUTH-014',
+          code: 'E-USER-004',
           message: 'Email already registered',
         });
       }
@@ -301,14 +301,14 @@ export class AuthService {
     // SMS 验证码校验（必传，dev/staging stub 固定 123456）
     if (!input.smsCode) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-013',
+        code: 'E-USER-003',
         message: 'SMS code required for registration',
       });
     }
     const verified = await this.verifySmsCode(input.phone, input.smsCode, 'REGISTER');
     if (!verified) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-013',
+        code: 'E-USER-003',
         message: 'SMS code invalid or expired',
       });
     }
@@ -356,14 +356,14 @@ export class AuthService {
     const user = await db.user.findUnique({ where: { phone: input.phone } });
     if (!user) {
       throw new NotFoundException({
-        code: 'E-AUTH-011',
+        code: 'E-USER-001',
         message: 'Phone not registered',
       });
     }
     const verified = await this.verifySmsCode(input.phone, input.smsCode, 'RESET_PASSWORD');
     if (!verified) {
       throw new UnauthorizedException({
-        code: 'E-AUTH-013',
+        code: 'E-USER-003',
         message: 'SMS code invalid or expired',
       });
     }
