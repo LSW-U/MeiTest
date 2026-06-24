@@ -16,6 +16,9 @@ vi.mock('../src/shared/db', () => ({
       findMany: vi.fn(),
       update: vi.fn(),
     },
+    auditLog: {
+      create: vi.fn().mockResolvedValue({}),
+    },
   },
 }));
 

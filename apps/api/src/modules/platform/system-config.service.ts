@@ -40,6 +40,14 @@ export class SystemConfigService {
     value: string,
     description: string | undefined,
     updatedBy: string,
+    /** 审计上下文（W4 完善：配置变更写 AuditLog） */
+    auditCtx?: {
+      deviceType?: 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB';
+      perspective?: string;
+      ip?: string | null;
+      userAgent?: string | null;
+      traceId?: string | null;
+    },
   ): Promise<SystemConfigItemType> {
     const existing = await db.systemConfig.findUnique({ where: { key } });
     if (!existing) {
@@ -60,10 +68,30 @@ export class SystemConfigService {
 
     /** 写后失效缓存（而不是更新，避免与并发读竞争） */
     await redis.del(cacheKey(key));
+
+    /** W4：配置变更写 AuditLog（before/after 快照便于追溯） */
+    await db.auditLog.create({
+      data: {
+        userId: updatedBy,
+        action: 'UPDATE_SYSTEMCONFIG',
+        resourceType: 'SystemConfig',
+        resourceId: key,
+        beforeData: { value: existing.value, description: existing.description } as object,
+        afterData: { value: updated.value, description: updated.description } as object,
+        deviceType: auditCtx?.deviceType ?? null,
+        perspective: auditCtx?.perspective ?? null,
+        ip: auditCtx?.ip ?? null,
+        userAgent: auditCtx?.userAgent ?? null,
+        traceId: auditCtx?.traceId ?? null,
+      },
+    });
+
     logger.info({
       msg: 'SYSTEM_CONFIG_UPDATED',
       key,
       updatedBy,
+      beforeValue: existing.value,
+      afterValue: updated.value,
     });
 
     return this.toDto(updated);

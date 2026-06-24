@@ -9,13 +9,14 @@ import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { PlatformModule } from './modules/platform/platform.module';
+import { SettleModule } from './modules/settle/settle.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
 
 @Module({
-  imports: [AuthModule, PlatformModule, RealtimeModule],
+  imports: [AuthModule, PlatformModule, RealtimeModule, SettleModule],
   controllers: [HealthController, MeController],
   providers: [
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）
