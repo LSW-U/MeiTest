@@ -57,12 +57,12 @@ tags: [MeiMart, W2, 三流程, 协作规范, 离线并行]
 - `apps/api/src/modules/user/**`（资料、地址）
 - `apps/api/src/modules/category/**`（如拆分）
 
-**前端**：
-- `apps/admin-web/src/app/(shop)/**`（商家视角）
-- `apps/admin-web/src/app/(warehouse)/**`（仓库视角）
-- `apps/client-app/src/screens/home/**`
-- `apps/client-app/src/screens/shop/**`
-- `apps/client-app/src/screens/category/**`
+**前端**（**已迁出 MeiMart1.0，本 repo 不再做**）：
+- ~~`apps/admin-web/src/app/(shop)/**`~~（admin-web 仍在，但商家视角归 M 流程的"审核"角度，不是 W）
+- ~~`apps/admin-web/src/app/(warehouse)/**`~~（仓库视角 admin-web 在 M 流程的视角切换器覆盖，不归 W）
+- ~~`apps/client-app/src/screens/home/**`~~（已迁 MeiMart1.0）
+- ~~`apps/client-app/src/screens/shop/**`~~（已迁 MeiMart1.0）
+- ~~`apps/client-app/src/screens/category/**`~~（已迁 MeiMart1.0）
 
 **契约**：
 - `packages/api-contract/src/schemas/warehouse.ts`
@@ -90,11 +90,11 @@ tags: [MeiMart, W2, 三流程, 协作规范, 离线并行]
 - `apps/api/src/modules/location/**`
 - `apps/api/src/modules/notify/**`
 
-**前端**：
-- `apps/client-app/src/screens/cart/**`
-- `apps/client-app/src/screens/order/**`
-- `apps/client-app/src/screens/payment/**`
-- `apps/rider-app/**`（骑手 App 整个归流程 C）
+**前端**（**已迁出 MeiMart1.0，本 repo 不再做**）：
+- ~~`apps/client-app/src/screens/cart/**`~~（已迁 MeiMart1.0）
+- ~~`apps/client-app/src/screens/order/**`~~（已迁 MeiMart1.0）
+- ~~`apps/client-app/src/screens/payment/**`~~（已迁 MeiMart1.0）
+- ~~`apps/rider-app/**`~~（已迁 MeiMart1.0）
 
 **契约**：
 - `packages/api-contract/src/schemas/order.ts`（W1 已存在，C 扩展）
@@ -142,6 +142,30 @@ tags: [MeiMart, W2, 三流程, 协作规范, 离线并行]
 - `apps/api/src/infrastructure/**`（外部服务抽象，W1 已完成）
 - `apps/api/prisma/migrations/20260620031102_init/**`（init migration 不动）
 - `apps/api/prisma/migrations/20260622093004_drop_unused_refresh_tokens/**`
+- `apps/client-app/**`（**已迁出到 MeiMart1.0 前端 repo，本 repo 仅保留历史档案**）
+- `apps/rider-app/**`（**已迁出到 MeiMart1.0 前端 repo，本 repo 仅保留历史档案**）
+
+### 2.5 前端 repo 边界（MeiMart1.0）
+
+> **决策（2026-06-24）**：客户端 App + 骑手 App 已迁出本 repo，独立维护在 [MeiMart1.0](https://github.com/LSW-U/MeiMart1.0)。本 repo（MeiMart）只做**后端 + admin-web**。
+
+| 边界 | 说明 |
+|---|---|
+| **本 repo 不再做** | `apps/client-app/**` 和 `apps/rider-app/**` 的任何前端 RN 任务 |
+| **本 repo 仍然做** | `apps/admin-web/**`（Next.js 后台 web，三流程各自视角页面） |
+| **前端 repo 负责** | client-app（客户端 RN+Expo） + rider-app（骑手 RN+Expo） |
+| **API 契约同步** | 后端改 schema → 前端跑 `scripts/sync-api.sh` 本地 cp 同步（详见下方） |
+| **协作模式** | 两个 repo 完全独立，git 历史不交叉，靠 OpenAPI + TS 类型作为契约层 |
+
+**前端 repo 信息**：
+- GitHub: https://github.com/LSW-U/MeiMart1.0
+- 本地路径（开发者机器）: `/Users/linsuwei/code/Work/Temporarily-project/mei-mart-app`
+- 分支：`master`
+- 前端用的 schema 同步脚本：`scripts/sync-api.sh`（自动调本 repo 的 `gen:openapi` + `gen:types`）
+
+**三流程 AI 注意**：
+- 你做后端 + admin-web，**不要写 client-app / rider-app 代码**（就算 W-M-C-T 任务清单提到也跳过，那是 MeiMart1.0 的活）
+- 你的 contract schema 改动会触发前端 sync-api.sh 拉新版本，注意向后兼容（详见 §3 命名规范）
 
 ### 2.5 共享文件（三流程都改，最后手工 merge）
 
@@ -211,6 +235,23 @@ tags: [MeiMart, W2, 三流程, 协作规范, 离线并行]
 - **每流程独占 namespace**（如 `order.json` / `settle.json`），不冲突
 - **共用 namespace（common.json）**：按 `{flow}.{feature}.{key}` 命名，如 `w.warehouse.open` / `c.cart.count` / `m.settle.total`
 - 跨流程共用的 key（如 `common.confirm` / `common.cancel`）三方都可用，但 **manifest 必须报备**
+
+### 3.7 跨 repo 契约同步（MeiMart1.0 前端）
+
+**触发条件**：你改了 `packages/api-contract/src/schemas/*.ts`（zod schema）或 `packages/shared-types/src/*.ts`
+
+**自动同步机制**（无需你做）：
+1. 后端 PR merge 到 main → GitHub Actions 跑 `gen:openapi + gen:types`
+2. 前端开发者本地跑 `bash scripts/sync-api.sh` → 从后端 repo 本地路径 cp 最新 OpenAPI + TS 类型
+
+**向后兼容规则**（你做 schema 改动时遵守，避免前端 break）：
+- ✅ **加字段** — 安全（前端旧代码不读新字段，兼容）
+- ✅ **加新 endpoint** — 安全（前端不调即可）
+- ⚠️ **改字段名/类型** — **breaking change**，必须在 PR title 标 `[BREAKING]`，manifest §4 报备
+- ⚠️ **删字段/endpoint** — **breaking change**，同上
+- ✅ **加新 zod schema 文件** — 安全（namespace 隔离）
+
+**OpenAPI 文档**：`packages/api-contract/openapi.yaml`（自动生成，不要手改）
 
 ---
 
