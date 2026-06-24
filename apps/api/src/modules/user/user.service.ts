@@ -10,12 +10,13 @@
  * - 通知 type 必须是 NotificationType enum（DB 校验）
  */
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { z } from 'zod';
 import { db } from '../../shared/db';
 import { AuthService } from '../auth/auth.service';
-import type {
-  Address as AddressType,
-  NotificationItem as NotificationType,
-} from '@meimart/api-contract';
+import { Address, NotificationItem } from '@meimart/api-contract';
+
+type AddressDTO = z.infer<typeof Address>;
+type NotificationDTO = z.infer<typeof NotificationItem>;
 
 @Injectable()
 export class UserService {
@@ -67,7 +68,7 @@ export class UserService {
 
   // ===== Addresses =====
 
-  async listAddresses(userId: string): Promise<AddressType[]> {
+  async listAddresses(userId: string): Promise<AddressDTO[]> {
     const addresses = await db.address.findMany({
       where: { userId },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
@@ -87,7 +88,7 @@ export class UserService {
       isDefault?: boolean;
       tag?: string | null;
     },
-  ): Promise<AddressType> {
+  ): Promise<AddressDTO> {
     const result = await db.$transaction(async (tx) => {
       // 若新增为默认，先取消该 user 现有默认
       if (input.isDefault) {
@@ -126,7 +127,7 @@ export class UserService {
       isDefault: boolean;
       tag: string | null;
     }>,
-  ): Promise<AddressType> {
+  ): Promise<AddressDTO> {
     const existing = await db.address.findFirst({
       where: { id: addressId, userId },
     });
@@ -180,7 +181,7 @@ export class UserService {
     tag: string | null;
     createdAt: Date;
     updatedAt: Date;
-  }): AddressType {
+  }): AddressDTO {
     return {
       id: a.id,
       userId: a.userId,
@@ -253,7 +254,7 @@ export class UserService {
 
   // ===== Notifications =====
 
-  async listNotifications(userId: string, onlyUnread = false): Promise<NotificationType[]> {
+  async listNotifications(userId: string, onlyUnread = false): Promise<NotificationDTO[]> {
     const items = await db.notification.findMany({
       where: onlyUnread ? { userId, isRead: false } : { userId },
       orderBy: { createdAt: 'desc' },

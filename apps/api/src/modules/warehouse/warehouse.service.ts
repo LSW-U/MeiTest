@@ -11,6 +11,7 @@
  */
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { db } from '../../shared/db';
+import { Prisma } from '../../prisma/client';
 import {
   setWarehouseGeometry,
   buildBoxPolygon,
@@ -75,7 +76,7 @@ export class WarehouseService {
         address: input.address,
         centerLat: input.centerLat,
         centerLng: input.centerLng,
-        operatingHours: input.operatingHours ?? null,
+        operatingHours: (input.operatingHours ?? null) as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue,
         deliveryFee: input.deliveryFee ?? 0,
         status: input.status ?? 'ACTIVE',
       },
@@ -119,7 +120,7 @@ export class WarehouseService {
         ...(input.address !== undefined && { address: input.address }),
         ...(input.centerLat !== undefined && { centerLat: input.centerLat }),
         ...(input.centerLng !== undefined && { centerLng: input.centerLng }),
-        ...(input.operatingHours !== undefined && { operatingHours: input.operatingHours }),
+        ...(input.operatingHours !== undefined && { operatingHours: input.operatingHours as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue }),
         ...(input.deliveryFee !== undefined && { deliveryFee: input.deliveryFee }),
         ...(input.status !== undefined && { status: input.status }),
       },

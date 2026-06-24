@@ -13,7 +13,7 @@
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../../shared/db';
-import { Prisma } from '../../prisma/client';
+import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
 
 @Injectable()
 export class CatalogService {
@@ -104,7 +104,7 @@ export class CatalogService {
 
   async adminListProducts(status?: string) {
     const items = await db.product.findMany({
-      where: status ? { status: status as Prisma.ProductStatus } : undefined,
+      where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
     return items.map((p) => this.toProductDTO(p));
@@ -127,11 +127,11 @@ export class CatalogService {
         shopId: shop.id,
         categoryId: input.categoryId ?? null,
         name: input.name,
-        description: input.description ?? null,
+        description: (input.description ?? null) as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue,
         mainImage: input.mainImage,
         images: input.images ?? [],
         unit: input.unit,
-        status: (input.status ?? 'ACTIVE') as Prisma.ProductStatus,
+        status: (input.status ?? 'ACTIVE') as ProductStatus,
         priceMin: 0, // 没 SKU 前是 0
       },
     });
@@ -155,11 +155,11 @@ export class CatalogService {
       data: {
         ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
         ...(input.name !== undefined && { name: input.name }),
-        ...(input.description !== undefined && { description: input.description }),
+        ...(input.description !== undefined && { description: input.description as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue }),
         ...(input.mainImage !== undefined && { mainImage: input.mainImage }),
         ...(input.images !== undefined && { images: input.images }),
         ...(input.unit !== undefined && { unit: input.unit }),
-        ...(input.status !== undefined && { status: input.status as Prisma.ProductStatus }),
+        ...(input.status !== undefined && { status: input.status as ProductStatus }),
       },
     });
     return this.toProductDTO(updated);
@@ -199,10 +199,10 @@ export class CatalogService {
       data: {
         productId,
         name: input.name,
-        attributes: input.attributes,
+        attributes: input.attributes as Prisma.InputJsonValue,
         price: input.price,
         imageUrl: input.imageUrl ?? null,
-        status: (input.status ?? 'ACTIVE') as Prisma.SkuStatus,
+        status: (input.status ?? 'ACTIVE') as SkuStatus,
       },
     });
 
@@ -226,10 +226,10 @@ export class CatalogService {
       where: { id: skuId },
       data: {
         ...(input.name !== undefined && { name: input.name }),
-        ...(input.attributes !== undefined && { attributes: input.attributes }),
+        ...(input.attributes !== undefined && { attributes: input.attributes as Prisma.InputJsonValue }),
         ...(input.price !== undefined && { price: input.price }),
         ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
-        ...(input.status !== undefined && { status: input.status as Prisma.SkuStatus }),
+        ...(input.status !== undefined && { status: input.status as SkuStatus }),
       },
     });
 
@@ -357,7 +357,7 @@ export class CatalogService {
     const created = await db.banner.create({
       data: {
         imageUrl: input.imageUrl,
-        alt: input.alt ?? null,
+        alt: (input.alt ?? null) as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue,
         linkType: input.linkType,
         linkValue: input.linkValue ?? null,
         sortOrder: input.sortOrder ?? 0,
@@ -392,7 +392,7 @@ export class CatalogService {
       where: { id },
       data: {
         ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
-        ...(input.alt !== undefined && { alt: input.alt }),
+        ...(input.alt !== undefined && { alt: input.alt as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue }),
         ...(input.linkType !== undefined && { linkType: input.linkType }),
         ...(input.linkValue !== undefined && { linkValue: input.linkValue }),
         ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),

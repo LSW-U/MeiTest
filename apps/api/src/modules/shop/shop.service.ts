@@ -10,7 +10,7 @@
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../../shared/db';
-import type { ShopStatus } from '@meimart/api-contract';
+import { Prisma } from '../../prisma/client';
 
 @Injectable()
 export class ShopService {
@@ -48,13 +48,13 @@ export class ShopService {
     const updated = await db.shop.update({
       where: { id: existing.id },
       data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.announcement !== undefined && { announcement: input.announcement }),
+        ...(input.name !== undefined && { name: input.name as Prisma.InputJsonValue }),
+        ...(input.announcement !== undefined && { announcement: input.announcement as Prisma.InputJsonValue }),
         ...(input.logoUrl !== undefined && { logoUrl: input.logoUrl }),
         ...(input.phone !== undefined && { phone: input.phone }),
         ...(input.address !== undefined && { address: input.address }),
-        ...(input.status !== undefined && { status: input.status as ShopStatus }),
-        ...(input.businessHours !== undefined && { businessHours: input.businessHours }),
+        ...(input.status !== undefined && { status: input.status as 'ACTIVE' | 'INACTIVE' }),
+        ...(input.businessHours !== undefined && { businessHours: input.businessHours as Prisma.InputJsonValue }),
       },
     });
     return this.toDTO(updated);

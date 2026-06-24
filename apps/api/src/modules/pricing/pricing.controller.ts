@@ -20,17 +20,6 @@ import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 
-const DeliveryFeeRequest = z.object({
-  warehouseId: z.string().uuid(),
-  lat: z.number(),
-  lng: z.number(),
-});
-
-const MinOrderCheckRequest = z.object({
-  warehouseId: z.string().uuid(),
-  cartTotal: z.number().int().nonnegative(),
-});
-
 const UpdateBaseFeeRequest = z.object({
   baseFee: z.number().int().nonnegative(),
 });

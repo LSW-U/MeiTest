@@ -6,7 +6,8 @@
     "types": ["node"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "ignoreDeprecations": "5.0"
   },
   "include": ["src/**/*"],
   "exclude": ["src/prisma/client/**/*"]

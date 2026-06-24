@@ -174,6 +174,18 @@ export class AuthService {
     }
   }
 
+  /** contract DeviceType (lowercase) → Prisma DeviceType enum (UPPERCASE) */
+  private toPrismaDeviceType(deviceType: DeviceType): 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB' {
+    switch (deviceType) {
+      case 'client_app':
+        return 'CLIENT_APP';
+      case 'rider_app':
+        return 'RIDER_APP';
+      case 'admin_web':
+        return 'ADMIN_WEB';
+    }
+  }
+
   /**
    * Prisma role（大写 enum：SUPER_ADMIN / CUSTOMER / ...）→ contract role（小写 union）
    *
@@ -213,7 +225,7 @@ export class AuthService {
 
     await db.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+      data: { lastLoginAt: new Date(), lastDeviceType: this.toPrismaDeviceType(deviceType) },
     });
 
     logger.info({
@@ -266,7 +278,7 @@ export class AuthService {
 
     await db.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+      data: { lastLoginAt: new Date(), lastDeviceType: this.toPrismaDeviceType(deviceType) },
     });
 
     return { ...tokenPair, userId: user.id, role };
@@ -332,7 +344,7 @@ export class AuthService {
 
     await db.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date(), lastDeviceType: deviceType },
+      data: { lastLoginAt: new Date(), lastDeviceType: this.toPrismaDeviceType(deviceType) },
     });
 
     logger.info({ msg: 'REGISTER_SUCCESS', userId: user.id, phone: input.phone });

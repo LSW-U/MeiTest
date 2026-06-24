@@ -18,7 +18,7 @@
  *   - 所有写库存操作走 withTransaction（保证 StockLog 与 Stock 一致）
  *   - 库存不存在时按需创建（首次入库用）
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { db, withTransaction, deductStock, releaseStock, type Tx } from '../../shared/db';
 import { findWarehouseByPoint } from '../../shared/db/postgis-helpers';
 
@@ -71,7 +71,7 @@ export class InventoryService {
       quantity,
       inStock: quantity > 0,
       outOfRange: false,
-      code: null as const,
+      code: null,
     };
   }
 
