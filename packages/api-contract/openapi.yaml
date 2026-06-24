@@ -35,8 +35,14 @@ tags:
     description: 库存（含仓库匹配）
   - name: pricing
     description: 配送费 + 起送价
+  - name: cart
+    description: 购物车
   - name: order
     description: 订单
+  - name: payment
+    description: 支付
+  - name: platform
+    description: 平台 dashboard / 审计 / 系统配置
 components:
   schemas:
     JwtPayload:
@@ -85,7 +91,7 @@ components:
           properties:
             code:
               type: string
-              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+              pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
             message:
               type: string
             details:
@@ -160,7 +166,7 @@ components:
               nullable: true
             status:
               type: string
-              enum: &a13
+              enum: &a15
                 - ACTIVE
                 - SUSPENDED
                 - DELETED
@@ -249,7 +255,7 @@ components:
           minLength: 1
         scene:
           type: string
-          enum: &a14
+          enum: &a16
             - REGISTER
             - LOGIN
             - RESET_PASSWORD
@@ -323,7 +329,7 @@ components:
           enum: *a1
         status:
           type: string
-          enum: &a15
+          enum: &a17
             - ACTIVE
             - SUSPENDED
             - DELETED
@@ -523,7 +529,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: &a16
+          enum: &a18
             - ORDER_UPDATE
             - PROMOTION
             - SYSTEM
@@ -1139,7 +1145,7 @@ components:
             type: string
         linkType:
           type: string
-          enum: &a25
+          enum: &a27
             - PRODUCT
             - CATEGORY
             - URL
@@ -1151,7 +1157,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a26
+          enum: &a28
             - ACTIVE
             - INACTIVE
         createdAt:
@@ -1780,6 +1786,251 @@ components:
           format: uri
       required:
         - receiptUrl
+    DashboardSummary:
+      type: object
+      properties:
+        range:
+          type: string
+          enum: &a13
+            - today
+            - week
+            - month
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        gmv:
+          type: integer
+          minimum: 0
+        gmvGrowthPct:
+          type: number
+        orderCount:
+          type: integer
+          minimum: 0
+        orderCountGrowthPct:
+          type: number
+        onlineRiderCount:
+          type: integer
+          minimum: 0
+        abnormalOrderCount:
+          type: integer
+          minimum: 0
+        trend:
+          type: array
+          items:
+            type: object
+            properties:
+              bucket:
+                type: string
+              gmv:
+                type: integer
+                minimum: 0
+              orderCount:
+                type: integer
+                minimum: 0
+            required:
+              - bucket
+              - gmv
+              - orderCount
+        warehouseBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              warehouseId:
+                type: string
+                format: uuid
+              warehouseName:
+                type: object
+                additionalProperties:
+                  type: string
+              gmv:
+                type: integer
+                minimum: 0
+              orderCount:
+                type: integer
+                minimum: 0
+              abnormalCount:
+                type: integer
+                minimum: 0
+            required:
+              - warehouseId
+              - warehouseName
+              - gmv
+              - orderCount
+              - abnormalCount
+      required:
+        - range
+        - from
+        - to
+        - gmv
+        - gmvGrowthPct
+        - orderCount
+        - orderCountGrowthPct
+        - onlineRiderCount
+        - abnormalOrderCount
+        - trend
+        - warehouseBreakdown
+    DashboardTimeRange:
+      type: string
+      enum: *a13
+    AuditLogListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          nullable: true
+          format: uuid
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+          nullable: true
+        deviceType:
+          type: string
+          nullable: true
+          enum: &a14
+            - CLIENT_APP
+            - RIDER_APP
+            - ADMIN_WEB
+        perspective:
+          type: string
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - action
+        - resourceType
+        - resourceId
+        - deviceType
+        - perspective
+        - ip
+        - createdAt
+    AuditLogDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          nullable: true
+          format: uuid
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+          nullable: true
+        deviceType:
+          type: string
+          nullable: true
+          enum: *a14
+        perspective:
+          type: string
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        beforeData:
+          nullable: true
+        afterData:
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        traceId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - userId
+        - action
+        - resourceType
+        - resourceId
+        - deviceType
+        - perspective
+        - ip
+        - createdAt
+        - userAgent
+        - traceId
+    AuditLogQuery:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        resourceType:
+          type: string
+        action:
+          type: string
+        perspective:
+          type: string
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        cursor:
+          type: string
+    SystemConfigItem:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 128
+        value:
+          type: string
+        description:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          nullable: true
+          format: uuid
+      required:
+        - key
+        - value
+        - description
+        - updatedAt
+        - updatedBy
+    UpdateSystemConfigRequest:
+      type: object
+      properties:
+        value:
+          type: string
+          minLength: 1
+        description:
+          type: string
+      required:
+        - value
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -1833,7 +2084,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a13
+                        enum: *a15
                     required:
                       - id
                       - role
@@ -1866,7 +2117,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1930,7 +2181,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a13
+                        enum: *a15
                     required:
                       - id
                       - role
@@ -1963,7 +2214,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -1992,7 +2243,7 @@ paths:
                   minLength: 1
                 scene:
                   type: string
-                  enum: *a14
+                  enum: *a16
                   default: LOGIN
               required:
                 - phone
@@ -2026,7 +2277,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2083,7 +2334,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2112,7 +2363,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2184,7 +2435,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a13
+                        enum: *a15
                     required:
                       - id
                       - role
@@ -2217,7 +2468,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2276,7 +2527,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2341,7 +2592,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a15
+                    enum: *a17
                   createdAt:
                     type: string
                     format: date-time
@@ -2402,7 +2653,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a15
+                    enum: *a17
                   createdAt:
                     type: string
                     format: date-time
@@ -2715,7 +2966,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2750,7 +3001,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -2828,7 +3079,7 @@ paths:
                       format: uuid
                     type:
                       type: string
-                      enum: *a16
+                      enum: *a18
                     title:
                       type: object
                       additionalProperties:
@@ -3163,7 +3414,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a17
+                        mon: &a19
                           type: object
                           properties:
                             open:
@@ -3175,12 +3426,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a17
-                        wed: *a17
-                        thu: *a17
-                        fri: *a17
-                        sat: *a17
-                        sun: *a17
+                        tue: *a19
+                        wed: *a19
+                        thu: *a19
+                        fri: *a19
+                        sat: *a19
+                        sun: *a19
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -3278,7 +3529,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a18
+                        mon: &a20
                           type: object
                           properties:
                             open:
@@ -3290,12 +3541,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a18
-                        wed: *a18
-                        thu: *a18
-                        fri: *a18
-                        sat: *a18
-                        sun: *a18
+                        tue: *a20
+                        wed: *a20
+                        thu: *a20
+                        fri: *a20
+                        sat: *a20
+                        sun: *a20
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -3367,7 +3618,7 @@ paths:
                   type: object
                   nullable: true
                   properties:
-                    mon: &a19
+                    mon: &a21
                       type: object
                       properties:
                         open:
@@ -3379,12 +3630,12 @@ paths:
                       required:
                         - open
                         - close
-                    tue: *a19
-                    wed: *a19
-                    thu: *a19
-                    fri: *a19
-                    sat: *a19
-                    sun: *a19
+                    tue: *a21
+                    wed: *a21
+                    thu: *a21
+                    fri: *a21
+                    sat: *a21
+                    sun: *a21
                 deliveryFee:
                   type: integer
                   minimum: 0
@@ -3465,7 +3716,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a20
+                      mon: &a22
                         type: object
                         properties:
                           open:
@@ -3477,12 +3728,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a20
-                      wed: *a20
-                      thu: *a20
-                      fri: *a20
-                      sat: *a20
-                      sun: *a20
+                      tue: *a22
+                      wed: *a22
+                      thu: *a22
+                      fri: *a22
+                      sat: *a22
+                      sun: *a22
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -3524,7 +3775,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -3544,222 +3795,6 @@ paths:
       responses:
         "200":
           description: 仓库详情（含 coverageArea GeoJSON）
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  code:
-                    type: string
-                    pattern: ^W\d{2}$
-                  name:
-                    type: object
-                    additionalProperties:
-                      type: string
-                  coverageArea:
-                    type: object
-                    nullable: true
-                    properties:
-                      type:
-                        type: string
-                        enum:
-                          - Polygon
-                      coordinates:
-                        type: array
-                        items:
-                          type: array
-                          items:
-                            type: array
-                            items:
-                              type: number
-                    required:
-                      - type
-                      - coordinates
-                  centerPoint:
-                    type: object
-                    nullable: true
-                    properties:
-                      type:
-                        type: string
-                        enum:
-                          - Point
-                      coordinates:
-                        type: array
-                        items:
-                          type: number
-                        minItems: 2
-                        maxItems: 2
-                    required:
-                      - type
-                      - coordinates
-                  centerLat:
-                    type: number
-                    nullable: true
-                  centerLng:
-                    type: number
-                    nullable: true
-                  address:
-                    type: string
-                  operatingHours:
-                    type: object
-                    nullable: true
-                    properties:
-                      mon: &a21
-                        type: object
-                        properties:
-                          open:
-                            type: string
-                            pattern: ^\d{2}:\d{2}$
-                          close:
-                            type: string
-                            pattern: ^\d{2}:\d{2}$
-                        required:
-                          - open
-                          - close
-                      tue: *a21
-                      wed: *a21
-                      thu: *a21
-                      fri: *a21
-                      sat: *a21
-                      sun: *a21
-                  deliveryFee:
-                    type: integer
-                    minimum: 0
-                    default: 0
-                  isActive:
-                    type: boolean
-                    default: true
-                  createdAt:
-                    type: string
-                    format: date-time
-                  updatedAt:
-                    type: string
-                    format: date-time
-                required:
-                  - id
-                  - code
-                  - name
-                  - coverageArea
-                  - centerPoint
-                  - centerLat
-                  - centerLng
-                  - address
-                  - operatingHours
-                  - createdAt
-                  - updatedAt
-        "404":
-          description: WAREHOUSE_NOT_FOUND
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    enum:
-                      - false
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
-                      message:
-                        type: string
-                      details:
-                        type: object
-                        additionalProperties:
-                          nullable: true
-                    required:
-                      - code
-                      - message
-                required:
-                  - success
-                  - error
-    patch:
-      tags:
-        - warehouse
-      description: 更新仓库（普通字段 + 可选 PostGIS）
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                code:
-                  type: string
-                  pattern: ^W\d{2}$
-                name:
-                  type: object
-                  additionalProperties:
-                    type: string
-                coverageArea:
-                  type: object
-                  nullable: true
-                  properties:
-                    type:
-                      type: string
-                      enum:
-                        - Polygon
-                    coordinates:
-                      type: array
-                      items:
-                        type: array
-                        items:
-                          type: array
-                          items:
-                            type: number
-                  required:
-                    - type
-                    - coordinates
-                centerLat:
-                  type: number
-                centerLng:
-                  type: number
-                address:
-                  type: string
-                operatingHours:
-                  type: object
-                  nullable: true
-                  properties:
-                    mon: &a22
-                      type: object
-                      properties:
-                        open:
-                          type: string
-                          pattern: ^\d{2}:\d{2}$
-                        close:
-                          type: string
-                          pattern: ^\d{2}:\d{2}$
-                      required:
-                        - open
-                        - close
-                    tue: *a22
-                    wed: *a22
-                    thu: *a22
-                    fri: *a22
-                    sat: *a22
-                    sun: *a22
-                deliveryFee:
-                  type: integer
-                  minimum: 0
-                isActive:
-                  type: boolean
-              required:
-                - name
-                - coverageArea
-                - centerLat
-                - centerLng
-                - address
-                - operatingHours
-                - deliveryFee
-                - isActive
-      responses:
-        "200":
-          description: 更新成功
           content:
             application/json:
               schema:
@@ -3866,6 +3901,222 @@ paths:
                   - operatingHours
                   - createdAt
                   - updatedAt
+        "404":
+          description: WAREHOUSE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    patch:
+      tags:
+        - warehouse
+      description: 更新仓库（普通字段 + 可选 PostGIS）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  pattern: ^W\d{2}$
+                name:
+                  type: object
+                  additionalProperties:
+                    type: string
+                coverageArea:
+                  type: object
+                  nullable: true
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - Polygon
+                    coordinates:
+                      type: array
+                      items:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: number
+                  required:
+                    - type
+                    - coordinates
+                centerLat:
+                  type: number
+                centerLng:
+                  type: number
+                address:
+                  type: string
+                operatingHours:
+                  type: object
+                  nullable: true
+                  properties:
+                    mon: &a24
+                      type: object
+                      properties:
+                        open:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                        close:
+                          type: string
+                          pattern: ^\d{2}:\d{2}$
+                      required:
+                        - open
+                        - close
+                    tue: *a24
+                    wed: *a24
+                    thu: *a24
+                    fri: *a24
+                    sat: *a24
+                    sun: *a24
+                deliveryFee:
+                  type: integer
+                  minimum: 0
+                isActive:
+                  type: boolean
+              required:
+                - name
+                - coverageArea
+                - centerLat
+                - centerLng
+                - address
+                - operatingHours
+                - deliveryFee
+                - isActive
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  code:
+                    type: string
+                    pattern: ^W\d{2}$
+                  name:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  coverageArea:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Polygon
+                      coordinates:
+                        type: array
+                        items:
+                          type: array
+                          items:
+                            type: array
+                            items:
+                              type: number
+                    required:
+                      - type
+                      - coordinates
+                  centerPoint:
+                    type: object
+                    nullable: true
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - Point
+                      coordinates:
+                        type: array
+                        items:
+                          type: number
+                        minItems: 2
+                        maxItems: 2
+                    required:
+                      - type
+                      - coordinates
+                  centerLat:
+                    type: number
+                    nullable: true
+                  centerLng:
+                    type: number
+                    nullable: true
+                  address:
+                    type: string
+                  operatingHours:
+                    type: object
+                    nullable: true
+                    properties:
+                      mon: &a25
+                        type: object
+                        properties:
+                          open:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                          close:
+                            type: string
+                            pattern: ^\d{2}:\d{2}$
+                        required:
+                          - open
+                          - close
+                      tue: *a25
+                      wed: *a25
+                      thu: *a25
+                      fri: *a25
+                      sat: *a25
+                      sun: *a25
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
+                    default: 0
+                  isActive:
+                    type: boolean
+                    default: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - code
+                  - name
+                  - coverageArea
+                  - centerPoint
+                  - centerLat
+                  - centerLng
+                  - address
+                  - operatingHours
+                  - createdAt
+                  - updatedAt
     delete:
       tags:
         - warehouse
@@ -3888,7 +4139,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4019,7 +4270,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a24
+                      mon: &a26
                         type: object
                         properties:
                           open:
@@ -4031,12 +4282,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a24
-                      wed: *a24
-                      thu: *a24
-                      fri: *a24
-                      sat: *a24
-                      sun: *a24
+                      tue: *a26
+                      wed: *a26
+                      thu: *a26
+                      fri: *a26
+                      sat: *a26
+                      sun: *a26
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -4078,7 +4329,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4232,7 +4483,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -4384,7 +4635,7 @@ paths:
                         type: string
                     linkType:
                       type: string
-                      enum: *a25
+                      enum: *a27
                     linkValue:
                       type: string
                       nullable: true
@@ -4392,7 +4643,7 @@ paths:
                       type: integer
                     status:
                       type: string
-                      enum: *a26
+                      enum: *a28
                     createdAt:
                       type: string
                       format: date-time
@@ -4889,7 +5140,7 @@ paths:
                       type: string
                   linkType:
                     type: string
-                    enum: *a25
+                    enum: *a27
                   linkValue:
                     type: string
                     nullable: true
@@ -4897,7 +5148,7 @@ paths:
                     type: integer
                   status:
                     type: string
-                    enum: *a26
+                    enum: *a28
                   createdAt:
                     type: string
                     format: date-time
@@ -5371,7 +5622,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -5553,6 +5804,540 @@ paths:
                     - deliveredAt
                     - cancelledAt
                     - cancelReason
+  /api/v1/admin/platform/dashboard/summary:
+    get:
+      tags:
+        - platform
+      description: 平台 dashboard 汇总（GMV / 订单数 / 在线骑手 / 异常订单 / 仓库钻取）
+      parameters:
+        - schema:
+            type: string
+            enum: *a13
+            default: today
+          required: false
+          name: range
+          in: query
+      responses:
+        "200":
+          description: 汇总数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  range:
+                    type: string
+                    enum: *a13
+                  from:
+                    type: string
+                    format: date-time
+                  to:
+                    type: string
+                    format: date-time
+                  gmv:
+                    type: integer
+                    minimum: 0
+                  gmvGrowthPct:
+                    type: number
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  orderCountGrowthPct:
+                    type: number
+                  onlineRiderCount:
+                    type: integer
+                    minimum: 0
+                  abnormalOrderCount:
+                    type: integer
+                    minimum: 0
+                  trend:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        bucket:
+                          type: string
+                        gmv:
+                          type: integer
+                          minimum: 0
+                        orderCount:
+                          type: integer
+                          minimum: 0
+                      required:
+                        - bucket
+                        - gmv
+                        - orderCount
+                  warehouseBreakdown:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        warehouseId:
+                          type: string
+                          format: uuid
+                        warehouseName:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        gmv:
+                          type: integer
+                          minimum: 0
+                        orderCount:
+                          type: integer
+                          minimum: 0
+                        abnormalCount:
+                          type: integer
+                          minimum: 0
+                      required:
+                        - warehouseId
+                        - warehouseName
+                        - gmv
+                        - orderCount
+                        - abnormalCount
+                required:
+                  - range
+                  - from
+                  - to
+                  - gmv
+                  - gmvGrowthPct
+                  - orderCount
+                  - orderCountGrowthPct
+                  - onlineRiderCount
+                  - abnormalOrderCount
+                  - trend
+                  - warehouseBreakdown
+  /api/v1/admin/platform/audit-logs:
+    get:
+      tags:
+        - platform
+      description: 审计日志列表（按 user/resource/action/perspective/时间筛选，游标分页）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: userId
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: resourceType
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: action
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: perspective
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: to
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: 审计日志列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            userId:
+                              type: string
+                              nullable: true
+                              format: uuid
+                            action:
+                              type: string
+                            resourceType:
+                              type: string
+                            resourceId:
+                              type: string
+                              nullable: true
+                            deviceType:
+                              type: string
+                              nullable: true
+                              enum: *a14
+                            perspective:
+                              type: string
+                              nullable: true
+                            ip:
+                              type: string
+                              nullable: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - userId
+                            - action
+                            - resourceType
+                            - resourceId
+                            - deviceType
+                            - perspective
+                            - ip
+                            - createdAt
+                      nextCursor:
+                        type: string
+                        nullable: true
+                      hasMore:
+                        type: boolean
+                      total:
+                        type: integer
+                    required:
+                      - items
+                      - nextCursor
+                      - hasMore
+                required:
+                  - success
+                  - data
+  /api/v1/admin/platform/audit-logs/{id}:
+    get:
+      tags:
+        - platform
+      description: 审计日志详情（含 before/after 快照）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 审计日志详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      action:
+                        type: string
+                      resourceType:
+                        type: string
+                      resourceId:
+                        type: string
+                        nullable: true
+                      deviceType:
+                        type: string
+                        nullable: true
+                        enum: *a14
+                      perspective:
+                        type: string
+                        nullable: true
+                      ip:
+                        type: string
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      beforeData:
+                        nullable: true
+                      afterData:
+                        nullable: true
+                      userAgent:
+                        type: string
+                        nullable: true
+                      traceId:
+                        type: string
+                        nullable: true
+                    required:
+                      - id
+                      - userId
+                      - action
+                      - resourceType
+                      - resourceId
+                      - deviceType
+                      - perspective
+                      - ip
+                      - createdAt
+                      - userAgent
+                      - traceId
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: AUDIT_LOG_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/platform/audit-logs/export:
+    get:
+      tags:
+        - platform
+      description: 审计日志导出 CSV（同 query 参数，最多 10000 行）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: userId
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: resourceType
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: action
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: perspective
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: from
+          in: query
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: to
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: CSV 流（text/csv）
+  /api/v1/admin/platform/system-configs:
+    get:
+      tags:
+        - platform
+      description: 系统配置列表（抽成比例 / 配送费基础规则等 key-value）
+      responses:
+        "200":
+          description: 配置列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          minLength: 1
+                          maxLength: 128
+                        value:
+                          type: string
+                        description:
+                          type: string
+                          nullable: true
+                        updatedAt:
+                          type: string
+                          format: date-time
+                        updatedBy:
+                          type: string
+                          nullable: true
+                          format: uuid
+                      required:
+                        - key
+                        - value
+                        - description
+                        - updatedAt
+                        - updatedBy
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+  /api/v1/admin/platform/system-configs/{key}:
+    put:
+      tags:
+        - platform
+      description: 更新系统配置（变更审计自动写 AuditLog，Redis 缓存失效）
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: key
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+              required:
+                - value
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                      value:
+                        type: string
+                      description:
+                        type: string
+                        nullable: true
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      updatedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                    required:
+                      - key
+                      - value
+                      - description
+                      - updatedAt
+                      - updatedBy
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: CONFIG_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/client/orders/{id}:
     get:
       tags:
@@ -5737,7 +6522,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -5786,7 +6571,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -5997,7 +6782,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6310,7 +7095,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6402,7 +7187,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6439,7 +7224,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:
@@ -6550,7 +7335,7 @@ paths:
                     properties:
                       code:
                         type: string
-                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|INVENTORY|PRICING|SHOP)-\d{3}$|^E-HTTP-\d{3}$
+                        pattern: ^E-(AUTH|COMMON|ORDER|PAYMENT|WAREHOUSE|USER|CATALOG|DISPATCH|RIDER|NOTIFY|PLATFORM|SETTLE|IM|AUDIT|INVENTORY|PRICING|SHOP|CART|REFUND)-\d{3}$|^E-HTTP-\d{3}$
                       message:
                         type: string
                       details:

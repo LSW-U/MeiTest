@@ -54,5 +54,13 @@
   "E-RIDER-002": "Estafeta fora de serviço",
   "E-RIDER-003": "Estafeta já está noutra tarefa",
   "E-RIDER-004": "Informação do veículo em falta",
-  "E-RIDER-005": "Estafeta ainda não aprovado"
+  "E-RIDER-005": "Estafeta ainda não aprovado",
+  "E-RIDER-005": "Estafeta ainda não aprovado",
+  "E-PLATFORM-002": "Chave de configuração do sistema não encontrada",
+  "E-SETTLE-001": "O valor de saque excede o saldo disponível",
+  "E-SETTLE-002": "Pedido de saque não encontrado",
+  "E-SETTLE-003": "Status do saque não permite esta ação",
+  "E-SETTLE-004": "Settlement não encontrado",
+  "E-SETTLE-005": "Frequência de settlement inválida (deve ser day/week/month)",
+  "E-AUDIT-001": "Registo de auditoria não encontrado"
 }

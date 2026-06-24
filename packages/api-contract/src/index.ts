@@ -8,16 +8,18 @@ import { z } from 'zod';
 
 export * from './schemas/common';
 export * from './schemas/auth';
-export * from './schemas/user';
-export * from './schemas/shop';
-export * from './schemas/warehouse';
-export * from './schemas/catalog';
-export * from './schemas/order';
 export * from './schemas/cart';
-export * from './schemas/payment';
+export * from './schemas/catalog';
 export * from './schemas/dispatch';
-export * from './schemas/rider';
+export * from './schemas/order';
+export * from './schemas/payment';
+export * from './schemas/platform';
 export * from './schemas/refund';
+export * from './schemas/rider';
+export * from './schemas/settle';
+export * from './schemas/shop';
+export * from './schemas/user';
+export * from './schemas/warehouse';
 
 /**
  * OpenAPI registry 占位（D1-T6 接入 @asteasolutions/zod-to-openapi）

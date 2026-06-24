@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PerspectiveSwitcher } from '@/components/PerspectiveSwitcher';
-import { PerspectiveProvider } from '@/lib/perspective';
 
 export const metadata: Metadata = {
   title: 'MeiMart Admin',
@@ -31,8 +30,7 @@ export default async function RootLayout({
         }}
       >
         <NextIntlClientProvider messages={messages}>
-          <PerspectiveProvider>
-            <header
+          <header
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -66,7 +64,6 @@ export default async function RootLayout({
               </div>
             </header>
             <main style={{ padding: 24 }}>{children}</main>
-          </PerspectiveProvider>
         </NextIntlClientProvider>
       </body>
     </html>

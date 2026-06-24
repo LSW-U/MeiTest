@@ -1,45 +1,90 @@
 /**
- * 视角切换器（admin-web 顶部下拉）
+ * PerspectiveSwitcher — 顶部下拉切换器
  *
- * W2-W 流程 2026-06-24：admin-web 三流程复用
+ * 决策依据：W-M-C-T 流程 3 W2 — platform M1 C2
+ *
+ * 切换时：
+ *   - 更新 zustand store（persist 到 localStorage）
+ *   - toast 确认（用 i18n 文案）
+ *   - 跳转到对应视角首页（PERSPECTIVE_HOME）
+ *   - reset 业务 state（避免脏数据 — 通过路由跳转天然完成）
  */
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
-import { PERSPECTIVES, usePerspective, getPerspectiveLabel, type Perspective } from '@/lib/perspective';
-import type { SupportedLocale } from '@/i18n/config';
+import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { usePerspectiveStore } from '@/stores/perspective';
+import {
+  PERSPECTIVES,
+  PERSPECTIVE_HOME,
+  PERSPECTIVE_LABEL_KEY,
+  type Perspective,
+} from '@/lib/perspective';
 
 export function PerspectiveSwitcher() {
-  const { perspective, setPerspective } = usePerspective();
-  const locale = useLocale() as SupportedLocale;
-  const t = useTranslations('common');
+  const t = useTranslations('platform');
+  const router = useRouter();
+  const perspective = usePerspectiveStore((s) => s.perspective);
+  const setPerspective = usePerspectiveStore((s) => s.setPerspective);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const next = e.target.value as Perspective;
+    setPerspective(next);
+    const label = t(PERSPECTIVE_LABEL_KEY[next].replace('platform.perspective.', 'perspective.'));
+    setToast(t('perspective.switchedToast', { name: label }));
+    router.push(PERSPECTIVE_HOME[next]);
+    setTimeout(() => setToast(null), 2500);
+  }
 
   return (
-    <label
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        fontSize: 14,
-      }}
-    >
-      <span style={{ color: '#666' }}>{t('w.perspective.title')}:</span>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+      <label
+        htmlFor="perspective-select"
+        style={{ fontSize: 13, color: '#666' }}
+      >
+        {t('perspective.label')}
+      </label>
       <select
+        id="perspective-select"
         value={perspective}
-        onChange={(e) => setPerspective(e.target.value as Perspective)}
+        onChange={onChange}
         style={{
-          padding: '4px 8px',
+          padding: '6px 10px',
+          border: '1px solid #d5d5d5',
           borderRadius: 4,
-          border: '1px solid #ccc',
           background: 'white',
+          fontSize: 13,
+          cursor: 'pointer',
         }}
       >
         {PERSPECTIVES.map((p) => (
           <option key={p} value={p}>
-            {getPerspectiveLabel(p, locale)}
+            {t(PERSPECTIVE_LABEL_KEY[p].replace('platform.perspective.', 'perspective.'))}
           </option>
         ))}
       </select>
-    </label>
+      {toast && (
+        <div
+          role="status"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: 8,
+            padding: '8px 12px',
+            background: '#1a5dc2',
+            color: 'white',
+            borderRadius: 4,
+            fontSize: 12,
+            whiteSpace: 'nowrap',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          }}
+        >
+          {toast}
+        </div>
+      )}
+    </div>
   );
 }

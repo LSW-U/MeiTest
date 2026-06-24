@@ -31,6 +31,7 @@ import type { Role, DeviceType } from '@meimart/api-contract';
 import type { JwtPayload } from '../auth/auth.types';
 import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 import { logger } from '../../shared/logger/logger';
+import { redis } from '../../shared/cache';
 
 /** WS 命名空间：/realtime（与 HTTP 路由 /api/v1 分开，避免冲突） */
 const WS_NAMESPACE = '/realtime';
@@ -40,6 +41,21 @@ const RIDERS_ROOM = 'riders';
 
 /** 订单 room 前缀（按 orderId 拼接） */
 const ORDER_ROOM_PREFIX = 'order:';
+
+/** IM 三方会话类型（决策 2026-06-24 自建 WebSocket） */
+export type ConversationType = 'customer_merchant' | 'customer_rider' | 'customer_service';
+
+/** IM 消息（前端发送 + 后端广播） */
+export interface ImMessage {
+  messageId: string;
+  conversationId: string;
+  conversationType: ConversationType;
+  senderId: string;
+  senderRole: Role;
+  /** 文本消息 MVP；后续可扩展 image / file / order-card */
+  content: string;
+  timestamp: number;
+}
 
 /** 骑手推送的位置数据 */
 export interface RiderLocationUpdate {
@@ -235,5 +251,169 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       role: payload.role,
       deviceType: payload.deviceType,
     };
+  }
+
+  // ===========================================================================
+  // IM 聊天（W3 流程 M — 决策 2026-06-24 自建 WebSocket）
+  //
+  // 三方会话：
+  //   - customer_merchant：客户 ↔ 商家
+  //   - customer_rider：客户 ↔ 骑手（按订单维度）
+  //   - customer_service：客户 ↔ 客服
+  //
+  // 会话 ID 规则：{type}:{a}:{b}（a/b 按字典序排，保证双方 ID 一致）
+  //   - customer_merchant：conv:cm:{customerId}:{shopId}
+  //   - customer_rider：conv:cr:{customerId}:{riderId}:{orderId}
+  //   - customer_service：conv:cs:{customerId}:{csId}
+  //
+  // MVP 阶段：消息只 Redis 暂存（最近 100 条），不入库
+  // W6+：迁移腾讯 IM 时再持久化
+  // ===========================================================================
+
+  /**
+   * 加入 IM 会话 room
+   *
+   * 客户端用法：
+   *   socket.emit('im:join', { conversationId: 'conv:cm:c1:shop1' });
+   */
+  @SubscribeMessage('im:join')
+  async handleImJoin(
+    @MessageBody() data: { conversationId: string },
+    @ConnectedSocket() client: Socket,
+  ): Promise<{ ok: true; conversationId: string } | { ok: false; error: string }> {
+    const user = (client.data as { user?: WsUser }).user;
+    if (!user) {
+      return { ok: false, error: 'not authenticated' };
+    }
+    if (!data?.conversationId?.startsWith('conv:')) {
+      return { ok: false, error: 'invalid conversationId (must start with conv:)' };
+    }
+
+    await client.join(data.conversationId);
+    logger.info({
+      msg: 'im_join',
+      userId: user.sub,
+      conversationId: data.conversationId,
+    });
+
+    return { ok: true, conversationId: data.conversationId };
+  }
+
+  /**
+   * 离开 IM 会话 room
+   */
+  @SubscribeMessage('im:leave')
+  async handleImLeave(
+    @MessageBody() data: { conversationId: string },
+    @ConnectedSocket() client: Socket,
+  ): Promise<{ ok: true }> {
+    if (data?.conversationId) {
+      await client.leave(data.conversationId);
+    }
+    return { ok: true };
+  }
+
+  /**
+   * 发送 IM 消息（广播到会话 room + 暂存 Redis）
+   *
+   * 客户端用法：
+   *   socket.emit('im:send', {
+   *     conversationId, conversationType, content: '你好'
+   *   });
+   *   // 接收：socket.on('im:message', (msg) => ...)
+   */
+  @SubscribeMessage('im:send')
+  async handleImSend(
+    @MessageBody() data: {
+      conversationId: string;
+      conversationType: ConversationType;
+      content: string;
+    },
+    @ConnectedSocket() client: Socket,
+  ): Promise<{ ok: true; message: ImMessage } | { ok: false; error: string }> {
+    const user = (client.data as { user?: WsUser }).user;
+    if (!user) {
+      return { ok: false, error: 'not authenticated' };
+    }
+    if (!data?.conversationId?.startsWith('conv:')) {
+      return { ok: false, error: 'invalid conversationId' };
+    }
+    if (!data?.content || typeof data.content !== 'string' || data.content.length > 2000) {
+      return { ok: false, error: 'content required (string, max 2000 chars)' };
+    }
+
+    const message: ImMessage = {
+      messageId: `m_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      conversationId: data.conversationId,
+      conversationType: data.conversationType,
+      senderId: user.sub,
+      senderRole: user.role,
+      content: data.content,
+      timestamp: Date.now(),
+    };
+
+    // 广播到会话 room（订阅方收到 im:message）
+    this.server.to(data.conversationId).emit('im:message', message);
+
+    // Redis 暂存最近 100 条（W3 MVP，不入库）
+    const listKey = `im:msg:${data.conversationId}`;
+    await redis.rpush(listKey, JSON.stringify(message));
+    await redis.ltrim(listKey, -100, -1); // 只保留最近 100 条
+    await redis.expire(listKey, 7 * 24 * 3600); // 7 天过期
+
+    // 对方未读数 +1（按 conversationId 解析对方 ID）
+    const otherUserId = this.extractOtherUserId(data.conversationId, user.sub);
+    if (otherUserId) {
+      const unreadKey = `im:unread:${otherUserId}:${data.conversationId}`;
+      await redis.incr(unreadKey);
+      await redis.expire(unreadKey, 30 * 24 * 3600);
+    }
+
+    logger.info({
+      msg: 'im_send',
+      messageId: message.messageId,
+      conversationId: data.conversationId,
+      senderId: user.sub,
+    });
+
+    return { ok: true, message };
+  }
+
+  /**
+   * 标记会话已读（清零未读数）
+   */
+  @SubscribeMessage('im:read')
+  async handleImRead(
+    @MessageBody() data: { conversationId: string },
+    @ConnectedSocket() client: Socket,
+  ): Promise<{ ok: true; clearedUnread: number }> {
+    const user = (client.data as { user?: WsUser }).user;
+    if (!user) {
+      return { ok: true, clearedUnread: 0 };
+    }
+
+    const unreadKey = `im:unread:${user.sub}:${data.conversationId}`;
+    const prev = await redis.get(unreadKey);
+    await redis.del(unreadKey);
+
+    return { ok: true, clearedUnread: prev ? Number(prev) : 0 };
+  }
+
+  /**
+   * 从 conversationId 提取对方 userId
+   *
+   * 格式：conv:{type}:{part1}:{part2}[:orderId]
+   * 字典序较小的 part 在前，已知自己 ID 取另一个
+   */
+  private extractOtherUserId(conversationId: string, myUserId: string): string | null {
+    const parts = conversationId.split(':');
+    // conv:cm:c1:shop1 → ['conv', 'cm', 'c1', 'shop1']
+    // conv:cr:c1:r1:o1 → ['conv', 'cr', 'c1', 'r1', 'o1']
+    if (parts.length < 4) return null;
+    const a = parts[2];
+    const b = parts[3];
+    if (a === myUserId) return b;
+    if (b === myUserId) return a;
+    return null;
   }
 }

@@ -3349,6 +3349,389 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/platform/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 平台 dashboard 汇总（GMV / 订单数 / 在线骑手 / 异常订单 / 仓库钻取） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 汇总数据 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            range: "today" | "week" | "month";
+                            /** Format: date-time */
+                            from: string;
+                            /** Format: date-time */
+                            to: string;
+                            gmv: number;
+                            gmvGrowthPct: number;
+                            orderCount: number;
+                            orderCountGrowthPct: number;
+                            onlineRiderCount: number;
+                            abnormalOrderCount: number;
+                            trend: {
+                                bucket: string;
+                                gmv: number;
+                                orderCount: number;
+                            }[];
+                            warehouseBreakdown: {
+                                /** Format: uuid */
+                                warehouseId: string;
+                                warehouseName: {
+                                    [key: string]: string;
+                                };
+                                gmv: number;
+                                orderCount: number;
+                                abnormalCount: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 审计日志列表（按 user/resource/action/perspective/时间筛选，游标分页） */
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                    resourceType?: string;
+                    action?: string;
+                    perspective?: string;
+                    from?: string;
+                    to?: string;
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 审计日志列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    userId: string | null;
+                                    action: string;
+                                    resourceType: string;
+                                    resourceId: string | null;
+                                    /** @enum {string|null} */
+                                    deviceType: "CLIENT_APP" | "RIDER_APP" | "ADMIN_WEB" | null;
+                                    perspective: string | null;
+                                    ip: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/audit-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 审计日志详情（含 before/after 快照） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 审计日志详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string | null;
+                                action: string;
+                                resourceType: string;
+                                resourceId: string | null;
+                                /** @enum {string|null} */
+                                deviceType: "CLIENT_APP" | "RIDER_APP" | "ADMIN_WEB" | null;
+                                perspective: string | null;
+                                ip: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                beforeData?: unknown;
+                                afterData?: unknown;
+                                userAgent: string | null;
+                                traceId: string | null;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description AUDIT_LOG_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/audit-logs/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 审计日志导出 CSV（同 query 参数，最多 10000 行） */
+        get: {
+            parameters: {
+                query?: {
+                    userId?: string;
+                    resourceType?: string;
+                    action?: string;
+                    perspective?: string;
+                    from?: string;
+                    to?: string;
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 流（text/csv） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/system-configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 系统配置列表（抽成比例 / 配送费基础规则等 key-value） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 配置列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                key: string;
+                                value: string;
+                                description: string | null;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: uuid */
+                                updatedBy: string | null;
+                            }[];
+                            message?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform/system-configs/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description 更新系统配置（变更审计自动写 AuditLog，Redis 缓存失效） */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        value: string;
+                        description?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                key: string;
+                                value: string;
+                                description: string | null;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: uuid */
+                                updatedBy: string | null;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description CONFIG_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders/{id}": {
         parameters: {
             query?: never;
@@ -4896,6 +5279,98 @@ export interface components {
         UploadReceiptRequest: {
             /** Format: uri */
             receiptUrl: string;
+        };
+        DashboardSummary: {
+            /** @enum {string} */
+            range: "today" | "week" | "month";
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            gmv: number;
+            gmvGrowthPct: number;
+            orderCount: number;
+            orderCountGrowthPct: number;
+            onlineRiderCount: number;
+            abnormalOrderCount: number;
+            trend: {
+                bucket: string;
+                gmv: number;
+                orderCount: number;
+            }[];
+            warehouseBreakdown: {
+                /** Format: uuid */
+                warehouseId: string;
+                warehouseName: {
+                    [key: string]: string;
+                };
+                gmv: number;
+                orderCount: number;
+                abnormalCount: number;
+            }[];
+        };
+        /** @enum {string} */
+        DashboardTimeRange: "today" | "week" | "month";
+        AuditLogListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string | null;
+            action: string;
+            resourceType: string;
+            resourceId: string | null;
+            /** @enum {string|null} */
+            deviceType: "CLIENT_APP" | "RIDER_APP" | "ADMIN_WEB" | null;
+            perspective: string | null;
+            ip: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AuditLogDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string | null;
+            action: string;
+            resourceType: string;
+            resourceId: string | null;
+            /** @enum {string|null} */
+            deviceType: "CLIENT_APP" | "RIDER_APP" | "ADMIN_WEB" | null;
+            perspective: string | null;
+            ip: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            beforeData?: unknown;
+            afterData?: unknown;
+            userAgent: string | null;
+            traceId: string | null;
+        };
+        AuditLogQuery: {
+            /** Format: uuid */
+            userId?: string;
+            resourceType?: string;
+            action?: string;
+            perspective?: string;
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
+            /** @default 20 */
+            limit: number;
+            cursor?: string;
+        };
+        SystemConfigItem: {
+            key: string;
+            value: string;
+            description: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uuid */
+            updatedBy: string | null;
+        };
+        UpdateSystemConfigRequest: {
+            value: string;
+            description?: string;
         };
     };
     responses: never;
