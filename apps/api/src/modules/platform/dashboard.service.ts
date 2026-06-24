@@ -12,6 +12,7 @@
  * 性能：所有聚合用 Prisma groupBy + 索引扫描，避免 N+1。
  */
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { buildRange, growthPct, type Range } from './platform-time';
@@ -21,13 +22,16 @@ import type {
   WarehouseBreakdownItemType,
 } from '@meimart/api-contract';
 
-/** 订单进入 GMV 统计的状态（已支付/已确认/配送中/已完成；排除待付款/取消/未确认） */
+/**
+ * 订单进入 GMV 统计的状态（已支付/已确认/配送中/已完成；排除待付款/取消/拒付/未确认）
+ *
+ * 2026-06-24 M2 修复：移除 DELIVERED_UNPAID（拒付不计入成交，否则 GMV 虚高）
+ */
 const GMV_ORDER_STATUSES = [
   'CONFIRMED',
   'PICKED',
   'OUT_FOR_DELIVERY',
   'DELIVERED_PAID',
-  'DELIVERED_UNPAID',
   'DELIVERED',
   'COMPLETED',
 ] as const;
@@ -52,7 +56,7 @@ export class DashboardService {
         this.aggregateGmvAndOrders(r.from, r.to),
         this.aggregateGmvAndOrders(r.prevFrom, r.prevTo),
         this.countOnlineRiders(now),
-        this.countAbnormalOrders(now),
+        this.countAbnormalOrders(now, r),
         this.aggregateTrend(r),
         this.aggregateWarehouseBreakdown(r.from, r.to),
       ]);
@@ -95,16 +99,21 @@ export class DashboardService {
     return count;
   }
 
-  private async countAbnormalOrders(now: Date): Promise<number> {
+  private async countAbnormalOrders(now: Date, range: Range): Promise<number> {
     const pendingCutoff = new Date(now.getTime() - PENDING_TIMEOUT_MIN * 60 * 1000);
+    // M1 修复：所有 abnormal count 都加 range，与其他 KPI 同口径
     const [statusCount, timeoutCount] = await Promise.all([
       db.order.count({
-        where: { status: { in: [...ABNORMAL_ORDER_STATUSES] } },
+        where: {
+          status: { in: [...ABNORMAL_ORDER_STATUSES] },
+          createdAt: { gte: range.from, lt: range.to },
+        },
       }),
       db.order.count({
         where: {
           status: 'PENDING_CONFIRM',
-          createdAt: { lt: pendingCutoff },
+          // pendingCutoff = now - 30min 已隐含 < range.to（range.to = now），无需重复 lt
+          createdAt: { gte: range.from, lt: pendingCutoff },
         },
       }),
     ]);
@@ -112,24 +121,29 @@ export class DashboardService {
   }
 
   private async aggregateTrend(r: Range): Promise<TrendPointType[]> {
-    /** raw SQL 一次取回 trend（避免 24/30 次 groupBy 查询） */
+    /**
+     * raw SQL 一次取回 trend（避免 24/30 次 groupBy 查询）
+     *
+     * B2 修复：AT TIME ZONE 'Asia/Dili'（市场口径）
+     * M3 修复：SELECT 复用 bucketExpr 变量（避免重复三元判断）
+     */
     const bucketExpr =
       r.bucketSecs === 3600
-        ? `TO_CHAR(created_at AT TIME ZONE 'UTC', 'HH24:00')`
-        : `TO_CHAR(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
+        ? `TO_CHAR(created_at AT TIME ZONE 'Asia/Dili', 'HH24:00')`
+        : `TO_CHAR(created_at AT TIME ZONE 'Asia/Dili', 'YYYY-MM-DD')`;
 
     const rows = (await db.$queryRaw<
       Array<{ bucket: string; gmv: bigint; order_count: bigint }>
     >`
-      SELECT ${r.bucketSecs === 3600 ? `TO_CHAR(created_at AT TIME ZONE 'UTC', 'HH24:00')` : `TO_CHAR(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD')`} AS bucket,
+      SELECT ${Prisma.raw(bucketExpr)} AS bucket,
              COALESCE(SUM(payable_amount), 0) AS gmv,
              COUNT(*)::bigint AS order_count
       FROM orders
       WHERE created_at >= ${r.from}::timestamptz
         AND created_at < ${r.to}::timestamptz
-        AND status IN ('CONFIRMED','PICKED','OUT_FOR_DELIVERY','DELIVERED_PAID','DELIVERED_UNPAID','DELIVERED','COMPLETED')
-      GROUP BY ${bucketExpr}
-      ORDER BY ${bucketExpr}
+        AND status IN ('CONFIRMED','PICKED','OUT_FOR_DELIVERY','DELIVERED_PAID','DELIVERED','COMPLETED')
+      GROUP BY ${Prisma.raw(bucketExpr)}
+      ORDER BY ${Prisma.raw(bucketExpr)}
     `).map((row) => ({
       bucket: row.bucket,
       gmv: Number(row.gmv),

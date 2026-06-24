@@ -1,0 +1,18 @@
+{
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": "Your cart is empty",
+    "selected": "Selected",
+    "selectAll": "Select All",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Delivery Fee",
+    "payable": "Total Payable",
+    "checkout": "Checkout",
+    "checkoutPreview": "Preview Order",
+    "addItem": "Added to cart",
+    "updateQty": "Quantity updated",
+    "removeItem": "Removed from cart",
+    "outOfRange": "Address is out of delivery range",
+    "emptySelection": "Please select at least one item"
+  }
+}

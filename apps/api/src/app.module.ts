@@ -7,16 +7,44 @@ import { TraceIdMiddleware } from './shared/middleware/trace-id.middleware';
 import { HealthController } from './modules/health/health.controller';
 import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
-import { RealtimeModule } from './modules/realtime/realtime.module';
+// 三流程 merge：按字母序排列 imports（避免再次冲突）
+// FLOW W（供给/仓储/浏览）: Catalog / Inventory / Pricing / Shop / User / Warehouse
+// FLOW C（交易/配送）: Cart / Order / Payment
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { CartModule } from './modules/cart/cart.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { PlatformModule } from './modules/platform/platform.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SettleModule } from './modules/settle/settle.module';
+import { ShopModule } from './modules/shop/shop.module';
+import { UserModule } from './modules/user/user.module';
+import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
 
 @Module({
-  imports: [AuthModule, PlatformModule, RealtimeModule, SettleModule],
+  // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Inventory → Order →
+  //   Payment → Platform → Pricing → Realtime → Settle → Shop → User → Warehouse
+  imports: [
+    AuthModule,
+    CartModule,
+    CatalogModule,
+    InventoryModule,
+    OrderModule,
+    PaymentModule,
+    PlatformModule,
+    PricingModule,
+    RealtimeModule,
+    SettleModule,
+    ShopModule,
+    UserModule,
+    WarehouseModule,
+  ],
   controllers: [HealthController, MeController],
   providers: [
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）

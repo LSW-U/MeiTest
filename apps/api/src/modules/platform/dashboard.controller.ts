@@ -10,7 +10,6 @@
 import { Controller, Get, Query, Inject } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { Roles } from '../../shared/decorators/roles.decorator';
-import { Public } from '../../shared/decorators/public.decorator';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { DashboardTimeRange } from '@meimart/api-contract';
 
@@ -28,6 +27,3 @@ export class DashboardController {
     return { success: true as const, data };
   }
 }
-
-/** Health probe for module wiring（无业务用途，避免 unused warning） */
-export const _platformDashboardPublic = Public;

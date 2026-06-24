@@ -22,7 +22,7 @@ import type { Response } from 'express';
 import { AuditService } from './audit.service';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
-import { AuditLogQuery } from '@meimart/api-contract';
+import { AuditLogQuery, type AuditLogQueryType } from '@meimart/api-contract';
 
 @Controller('api/v1/admin/platform/audit-logs')
 @Roles('super_admin')
@@ -30,17 +30,17 @@ export class AuditController {
   constructor(@Inject(AuditService) private readonly audit: AuditService) {}
 
   @Get()
-  async list(@Query(new ZodValidationPipe(AuditLogQuery)) query: unknown) {
-    const data = await this.audit.list(query as Parameters<AuditService['list']>[0]);
+  async list(@Query(new ZodValidationPipe(AuditLogQuery)) query: AuditLogQueryType) {
+    const data = await this.audit.list(query);
     return { success: true as const, data };
   }
 
   @Get('export')
   async exportCsv(
-    @Query(new ZodValidationPipe(AuditLogQuery)) query: unknown,
+    @Query(new ZodValidationPipe(AuditLogQuery)) query: AuditLogQueryType,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const csv = await this.audit.exportCsv(query as Parameters<AuditService['exportCsv']>[0]);
+    const csv = await this.audit.exportCsv(query);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
@@ -51,7 +51,8 @@ export class AuditController {
 
   @Get(':id')
   async detail(@Param('id') id: string) {
-    if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    // m1 修复：严格 UUID v4 正则（原正则允许 36 个连字符通过）
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       throw new HttpException(
         { code: 'E-COMMON-001', message: 'Invalid audit log id' },
         HttpStatus.BAD_REQUEST,

@@ -31,20 +31,39 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <header
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'center',
-              gap: 16,
-              padding: '12px 24px',
-              background: 'white',
-              borderBottom: '1px solid #e5e5e5',
-            }}
-          >
-            <PerspectiveSwitcher />
-            <LanguageSwitcher />
-          </header>
-          <main>{children}</main>
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 24px',
+                background: 'white',
+                borderBottom: '1px solid #e5e5e5',
+                gap: 16,
+              }}
+            >
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <strong>MeiMart</strong>
+                <nav style={{ display: 'flex', gap: 12, fontSize: 14 }}>
+                  <a href="/shop" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                    Shop
+                  </a>
+                  <a href="/warehouse" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                    Warehouse
+                  </a>
+                  <a
+                    href="/catalog/products"
+                    style={{ color: '#1976d2', textDecoration: 'none' }}
+                  >
+                    Products
+                  </a>
+                </nav>
+              </div>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <PerspectiveSwitcher />
+                <LanguageSwitcher />
+              </div>
+            </header>
+            <main style={{ padding: 24 }}>{children}</main>
         </NextIntlClientProvider>
       </body>
     </html>

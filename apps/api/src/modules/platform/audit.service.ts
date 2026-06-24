@@ -18,7 +18,8 @@ export class AuditService {
     const limit = query.limit;
     const items = await db.auditLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      // M5 修复：复合排序保证 cursor 跳页稳定（同毫秒多条不丢）
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
       select: {
@@ -61,7 +62,7 @@ export class AuditService {
     const where = this.buildWhere(query);
     const rows = await db.auditLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MAX_EXPORT_ROWS,
       select: {
         id: true,
@@ -114,7 +115,8 @@ export class AuditService {
           .join(','),
       );
     }
-    return lines.join('\n');
+    // m2 修复：开头加 UTF-8 BOM，避免 Excel 按默认 GBK 解析中文/印尼/葡文乱码
+    return '﻿' + lines.join('\n');
   }
 
   private buildWhere(query: AuditLogQueryType) {

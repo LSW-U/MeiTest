@@ -23,6 +23,7 @@ import enWarehouse from './en/warehouse.json';
 import enOrder from './en/order.json';
 import enPayment from './en/payment.json';
 import enCatalog from './en/catalog.json';
+import enCart from './en/cart.json';
 import enPlatform from './en/platform.json';
 import enErrors from './en/errors.json';
 
@@ -34,6 +35,7 @@ import zhWarehouse from './zh/warehouse.json';
 import zhOrder from './zh/order.json';
 import zhPayment from './zh/payment.json';
 import zhCatalog from './zh/catalog.json';
+import zhCart from './zh/cart.json';
 import zhPlatform from './zh/platform.json';
 import zhErrors from './zh/errors.json';
 
@@ -45,6 +47,7 @@ import idWarehouse from './id/warehouse.json';
 import idOrder from './id/order.json';
 import idPayment from './id/payment.json';
 import idCatalog from './id/catalog.json';
+import idCart from './id/cart.json';
 import idPlatform from './id/platform.json';
 import idErrors from './id/errors.json';
 
@@ -56,6 +59,7 @@ import ptWarehouse from './pt/warehouse.json';
 import ptOrder from './pt/order.json';
 import ptPayment from './pt/payment.json';
 import ptCatalog from './pt/catalog.json';
+import ptCart from './pt/cart.json';
 import ptPlatform from './pt/platform.json';
 import ptErrors from './pt/errors.json';
 
@@ -67,6 +71,7 @@ import tetWarehouse from './tet/warehouse.json';
 import tetOrder from './tet/order.json';
 import tetPayment from './tet/payment.json';
 import tetCatalog from './tet/catalog.json';
+import tetCart from './tet/cart.json';
 import tetPlatform from './tet/platform.json';
 import tetErrors from './tet/errors.json';
 
@@ -84,11 +89,12 @@ export interface MessagesBundle {
   order: typeof enOrder;
   payment: typeof enPayment;
   catalog: typeof enCatalog;
+  cart: typeof enCart;
   platform: typeof enPlatform;
   errors: typeof enErrors;
 }
 
-/** 所有语言的翻译（key=语言代码，value=该语言的 9 模块 bundle） */
+/** 所有语言的翻译（key=语言代码，value=该语言的所有模块 bundle） */
 export const messages: Record<Locale, MessagesBundle> = {
   en: {
     common: enCommon,
@@ -99,6 +105,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: enOrder,
     payment: enPayment,
     catalog: enCatalog,
+    cart: enCart,
     platform: enPlatform,
     errors: enErrors,
   },
@@ -111,6 +118,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: zhOrder,
     payment: zhPayment,
     catalog: zhCatalog,
+    cart: zhCart,
     platform: zhPlatform,
     errors: zhErrors,
   },
@@ -123,6 +131,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: idOrder,
     payment: idPayment,
     catalog: idCatalog,
+    cart: idCart,
     platform: idPlatform,
     errors: idErrors,
   },
@@ -135,6 +144,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: ptOrder,
     payment: ptPayment,
     catalog: ptCatalog,
+    cart: ptCart,
     platform: ptPlatform,
     errors: ptErrors,
   },
@@ -147,6 +157,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     order: tetOrder,
     payment: tetPayment,
     catalog: tetCatalog,
+    cart: tetCart,
     platform: tetPlatform,
     errors: tetErrors,
   },

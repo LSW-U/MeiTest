@@ -1,0 +1,18 @@
+{
+  "cart": {
+    "title": "Carrinho de Compras",
+    "empty": "O seu carrinho está vazio",
+    "selected": "Selecionado",
+    "selectAll": "Selecionar Tudo",
+    "subtotal": "Subtotal",
+    "deliveryFee": "Taxa de Entrega",
+    "payable": "Total a Pagar",
+    "checkout": "Finalizar",
+    "checkoutPreview": "Pré-visualizar Encomenda",
+    "addItem": "Adicionado ao carrinho",
+    "updateQty": "Quantidade atualizada",
+    "removeItem": "Removido do carrinho",
+    "outOfRange": "Endereço fora da área de entrega",
+    "emptySelection": "Selecione pelo menos um item"
+  }
+}

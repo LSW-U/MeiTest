@@ -1,3 +1,10 @@
 export { db } from './prisma';
-export { withTransaction, deductStock, type Tx, type TransactionOptions } from './transaction';
+export {
+  withTransaction,
+  deductStock,
+  releaseStock,
+  type Tx,
+  type TransactionOptions,
+  type StockChangeContext,
+} from './transaction';
 export * from './postgis-helpers';

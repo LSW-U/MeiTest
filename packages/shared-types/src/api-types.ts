@@ -13,7 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 密码登录（v0.3：deviceType 由前端 App 配置写死） */
+        /** @description 密码登录（W 流程正式 endpoint，2026-06-24 加；deviceType 服务端按 role 推断） */
         post: {
             parameters: {
                 query?: never;
@@ -24,7 +24,7 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        identifier: string;
+                        phone: string;
                         password: string;
                     };
                 };
@@ -81,6 +81,231 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/auth/login-sms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SMS 验证码登录（不存在自动注册 customer） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        smsCode: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 登录成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            user: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                phone: string | null;
+                                email: string | null;
+                                name: string | null;
+                                avatarUrl: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            };
+                            accessToken: string;
+                            refreshToken: string;
+                        };
+                    };
+                };
+                /** @description SMS_CODE_INVALID */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/sms-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 发送 SMS 验证码（stub 固定 123456，标 [SMS_STUB]，W6 切东帝汶本地） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        /**
+                         * @default LOGIN
+                         * @enum {string}
+                         */
+                        scene?: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+                    };
+                };
+            };
+            responses: {
+                /** @description 已发送（stub） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            expireIn: number;
+                        };
+                    };
+                };
+                /** @description SMS_RATE_LIMIT */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SMS 找回密码 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        smsCode: string;
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 重置成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description SMS_CODE_INVALID */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PHONE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/auth/register": {
         parameters: {
             query?: never;
@@ -90,7 +315,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 注册（v0.3 冲突 11：smsCode 可选，W6 强制） */
+        /** @description 注册（必传 smsCode，dev stub 固定 123456；email optional 走密码+SMS 主路径） */
         post: {
             parameters: {
                 query?: never;
@@ -103,7 +328,7 @@ export interface paths {
                     "application/json": {
                         phone: string;
                         /** Format: email */
-                        email: string;
+                        email?: string;
                         password: string;
                         name?: string;
                         smsCode?: string;
@@ -265,72 +490,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/common/auth/send-sms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description SMS stub（固定 123456，标 [SMS_STUB]），W6 切东帝汶本地 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        phone: string;
-                        /** @enum {string} */
-                        type: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
-                    };
-                };
-            };
-            responses: {
-                /** @description 已发送（stub） */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            expireIn: number;
-                        };
-                    };
-                };
-                /** @description SMS_RATE_LIMIT */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                                details?: {
-                                    [key: string]: unknown;
-                                };
-                            };
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/client/profile": {
+    "/api/v1/client/user/profile": {
         parameters: {
             query?: never;
             header?: never;
@@ -375,6 +535,536 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        /** Format: uri */
+                        avatarUrl?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string | null;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 收货地址列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            name: string;
+                            phone: string;
+                            region: {
+                                province: string;
+                                city: string;
+                                district?: string;
+                            };
+                            detail: string;
+                            lat: number | null;
+                            lng: number | null;
+                            isDefault: boolean;
+                            tag: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        phone: string;
+                        region: {
+                            province: string;
+                            city: string;
+                            district?: string;
+                        };
+                        detail: string;
+                        lat?: number | null;
+                        lng?: number | null;
+                        isDefault?: boolean;
+                        tag?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            name: string;
+                            phone: string;
+                            region: {
+                                province: string;
+                                city: string;
+                                district?: string;
+                            };
+                            detail: string;
+                            lat: number | null;
+                            lng: number | null;
+                            isDefault: boolean;
+                            tag: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/addresses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ADDRESS_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        phone?: string;
+                        region?: {
+                            province: string;
+                            city: string;
+                            district?: string;
+                        };
+                        detail?: string;
+                        lat?: number | null;
+                        lng?: number | null;
+                        isDefault?: boolean;
+                        tag?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            name: string;
+                            phone: string;
+                            region: {
+                                province: string;
+                                city: string;
+                                district?: string;
+                            };
+                            detail: string;
+                            lat: number | null;
+                            lng: number | null;
+                            isDefault: boolean;
+                            tag: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description ADDRESS_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 收藏列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            isFavorite: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/favorites/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        productId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 切换成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            isFavorite: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 通知列表（最新 100 条） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** @enum {string} */
+                            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                            title: {
+                                [key: string]: string;
+                            };
+                            content: {
+                                [key: string]: string;
+                            };
+                            isRead: boolean;
+                            data: {
+                                [key: string]: unknown;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 未读数量 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            count: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 标记已读 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 全部标记已读 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -434,6 +1124,119 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 后台查看店铺信息 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            /** Format: uri */
+                            logoUrl: string | null;
+                            phone: string;
+                            address: string;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            businessHours: string | null;
+                            announcement?: {
+                                [key: string]: string;
+                            };
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 后台编辑店铺信息（super_admin） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: {
+                            [key: string]: string;
+                        };
+                        /** Format: uri */
+                        logoUrl?: string | null;
+                        phone?: string;
+                        address?: string;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                        businessHours?: string | null;
+                        announcement?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            /** Format: uri */
+                            logoUrl: string | null;
+                            phone: string;
+                            address: string;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            businessHours: string | null;
+                            announcement?: {
+                                [key: string]: string;
+                            };
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/common/warehouses": {
@@ -527,6 +1330,564 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 后台仓库列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 创建仓库（写 PostGIS center + coverage） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code?: string;
+                        name: {
+                            [key: string]: string;
+                        };
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        } | null;
+                        centerLat: number;
+                        centerLng: number;
+                        address: string;
+                        operatingHours: {
+                            mon?: {
+                                open: string;
+                                close: string;
+                            };
+                            tue?: {
+                                open: string;
+                                close: string;
+                            };
+                            wed?: {
+                                open: string;
+                                close: string;
+                            };
+                            thu?: {
+                                open: string;
+                                close: string;
+                            };
+                            fri?: {
+                                open: string;
+                                close: string;
+                            };
+                            sat?: {
+                                open: string;
+                                close: string;
+                            };
+                            sun?: {
+                                open: string;
+                                close: string;
+                            };
+                        } | null;
+                        deliveryFee: number;
+                        isActive: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description WAREHOUSE_CODE_DUPLICATE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/warehouses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 仓库详情（含 coverageArea GeoJSON） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description WAREHOUSE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WAREHOUSE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 更新仓库（普通字段 + 可选 PostGIS） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code?: string;
+                        name: {
+                            [key: string]: string;
+                        };
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        } | null;
+                        centerLat: number;
+                        centerLng: number;
+                        address: string;
+                        operatingHours: {
+                            mon?: {
+                                open: string;
+                                close: string;
+                            };
+                            tue?: {
+                                open: string;
+                                close: string;
+                            };
+                            wed?: {
+                                open: string;
+                                close: string;
+                            };
+                            thu?: {
+                                open: string;
+                                close: string;
+                            };
+                            fri?: {
+                                open: string;
+                                close: string;
+                            };
+                            sat?: {
+                                open: string;
+                                close: string;
+                            };
+                            sun?: {
+                                open: string;
+                                close: string;
+                            };
+                        } | null;
+                        deliveryFee: number;
+                        isActive: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            coverageArea: {
+                                /** @enum {string} */
+                                type: "Polygon";
+                                coordinates: number[][][];
+                            } | null;
+                            centerPoint: {
+                                /** @enum {string} */
+                                type: "Point";
+                                coordinates: number[];
+                            } | null;
+                            centerLat: number | null;
+                            centerLng: number | null;
+                            address: string;
+                            operatingHours: {
+                                mon?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                tue?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                wed?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                thu?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                fri?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sat?: {
+                                    open: string;
+                                    close: string;
+                                };
+                                sun?: {
+                                    open: string;
+                                    close: string;
+                                };
+                            } | null;
+                            /** @default 0 */
+                            deliveryFee: number;
+                            /** @default true */
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/warehouses/{id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 单独更新配送范围多边形（地图编辑器调） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        coverageArea: {
+                            /** @enum {string} */
+                            type: "Polygon";
+                            coordinates: number[][][];
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/common/warehouses/match": {
@@ -649,7 +2010,331 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/client/orders": {
+    "/api/v1/client/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品列表（客户端公开浏览，默认只看 ACTIVE） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 商品列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                            }[];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                            hasMore: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 商品详情（含 SKU） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description PRODUCT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 推荐商品（按销量 top N） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 推荐列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            mainImage: string;
+                            priceMin: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            salesCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 搜索商品（按多语言 name 匹配） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 搜索结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            mainImage: string;
+                            priceMin: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            salesCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 分类列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            iconUrl: string;
+                            /** Format: uuid */
+                            parentId: string | null;
+                            sortOrder: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Banner 列表（仅 ACTIVE） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            imageUrl: string;
+                            alt: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                            linkValue: string | null;
+                            sortOrder: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products": {
         parameters: {
             query?: never;
             header?: never;
@@ -657,6 +2342,893 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /** @description 创建商品 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        categoryId?: string | null;
+                        name: {
+                            [key: string]: string;
+                        };
+                        description?: {
+                            [key: string]: string;
+                        } | null;
+                        mainImage: string;
+                        /** @default [] */
+                        images?: string[];
+                        unit: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        categoryId?: string | null;
+                        name?: {
+                            [key: string]: string;
+                        };
+                        description?: {
+                            [key: string]: string;
+                        } | null;
+                        mainImage?: string;
+                        /** @default [] */
+                        images?: string[];
+                        unit?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 商品上下架 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            salesCount: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/products/{id}/skus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 创建 SKU（自动重算 product.priceMin） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: {
+                            [key: string]: string;
+                        };
+                        attributes: {
+                            [key: string]: unknown;
+                        };
+                        price: number;
+                        imageUrl?: string | null;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            attributes: {
+                                [key: string]: unknown;
+                            };
+                            price: number;
+                            imageUrl: string | null;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name: {
+                            [key: string]: string;
+                        };
+                        iconUrl: string;
+                        /** Format: uuid */
+                        parentId?: string | null;
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            iconUrl: string;
+                            /** Format: uuid */
+                            parentId: string | null;
+                            sortOrder: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        imageUrl: string;
+                        alt?: {
+                            [key: string]: string;
+                        } | null;
+                        /** @enum {string} */
+                        linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                        linkValue?: string | null;
+                        sortOrder?: number;
+                        /** @enum {string} */
+                        status?: "ACTIVE" | "INACTIVE";
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            imageUrl: string;
+                            alt: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+                            linkValue: string | null;
+                            sortOrder: number;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/inventory/match-warehouse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 按收货地址匹配最近仓库（PostGIS ST_Within + ST_Distance） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        lat: number;
+                        lng: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 匹配成功（null 表示超出配送范围） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            warehouseId: string;
+                            code: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            deliveryFee: number;
+                            distance: number;
+                        } | null;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/inventory/{skuId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 切地址时刷新 SKU 在收货地址所属仓库的库存（关键 UX） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 库存查询结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            warehouse: {
+                                /** Format: uuid */
+                                warehouseId: string;
+                                code: string;
+                                deliveryFee: number;
+                            } | null;
+                            quantity: number;
+                            inStock: boolean;
+                            outOfRange: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/stocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台库存列表（可按 warehouseId / lowStockOnly 过滤） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 库存列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** Format: uuid */
+                            skuId: string;
+                            quantity: number;
+                            safetyStock: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 后台调整库存（deltaQty 正负皆可，写入 StockLog） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        skuId: string;
+                        deltaQty: number;
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 调整成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 库存变更日志（按 createdAt desc） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 日志列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/pricing/delivery-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 计算配送费（基础费 + 距离加价） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 配送费结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            warehouseId: string;
+                            baseFee: number;
+                            perKmFee: number;
+                            distance: number;
+                            deliveryFee: number;
+                            /** @enum {string} */
+                            currency: "USD";
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/pricing/min-order-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 起送价校验 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 校验结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                            minOrderAmount: number;
+                            cartTotal: number;
+                            shortfall: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 所有仓库的配送费配置 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 配置列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/warehouses/{warehouseId}/base-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 更新某仓库的基础配送费 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        baseFee: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 客户端订单列表（按状态筛选 + 游标分页） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderNo: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** @enum {string} */
+                            status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                productName: string;
+                                productImage: string;
+                                skuName: string;
+                                unitPrice: number;
+                                quantity: number;
+                                subtotal: number;
+                            }[];
+                            totalAmount: number;
+                            deliveryFee: number;
+                            /** @default 0 */
+                            discountAmount: number;
+                            payableAmount: number;
+                            deliveryAddress: {
+                                name: string;
+                                phone: string;
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                            };
+                            remark: string | null;
+                            /** Format: uuid */
+                            riderId: string | null;
+                            /** @enum {string} */
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            confirmedAt: string | null;
+                            /** Format: date-time */
+                            pickedAt: string | null;
+                            /** Format: date-time */
+                            deliveringAt: string | null;
+                            /** Format: date-time */
+                            deliveredAt: string | null;
+                            /** Format: date-time */
+                            cancelledAt: string | null;
+                            cancelReason: string | null;
+                        }[];
+                    };
+                };
+            };
+        };
         put?: never;
         /** @description 创建订单（同步事务 MVP，自动匹配仓库 + orderNo 16 位） */
         post: {
@@ -1160,6 +3732,795 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 订单详情（含 items + events） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderNo: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** @enum {string} */
+                            status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                productName: string;
+                                productImage: string;
+                                skuName: string;
+                                unitPrice: number;
+                                quantity: number;
+                                subtotal: number;
+                            }[];
+                            totalAmount: number;
+                            deliveryFee: number;
+                            /** @default 0 */
+                            discountAmount: number;
+                            payableAmount: number;
+                            deliveryAddress: {
+                                name: string;
+                                phone: string;
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                            };
+                            remark: string | null;
+                            /** Format: uuid */
+                            riderId: string | null;
+                            /** @enum {string} */
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            confirmedAt: string | null;
+                            /** Format: date-time */
+                            pickedAt: string | null;
+                            /** Format: date-time */
+                            deliveringAt: string | null;
+                            /** Format: date-time */
+                            deliveredAt: string | null;
+                            /** Format: date-time */
+                            cancelledAt: string | null;
+                            cancelReason: string | null;
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 取消订单（用户自助，PENDING_* / CONFIRMED 可取消） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 取消成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ORDER_STATUS_NOT_CANCELLABLE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取购物车（按用户 1 份，含 items + 选中金额汇总） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 购物车详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 加购（同 sku 累加数量 + 刷新价格快照） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        skuId: string;
+                        quantity: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 加购后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+                /** @description SKU_INACTIVE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/cart/items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 删除购物车项 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 修改购物车项数量 / 选中状态 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        quantity?: number;
+                        isSelected?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 修改后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/cart/checkout-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 结算前预览（按地址匹配仓库 + 库存/价格校验 + 金额汇总） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        addressId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 结算预览 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            warehouseMatch: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                deliveryFee: number;
+                            } | null;
+                            itemsSubtotal: number;
+                            deliveryFee: number;
+                            payableAmount: number;
+                            warnings: string[];
+                        };
+                    };
+                };
+                /** @description NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 查询订单支付状态（含 mock/stub 标识） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description PaymentIntent 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** @enum {string} */
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            status: "UNPAID" | "PAID" | "REFUNDED";
+                            amount: number;
+                            transactionId: string | null;
+                            clientSecret: string | null;
+                            /** Format: uri */
+                            receiptUrl: string | null;
+                            mockFlag: boolean;
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description PAYMENT_INTENT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/mock-callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description dev/staging 模拟第三方支付成功回调（仅 WECHAT/PAYPAL/STRIPE） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 回调成功，订单自动进 CONFIRMED */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description METHOD_NOT_ALLOWED / DISABLED_IN_PROD */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 银行转账凭证上传（BANK_TRANSFER 专用） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        receiptUrl: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 凭证已上传，状态进 PROCESSING 等审核 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** @enum {string} */
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            /** @enum {string} */
+                            status: "UNPAID" | "PAID" | "REFUNDED";
+                            amount: number;
+                            transactionId: string | null;
+                            clientSecret: string | null;
+                            /** Format: uri */
+                            receiptUrl: string | null;
+                            mockFlag: boolean;
+                            /** Format: date-time */
+                            paidAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/payments/{orderId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户端轮询查到 PAID 后触发订单确认 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单已确认 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description PAYMENT_NOT_PAID */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1191,6 +4552,14 @@ export interface components {
             identifier: string;
             password: string;
         };
+        LoginPasswordRequest: {
+            phone: string;
+            password: string;
+        };
+        LoginSmsRequest: {
+            phone: string;
+            smsCode: string;
+        };
         LoginResponseData: {
             user: {
                 /** Format: uuid */
@@ -1210,7 +4579,7 @@ export interface components {
         RegisterRequest: {
             phone: string;
             /** Format: email */
-            email: string;
+            email?: string;
             password: string;
             name?: string;
             smsCode?: string;
@@ -1230,6 +4599,14 @@ export interface components {
             /** @enum {string} */
             type: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
         };
+        SendSmsCodeRequest: {
+            phone: string;
+            /**
+             * @default LOGIN
+             * @enum {string}
+             */
+            scene: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+        };
         SendSmsResponseData: {
             expireIn: number;
         };
@@ -1237,6 +4614,11 @@ export interface components {
             /** Format: email */
             email: string;
             code: string;
+            newPassword: string;
+        };
+        PasswordResetRequest: {
+            phone: string;
+            smsCode: string;
             newPassword: string;
         };
         User: {
@@ -1264,6 +4646,86 @@ export interface components {
         ChangePasswordRequest: {
             oldPassword: string;
             newPassword: string;
+        };
+        Address: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            name: string;
+            phone: string;
+            region: {
+                province: string;
+                city: string;
+                district?: string;
+            };
+            detail: string;
+            lat: number | null;
+            lng: number | null;
+            isDefault: boolean;
+            tag: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateAddressRequest: {
+            name: string;
+            phone: string;
+            region: {
+                province: string;
+                city: string;
+                district?: string;
+            };
+            detail: string;
+            lat?: number | null;
+            lng?: number | null;
+            isDefault?: boolean;
+            tag?: string | null;
+        };
+        UpdateAddressRequest: {
+            name?: string;
+            phone?: string;
+            region?: {
+                province: string;
+                city: string;
+                district?: string;
+            };
+            detail?: string;
+            lat?: number | null;
+            lng?: number | null;
+            isDefault?: boolean;
+            tag?: string | null;
+        };
+        FavoriteToggleRequest: {
+            /** Format: uuid */
+            productId: string;
+        };
+        FavoriteToggleResponse: {
+            isFavorite: boolean;
+        };
+        NotificationItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            title: {
+                [key: string]: string;
+            };
+            content: {
+                [key: string]: string;
+            };
+            isRead: boolean;
+            data: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MarkNotificationReadResponse: {
+            success: boolean;
         };
         Shop: {
             /** Format: uuid */
@@ -1410,6 +4872,200 @@ export interface components {
             lat: number;
             lng: number;
         };
+        Product: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            shopId: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            name: {
+                [key: string]: string;
+            };
+            description: {
+                [key: string]: string;
+            } | null;
+            mainImage: string;
+            images: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+            unit: {
+                [key: string]: string;
+            };
+            priceMin: number;
+            salesCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProductSummary: {
+            /** Format: uuid */
+            id: string;
+            name: {
+                [key: string]: string;
+            };
+            mainImage: string;
+            priceMin: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+            salesCount: number;
+        };
+        CreateProductRequest: {
+            /** Format: uuid */
+            categoryId?: string | null;
+            name: {
+                [key: string]: string;
+            };
+            description?: {
+                [key: string]: string;
+            } | null;
+            mainImage: string;
+            /** @default [] */
+            images: string[];
+            unit: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        UpdateProductRequest: {
+            /** Format: uuid */
+            categoryId?: string | null;
+            name?: {
+                [key: string]: string;
+            };
+            description?: {
+                [key: string]: string;
+            } | null;
+            mainImage?: string;
+            /** @default [] */
+            images: string[];
+            unit?: {
+                [key: string]: string;
+            };
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        UpdateProductStatusRequest: {
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        Sku: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            name: {
+                [key: string]: string;
+            };
+            attributes: {
+                [key: string]: unknown;
+            };
+            price: number;
+            imageUrl: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateSkuRequest: {
+            name: {
+                [key: string]: string;
+            };
+            attributes: {
+                [key: string]: unknown;
+            };
+            price: number;
+            imageUrl?: string | null;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateSkuRequest: {
+            name?: {
+                [key: string]: string;
+            };
+            attributes?: {
+                [key: string]: unknown;
+            };
+            price?: number;
+            imageUrl?: string | null;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        Category: {
+            /** Format: uuid */
+            id: string;
+            name: {
+                [key: string]: string;
+            };
+            iconUrl: string;
+            /** Format: uuid */
+            parentId: string | null;
+            sortOrder: number;
+        };
+        CreateCategoryRequest: {
+            name: {
+                [key: string]: string;
+            };
+            iconUrl: string;
+            /** Format: uuid */
+            parentId?: string | null;
+            sortOrder?: number;
+        };
+        UpdateCategoryRequest: {
+            name?: {
+                [key: string]: string;
+            };
+            iconUrl?: string;
+            /** Format: uuid */
+            parentId?: string | null;
+            sortOrder?: number;
+        };
+        Banner: {
+            /** Format: uuid */
+            id: string;
+            imageUrl: string;
+            alt: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue: string | null;
+            sortOrder: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateBannerRequest: {
+            imageUrl: string;
+            alt?: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue?: string | null;
+            sortOrder?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        UpdateBannerRequest: {
+            imageUrl?: string;
+            alt?: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            linkType?: "PRODUCT" | "CATEGORY" | "URL" | "NONE";
+            linkValue?: string | null;
+            sortOrder?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
         Order: {
             /** Format: uuid */
             id: string;
@@ -1503,6 +5159,127 @@ export interface components {
         PaymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
         /** @enum {string} */
         OrderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+        Cart: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            warehouseId: string | null;
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                skuId: string;
+                /** Format: uuid */
+                productId: string;
+                productName: {
+                    [key: string]: string;
+                };
+                productImage: string;
+                skuName: {
+                    [key: string]: string;
+                };
+                unitPrice: number;
+                quantity: number;
+                isSelected: boolean;
+                /** Format: date-time */
+                addedAt: string;
+            }[];
+            selectedSubtotal: number;
+            totalSubtotal: number;
+        };
+        CartItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            skuId: string;
+            /** Format: uuid */
+            productId: string;
+            productName: {
+                [key: string]: string;
+            };
+            productImage: string;
+            skuName: {
+                [key: string]: string;
+            };
+            unitPrice: number;
+            quantity: number;
+            isSelected: boolean;
+            /** Format: date-time */
+            addedAt: string;
+        };
+        AddCartItemRequest: {
+            /** Format: uuid */
+            skuId: string;
+            quantity: number;
+        };
+        UpdateCartItemRequest: {
+            quantity?: number;
+            isSelected?: boolean;
+        };
+        CheckoutPreviewRequest: {
+            /** Format: uuid */
+            addressId: string;
+        };
+        CheckoutPreview: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                skuId: string;
+                /** Format: uuid */
+                productId: string;
+                productName: {
+                    [key: string]: string;
+                };
+                productImage: string;
+                skuName: {
+                    [key: string]: string;
+                };
+                unitPrice: number;
+                quantity: number;
+                isSelected: boolean;
+                /** Format: date-time */
+                addedAt: string;
+            }[];
+            warehouseMatch: {
+                /** Format: uuid */
+                id: string;
+                code: string;
+                deliveryFee: number;
+            } | null;
+            itemsSubtotal: number;
+            deliveryFee: number;
+            payableAmount: number;
+            warnings: string[];
+        };
+        PaymentIntent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** @enum {string} */
+            status: "UNPAID" | "PAID" | "REFUNDED";
+            amount: number;
+            transactionId: string | null;
+            clientSecret: string | null;
+            /** Format: uri */
+            receiptUrl: string | null;
+            mockFlag: boolean;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UploadReceiptRequest: {
+            /** Format: uri */
+            receiptUrl: string;
+        };
         DashboardSummary: {
             /** @enum {string} */
             range: "today" | "week" | "month";
