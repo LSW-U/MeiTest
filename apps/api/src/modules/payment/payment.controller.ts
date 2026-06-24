@@ -21,6 +21,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { UploadReceiptRequest } from '@meimart/api-contract';
 import { PaymentService, PAYMENT_SERVICE_TOKEN } from './payment.service';
 import { OrderService } from '../order/order.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
@@ -28,11 +29,6 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { DeviceType } from '@meimart/api-contract';
-
-const UploadReceiptRequest = z.object({
-  receiptUrl: z.string().url(),
-});
-type UploadReceiptRequestType = z.infer<typeof UploadReceiptRequest>;
 
 @Controller('api/v1/client/payments')
 @Roles('customer')
@@ -81,7 +77,7 @@ export class PaymentController {
   @Audit({ resource: 'PaymentIntent' })
   async uploadReceipt(
     @Param('orderId') orderId: string,
-    @Body(new ZodValidationPipe(UploadReceiptRequest)) body: UploadReceiptRequestType,
+    @Body(new ZodValidationPipe(UploadReceiptRequest)) body: z.infer<typeof UploadReceiptRequest>,
   ) {
     const intent = await this.paymentService.uploadReceipt(orderId, body.receiptUrl);
     return { success: true as const, data: intent };

@@ -24,25 +24,12 @@ import {
   Inject,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { AddCartItemRequest, UpdateCartItemRequest, CheckoutPreviewRequest } from '@meimart/api-contract';
 import { CartService } from './cart.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
-
-const AddItemRequest = z.object({
-  skuId: z.string().uuid(),
-  quantity: z.number().int().positive(),
-});
-
-const UpdateItemRequest = z.object({
-  quantity: z.number().int().positive().optional(),
-  isSelected: z.boolean().optional(),
-});
-
-const CheckoutPreviewRequest = z.object({
-  addressId: z.string().uuid(),
-});
 
 interface RequestWithUser {
   user?: RequestUser;
@@ -66,7 +53,7 @@ export class CartController {
   @Post('items')
   @Audit({ resource: 'Cart' })
   async addItem(
-    @Body(new ZodValidationPipe(AddItemRequest)) body: z.infer<typeof AddItemRequest>,
+    @Body(new ZodValidationPipe(AddCartItemRequest)) body: z.infer<typeof AddCartItemRequest>,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
@@ -85,7 +72,7 @@ export class CartController {
   @Audit({ resource: 'Cart', resourceIdParam: 'id' })
   async updateItem(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(UpdateItemRequest)) body: z.infer<typeof UpdateItemRequest>,
+    @Body(new ZodValidationPipe(UpdateCartItemRequest)) body: z.infer<typeof UpdateCartItemRequest>,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
