@@ -8,11 +8,13 @@
  * 不导出 PaymentService 给其他模块（用 token 注入）。
  * OrderModule import PaymentModule 后通过 token 拿 service。
  */
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PaymentController } from './payment.controller';
 import { PaymentService, PAYMENT_SERVICE_TOKEN } from './payment.service';
+import { OrderModule } from '../order/order.module';
 
 @Module({
+  imports: [forwardRef(() => OrderModule)],
   controllers: [PaymentController],
   providers: [
     PaymentService,

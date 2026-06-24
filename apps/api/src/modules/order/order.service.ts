@@ -97,7 +97,7 @@ export interface OrderWithRelations {
 @Injectable()
 export class OrderService {
   constructor(
-    private readonly orderNoService: OrderNoService,
+    @Inject(OrderNoService) private readonly orderNoService: OrderNoService,
     @Inject('PaymentServiceToken') private readonly paymentService: PaymentService,
   ) {}
 
