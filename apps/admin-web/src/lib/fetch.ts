@@ -35,7 +35,7 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   const perspective = usePerspectiveStore.getState().perspective;
   const locale = readLocaleCookie();
   const token =
-    typeof window !== 'undefined' ? window.localStorage.getItem('meimart.accessToken') : null;
+    typeof window !== 'undefined' ? window.localStorage.getItem('admin_token') : null;
 
   const headers = new Headers(init.headers);
   headers.set('Accept-Language', locale);

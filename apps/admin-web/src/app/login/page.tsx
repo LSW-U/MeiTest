@@ -4,27 +4,43 @@ import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import type { components } from '@meimart/shared-types';
 
-type LoginRequest = components['schemas']['LoginRequest'];
+type LoginPasswordRequest = components['schemas']['LoginPasswordRequest'];
 
 export default function LoginPage() {
   const t = useTranslations('auth');
-  const [identifier, setIdentifier] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
 
-    const body: LoginRequest = { identifier, password };
-    // TODO: D4-T6 接入真实 /api/v1/common/auth/login-password
-    console.log('login payload:', body);
-    setTimeout(() => {
+    const body: LoginPasswordRequest = { phone, password };
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1';
+
+    try {
+      const resp = await fetch(`${apiBase}/common/auth/login-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        setError(data?.error?.message ?? `Login failed (HTTP ${resp.status})`);
+        return;
+      }
+      window.localStorage.setItem('admin_token', data.data.accessToken);
+      window.localStorage.setItem('admin_refresh_token', data.data.refreshToken);
+      window.localStorage.setItem('admin_perspective', 'platform');
+      window.location.href = '/platform';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
+    } finally {
       setSubmitting(false);
-      setError(t('login.devsStubNoBackend'));
-    }, 300);
+    }
   }
 
   return (
@@ -53,12 +69,12 @@ export default function LoginPage() {
         <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
           <span>{t('login.identifier')}</span>
           <input
-            type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder={t('login.identifierPlaceholder')}
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+670999999999"
             required
-            autoComplete="username"
+            autoComplete="tel"
             style={{
               padding: '8px 12px',
               border: '1px solid #d5d5d5',
