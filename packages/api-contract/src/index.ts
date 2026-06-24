@@ -11,6 +11,7 @@ export * from './schemas/auth';
 export * from './schemas/user';
 export * from './schemas/shop';
 export * from './schemas/warehouse';
+export * from './schemas/catalog';
 export * from './schemas/order';
 
 /**
