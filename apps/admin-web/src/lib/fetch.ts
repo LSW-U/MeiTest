@@ -37,6 +37,10 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   const token =
     typeof window !== 'undefined' ? window.localStorage.getItem('admin_token') : null;
 
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1';
+  // 相对路径（/api/v1/... 或 /xxx）自动拼 apiBase；绝对 URL（http://...）原样使用
+  const url = input.startsWith('http') ? input : `${apiBase}${input.startsWith('/') ? input.replace(/^\/api\/v1/, '') : `/api/v1/${input}`}`;
+
   const headers = new Headers(init.headers);
   headers.set('Accept-Language', locale);
   headers.set('X-Perspective', perspective);
@@ -45,7 +49,7 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
     headers.set('Content-Type', 'application/json');
   }
 
-  return fetch(input, { ...init, headers, credentials: 'include' });
+  return fetch(url, { ...init, headers, credentials: 'include' });
 }
 
 /** JSON 简化：apiFetch + res.json() + 业务错误码 throw */
