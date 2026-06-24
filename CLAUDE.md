@@ -232,9 +232,9 @@
 
 ---
 
-## 🚀 W2 启动指令（三流程并行）
+## 🚀 W2 启动指令（三流程并行）— 已完成
 
-**W2 进入条件**：W1 验收通过（HEAD 见最后一个 `[W1-D7-fix-*]` commit）。
+**W2 状态**：✅ 已于 2026-06-25 完成（HEAD `895ad6c`）。三流程 W/C/M 全部整合到 main，审查报告 4 项 P0+P1 修复完成。下方为历史启动指令，W3 任务请看下一节"W3 启动指令"。
 
 ### 如果你是三流程之一（W / C / M）
 
@@ -259,6 +259,64 @@
 4. 整合失败按 §6.5 处理（不停在原地猜）
 5. 整合完成跑 §6.4 最终验证 + 端到端冒烟
 ```
+
+---
+
+## 🚀 W3 启动指令（三流程并行）— 当前阶段
+
+**W3 进入条件**：✅ W2 三流程整合完成 + 审查修复（HEAD `895ad6c`，已 push）。
+
+**W3 任务范围**（来自 W-M-C-T 任务分解 §W3）：
+
+| 流程 | W3 任务 |
+|---|---|
+| **W** | catalog 客户端浏览页（admin-web 收尾）；M1 模块收尾 |
+| **C** | dispatch 抢单大厅 + WS 广播；rider 入驻/上下班；cart Redis 持久化；order 超时取消（BullMQ）；order 幂等键；补 createOrder/cart 单测 |
+| **M** | IM 自建 WebSocket（用户签名接口）；settle 结算单（BullMQ T+1）；settle 提现审核 |
+
+### 分支命名（W3）
+
+```
+w3-flow-w  ← W 流程
+w3-flow-c  ← C 流程
+w3-flow-m  ← M 流程
+```
+
+base 都从当前 main HEAD `895ad6c` 出发，不复用 w2-flow-*。
+
+### 如果你是三流程之一（W / C / M）
+
+```
+1. 读项目根 W2-COLLABORATION.md 全文（W3 沿用 W2 协作规范：文件分工 / 命名规范 / manifest 模板都不变）
+2. 读 Obsidian MeiMart-三流程W-M-C-T任务分解-20260617.md 的 W3 章节（找自己流程）
+3. 创建分支：git checkout main && git pull && git checkout -b w3-flow-{你的流程}
+4. 按 W-M-C-T 任务分解执行 W3 任务，遵守：
+   - 文件分工矩阵（W2-COLLABORATION.md §2，不碰其他流程独占 + W1/W2 完成的文件）
+   - 命名规范（§3：migration 后缀 _w/_c/_m；schema 文件名按业务模块）
+   - 错误码分段（§3.4：每个新模块预留 001-099 段，不撞 W2 已用的）
+   - i18n 共用 namespace 按 {flow}.{feature}.{key}（§3.6）
+   - PR 自检 checklist（§5）
+5. 完成时输出 W3-{FLOW}-MANIFEST.md（按 W2 manifest 模板）
+6. W2 遗留推到 W3 的任务（在 W2-{FLOW}-MANIFEST.md §6 标注的）也要做：
+   - C 流程：补 createOrder/cart 单测；接入 IdempotencyKey；BullMQ 超时取消
+   - 通用：admin-web 5 视角浏览器实测（dev server 起来后跑三步冒烟）
+```
+
+### 如果你是主 AI（整合 3 份代码）
+
+```
+1. 等 w3-flow-w/c/m 三流程 push 后，按 W2 整合流程做：
+2. 按 W → C → M 顺序整合（W2-COLLABORATION.md §6）
+3. 共享文件冲突按 §6.3 优先级（gen:openapi 重生成 / 字母序 union / errors.json Python 脚本合并）
+4. 跑 §6.4 最终验证（typecheck + test + 全栈启动 + 契约一致性）
+5. 整合后写 MeiMart-W3-整合进度-YYYYMMDD.md 到 Obsidian
+6. 整合后第一个 PR merge 到 main 时，提醒用户评估 w2-flow-* 分支清理（参考 Obsidian MeiMart-W2-整合进度-20260624.md §八）
+```
+
+### W3 启动后第 1 周内必做
+
+- **admin-web 5 视角浏览器实测**（W2 审查报告第 9 项）：W 流程 dev server 起来后跑三步冒烟（mock-login → 切视角 → 验证数据范围正确）
+- **W2 遗留 baseline 类型问题再扫一遍**：W3 新代码不引入新 typecheck 错误
 
 ---
 
