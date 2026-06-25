@@ -55,12 +55,16 @@ export default function CreateProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!mainImage || !unit.en) {
+      // 表单已 required，理论上不会到这；防御
+      return;
+    }
     try {
       const res = await createMutation.mutateAsync({
         name,
-        mainImage: mainImage || undefined,
+        mainImage,
         description: Object.keys(description).length ? description : undefined,
-        unit: Object.keys(unit).length ? unit : undefined,
+        unit,
         categoryId: categoryId || undefined,
         status,
       });
@@ -128,11 +132,12 @@ export default function CreateProductPage() {
         <CardContent className="space-y-4">
           {i18nField('Name', name, setName, 'Product name', 'en')}
           <div className="space-y-2">
-            <Label>Main Image URL</Label>
+            <Label>Main Image URL *</Label>
             <Input
               value={mainImage}
               onChange={(e) => setMainImage(e.target.value)}
               placeholder="https://..."
+              required
             />
             {mainImage && (
               <img
@@ -146,7 +151,7 @@ export default function CreateProductPage() {
             )}
           </div>
           {i18nField('Description', description, setDescription, 'Optional description')}
-          {i18nField('Unit', unit, setUnit, 'e.g. bottle / 瓶 / botol')}
+          {i18nField('Unit *', unit, setUnit, 'e.g. bottle / 瓶 / botol', 'en')}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Category</Label>

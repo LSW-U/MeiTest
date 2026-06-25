@@ -161,7 +161,7 @@ function CreateCategoryForm({
   pending,
   error,
 }: {
-  onCreate: (input: { name: I18nText; iconUrl?: string; sortOrder?: number }) => void;
+  onCreate: (input: { name: I18nText; iconUrl: string; sortOrder?: number }) => void;
   pending: boolean;
   error?: string;
 }) {
@@ -171,9 +171,10 @@ function CreateCategoryForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!iconUrl) return;
     onCreate({
       name,
-      iconUrl: iconUrl || undefined,
+      iconUrl,
       sortOrder: parseInt(sortOrder, 10) || 0,
     });
     setName({});
@@ -199,8 +200,13 @@ function CreateCategoryForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label>Icon URL</Label>
-          <Input value={iconUrl} onChange={(e) => setIconUrl(e.target.value)} />
+          <Label>Icon URL *</Label>
+          <Input
+            value={iconUrl}
+            onChange={(e) => setIconUrl(e.target.value)}
+            placeholder="https://..."
+            required
+          />
         </div>
         <div className="space-y-1">
           <Label>Sort Order</Label>

@@ -38,10 +38,10 @@ export interface Product {
 
 export interface CreateProductInput {
   name: I18nText;
+  mainImage: string; // 后端契约必填
+  unit: I18nText; // 后端契约必填
   description?: I18nText;
-  mainImage?: string;
   images?: string[];
-  unit?: I18nText;
   status?: 'ACTIVE' | 'INACTIVE';
   categoryId?: string;
 }

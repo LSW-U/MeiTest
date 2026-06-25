@@ -29,7 +29,7 @@ export interface Category {
 
 export interface CreateCategoryInput {
   name: I18nText;
-  iconUrl?: string;
+  iconUrl: string; // 后端契约必填
   parentId?: string | null;
   sortOrder?: number;
 }
