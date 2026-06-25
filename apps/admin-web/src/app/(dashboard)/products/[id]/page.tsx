@@ -47,6 +47,7 @@ import {
   type I18nText,
   type Sku,
 } from '@/hooks/api/use-products';
+import { formatCurrency } from '@/lib/utils';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
@@ -135,7 +136,7 @@ export default function ProductDetailPage() {
       key: 'price',
       header: 'Price',
       render: (row) => (
-        <span className="font-mono text-xs">${(row.price / 100).toFixed(2)}</span>
+        <span className="font-mono text-xs">{formatCurrency(row.price)}</span>
       ),
     },
     {

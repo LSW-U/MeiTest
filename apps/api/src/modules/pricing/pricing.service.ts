@@ -54,7 +54,7 @@ export class PricingService {
       throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
     }
 
-    const distance = this.haversineDistance(
+    const distance = this.euclideanDistanceKm(
       warehouse.centerLat.toNumber(),
       warehouse.centerLng.toNumber(),
       lat,
@@ -135,8 +135,15 @@ export class PricingService {
     };
   }
 
-  /** Haversine 球面距离（度→km 近似） */
-  private haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  /**
+   * 欧氏距离近似（度 → km）
+   *
+   * 注：函数名曾叫 haversineDistance 但实现并非真 Haversine，会误导后续维护者。
+   * MVP 在东帝汶市场（赤道附近 -8°S），欧氏近似误差 < 1%，可接受。
+   * 真实 Haversine 公式：2 * R * asin(sqrt(sin²(dLat/2) + cos(lat1)*cos(lat2)*sin²(dLng/2)))。
+   * W6+ 跨地区配送时可换 Haversine 或直接走 PostGIS ST_DistanceSphere。
+   */
+  private euclideanDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const dLat = lat2 - lat1;
     const dLng = lng2 - lng1;
     return Math.sqrt(dLat * dLat + dLng * dLng) * KM_PER_DEGREE;

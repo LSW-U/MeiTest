@@ -19,6 +19,7 @@ import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
 import { useProducts, type Product } from '@/hooks/api/use-products';
 import { useUpdateProductStatus } from '@/hooks/api/use-products';
+import { formatCurrency } from '@/lib/utils';
 
 export default function ProductsListPage() {
   const t = useTranslations();
@@ -65,7 +66,7 @@ export default function ProductsListPage() {
       header: 'Min Price',
       render: (row) =>
         row.priceMin != null ? (
-          <span className="font-mono text-xs">${(row.priceMin / 100).toFixed(2)}</span>
+          <span className="font-mono text-xs">{formatCurrency(row.priceMin)}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),

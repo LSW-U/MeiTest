@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
 import { useWarehouses, type Warehouse } from '@/hooks/api/use-warehouses';
+import { formatCurrency } from '@/lib/utils';
 
 export default function WarehousesListPage() {
   const t = useTranslations();
@@ -51,7 +52,7 @@ export default function WarehousesListPage() {
       key: 'deliveryFee',
       header: 'Delivery Fee',
       render: (row) => (
-        <span className="font-mono text-xs">${(row.deliveryFee / 100).toFixed(2)}</span>
+        <span className="font-mono text-xs">{formatCurrency(row.deliveryFee)}</span>
       ),
     },
     {
