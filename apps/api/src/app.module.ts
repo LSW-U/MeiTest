@@ -12,6 +12,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { RiderModule } from './modules/rider/rider.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
@@ -20,7 +21,7 @@ import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 import { QueueModule } from './shared/queue';
 
 @Module({
-  // 字母序：Auth → Cart → Dispatch → Order → Payment → Realtime（W3 加 Rider 时按字母序插入）
+  // 字母序：Auth → Cart → Dispatch → Order → Payment → Realtime → Rider
   imports: [
     AuthModule,
     CartModule,
@@ -28,6 +29,7 @@ import { QueueModule } from './shared/queue';
     OrderModule,
     PaymentModule,
     RealtimeModule,
+    RiderModule,
     IdempotencyModule,
     QueueModule,
   ],

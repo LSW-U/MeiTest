@@ -1,20 +1,29 @@
 /**
- * Cart Service — 购物车业务（DB 持久化版本，Redis 优化 W3+）
+ * Cart Service — 购物车业务（DB + Redis 双层缓存）
  *
  * 决策依据：
  * - 契约 v0.3：购物车按 user 一份，DB Cart 表 + CartItem
  * - schema.prisma 已定义 Cart + CartItem（含 isSelected、product/sku 多语言快照）
  * - 单一商家 + 多仓库：购物车不绑 warehouseId，加购时不查库存（结算时按地址匹配仓库并校验）
+ * - W3-C：Redis 持久化（DB 是 source of truth，Redis 作为读缓存）
  *
  * 业务规则：
  *   - add items：同 skuId 数量累加（CartItem @@unique([cartId, skuId])）
  *   - 加购时存 productName/skuName/unitPrice 快照（结算校验 + 价格变动可见性）
  *   - quantity 必须 > 0（schema Int，service 校验 ≥1）
  *   - SKU 下架后 add 拒绝，已加购的 item 显示但标 inactive
+ *
+ * Redis 缓存策略（W3-C）：
+ *   - 命名：`cart:{userId}` → JSON 序列化的 CartView
+ *   - TTL：5 分钟（短时缓存，避免长期脏数据）
+ *   - 失效：任何写操作（add/update/remove/clear）后立即 DEL
+ *   - 读：getCart 先查 Redis，miss 查 DB + 回填
+ *   - 容错：Redis 异常不阻塞业务（catch + 降级到 DB）
  */
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
+import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 
 /** 加购请求 */
@@ -58,10 +67,64 @@ export interface CartView {
   totalSubtotal: number;
 }
 
+/** Cart Redis 缓存 TTL（秒） */
+const CART_CACHE_TTL_SEC = 5 * 60;
+
 @Injectable()
 export class CartService {
-  /** 获取（或初始化）用户购物车 */
+  /** Redis 缓存 key：`cart:{userId}` */
+  private cacheKey(userId: string): string {
+    return `cart:${userId}`;
+  }
+
+  /** 失效用户购物车缓存（写操作后调，容错处理 Redis 异常） */
+  private async invalidateCache(userId: string): Promise<void> {
+    try {
+      await redis.del(this.cacheKey(userId));
+    } catch (e) {
+      logger.warn({
+        msg: 'CART_CACHE_INVALIDATE_FAILED',
+        userId,
+        error: (e as Error).message,
+      });
+    }
+  }
+
+  /** 写入缓存（容错） */
+  private async setCache(userId: string, view: CartView): Promise<void> {
+    try {
+      await redis.set(
+        this.cacheKey(userId),
+        JSON.stringify(view),
+        'EX',
+        CART_CACHE_TTL_SEC,
+      );
+    } catch (e) {
+      logger.warn({
+        msg: 'CART_CACHE_SET_FAILED',
+        userId,
+        error: (e as Error).message,
+      });
+    }
+  }
+
+  /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
   async getCart(userId: string): Promise<CartView> {
+    // 1. 先查 Redis
+    try {
+      const cached = await redis.get(this.cacheKey(userId));
+      if (cached) {
+        return JSON.parse(cached) as CartView;
+      }
+    } catch (e) {
+      logger.warn({
+        msg: 'CART_CACHE_GET_FAILED',
+        userId,
+        error: (e as Error).message,
+      });
+    }
+
+    // 2. Miss：查 DB
     const cart = await this.getOrCreateCart(userId);
     const items = await db.cartItem.findMany({
       where: { cartId: cart.id },
@@ -86,7 +149,7 @@ export class CartService {
       .reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const totalSubtotal = itemViews.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
-    return {
+    const view: CartView = {
       id: cart.id,
       userId: cart.userId,
       warehouseId: cart.warehouseId,
@@ -94,6 +157,11 @@ export class CartService {
       selectedSubtotal,
       totalSubtotal,
     };
+
+    // 3. 回填 Redis
+    await this.setCache(userId, view);
+
+    return view;
   }
 
   /** 加购 / 同 sku 累加数量 */
@@ -147,6 +215,9 @@ export class CartService {
       quantity: input.quantity,
     });
 
+    // 失效缓存（下次 getCart 重读 DB）
+    await this.invalidateCache(input.userId);
+
     return this.getCart(input.userId);
   }
 
@@ -186,6 +257,8 @@ export class CartService {
       },
     });
 
+    await this.invalidateCache(input.userId);
+
     return this.getCart(input.userId);
   }
 
@@ -203,6 +276,9 @@ export class CartService {
       });
     }
     await db.cartItem.delete({ where: { id: itemId } });
+
+    await this.invalidateCache(userId);
+
     return this.getCart(userId);
   }
 
@@ -295,6 +371,8 @@ export class CartService {
     await db.cartItem.deleteMany({
       where: { cartId: cart.id, skuId: { in: skuIds } },
     });
+
+    await this.invalidateCache(userId);
   }
 
   /** 取得（或自动创建）购物车 */

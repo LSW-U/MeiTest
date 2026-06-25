@@ -681,6 +681,15 @@ model RiderProfile {
 
   // v0.3:不在此表存 currentLat/currentLng,拆到 RiderLocation 表
 
+  // W3 流程 C:入驻审核 + 实名认证（mock）+ 偏好仓库
+  // applicationStatus: PENDING / APPROVED / REJECTED（不用 enum，TEXT 避免与流程 W/M enum 撞）
+  applicationStatus       String?     @default("PENDING") @map("application_status")
+  idCardNumber            String?     @map("id_card_number")
+  reviewedById            String?     @map("reviewed_by_id")
+  reviewedAt              DateTime?   @map("reviewed_at")
+  rejectReason            String?     @map("reject_reason")
+  preferredWarehouseIds   String[]    @default([]) @map("preferred_warehouse_ids")
+
   user              User                   @relation(fields: [userId], references: [id])
   orders            Order[]
   deliveryTasks     DeliveryTask[]
@@ -688,6 +697,7 @@ model RiderProfile {
   currentLocation   RiderLocation?
   locationHistories RiderLocationHistory[]
 
+  @@index([applicationStatus])
   @@map("rider_profiles")
 }
 
