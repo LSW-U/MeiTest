@@ -16,6 +16,7 @@
  *     });
  *   });
  */
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db } from './prisma';
 
@@ -80,7 +81,10 @@ export async function deductStock(
   context: StockChangeContext = {},
 ): Promise<boolean> {
   if (quantity <= 0) {
-    throw new Error(`STOCK_QTY_INVALID: quantity=${quantity} must be > 0`);
+    throw new BadRequestException({
+      code: 'E-INVENTORY-003',
+      message: `Stock quantity must be > 0 (got ${quantity})`,
+    });
   }
 
   const result = await tx.$queryRaw<Array<{ quantity: number }>>`
@@ -135,7 +139,10 @@ export async function releaseStock(
   context: StockChangeContext = {},
 ): Promise<void> {
   if (quantity <= 0) {
-    throw new Error(`STOCK_QTY_INVALID: quantity=${quantity} must be > 0`);
+    throw new BadRequestException({
+      code: 'E-INVENTORY-003',
+      message: `Stock quantity must be > 0 (got ${quantity})`,
+    });
   }
 
   const result = await tx.$queryRaw<Array<{ quantity: number }>>`
@@ -147,7 +154,10 @@ export async function releaseStock(
   `;
 
   if (result.length === 0) {
-    throw new Error(`STOCK_RECORD_NOT_FOUND: warehouseId=${warehouseId} skuId=${skuId}`);
+    throw new NotFoundException({
+      code: 'E-INVENTORY-004',
+      message: `Stock record not found (warehouseId=${warehouseId} skuId=${skuId})`,
+    });
   }
 
   const afterQty = result[0].quantity;

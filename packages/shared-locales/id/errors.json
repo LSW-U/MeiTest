@@ -55,12 +55,16 @@
   "E-RIDER-003": "Pengendara sedang menangani pesanan lain",
   "E-RIDER-004": "Info kendaraan belum lengkap",
   "E-RIDER-005": "Pengendara belum disetujui",
-  "E-RIDER-005": "Pengendara belum disetujui",
   "E-PLATFORM-002": "Kunci konfigurasi sistem tidak ditemukan",
   "E-SETTLE-001": "Jumlah penarikan melebihi saldo yang tersedia",
   "E-SETTLE-002": "Permintaan penarikan tidak ditemukan",
   "E-SETTLE-003": "Status penarikan tidak mengizinkan tindakan ini",
   "E-SETTLE-004": "Settlement tidak ditemukan",
   "E-SETTLE-005": "Frekuensi settlement tidak valid (harus day/week/month)",
-  "E-AUDIT-001": "Log audit tidak ditemukan"
+  "E-AUDIT-001": "Log audit tidak ditemukan",
+  "E-WAREHOUSE-003": "Gudang tidak ditemukan",
+  "E-INVENTORY-003": "Jumlah stok tidak valid (harus > 0)",
+  "E-INVENTORY-004": "Catatan stok tidak ditemukan",
+  "E-USER-006": "Nomor telepon atau kata sandi salah",
+  "E-USER-007": "Sumber daya tidak ditemukan"
 }

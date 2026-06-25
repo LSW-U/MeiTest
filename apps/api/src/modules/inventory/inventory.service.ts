@@ -18,7 +18,7 @@
  *   - 所有写库存操作走 withTransaction（保证 StockLog 与 Stock 一致）
  *   - 库存不存在时按需创建（首次入库用）
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { db, withTransaction, deductStock, releaseStock, type Tx } from '../../shared/db';
 import { findWarehouseByPoint } from '../../shared/db/postgis-helpers';
 
@@ -119,7 +119,10 @@ export class InventoryService {
   /** 手动调整库存（正负皆可，写入 StockLog 审计） */
   async adjustStock(input: StockAdjustInput) {
     if (input.deltaQty === 0) {
-      throw new Error('STOCK_QTY_INVALID: deltaQty cannot be 0');
+      throw new BadRequestException({
+        code: 'E-INVENTORY-003',
+        message: 'Stock adjust deltaQty cannot be 0',
+      });
     }
     return withTransaction(async (tx) => {
 
@@ -134,7 +137,10 @@ export class InventoryService {
       });
       if (!existing) {
         if (input.deltaQty < 0) {
-          throw new Error('STOCK_RECORD_NOT_FOUND');
+          throw new NotFoundException({
+            code: 'E-INVENTORY-004',
+            message: 'Stock record not found (cannot deduct from non-existent stock)',
+          });
         }
         // 入库创建
         const created = await tx.stock.create({
@@ -174,7 +180,10 @@ export class InventoryService {
           operatorId: input.operatorId,
         });
         if (!ok) {
-          throw new Error('E-INVENTORY-001: STOCK_NOT_ENOUGH');
+          throw new BadRequestException({
+            code: 'E-INVENTORY-001',
+            message: 'Stock is not enough',
+          });
         }
       }
 

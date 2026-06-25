@@ -2,6 +2,7 @@
  * Inventory Service 测试（W 流程 2026-06-24）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { BadRequestException } from '@nestjs/common';
 
 const m = vi.hoisted(() => ({
   stockFindUnique: vi.fn(),
@@ -159,7 +160,7 @@ describe('InventoryService', () => {
           skuId: 'sku-1',
           deltaQty: 0,
         }),
-      ).rejects.toThrow('STOCK_QTY_INVALID');
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

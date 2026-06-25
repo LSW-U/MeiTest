@@ -27,7 +27,7 @@ export class UserService {
   async getProfile(userId: string) {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'User not found' });
+      throw new NotFoundException({ code: 'E-USER-007', message: 'User not found' });
     }
     return {
       id: user.id,
@@ -70,7 +70,7 @@ export class UserService {
 
   async listAddresses(userId: string): Promise<AddressDTO[]> {
     const addresses = await db.address.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     });
     return addresses.map((a) => this.toAddressDTO(a));
@@ -129,10 +129,10 @@ export class UserService {
     }>,
   ): Promise<AddressDTO> {
     const existing = await db.address.findFirst({
-      where: { id: addressId, userId },
+      where: { id: addressId, userId, deletedAt: null },
     });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Address not found' });
+      throw new NotFoundException({ code: 'E-USER-007', message: 'Address not found' });
     }
 
     const result = await db.$transaction(async (tx) => {
@@ -161,11 +161,14 @@ export class UserService {
   }
 
   async deleteAddress(userId: string, addressId: string): Promise<void> {
-    const existing = await db.address.findFirst({ where: { id: addressId, userId } });
+    const existing = await db.address.findFirst({
+      where: { id: addressId, userId, deletedAt: null },
+    });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Address not found' });
+      throw new NotFoundException({ code: 'E-USER-007', message: 'Address not found' });
     }
-    await db.address.delete({ where: { id: addressId } });
+    // 软删除：地址可能被 Order 引用为 shippingAddress，硬删后历史订单看不到收货地址
+    await db.address.update({ where: { id: addressId }, data: { deletedAt: new Date() } });
   }
 
   private toAddressDTO(a: {
@@ -277,7 +280,7 @@ export class UserService {
       where: { id: notificationId, userId },
     });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Notification not found' });
+      throw new NotFoundException({ code: 'E-USER-007', message: 'Notification not found' });
     }
     await db.notification.update({
       where: { id: notificationId },
