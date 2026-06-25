@@ -1,21 +1,35 @@
 /**
- * Order Module — 注册 OrderService + OrderNoService + Controller
+ * Order Module — 注册 OrderService + OrderNoService + OrderTimeoutProcessor + Controller
  *
  * 依赖：
  *   - PaymentModule（提供 PAYMENT_SERVICE_TOKEN）
- *
- * 不直接 import infrastructure（用 withTransaction + deductStock + findWarehouseByPoint 这些 shared/db 纯函数）
+ *   - DispatchModule（提供 DISPATCH_SERVICE_TOKEN，CONFIRMED 时自动建配送任务）
+ *   - BullModule.registerQueue（提供 ORDER_TIMEOUT_QUEUE injection token）
  */
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { OrderNoService } from './order-no.service';
+import { OrderTimeoutProcessor } from './order-timeout.processor';
+import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
 import { PaymentModule } from '../payment/payment.module';
+import { DispatchModule, DISPATCH_SERVICE_TOKEN } from '../dispatch/dispatch.module';
 
 @Module({
-  imports: [PaymentModule],
+  imports: [
+    forwardRef(() => PaymentModule),
+    forwardRef(() => DispatchModule),
+    BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
+  ],
   controllers: [OrderController],
-  providers: [OrderService, OrderNoService],
+  providers: [
+    OrderService,
+    OrderNoService,
+    OrderTimeoutProcessor,
+    // 显式声明 DI token，避免 tsx esbuild 不生成 emitDecoratorMetadata 导致 Inject token 无法解析
+    { provide: 'DISPATCH_SERVICE_TOKEN', useExisting: DISPATCH_SERVICE_TOKEN },
+  ],
   exports: [OrderService, OrderNoService],
 })
 export class OrderModule {}

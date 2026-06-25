@@ -46,6 +46,18 @@ import type {
 } from './order.types';
 import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
+import type { Queue } from 'bullmq';
+import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
+import {
+  enqueueOrderTimeout,
+  cancelOrderTimeout,
+  type OrderTimeoutJobData,
+} from './order-timeout.helper';
+
+/** DispatchService 接口（避免直接 import DispatchService 形成强耦合 + 循环 import） */
+interface DispatchServiceLike {
+  createTaskForOrder(orderId: string): Promise<unknown>;
+}
 
 /** Order 查询结果（含 items + events） */
 export interface OrderWithRelations {
@@ -99,6 +111,9 @@ export class OrderService {
   constructor(
     private readonly orderNoService: OrderNoService,
     @Inject('PaymentServiceToken') private readonly paymentService: PaymentService,
+    @Inject(ORDER_TIMEOUT_QUEUE) private readonly timeoutQueue: Queue<OrderTimeoutJobData>,
+    @Inject('DISPATCH_SERVICE_TOKEN')
+    private readonly dispatchService: DispatchServiceLike | null,
   ) {}
 
   /**
@@ -316,6 +331,10 @@ export class OrderService {
         itemCount: orderItemData.length,
       });
 
+      // W3-C：入队超时取消 job（PENDING_* 状态 15 分钟未推进则自动取消）
+      // 失败容忍：Redis 不可用时不阻塞下单
+      await enqueueOrderTimeout(this.timeoutQueue, created.id, created.status);
+
       return {
         id: created.id,
         orderNo: created.orderNo,
@@ -372,6 +391,51 @@ export class OrderService {
       perspective: eventCtx.perspective,
       reason,
     });
+
+    // 取消超时 job（避免后续 BullMQ job 触发时重复取消）
+    await cancelOrderTimeout(this.timeoutQueue, orderId);
+  }
+
+  /**
+   * 取消待支付/待确认订单（BullMQ 超时 job 触发）
+   *
+   * 幂等：订单若已推进到 CONFIRMED 之后的状态则跳过
+   *
+   * 用法：
+   *   - OrderTimeoutProcessor.process() 调用
+   *   - 未来 admin 拒单接口（W3+）也可复用
+   */
+  async cancelIfPending(
+    orderId: string,
+    ctx: { reason: string; operatorId?: string },
+  ): Promise<{ cancelled: boolean; fromStatus: OrderStatusValue | null }> {
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      logger.warn({
+        msg: 'ORDER_TIMEOUT_ORDER_NOT_FOUND',
+        orderId,
+      });
+      return { cancelled: false, fromStatus: null };
+    }
+    // 已推进到 CONFIRMED 及之后状态 → 跳过（不再取消）
+    if (
+      order.status !== 'PENDING_PAYMENT' &&
+      order.status !== 'PENDING_CONFIRM'
+    ) {
+      logger.info({
+        msg: 'ORDER_TIMEOUT_SKIP',
+        orderId,
+        status: order.status,
+      });
+      return { cancelled: false, fromStatus: order.status };
+    }
+
+    await this.cancelOrderInternal(orderId, {
+      operatorId: ctx.operatorId,
+      reason: ctx.reason,
+    });
+
+    return { cancelled: true, fromStatus: order.status };
   }
 
   /**
@@ -500,6 +564,23 @@ export class OrderService {
         },
       });
     });
+
+    // 事务后取消超时 job（避免 job 触发时再尝试取消已 CONFIRMED 的订单）
+    await cancelOrderTimeout(this.timeoutQueue, orderId);
+
+    // 订单 CONFIRMED → 自动创建 DeliveryTask（骑手可抢单）
+    // 失败容忍：dispatch 创建失败不阻塞 markPaid（admin 可手动补 task）
+    if (this.dispatchService) {
+      try {
+        await this.dispatchService.createTaskForOrder(orderId);
+      } catch (e) {
+        logger.error({
+          msg: 'DISPATCH_TASK_CREATE_FAILED',
+          orderId,
+          error: (e as Error).message,
+        });
+      }
+    }
   }
 
   /**

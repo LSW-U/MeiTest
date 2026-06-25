@@ -9,6 +9,7 @@ import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { CartModule } from './modules/cart/cart.module';
+import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
@@ -16,16 +17,19 @@ import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
+import { QueueModule } from './shared/queue';
 
 @Module({
-  // 字母序：Auth → Cart → Order → Payment → Realtime（W3 加 Dispatch / Rider 时按字母序插入）
+  // 字母序：Auth → Cart → Dispatch → Order → Payment → Realtime（W3 加 Rider 时按字母序插入）
   imports: [
     AuthModule,
     CartModule,
+    DispatchModule,
     OrderModule,
     PaymentModule,
     RealtimeModule,
     IdempotencyModule,
+    QueueModule,
   ],
   controllers: [HealthController, MeController],
   providers: [
