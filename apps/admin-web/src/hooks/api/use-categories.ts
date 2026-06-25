@@ -11,6 +11,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, type ApiSuccess } from '@/lib/api';
 import type { I18nText } from './use-products';
 
+export type { I18nText };
+
 export interface Category {
   id: string;
   name: I18nText;
