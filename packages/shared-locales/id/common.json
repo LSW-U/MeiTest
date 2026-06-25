@@ -28,6 +28,20 @@
       "warehouse": "Gudang",
       "support": "Dukungan",
       "rider-mgmt": "Manajemen Rider"
+    },
+    "dashboard": {
+      "title": "Dasbor"
+    },
+    "products": {
+      "title": "Produk",
+      "create": "Buat Produk"
+    },
+    "categories": {
+      "title": "Kategori"
+    },
+    "warehouses": {
+      "title": "Gudang",
+      "create": "Buat Gudang"
     }
   }
 }

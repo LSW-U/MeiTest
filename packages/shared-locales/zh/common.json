@@ -28,6 +28,20 @@
       "warehouse": "仓库",
       "support": "客服",
       "rider-mgmt": "骑手管理"
+    },
+    "dashboard": {
+      "title": "仪表盘"
+    },
+    "products": {
+      "title": "商品",
+      "create": "新建商品"
+    },
+    "categories": {
+      "title": "分类"
+    },
+    "warehouses": {
+      "title": "仓库",
+      "create": "新建仓库"
     }
   }
 }

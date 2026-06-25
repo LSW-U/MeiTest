@@ -28,6 +28,20 @@
       "warehouse": "Warehouse",
       "support": "Support",
       "rider-mgmt": "Rider Management"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "products": {
+      "title": "Produtu",
+      "create": "Kria Produtu"
+    },
+    "categories": {
+      "title": "Kategoria"
+    },
+    "warehouses": {
+      "title": "Armazén",
+      "create": "Kria Armazén"
     }
   }
 }

@@ -28,6 +28,20 @@
       "warehouse": "Armazém",
       "support": "Suporte",
       "rider-mgmt": "Gestão de Riders"
+    },
+    "dashboard": {
+      "title": "Painel"
+    },
+    "products": {
+      "title": "Produtos",
+      "create": "Criar Produto"
+    },
+    "categories": {
+      "title": "Categorias"
+    },
+    "warehouses": {
+      "title": "Armazéns",
+      "create": "Criar Armazém"
     }
   }
 }

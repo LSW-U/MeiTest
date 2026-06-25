@@ -28,6 +28,20 @@
       "warehouse": "Warehouse",
       "support": "Support",
       "rider-mgmt": "Rider Management"
+    },
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "products": {
+      "title": "Products",
+      "create": "Create Product"
+    },
+    "categories": {
+      "title": "Categories"
+    },
+    "warehouses": {
+      "title": "Warehouses",
+      "create": "Create Warehouse"
     }
   }
 }
