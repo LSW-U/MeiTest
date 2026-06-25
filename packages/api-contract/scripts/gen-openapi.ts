@@ -97,6 +97,10 @@ import {
   SystemConfigResponse,
   UpdateSystemConfigRequest,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
+  // im（流程 M W3 自建 WS 用户签名接口）
+  ImSignature,
+  ConversationType,
+  ImMessage,
   // common
   ErrorResponse,
   Id,
@@ -1149,6 +1153,29 @@ registry.registerPath({
   },
 });
 
+// ============================================================================
+// IM（流程 M W3 — 自建 WebSocket 用户签名接口）
+// ============================================================================
+
+registry.register('ImSignature', ImSignature);
+registry.register('ImMessage', ImMessage);
+registry.register('ConversationType', ConversationType);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/im/signature',
+  tags: ['im'],
+  description:
+    '获取 IM 自建 WS 连接信息（URL / namespace / 事件名 / 会话 ID 模板）。三端 SDK 启动时调用一次。鉴权方式 = bearer（复用 access token）',
+  responses: {
+    200: {
+      description: 'IM 连接信息',
+      content: { 'application/json': { schema: ImSignature } },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ===== 生成 =====
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({
@@ -1180,6 +1207,8 @@ const openapi = generator.generateDocument({
     { name: 'order', description: '订单' },
     { name: 'payment', description: '支付' },
     { name: 'platform', description: '平台 dashboard / 审计 / 系统配置' },
+    { name: 'settle', description: '结算单 + 提现审核（M W3）' },
+    { name: 'im', description: 'IM 自建 WebSocket 用户签名（M W3）' },
   ],
 });
 

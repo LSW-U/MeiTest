@@ -1,0 +1,28 @@
+{
+  "signature": {
+    "title": "Conexão IM",
+    "url": "URL do WebSocket",
+    "namespace": "Namespace",
+    "transport": "Transporte",
+    "authScheme": "Esquema de Autenticação",
+    "userId": "ID do Usuário",
+    "serverEvents": "Eventos do Servidor",
+    "clientEvents": "Eventos do Cliente",
+    "conversationFormats": "Formatos de ID de Conversa",
+    "messageRetentionDays": "Retenção de Mensagens (dias)",
+    "connect": "Conectar"
+  },
+  "conversation": {
+    "customerMerchant": "Cliente ↔ Comerciante",
+    "customerRider": "Cliente ↔ Estafeta",
+    "customerService": "Cliente ↔ Atendimento",
+    "placeholder": "Digite uma mensagem",
+    "send": "Enviar",
+    "empty": "Sem mensagens"
+  },
+  "errors": {
+    "E-IM-001": "Formato de ID de conversa inválido",
+    "E-IM-002": "Conteúdo da mensagem excede 2000 caracteres",
+    "E-IM-003": "Não autenticado"
+  }
+}

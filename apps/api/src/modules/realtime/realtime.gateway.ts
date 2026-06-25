@@ -32,6 +32,7 @@ import type { JwtPayload } from '../auth/auth.types';
 import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 import { logger } from '../../shared/logger/logger';
 import { redis } from '../../shared/cache';
+import { db } from '../../shared/db';
 
 /** WS 命名空间：/realtime（与 HTTP 路由 /api/v1 分开，避免冲突） */
 const WS_NAMESPACE = '/realtime';
@@ -67,6 +68,18 @@ export interface RiderLocationUpdate {
   /** 可选：方向（0-360） */
   heading?: number;
   timestamp: number;
+}
+
+/** IM 错误（结构化，前端按 code 查 i18n） */
+export interface ImError {
+  /** E-IM-001/002/003，对齐 packages/api-contract/src/schemas/im.ts 注释 */
+  code: 'E-IM-001' | 'E-IM-002' | 'E-IM-003';
+  message: string;
+}
+
+/** 构造结构化 IM 错误（审查报告 P1 #11 — 对齐契约） */
+function imError(code: ImError['code'], message: string): { ok: false; error: ImError } {
+  return { ok: false, error: { code, message } };
 }
 
 /** Socket.IO handshake 中的 user（JWT 解码后） */
@@ -275,18 +288,38 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
    *
    * 客户端用法：
    *   socket.emit('im:join', { conversationId: 'conv:cm:c1:shop1' });
+   *
+   * 鉴权（审查报告 P0 #3 修复）：
+   *   - super_admin：允许任意会话（平台监管）
+   *   - customer_service：允许 customer_service 类会话（cs:*）+ 可代回任意会话
+   *   - customer：必须是 conversationId 中的 customerId
+   *   - rider：必须是 customer_rider 会话中的 riderId
+   *   - customer_rider 会话：额外校验 orderId 属于 customerId（DB 查 Order）
    */
   @SubscribeMessage('im:join')
   async handleImJoin(
     @MessageBody() data: { conversationId: string },
     @ConnectedSocket() client: Socket,
-  ): Promise<{ ok: true; conversationId: string } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; conversationId: string } | { ok: false; error: ImError }> {
     const user = (client.data as { user?: WsUser }).user;
     if (!user) {
-      return { ok: false, error: 'not authenticated' };
+      return imError('E-IM-003', 'not authenticated');
     }
     if (!data?.conversationId?.startsWith('conv:')) {
-      return { ok: false, error: 'invalid conversationId (must start with conv:)' };
+      return imError('E-IM-001', 'invalid conversationId (must start with conv:)');
+    }
+
+    const auth = await this.assertParticipant(data.conversationId, user);
+    if (!auth.ok) {
+      logger.warn({
+        msg: 'im_join_forbidden',
+        userId: user.sub,
+        role: user.role,
+        conversationId: data.conversationId,
+        reason: auth.error,
+      });
+      // 鉴权失败不暴露内部原因（防止信息泄露），统一返回 E-IM-003
+      return imError('E-IM-003', 'forbidden: not a participant');
     }
 
     await client.join(data.conversationId);
@@ -330,16 +363,28 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       content: string;
     },
     @ConnectedSocket() client: Socket,
-  ): Promise<{ ok: true; message: ImMessage } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; message: ImMessage } | { ok: false; error: ImError }> {
     const user = (client.data as { user?: WsUser }).user;
     if (!user) {
-      return { ok: false, error: 'not authenticated' };
+      return imError('E-IM-003', 'not authenticated');
     }
     if (!data?.conversationId?.startsWith('conv:')) {
-      return { ok: false, error: 'invalid conversationId' };
+      return imError('E-IM-001', 'invalid conversationId');
     }
     if (!data?.content || typeof data.content !== 'string' || data.content.length > 2000) {
-      return { ok: false, error: 'content required (string, max 2000 chars)' };
+      return imError('E-IM-002', 'content required (string, max 2000 chars)');
+    }
+
+    // 审查报告 P0 #3 修复：必须先 join 才能 send
+    // （join 时已过 assertParticipant 校验，包括 customer_rider 的 orderId 归属）
+    if (!client.rooms.has(data.conversationId)) {
+      logger.warn({
+        msg: 'im_send_not_joined',
+        userId: user.sub,
+        role: user.role,
+        conversationId: data.conversationId,
+      });
+      return imError('E-IM-003', 'must join conversation before sending');
     }
 
     const message: ImMessage = {
@@ -415,5 +460,95 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (a === myUserId) return b;
     if (b === myUserId) return a;
     return null;
+  }
+
+  /**
+   * 校验 user 是否为会话参与方（审查报告 P0 #3）
+   *
+   * 规则：
+   *   - super_admin：允许任意（平台监管）
+   *   - customer_service：允许任意（客服可介入三方会话）
+   *   - customer：必须是 conversationId 中的 customerId（parts[2]）
+   *   - rider：必须是 customer_rider 会话中的 riderId（parts[3]）
+   *   - customer_rider 会话：额外校验 orderId 属于 customerId（DB 查 Order.userId）
+   *
+   * @returns ok=true 通过；ok=false + error 描述拒绝原因
+   */
+  private async assertParticipant(
+    conversationId: string,
+    user: WsUser,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const parts = conversationId.split(':');
+    // conv:cm:c1:shop1 → ['conv', 'cm', 'c1', 'shop1']，最小 4 段
+    if (parts.length < 4) {
+      return { ok: false, error: 'invalid conversationId format' };
+    }
+    const [, convType, customerId, partyB] = parts;
+    const orderId = parts.length >= 5 ? parts[4] : null;
+
+    // 平台与客服角色允许任意会话
+    if (user.role === 'super_admin' || user.role === 'customer_service') {
+      return { ok: true };
+    }
+
+    if (convType === 'cm') {
+      // customer ↔ merchant：customer 必须是 customerId；merchant 端走 super_admin 视角已放过
+      if (user.role === 'customer' && user.sub === customerId) {
+        return { ok: true };
+      }
+      return { ok: false, error: 'not a participant of this customer_merchant conversation' };
+    }
+
+    if (convType === 'cs') {
+      // customer ↔ customer_service：customer 必须是 customerId；客服角色已放过
+      if (user.role === 'customer' && user.sub === customerId) {
+        return { ok: true };
+      }
+      return { ok: false, error: 'not a participant of this customer_service conversation' };
+    }
+
+    if (convType === 'cr') {
+      // customer ↔ rider：customer 必须是 customerId AND rider 必须是 partyB AND orderId 属于 customerId
+      if (!orderId) {
+        return { ok: false, error: 'customer_rider conversation requires orderId' };
+      }
+      if (user.role === 'customer' && user.sub === customerId) {
+        // 校验订单归属
+        const belongs = await this.verifyOrderOwnership(orderId, customerId);
+        if (!belongs) {
+          return { ok: false, error: 'order does not belong to customer' };
+        }
+        return { ok: true };
+      }
+      if (user.role === 'rider' && user.sub === partyB) {
+        // rider 不强校验订单归属（已通过派单系统获得该订单）
+        return { ok: true };
+      }
+      return { ok: false, error: 'not a participant of this customer_rider conversation' };
+    }
+
+    return { ok: false, error: `unknown conversation type: ${convType}` };
+  }
+
+  /**
+   * 校验订单归属（customer_rider 会话用）
+   * C 流程订单/支付完成后此项真实有效；MVP 早期 Order 表为空时返回 false
+   */
+  private async verifyOrderOwnership(orderId: string, customerId: string): Promise<boolean> {
+    try {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { userId: true },
+      });
+      return order?.userId === customerId;
+    } catch (err) {
+      logger.error({
+        msg: 'im_order_verify_failed',
+        orderId,
+        customerId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return false;
+    }
   }
 }

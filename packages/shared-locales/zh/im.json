@@ -1,0 +1,28 @@
+{
+  "signature": {
+    "title": "IM 连接",
+    "url": "WebSocket 地址",
+    "namespace": "命名空间",
+    "transport": "传输方式",
+    "authScheme": "鉴权方式",
+    "userId": "用户 ID",
+    "serverEvents": "服务端事件",
+    "clientEvents": "客户端事件",
+    "conversationFormats": "会话 ID 格式",
+    "messageRetentionDays": "消息保留天数",
+    "connect": "连接"
+  },
+  "conversation": {
+    "customerMerchant": "客户 ↔ 商家",
+    "customerRider": "客户 ↔ 骑手",
+    "customerService": "客户 ↔ 客服",
+    "placeholder": "输入消息",
+    "send": "发送",
+    "empty": "暂无消息"
+  },
+  "errors": {
+    "E-IM-001": "会话 ID 格式不合法",
+    "E-IM-002": "消息内容超过 2000 字符",
+    "E-IM-003": "未登录"
+  }
+}

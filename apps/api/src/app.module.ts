@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 // FLOW C（交易/配送）: Cart / Order / Payment
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CartModule } from './modules/cart/cart.module';
+import { ImModule } from './modules/im/im.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
@@ -22,6 +23,7 @@ import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { UserModule } from './modules/user/user.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { QueueModule } from './shared/queue';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
@@ -34,6 +36,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     AuthModule,
     CartModule,
     CatalogModule,
+    ImModule,
     InventoryModule,
     OrderModule,
     PaymentModule,
@@ -44,6 +47,8 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     ShopModule,
     UserModule,
     WarehouseModule,
+    // 共享基建（M W3 引入 BullMQ；C W3 复用同一 QueueModule 连接）
+    QueueModule,
   ],
   controllers: [HealthController, MeController],
   providers: [

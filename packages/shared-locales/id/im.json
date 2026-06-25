@@ -1,0 +1,28 @@
+{
+  "signature": {
+    "title": "Koneksi IM",
+    "url": "URL WebSocket",
+    "namespace": "Namespace",
+    "transport": "Transport",
+    "authScheme": "Skema Autentikasi",
+    "userId": "ID Pengguna",
+    "serverEvents": "Event Server",
+    "clientEvents": "Event Klien",
+    "conversationFormats": "Format ID Percakapan",
+    "messageRetentionDays": "Retensi Pesan (hari)",
+    "connect": "Hubungkan"
+  },
+  "conversation": {
+    "customerMerchant": "Pelanggan ↔ Pedagang",
+    "customerRider": "Pelanggan ↔ Kurir",
+    "customerService": "Pelanggan ↔ CS",
+    "placeholder": "Ketik pesan",
+    "send": "Kirim",
+    "empty": "Belum ada pesan"
+  },
+  "errors": {
+    "E-IM-001": "Format ID percakapan tidak valid",
+    "E-IM-002": "Konten pesan melebihi 2000 karakter",
+    "E-IM-003": "Belum terautentikasi"
+  }
+}

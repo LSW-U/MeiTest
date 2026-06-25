@@ -1,0 +1,28 @@
+{
+  "signature": {
+    "title": "IM Connection",
+    "url": "WebSocket URL",
+    "namespace": "Namespace",
+    "transport": "Transport",
+    "authScheme": "Auth Scheme",
+    "userId": "User ID",
+    "serverEvents": "Server Events",
+    "clientEvents": "Client Events",
+    "conversationFormats": "Conversation ID Formats",
+    "messageRetentionDays": "Message Retention (days)",
+    "connect": "Connect"
+  },
+  "conversation": {
+    "customerMerchant": "Customer ↔ Merchant",
+    "customerRider": "Customer ↔ Rider",
+    "customerService": "Customer ↔ Service",
+    "placeholder": "Type a message",
+    "send": "Send",
+    "empty": "No messages"
+  },
+  "errors": {
+    "E-IM-001": "Invalid conversationId format",
+    "E-IM-002": "Message content exceeds 2000 characters",
+    "E-IM-003": "Not authenticated"
+  }
+}

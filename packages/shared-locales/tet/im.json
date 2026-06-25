@@ -1,0 +1,28 @@
+{
+  "signature": {
+    "title": "Koneksaun IM",
+    "url": "URL WebSocket",
+    "namespace": "Namespace",
+    "transport": "Transporte",
+    "authScheme": "Esquema Autentikasaun",
+    "userId": "ID Uzuáriu",
+    "serverEvents": "Eventu Server",
+    "clientEvents": "Eventu Kliente",
+    "conversationFormats": "Formatu ID Konversasaun",
+    "messageRetentionDays": "Retensaun Mensajen (loron)",
+    "connect": "Konekta"
+  },
+  "conversation": {
+    "customerMerchant": "Kliente ↔ Comerciante",
+    "customerRider": "Kliente ↔ Rider",
+    "customerService": "Kliente ↔ Atendimentu",
+    "placeholder": "Hakerek mensajen",
+    "send": "Haruka",
+    "empty": "Seidauk iha mensajen"
+  },
+  "errors": {
+    "E-IM-001": "Formatu ID konversasaun la duni",
+    "E-IM-002": "Konteu mensajen menus 2000 karakter",
+    "E-IM-003": "Seidauk autentika"
+  }
+}

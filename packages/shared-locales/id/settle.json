@@ -1,0 +1,60 @@
+{
+  "settlement": {
+    "title": "Penyelesaian",
+    "subjectType": {
+      "label": "Subjek",
+      "MERCHANT": "Pedagang",
+      "RIDER": "Kurir"
+    },
+    "status": {
+      "label": "Status",
+      "PENDING": "Menunggu",
+      "CONFIRMED": "Dikonfirmasi",
+      "PAID": "Dibayar",
+      "DISPUTED": "Sengketa"
+    },
+    "periodDate": "Periode",
+    "orderCount": "Pesanan",
+    "grossAmount": "Kotor",
+    "commission": "Komisi",
+    "refundAmount": "Pengembalian",
+    "netAmount": "Bersih",
+    "confirmedAt": "Dikonfirmasi Pada",
+    "paidAt": "Dibayar Pada",
+    "manualRun": "Jalankan Manual",
+    "runByDate": "Jalankan per Tanggal",
+    "empty": "Belum ada penyelesaian"
+  },
+  "withdrawal": {
+    "title": "Permintaan Penarikan",
+    "amount": "Jumlah",
+    "status": {
+      "label": "Status",
+      "PENDING": "Menunggu Review",
+      "APPROVED": "Disetujui",
+      "REJECTED": "Ditolak",
+      "PAID": "Dibayar",
+      "CANCELLED": "Dibatalkan"
+    },
+    "payoutAccount": "Akun Pembayaran",
+    "payoutReference": "Referensi Pembayaran",
+    "requestedAt": "Diajukan Pada",
+    "reviewedAt": "Direview Pada",
+    "paidAt": "Dibayar Pada",
+    "review": "Review",
+    "approve": "Setujui",
+    "reject": "Tolak",
+    "markPaid": "Tandai Sudah Dibayar",
+    "cancel": "Batalkan",
+    "create": "Ajukan Penarikan",
+    "availableBalance": "Saldo Tersedia",
+    "empty": "Belum ada permintaan penarikan"
+  },
+  "errors": {
+    "E-SETTLE-001": "Jumlah penarikan melebihi saldo tersedia",
+    "E-SETTLE-002": "Permintaan penarikan tidak ditemukan",
+    "E-SETTLE-003": "Status penarikan tidak mengizinkan tindakan ini",
+    "E-SETTLE-004": "Penyelesaian tidak ditemukan",
+    "E-SETTLE-005": "Frekuensi penyelesaian tidak valid (harus day/week/month)"
+  }
+}

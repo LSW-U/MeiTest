@@ -25,6 +25,8 @@ import enPayment from './en/payment.json';
 import enCatalog from './en/catalog.json';
 import enCart from './en/cart.json';
 import enPlatform from './en/platform.json';
+import enSettle from './en/settle.json';
+import enIm from './en/im.json';
 import enErrors from './en/errors.json';
 
 import zhCommon from './zh/common.json';
@@ -37,6 +39,8 @@ import zhPayment from './zh/payment.json';
 import zhCatalog from './zh/catalog.json';
 import zhCart from './zh/cart.json';
 import zhPlatform from './zh/platform.json';
+import zhSettle from './zh/settle.json';
+import zhIm from './zh/im.json';
 import zhErrors from './zh/errors.json';
 
 import idCommon from './id/common.json';
@@ -49,6 +53,8 @@ import idPayment from './id/payment.json';
 import idCatalog from './id/catalog.json';
 import idCart from './id/cart.json';
 import idPlatform from './id/platform.json';
+import idSettle from './id/settle.json';
+import idIm from './id/im.json';
 import idErrors from './id/errors.json';
 
 import ptCommon from './pt/common.json';
@@ -61,6 +67,8 @@ import ptPayment from './pt/payment.json';
 import ptCatalog from './pt/catalog.json';
 import ptCart from './pt/cart.json';
 import ptPlatform from './pt/platform.json';
+import ptSettle from './pt/settle.json';
+import ptIm from './pt/im.json';
 import ptErrors from './pt/errors.json';
 
 import tetCommon from './tet/common.json';
@@ -73,6 +81,8 @@ import tetPayment from './tet/payment.json';
 import tetCatalog from './tet/catalog.json';
 import tetCart from './tet/cart.json';
 import tetPlatform from './tet/platform.json';
+import tetSettle from './tet/settle.json';
+import tetIm from './tet/im.json';
 import tetErrors from './tet/errors.json';
 
 export const SUPPORTED_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
@@ -91,6 +101,8 @@ export interface MessagesBundle {
   catalog: typeof enCatalog;
   cart: typeof enCart;
   platform: typeof enPlatform;
+  settle: typeof enSettle;
+  im: typeof enIm;
   errors: typeof enErrors;
 }
 
@@ -107,6 +119,8 @@ export const messages: Record<Locale, MessagesBundle> = {
     catalog: enCatalog,
     cart: enCart,
     platform: enPlatform,
+    settle: enSettle,
+    im: enIm,
     errors: enErrors,
   },
   zh: {
@@ -120,6 +134,8 @@ export const messages: Record<Locale, MessagesBundle> = {
     catalog: zhCatalog,
     cart: zhCart,
     platform: zhPlatform,
+    settle: zhSettle,
+    im: zhIm,
     errors: zhErrors,
   },
   id: {
@@ -133,6 +149,8 @@ export const messages: Record<Locale, MessagesBundle> = {
     catalog: idCatalog,
     cart: idCart,
     platform: idPlatform,
+    settle: idSettle,
+    im: idIm,
     errors: idErrors,
   },
   pt: {
@@ -146,6 +164,8 @@ export const messages: Record<Locale, MessagesBundle> = {
     catalog: ptCatalog,
     cart: ptCart,
     platform: ptPlatform,
+    settle: ptSettle,
+    im: ptIm,
     errors: ptErrors,
   },
   tet: {
@@ -159,6 +179,8 @@ export const messages: Record<Locale, MessagesBundle> = {
     catalog: tetCatalog,
     cart: tetCart,
     platform: tetPlatform,
+    settle: tetSettle,
+    im: tetIm,
     errors: tetErrors,
   },
 };

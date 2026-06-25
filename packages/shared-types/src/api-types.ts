@@ -4521,6 +4521,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/im/signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取 IM 自建 WS 连接信息（URL / namespace / 事件名 / 会话 ID 模板）。三端 SDK 启动时调用一次。鉴权方式 = bearer（复用 access token） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description IM 连接信息 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            url: string;
+                            namespace: string;
+                            /**
+                             * @default websocket
+                             * @enum {string}
+                             */
+                            transport: "websocket" | "polling";
+                            /** @enum {string} */
+                            authScheme: "bearer";
+                            userId: string;
+                            /** @enum {string} */
+                            role: "customer" | "rider" | "super_admin" | "customer_service";
+                            serverEvents: string[];
+                            clientEvents: string[];
+                            conversationFormats: {
+                                customerMerchant: {
+                                    template: string;
+                                    placeholders: string[];
+                                };
+                                customerRider: {
+                                    template: string;
+                                    placeholders: string[];
+                                };
+                                customerService: {
+                                    template: string;
+                                    placeholders: string[];
+                                };
+                            };
+                            /** Format: date-time */
+                            serverTime: string;
+                            messageRetentionDays: number;
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5372,6 +5459,52 @@ export interface components {
             value: string;
             description?: string;
         };
+        ImSignature: {
+            url: string;
+            namespace: string;
+            /**
+             * @default websocket
+             * @enum {string}
+             */
+            transport: "websocket" | "polling";
+            /** @enum {string} */
+            authScheme: "bearer";
+            userId: string;
+            /** @enum {string} */
+            role: "customer" | "rider" | "super_admin" | "customer_service";
+            serverEvents: string[];
+            clientEvents: string[];
+            conversationFormats: {
+                customerMerchant: {
+                    template: string;
+                    placeholders: string[];
+                };
+                customerRider: {
+                    template: string;
+                    placeholders: string[];
+                };
+                customerService: {
+                    template: string;
+                    placeholders: string[];
+                };
+            };
+            /** Format: date-time */
+            serverTime: string;
+            messageRetentionDays: number;
+        };
+        ImMessage: {
+            messageId: string;
+            conversationId: string;
+            /** @enum {string} */
+            conversationType: "customer_merchant" | "customer_rider" | "customer_service";
+            senderId: string;
+            /** @enum {string} */
+            senderRole: "customer" | "rider" | "super_admin" | "customer_service";
+            content: string;
+            timestamp: number;
+        };
+        /** @enum {string} */
+        ConversationType: "customer_merchant" | "customer_rider" | "customer_service";
     };
     responses: never;
     parameters: never;

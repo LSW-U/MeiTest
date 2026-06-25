@@ -1,0 +1,60 @@
+{
+  "settlement": {
+    "title": "Liquidações",
+    "subjectType": {
+      "label": "Sujeito",
+      "MERCHANT": "Comerciante",
+      "RIDER": "Estafeta"
+    },
+    "status": {
+      "label": "Estado",
+      "PENDING": "Pendente",
+      "CONFIRMED": "Confirmado",
+      "PAID": "Pago",
+      "DISPUTED": "Contestado"
+    },
+    "periodDate": "Período",
+    "orderCount": "Pedidos",
+    "grossAmount": "Bruto",
+    "commission": "Comissão",
+    "refundAmount": "Reembolsos",
+    "netAmount": "Líquido",
+    "confirmedAt": "Confirmado Em",
+    "paidAt": "Pago Em",
+    "manualRun": "Execução Manual",
+    "runByDate": "Executar por Data",
+    "empty": "Sem liquidações ainda"
+  },
+  "withdrawal": {
+    "title": "Pedidos de Levantamento",
+    "amount": "Valor",
+    "status": {
+      "label": "Estado",
+      "PENDING": "Aguardando Revisão",
+      "APPROVED": "Aprovado",
+      "REJECTED": "Rejeitado",
+      "PAID": "Pago",
+      "CANCELLED": "Cancelado"
+    },
+    "payoutAccount": "Conta de Pagamento",
+    "payoutReference": "Referência de Pagamento",
+    "requestedAt": "Solicitado Em",
+    "reviewedAt": "Revisto Em",
+    "paidAt": "Pago Em",
+    "review": "Rever",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "markPaid": "Marcar como Pago",
+    "cancel": "Cancelar",
+    "create": "Solicitar Levantamento",
+    "availableBalance": "Saldo Disponível",
+    "empty": "Sem pedidos de levantamento"
+  },
+  "errors": {
+    "E-SETTLE-001": "Valor de levantamento excede saldo disponível",
+    "E-SETTLE-002": "Pedido de levantamento não encontrado",
+    "E-SETTLE-003": "Estado do levantamento não permite esta ação",
+    "E-SETTLE-004": "Liquidação não encontrada",
+    "E-SETTLE-005": "Frequência de liquidação inválida (deve ser day/week/month)"
+  }
+}

@@ -7,9 +7,10 @@
  *
  * 切换真数据：实现 OrderAggregator 接口（注入 SETTLE_ORDER_AGGREGATOR token）
  */
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
+import { getYesterdayInTz } from '../../shared/datetime';
 import type {
   SettlementType,
   SettlementQueryType,
@@ -110,7 +111,38 @@ export class SettlementService {
         netAmount,
         status: 'PENDING',
       },
+    }).catch((err: { code?: string; message?: string }) => {
+      // P2002 = unique constraint violation（periodDate+subjectType+subjectId 已存在）
+      // 审查报告 P0 #5：并发跑两个 runSettlement 时，第二个落到 catch 走"已存在"分支
+      if (err?.code === 'P2002') {
+        logger.info({
+          msg: 'SETTLEMENT_RACE_DETECTED',
+          periodDate,
+          subjectType: input.subjectType,
+          subjectId: input.subjectId,
+        });
+        return null;
+      }
+      throw err;
     });
+
+    if (row === null) {
+      // 并发赢家已写入，回查现有记录返回（幂等语义）
+      const existing = await db.settlement.findFirst({
+        where: {
+          periodDate: new Date(periodDate),
+          subjectType: input.subjectType,
+          subjectId: input.subjectId,
+        },
+      });
+      if (existing) {
+        return this.toDto(existing);
+      }
+      throw new ConflictException({
+        code: 'E-SETTLE-003',
+        message: 'Settlement race detected but record not found',
+      });
+    }
 
     logger.info({
       msg: 'SETTLEMENT_CREATED',
@@ -121,6 +153,48 @@ export class SettlementService {
     });
 
     return this.toDto(row);
+  }
+
+  /**
+   * 确认结算单（PENDING → CONFIRMED）
+   *
+   * 审查报告 P0 #5 修复：原代码 settlement 创建后永远是 PENDING，
+   * 而 getAvailableBalance 只认 CONFIRMED/PAID → 余额永远是 0。
+   *
+   * 调用方：
+   *   - super_admin 在 admin-web 点"确认"按钮（POST /:id/confirm）
+   *   - 未来可由订单流程末尾自动触发（C 流程完成后接）
+   */
+  async confirm(id: string, confirmerId: string): Promise<SettlementType> {
+    const row = await db.settlement.findUnique({ where: { id } });
+    if (!row) {
+      throw new NotFoundException({
+        code: 'E-SETTLE-004',
+        message: `Settlement not found: ${id}`,
+      });
+    }
+    if (row.status !== 'PENDING') {
+      throw new ConflictException({
+        code: 'E-SETTLE-003',
+        message: `Settlement status ${row.status} cannot be confirmed (must be PENDING)`,
+      });
+    }
+
+    const updated = await db.settlement.update({
+      where: { id },
+      data: {
+        status: 'CONFIRMED',
+        confirmedAt: new Date(),
+      },
+    });
+
+    logger.info({
+      msg: 'SETTLEMENT_CONFIRMED',
+      id,
+      confirmerId,
+    });
+
+    return this.toDto(updated);
   }
 
   /** 列表查询（游标分页简化为 offset 分页） */
@@ -174,9 +248,7 @@ export class SettlementService {
   }
 
   private getYesterday(): string {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
+    return getYesterdayInTz();
   }
 
   private toDto(row: {
