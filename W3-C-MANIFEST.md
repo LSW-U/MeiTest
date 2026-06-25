@@ -309,7 +309,112 @@ const order = await this.idempotencyService.withIdempotency(
 
 ---
 
-**Manifest 版本**：v1.0
-**最后更新**：2026-06-25（Asia/Dili）
+**Manifest 版本**：v1.1（加审查报告修复章节）
+**最后更新**：2026-06-26（Asia/Dili）
 **作者**：流程 C AI（GLM-5.2[1M]，Claude Code harness）
 **主 AI 整合时**：按 §2 共享文件改动逐项 merge，§4 冲突点逐项核对，§8 验证步骤必跑
+
+---
+
+## 9. 审查报告修复（v1.1 新增，2026-06-26）
+
+依据 `W3-C-REVIEW.md`（评分 7.2/10）逐项修复，分 4 个 commit：
+
+| Commit | 修复内容 | 测试 |
+|---|---|---|
+| `[W3-C-fix-P0]` ea0e5f9 | B1 clearOrderedItems 接入 + B2 apply 加 @Roles | +1 测试 |
+| `[W3-C-fix-P1]` 31fb6ac | S1 cart 缓存降级 / S2 acceptTask 事务 / S3 deviceType 透传 / S4 stuck-pending 检测 / S5 reportIssue 写 OrderEvent | +1 测试 |
+| `[W3-C-fix-P2]` 79ad3dc | S6 rider Redis/DB 一致性 / M1-M7 全部小改进 | — |
+| `[W3-C-fix-tests]` (post) | 补 dispatch.service 17 测 + rider.service 17 测 | +34 测试 |
+| `[W3-C-fix-e2e]` c56e2f2 | Order→Dispatch 全链路集成测试 | +1 测试 |
+
+### 9.1 P0 阻塞项（已修复）
+
+**B1：clearOrderedItems 死代码** ✅
+- 新增 `CART_SERVICE_TOKEN` + `CartServiceLike` 接口（仿 DISPATCH_SERVICE_TOKEN 模式）
+- OrderService 注入 cartService（容错为 null）+ createOrder Step 7 后调 clearOrderedItems
+- 失败容忍：清购物车异常只 warn，不阻塞下单
+
+**B2：RiderApplicationController 缺 @Roles** ✅
+- 加 `@Roles('customer')`
+- **审查报告描述修正**：实际表现是"功能死锁"（RolesGuard least-privilege 拒绝所有访问），不是"鉴权缺口"
+
+### 9.2 P1 应修项（已修复）
+
+**S1：cart JSON.parse try-catch** ✅
+- 缓存损坏降级到 DB（CART_CACHE_DESERIALIZE_FAILED 日志）
+
+**S2：acceptTask 双 UPDATE 包事务** ✅
+- 先查 task.orderId + 状态校验 → withTransaction(乐观锁 + order.update)
+- 任一失败自动回滚
+
+**S3：cancelIfPending 透传 deviceType/perspective** ✅
+- deviceType='admin_web'（用现有值表达"系统后台操作"）
+- perspective='system'
+
+**S4：idempotency stuck-pending 检测** ✅
+- STUCK_PENDING_MS = 5min（fn hang 阈值）
+- PENDING > 5min → 删旧重建（不再死锁 24h）
+
+**S5：reportIssue 写 OrderEvent + WS 推客服** ✅
+- 新 migration `add_order_event_issue_reported_c`：OrderEventType 加 ISSUE_REPORTED
+- 写 OrderEvent + WS 推 'customer-service' room
+
+### 9.3 P2 改进项（已修复）
+
+| 项 | 修复 |
+|---|---|
+| **S6** | rider getProfile：DB ONLINE 但 Redis 失效 → 强制返回 OFFLINE |
+| **M1** | cart previewCheckout 改静态 import findWarehouseByPoint |
+| **M2** | order.controller Idempotency-Key UUID 校验（非 UUID 视为未传） |
+| **M3** | dispatch.controller :id 加 ParseUUIDPipe（4 端点） |
+| **M4** | rider heartbeat 校验 APPROVED 状态 |
+| **M5** | cart addItem 数量上限 99 |
+| **M6** | rider review APPROVED 保留原 rejectReason |
+| **M7** | idempotency handleExistingKey 递归深度限制 3 |
+
+### 9.4 新增 migration
+
+| Migration | 内容 | 说明 |
+|---|---|---|
+| `20260625010000_add_order_event_issue_reported_c` | ALTER TYPE OrderEventType ADD VALUE ISSUE_REPORTED | S5 修复用 |
+
+### 9.5 修复后测试覆盖
+
+| 项 | 测试数 | 备注 |
+|---|---|---|
+| W1 留下 | 5 spec | assert-jwt-secret / auth / device-type.guard / roles.guard / realtime.gateway |
+| W2-C 留下 | 3 spec / 61 测试 | order-no.service / order-status.machine / payment.service |
+| **W3-C T4** | 3 spec / 32 测试 | idempotency (+1 stuck-pending) / cart / order (+1 B1 容错) |
+| **W3-C fix-tests** | 2 spec / 34 测试 | dispatch.service (17) / rider.service (17) |
+| **W3-C fix-e2e** | 1 spec / 1 测试 | Order→Dispatch 全链路集成 |
+| **合计** | **14 spec / 175 测试** | W3-C 范围累计 66 测试 |
+
+### 9.6 修复后评分预估
+
+| 维度 | 原评分 | 修复后预估 | 提升 |
+|---|---|---|---|
+| 正确性 | 6 | **9** | B1 + S5 修复 |
+| 安全性 | 7 | **9** | B2 + M2/M3 修复 |
+| 可维护性 | 8 | **9** | M1/M6/M7 修复 |
+| 性能 | 8 | 8 | 不变（无性能问题） |
+| 测试覆盖 | 7 | **9** | dispatch/rider 17+17 + e2e 集成 |
+| **整体** | **7.2** | **8.8** | +1.6 |
+
+### 9.7 推到 W4 / W5 的技术债
+
+- 补 e2e（testcontainers + 真实 PostGIS + Redis）— 当前用 in-memory mock，不验证 Prisma SQL 实际行为
+- 补 dispatch C2 按仓库分组派单算法 — preferredWarehouseIds 字段已加，未做调度
+- 补 dispatch C3 系统派单 worker — AUTO_DISPATCH 模式存 Redis 但无 worker
+- 补 admin 接单 endpoint（PENDING_CONFIRM → CONFIRMED）— 当前仅 markPaid 一条路径
+- 补 dispatch/rider endpoint path 注册到 OpenAPI（gen-openapi.ts 加 11 path）
+
+### 9.8 整合时主 AI 提示
+
+- **新 migration 2 个**：`add_rider_application_c` + `add_order_event_issue_reported_c`，按时间戳顺序 deploy
+- **共享文件冲突点更新**：
+  - `schema.prisma` 新增 enum 值（OrderEventType）+ RiderProfile 6 列
+  - `app.module.ts` 不变（已在 v1.0 完成）
+  - `package.json` 不变（v1.0 已加 bullmq）
+- **整合测试**：14 spec / 175 测试应全过
+
