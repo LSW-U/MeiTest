@@ -160,6 +160,7 @@ describe('IdempotencyService', () => {
         id: 'id-2',
         status: 'PENDING',
         responsePayload: null,
+        createdAt: new Date(), // 刚创建（未触发 stuck-pending）
         expiresAt: new Date(Date.now() + 60_000),
       });
 
@@ -176,6 +177,7 @@ describe('IdempotencyService', () => {
         id: 'id-3',
         status: 'FAILED',
         responsePayload: null,
+        createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60_000),
       });
 
@@ -183,6 +185,27 @@ describe('IdempotencyService', () => {
       await expect(service.withIdempotency('ORDER_CREATE', 'key-failed', fn)).rejects.toThrow(
         /already FAILED/,
       );
+    });
+
+    it('S4：PENDING > 5min → stuck-pending 删旧重建', async () => {
+      mockDb.idempotencyKey.create
+        .mockRejectedValueOnce(uniqueViolation())
+        .mockResolvedValueOnce({});
+      mockDb.idempotencyKey.findUnique.mockResolvedValue({
+        id: 'id-stuck',
+        status: 'PENDING',
+        responsePayload: null,
+        createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 分钟前（超过 5min 阈值）
+        expiresAt: new Date(Date.now() + 60_000), // 未过期
+      });
+      mockDb.idempotencyKey.delete.mockResolvedValue({});
+      mockDb.idempotencyKey.update.mockResolvedValue({});
+
+      const fn = vi.fn().mockResolvedValue({ recovered: true });
+      const result = await service.withIdempotency('ORDER_CREATE', 'key-stuck', fn);
+
+      expect(result).toEqual({ recovered: true });
+      expect(mockDb.idempotencyKey.delete).toHaveBeenCalledWith({ where: { id: 'id-stuck' } });
     });
   });
 
@@ -195,6 +218,7 @@ describe('IdempotencyService', () => {
         id: 'id-old',
         status: 'PENDING',
         responsePayload: null,
+        createdAt: new Date(),
         expiresAt: new Date(Date.now() - 60_000), // 1 分钟前过期
       });
       mockDb.idempotencyKey.delete.mockResolvedValue({});

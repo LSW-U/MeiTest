@@ -34,6 +34,12 @@ export type IdempotencyScene =
 /** 默认 TTL：24 小时 */
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * PENDING 状态的"短超时"：超过此时间视为 stuck（fn 永远 hang 住）
+ * S4 修复：避免 fn hang 住导致 24h 内同 key 请求全部 409 死锁
+ */
+const STUCK_PENDING_MS = 5 * 60 * 1000; // 5 分钟
+
 /** 并发冲突异常（前端可换新 key 重试） */
 export class IdempotencyConcurrentException extends ConflictException {
   constructor(scene: string, key: string, status: string) {
@@ -113,8 +119,22 @@ export class IdempotencyService {
       return fn();
     }
 
-    if (existing.expiresAt < new Date()) {
+    // S4 修复：已过期 OR stuck-pending（fn hang > 5min）→ 删旧重建，避免 24h 死锁
+    const now = Date.now();
+    const isExpired = existing.expiresAt.getTime() < now;
+    const isStuckPending =
+      existing.status === 'PENDING' &&
+      now - existing.createdAt.getTime() > STUCK_PENDING_MS;
+
+    if (isExpired || isStuckPending) {
       await db.idempotencyKey.delete({ where: { id: existing.id } });
+      logger.warn({
+        msg: 'IDEMPOTENCY_STUCK_KEY_CLEANED',
+        scene,
+        key,
+        previousStatus: existing.status,
+        reason: isExpired ? 'expired' : 'stuck-pending',
+      });
       return this.withIdempotency(scene as IdempotencyScene, key, fn);
     }
 
@@ -122,6 +142,7 @@ export class IdempotencyService {
       return existing.responsePayload as unknown as T;
     }
 
+    // PENDING（未超时）/ FAILED：抛 409
     throw new IdempotencyConcurrentException(scene, key, existing.status);
   }
 }

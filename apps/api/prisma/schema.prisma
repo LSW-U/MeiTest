@@ -107,6 +107,7 @@ enum OrderEventType {
   CANCELLED // 取消
   REFUND_REQUESTED // 申请退款
   REFUNDED // 已退款
+  ISSUE_REPORTED // W3-C S5:骑手异常上报（CUSTOMER_UNREACHABLE / REJECTED 等）
 }
 
 /// 支付方式(v0.3 决策 D:全预留 5 枚举,2 真实 + 3 mock/stub)

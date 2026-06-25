@@ -425,6 +425,9 @@ export class OrderService {
    *
    * 幂等：订单若已推进到 CONFIRMED 之后的状态则跳过
    *
+   * S3 修复：透传 deviceType='admin_web' + perspective='system' 给 cancelOrderInternal，
+   * 让 OrderEvent 记录能区分"系统自动取消"和"用户手动取消"
+   *
    * 用法：
    *   - OrderTimeoutProcessor.process() 调用
    *   - 未来 admin 拒单接口（W3+）也可复用
@@ -456,6 +459,8 @@ export class OrderService {
 
     await this.cancelOrderInternal(orderId, {
       operatorId: ctx.operatorId,
+      deviceType: 'admin_web', // S3 修复：用现有值表达"系统后台操作"（不新增枚举）
+      perspective: 'system',
       reason: ctx.reason,
     });
 

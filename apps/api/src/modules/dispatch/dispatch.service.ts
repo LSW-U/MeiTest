@@ -20,7 +20,8 @@
  */
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
-import { db } from '../../shared/db';
+import { db, withTransaction } from '../../shared/db';
+import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 
@@ -115,35 +116,62 @@ export class DispatchService {
 
   /**
    * 抢单（乐观锁防重复抢）
+   *
+   * S2 修复：UPDATE delivery_tasks + UPDATE order.riderId 同事务，避免进程崩溃后状态分裂
    */
   async acceptTask(input: AcceptTaskInput): Promise<DeliveryTaskView> {
     const now = new Date();
 
-    // 乐观锁 UPDATE（行锁原子操作）
-    const result = await db.$executeRaw`
-      UPDATE "delivery_tasks"
-      SET status = 'ASSIGNED',
-          rider_id = ${input.riderId},
-          assigned_at = ${now},
-          updated_at = ${now}
-      WHERE id = ${input.taskId}
-        AND status = 'PENDING_ASSIGN'
-    `;
-
-    if (result === 0) {
-      const existing = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
-      if (!existing) {
-        throw new NotFoundException({
-          code: 'E-DISPATCH-001',
-          message: 'Task not found',
-        });
-      }
-      throw new ConflictException({
-        code: 'E-DISPATCH-002',
-        message: `Task already ${existing.status} (cannot be grabbed)`,
+    // 先查 orderId（用于事务内的 order.update）
+    const taskBefore = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      select: { orderId: true, status: true },
+    });
+    if (!taskBefore) {
+      throw new NotFoundException({
+        code: 'E-DISPATCH-001',
+        message: 'Task not found',
       });
     }
 
+    if (taskBefore.status !== 'PENDING_ASSIGN') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-002',
+        message: `Task already ${taskBefore.status} (cannot be grabbed)`,
+      });
+    }
+
+    // 事务：乐观锁 UPDATE + order.riderId 同步（任一失败回滚）
+    const updateResult = await withTransaction(async (tx: Tx) => {
+      const updated = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET status = 'ASSIGNED',
+            rider_id = ${input.riderId},
+            assigned_at = ${now},
+            updated_at = ${now}
+        WHERE id = ${input.taskId}
+          AND status = 'PENDING_ASSIGN'
+      `;
+      if (updated === 0) {
+        return { ok: false as const };
+      }
+      await tx.order.update({
+        where: { id: taskBefore.orderId },
+        data: { riderId: input.riderId },
+      });
+      return { ok: true as const };
+    });
+
+    if (!updateResult.ok) {
+      // 并发场景：刚查到 PENDING_ASSIGN 但 UPDATE 时已被改 → 视为已被抢
+      const existing = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
+      throw new ConflictException({
+        code: 'E-DISPATCH-002',
+        message: `Task already ${existing?.status ?? 'unknown'} (cannot be grabbed)`,
+      });
+    }
+
+    // 事务外查 task 详情用于响应 + WS 推送
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
@@ -155,12 +183,6 @@ export class DispatchService {
     if (!task) {
       throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found after accept' });
     }
-
-    // 同步更新 Order.riderId（订单维度冗余骑手 ID，方便客户端订阅）
-    await db.order.update({
-      where: { id: task.orderId },
-      data: { riderId: input.riderId },
-    });
 
     logger.info({
       msg: 'DISPATCH_TASK_ACCEPTED',
@@ -349,7 +371,12 @@ export class DispatchService {
   }
 
   /**
-   * 异常上报（标记 task FAILED + Order 状态保持，需客服介入）
+   * 异常上报（标记 task FAILED + 写 OrderEvent + WS 推客服）
+   *
+   * S5 修复：
+   *   - 写 OrderEvent(ISSUE_REPORTED) → 订单维度查得到异常记录
+   *   - WS 推 'customer-service' room → 客服实时介入
+   *   - Order.status 保持（需客服介入决定后续状态推进）
    */
   async reportIssue(input: ReportIssueInput): Promise<DeliveryTaskView> {
     const task = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
@@ -370,10 +397,46 @@ export class DispatchService {
         note: `[ISSUE:${input.reason}]${input.note ? ' ' + input.note : ''}`,
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, status: true } },
         warehouse: { select: { code: true } },
       },
     });
+
+    // 写 OrderEvent（订单维度审计）
+    await db.orderEvent.create({
+      data: {
+        orderId: task.orderId,
+        eventType: 'ISSUE_REPORTED',
+        fromStatus: updated.order?.status ?? null,
+        toStatus: updated.order?.status ?? null,
+        operatorId: input.riderId,
+        deviceType: 'RIDER_APP',
+        perspective: null,
+        metadata: {
+          reason: input.reason,
+          note: input.note,
+          taskId: input.taskId,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    // WS 推客服 room（客服端订阅 'customer-service' 实时收到异常）
+    try {
+      this.realtime.server.to('customer-service').emit('dispatch:issue-reported', {
+        taskId: input.taskId,
+        orderId: task.orderId,
+        riderId: input.riderId,
+        reason: input.reason,
+        note: input.note,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'DISPATCH_BROADCAST_ISSUE_FAILED',
+        taskId: input.taskId,
+        error: (e as Error).message,
+      });
+    }
 
     logger.warn({
       msg: 'DISPATCH_TASK_ISSUE_REPORTED',

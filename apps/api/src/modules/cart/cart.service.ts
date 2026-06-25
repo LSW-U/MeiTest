@@ -110,11 +110,20 @@ export class CartService {
 
   /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
   async getCart(userId: string): Promise<CartView> {
-    // 1. 先查 Redis
+    // 1. 先查 Redis（缓存损坏降级到 DB，不阻塞用户）
     try {
       const cached = await redis.get(this.cacheKey(userId));
       if (cached) {
-        return JSON.parse(cached) as CartView;
+        try {
+          return JSON.parse(cached) as CartView;
+        } catch (parseErr) {
+          logger.warn({
+            msg: 'CART_CACHE_DESERIALIZE_FAILED',
+            userId,
+            error: (parseErr as Error).message,
+          });
+          // 继续走 DB 路径
+        }
       }
     } catch (e) {
       logger.warn({
@@ -124,7 +133,7 @@ export class CartService {
       });
     }
 
-    // 2. Miss：查 DB
+    // 2. Miss 或缓存损坏：查 DB
     const cart = await this.getOrCreateCart(userId);
     const items = await db.cartItem.findMany({
       where: { cartId: cart.id },
