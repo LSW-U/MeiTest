@@ -19,7 +19,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue } = vi.hoisted(() => ({
+const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart } = vi.hoisted(() => ({
   mockDb: {
     address: { findUnique: vi.fn() },
     sku: { findMany: vi.fn() },
@@ -35,6 +35,7 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue } = vi.hoisted(
   mockOrderNo: { nextOrderNo: vi.fn() },
   mockPayment: { createIntentForOrder: vi.fn() },
   mockQueue: { add: vi.fn(), getJob: vi.fn() },
+  mockCart: { clearOrderedItems: vi.fn() },
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -100,12 +101,14 @@ describe('OrderService.createOrder', () => {
     mockOrderNo.nextOrderNo.mockReset();
     mockPayment.createIntentForOrder.mockReset();
     mockQueue.add.mockReset();
+    mockCart.clearOrderedItems.mockReset();
 
     service = new OrderService(
       new (class { nextOrderNo = mockOrderNo.nextOrderNo })(),
       mockPayment,
       mockQueue,
       null, // dispatchService（happy path 中 markPaid 才用，createOrder 不调）
+      mockCart, // cartService（B1：createOrder 后调 clearOrderedItems）
     );
   });
 
@@ -329,10 +332,62 @@ describe('OrderService.createOrder', () => {
     expect(result.payableAmount).toBe(200);
 
     // enqueueOrderTimeout 被调用（mock 模块捕获）
-    // 由于 enqueueOrderTimeout 是 vi.fn() mock 的 module，需要 expect mock 被调
-    // 简化验证：mockQueue.add 不直接调（enqueueOrderTimeout 内部用），但我们 mock helper 时
-    // 没有验证调用 — 改成验证 helper 被调
     const { enqueueOrderTimeout } = await import('../src/modules/order/order-timeout.helper');
     expect(enqueueOrderTimeout).toHaveBeenCalled();
+
+    // B1 修复验证：cartService.clearOrderedItems 被调用，skuIds 来自 input.items
+    expect(mockCart.clearOrderedItems).toHaveBeenCalledWith('user-1', ['sku-1']);
+  });
+
+  it('B1 修复：cartService 抛错时 → 仅 warn，不阻塞下单', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260625010000001');
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+    mockCart.clearOrderedItems.mockRejectedValue(new Error('redis down'));
+
+    // 不抛错（容错）
+    const result = await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 1 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+
+    expect(result.id).toBe('order-1');
+    expect(mockCart.clearOrderedItems).toHaveBeenCalled();
   });
 });

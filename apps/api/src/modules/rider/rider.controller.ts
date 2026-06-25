@@ -64,9 +64,13 @@ interface RequestWithUser {
 }
 
 /**
- * 入驻申请 controller（common 前缀，role=customer 也可调）
+ * 入驻申请 controller（common 前缀，role=customer）
+ *
+ * 注：用户在 client_app 中登录后申请成为骑手，审核通过后改用 rider_app deviceType。
+ * B2 修复：必须显式 @Roles('customer') — RolesGuard 默认 least-privilege 拒绝未声明 @Roles 的端点。
  */
 @Controller('api/v1/common/rider')
+@Roles('customer')
 export class RiderApplicationController {
   constructor(@Inject(RiderService) private readonly riderService: RiderService) {}
 

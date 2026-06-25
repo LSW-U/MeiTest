@@ -59,6 +59,11 @@ interface DispatchServiceLike {
   createTaskForOrder(orderId: string): Promise<unknown>;
 }
 
+/** CartService 接口（避免直接 import CartService 形成 Order ↔ Cart 循环依赖） */
+interface CartServiceLike {
+  clearOrderedItems(userId: string, skuIds: string[]): Promise<void>;
+}
+
 /** Order 查询结果（含 items + events） */
 export interface OrderWithRelations {
   id: string;
@@ -114,6 +119,8 @@ export class OrderService {
     @Inject(ORDER_TIMEOUT_QUEUE) private readonly timeoutQueue: Queue<OrderTimeoutJobData>,
     @Inject('DISPATCH_SERVICE_TOKEN')
     private readonly dispatchService: DispatchServiceLike | null,
+    @Inject('CART_SERVICE_TOKEN')
+    private readonly cartService: CartServiceLike | null,
   ) {}
 
   /**
@@ -334,6 +341,23 @@ export class OrderService {
       // W3-C：入队超时取消 job（PENDING_* 状态 15 分钟未推进则自动取消）
       // 失败容忍：Redis 不可用时不阻塞下单
       await enqueueOrderTimeout(this.timeoutQueue, created.id, created.status);
+
+      // 下单成功后清空购物车已下单 items（B1 修复）
+      // 失败容忍：清购物车失败不阻塞下单（用户可手动清，订单已成功）
+      const orderedSkuIds = input.items.map((i) => i.skuId);
+      if (this.cartService && orderedSkuIds.length > 0) {
+        try {
+          await this.cartService.clearOrderedItems(input.userId, orderedSkuIds);
+        } catch (e) {
+          logger.warn({
+            msg: 'CART_CLEAR_AFTER_ORDER_FAILED',
+            orderId: created.id,
+            userId: input.userId,
+            skuIds: orderedSkuIds,
+            error: (e as Error).message,
+          });
+        }
+      }
 
       return {
         id: created.id,

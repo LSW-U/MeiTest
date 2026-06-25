@@ -4,6 +4,7 @@
  * 依赖：
  *   - PaymentModule（提供 PAYMENT_SERVICE_TOKEN）
  *   - DispatchModule（提供 DISPATCH_SERVICE_TOKEN，CONFIRMED 时自动建配送任务）
+ *   - CartModule（提供 CART_SERVICE_TOKEN，下单后清空购物车）
  *   - BullModule.registerQueue（提供 ORDER_TIMEOUT_QUEUE injection token）
  */
 import { Module, forwardRef } from '@nestjs/common';
@@ -15,11 +16,13 @@ import { OrderTimeoutProcessor } from './order-timeout.processor';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
 import { PaymentModule } from '../payment/payment.module';
 import { DispatchModule, DISPATCH_SERVICE_TOKEN } from '../dispatch/dispatch.module';
+import { CartModule, CART_SERVICE_TOKEN } from '../cart/cart.module';
 
 @Module({
   imports: [
     forwardRef(() => PaymentModule),
     forwardRef(() => DispatchModule),
+    forwardRef(() => CartModule),
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
   ],
   controllers: [OrderController],
@@ -29,6 +32,7 @@ import { DispatchModule, DISPATCH_SERVICE_TOKEN } from '../dispatch/dispatch.mod
     OrderTimeoutProcessor,
     // 显式声明 DI token，避免 tsx esbuild 不生成 emitDecoratorMetadata 导致 Inject token 无法解析
     { provide: 'DISPATCH_SERVICE_TOKEN', useExisting: DISPATCH_SERVICE_TOKEN },
+    { provide: 'CART_SERVICE_TOKEN', useExisting: CART_SERVICE_TOKEN },
   ],
   exports: [OrderService, OrderNoService],
 })
