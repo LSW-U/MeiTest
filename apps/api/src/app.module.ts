@@ -15,10 +15,18 @@ import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
+import { IdempotencyModule } from './shared/idempotency/idempotency.module';
 
 @Module({
-  // 字母序：Auth → Cart → Order → Payment → Realtime（避免三流程 merge 时 imports 数组顺序冲突）
-  imports: [AuthModule, CartModule, OrderModule, PaymentModule, RealtimeModule],
+  // 字母序：Auth → Cart → Order → Payment → Realtime（W3 加 Dispatch / Rider 时按字母序插入）
+  imports: [
+    AuthModule,
+    CartModule,
+    OrderModule,
+    PaymentModule,
+    RealtimeModule,
+    IdempotencyModule,
+  ],
   controllers: [HealthController, MeController],
   providers: [
     // Guards 实例显式注册（avoid tsx esbuild 不生成 emitDecoratorMetadata 导致 DI 失败）

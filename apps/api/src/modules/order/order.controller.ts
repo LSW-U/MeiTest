@@ -33,6 +33,7 @@ import { OrderService } from './order.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
+import { IdempotencyService } from '../../shared/idempotency';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { CreateOrderInput, PaymentMethodValue, OrderStatusValue } from './order.types';
 
@@ -63,13 +64,19 @@ interface RequestWithUser {
 @Controller('api/v1/client/orders')
 @Roles('customer')
 export class OrderController {
-  constructor(@Inject(OrderService) private readonly orderService: OrderService) {}
+  constructor(
+    @Inject(OrderService) private readonly orderService: OrderService,
+    @Inject(IdempotencyService) private readonly idempotencyService: IdempotencyService,
+  ) {}
 
   /**
    * 创建订单（同步事务）
    *
    * Idempotency-Key header 防重复下单（客户端生成 UUID，重试用同一个 key）
-   * W2 阶段 IdempotencyKey 表已建但暂未接入（W3 cart 模块联调时统一接入）
+   * W3 接入：IdempotencyService.withIdempotency 包装 createOrder
+   *   - 首次请求 → 执行 createOrder + 缓存 responsePayload
+   *   - 同 key 重试 → 直接回放缓存（不再扣库存）
+   *   - 并发同 key → 409 IdempotencyConcurrentException
    */
   @Post()
   @Audit({ resource: 'Order' })
@@ -77,13 +84,12 @@ export class OrderController {
     @Body(new ZodValidationPipe(CreateOrderRequest)) body: z.infer<typeof CreateOrderRequest>,
     @Req() req: RequestWithUser,
     @Headers('x-perspective') perspective: string | undefined,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
   ) {
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
-
-    // W3 cart 联调时接入 IdempotencyKey 表防重复下单（header: Idempotency-Key）
 
     const input: CreateOrderInput = {
       userId: user.sub,
@@ -95,7 +101,11 @@ export class OrderController {
       perspective,
     };
 
-    const order = await this.orderService.createOrder(input);
+    const order = await this.idempotencyService.withIdempotency(
+      'ORDER_CREATE',
+      idempotencyKey,
+      () => this.orderService.createOrder(input),
+    );
     return { success: true as const, data: order };
   }
 
