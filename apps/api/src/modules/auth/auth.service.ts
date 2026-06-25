@@ -10,7 +10,7 @@
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
-import { Injectable, UnauthorizedException, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { genId } from '@meimart/shared-utils';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -378,7 +378,11 @@ export class AuthService {
     return { expireIn: result.expireIn };
   }
 
-  /** SMS 找回密码：verify SMS + 改密 */
+  /** SMS 找回密码：verify SMS + 改密
+   *
+   * 安全（v1.1 审查补漏）：不区分「用户不存在」vs「SMS code 错」，统一返回 E-USER-003。
+   * 防止攻击者通过错误码差异枚举已注册手机号（resetPassword 也是泄漏点）。
+   */
   async resetPassword(input: {
     phone: string;
     smsCode: string;
@@ -386,9 +390,10 @@ export class AuthService {
   }): Promise<void> {
     const user = await db.user.findUnique({ where: { phone: input.phone } });
     if (!user) {
-      throw new NotFoundException({
-        code: 'E-USER-001',
-        message: 'Phone not registered',
+      // 不暴露"用户不存在"，统一返回 SMS code 错误码（攻击者无法区分）
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'SMS code invalid or expired',
       });
     }
     const verified = await this.verifySmsCode(input.phone, input.smsCode, 'RESET_PASSWORD');
