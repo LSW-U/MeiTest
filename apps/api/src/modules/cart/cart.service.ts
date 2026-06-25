@@ -22,7 +22,7 @@
  */
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
-import { db } from '../../shared/db';
+import { db, findWarehouseByPoint } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 
@@ -179,6 +179,13 @@ export class CartService {
       throw new ConflictException({
         code: 'E-CART-001',
         message: 'quantity must be >= 1',
+      });
+    }
+    // M5：单次加购上限 99（防恶意刷接口或 UI bug 累加无限制）
+    if (input.quantity > 99) {
+      throw new ConflictException({
+        code: 'E-CART-001',
+        message: 'quantity must be <= 99 per add',
       });
     }
 
@@ -344,8 +351,6 @@ export class CartService {
     // 仓库匹配（address 有 lat/lng 时）
     let warehouseMatch: { id: string; code: string; deliveryFee: number } | null = null;
     if (address.lat !== null && address.lng !== null) {
-      // 动态导入避免循环（findWarehouseByPoint 是纯函数，但 tx 复用 db）
-      const { findWarehouseByPoint } = await import('../../shared/db');
       const wh = await findWarehouseByPoint(db, Number(address.lng), Number(address.lat));
       if (wh) {
         warehouseMatch = { id: wh.id, code: wh.code, deliveryFee: wh.deliveryFee };

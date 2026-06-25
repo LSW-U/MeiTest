@@ -26,6 +26,7 @@ import {
   HttpException,
   HttpStatus,
   Inject,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { z } from 'zod';
 import {
@@ -75,7 +76,7 @@ export class DispatchController {
   @Post('tasks/:id/accept')
   @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
   async acceptTask(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Req() req: RequestWithUser,
   ) {
     const user = req.user;
@@ -93,7 +94,7 @@ export class DispatchController {
   @Post('tasks/:id/pickup')
   @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
   async pickupTask(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(PickupTaskRequest)) body: z.infer<typeof PickupTaskRequest>,
     @Req() req: RequestWithUser,
   ) {
@@ -113,7 +114,7 @@ export class DispatchController {
   @Post('tasks/:id/deliver')
   @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
   async deliverTask(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(DeliverTaskRequest)) body: z.infer<typeof DeliverTaskRequest>,
     @Req() req: RequestWithUser,
   ) {
@@ -134,7 +135,7 @@ export class DispatchController {
   @Post('tasks/:id/report-issue')
   @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
   async reportIssue(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(ReportIssueRequest)) body: z.infer<typeof ReportIssueRequest>,
     @Req() req: RequestWithUser,
   ) {

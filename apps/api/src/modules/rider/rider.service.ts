@@ -163,7 +163,11 @@ export class RiderService {
         applicationStatus: input.decision,
         reviewedById: input.reviewerId,
         reviewedAt: new Date(),
-        rejectReason: input.decision === 'REJECTED' ? input.rejectReason : null,
+        // M6：APPROVED 时保留原 rejectReason（不主动 nullify，便于未来"重新审核"功能）
+        rejectReason:
+          input.decision === 'REJECTED'
+            ? input.rejectReason
+            : profile.rejectReason,
       },
     });
 
@@ -257,8 +261,18 @@ export class RiderService {
 
   /**
    * 心跳续期（骑手 WS 连接或定时 HTTP 上报时调）
+   *
+   * M4：仅 APPROVED 骑手心跳生效（PENDING/REJECTED 心跳返回 false 不污染在线列表）
+   * 注意：每次心跳查 DB 会增加 QPS，可改成首次心跳查 DB + 后续只 SET Redis（依赖前端保证状态）
    */
   async heartbeat(riderId: string): Promise<{ renewed: boolean }> {
+    const profile = await db.riderProfile.findUnique({
+      where: { userId: riderId },
+      select: { applicationStatus: true },
+    });
+    if (!profile || profile.applicationStatus !== 'APPROVED') {
+      return { renewed: false };
+    }
     try {
       await redis.set(this.onlineKey(riderId), '1', 'EX', RIDER_ONLINE_TTL_SEC);
       return { renewed: true };
@@ -282,7 +296,16 @@ export class RiderService {
       });
     }
     const isOnline = await this.isOnline(riderId);
-    return this.toView(profile, isOnline);
+
+    // S6 修复：DB status 与 Redis isOnline 不一致时，以 Redis 为准
+    // - profile.status=ONLINE/BUSY 但 Redis 失效（TTL 过期/Redis 异常）→ 强制 OFFLINE
+    // - profile.status=OFFLINE 但 Redis 仍在（理论不应发生，updateDuty 已 DEL）→ 信任 DB
+    let consistentStatus = profile.status;
+    if ((consistentStatus === 'ONLINE' || consistentStatus === 'BUSY') && !isOnline) {
+      consistentStatus = 'OFFLINE';
+    }
+
+    return this.toView({ ...profile, status: consistentStatus }, isOnline);
   }
 
   /** 列出待审核申请（admin 用） */

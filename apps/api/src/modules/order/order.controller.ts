@@ -56,6 +56,9 @@ const ListOrdersQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
+/** M2：Idempotency-Key header UUID 校验，避免客户端传 "1"/"test" 占用表空间 */
+const IdempotencyKeyHeader = z.string().uuid().min(1).max(64).optional();
+
 interface RequestWithUser {
   user?: RequestUser;
   headers: Record<string, string | string | undefined>;
@@ -84,12 +87,18 @@ export class OrderController {
     @Body(new ZodValidationPipe(CreateOrderRequest)) body: z.infer<typeof CreateOrderRequest>,
     @Req() req: RequestWithUser,
     @Headers('x-perspective') perspective: string | undefined,
-    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('idempotency-key') rawIdempotencyKey: string | undefined,
   ) {
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
+
+    // M2：UUID 校验（非 UUID 视为没传，向后兼容）
+    const idempotencyKeyParsed = IdempotencyKeyHeader.safeParse(rawIdempotencyKey);
+    const idempotencyKey = idempotencyKeyParsed.success
+      ? idempotencyKeyParsed.data
+      : undefined;
 
     const input: CreateOrderInput = {
       userId: user.sub,

@@ -111,7 +111,19 @@ export class IdempotencyService {
     scene: string,
     key: string,
     fn: () => Promise<T>,
+    depth = 0,
   ): Promise<T> {
+    // M7：递归深度限制（默认 max=3，防 delete 失败导致无限循环）
+    if (depth >= 3) {
+      logger.error({
+        msg: 'IDEMPOTENCY_RECURSION_LIMIT',
+        scene,
+        key,
+        depth,
+      });
+      throw new IdempotencyConcurrentException(scene, key, 'RECURSION_LIMIT');
+    }
+
     const existing = await db.idempotencyKey.findUnique({
       where: { scene_key: { scene, key } },
     });
@@ -134,6 +146,7 @@ export class IdempotencyService {
         key,
         previousStatus: existing.status,
         reason: isExpired ? 'expired' : 'stuck-pending',
+        depth,
       });
       return this.withIdempotency(scene as IdempotencyScene, key, fn);
     }
