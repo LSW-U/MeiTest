@@ -56,7 +56,37 @@ export default function WarehouseListPage() {
 
   return (
     <div style={{ maxWidth: 1200 }}>
-      <h1 style={{ marginBottom: 24 }}>{t('warehouse.admin.listTitle') ?? 'Warehouses'}</h1>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: '12px 16px',
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: 6,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ color: '#1e3a8a', fontSize: 14 }}>
+          W3-W 流程已上线新 UI：仓库列表 + 新建 + 详情（含配送范围 + 库存 + 启停）。
+        </span>
+        <a
+          href="/warehouses"
+          style={{
+            color: '#1d4ed8',
+            fontWeight: 600,
+            textDecoration: 'none',
+            fontSize: 14,
+          }}
+        >
+          前往新 UI →
+        </a>
+      </div>
+      <h1 style={{ marginBottom: 24 }}>
+        {t('warehouse.admin.listTitle') ?? 'Warehouses'}{' '}
+        <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>(legacy)</span>
+      </h1>
       <table
         style={{
           width: '100%',
