@@ -46,6 +46,7 @@ import type {
 } from './order.types';
 import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
+import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
 import {
@@ -116,7 +117,7 @@ export class OrderService {
   constructor(
     @Inject(OrderNoService) private readonly orderNoService: OrderNoService,
     @Inject('PaymentServiceToken') private readonly paymentService: PaymentService,
-    @Inject(ORDER_TIMEOUT_QUEUE) private readonly timeoutQueue: Queue<OrderTimeoutJobData>,
+    @InjectQueue(ORDER_TIMEOUT_QUEUE) private readonly timeoutQueue: Queue<OrderTimeoutJobData>,
     @Inject('DISPATCH_SERVICE_TOKEN')
     private readonly dispatchService: DispatchServiceLike | null,
     @Inject('CART_SERVICE_TOKEN')
