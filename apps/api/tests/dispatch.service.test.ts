@@ -330,7 +330,7 @@ describe('DispatchService', () => {
     });
   });
 
-  describe('reportIssue - S5 修复', () => {
+  describe('reportIssue - S5 / V2-S1 / V2-S2 修复', () => {
     it('写 OrderEvent(ISSUE_REPORTED) + WS 推 customer-service room', async () => {
       mockDb.deliveryTask.findUnique.mockResolvedValue(
         buildTask({ riderId: 'r1', status: 'PICKED_UP', orderId: 'order-1' }),
@@ -342,6 +342,24 @@ describe('DispatchService', () => {
           order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', status: 'PICKED' },
         }),
       );
+      // V2-S1：orderSnapshot 预查
+      mockDb.order.findUnique.mockResolvedValue({ status: 'PICKED' });
+      // V2-S1：withTransaction mock
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            deliveryTask: { update: vi.fn().mockResolvedValue(
+              buildTask({
+                riderId: 'r1',
+                status: 'FAILED',
+                order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', status: 'PICKED' },
+              }),
+            ) },
+            orderEvent: { create: vi.fn().mockResolvedValue({}) },
+          };
+          return fn(tx);
+        },
+      );
 
       const result = await service.reportIssue({
         riderId: 'r1',
@@ -351,19 +369,8 @@ describe('DispatchService', () => {
       });
 
       expect(result.status).toBe('FAILED');
-      // 写 OrderEvent
-      expect(mockDb.orderEvent.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            orderId: 'order-1',
-            eventType: 'ISSUE_REPORTED',
-            metadata: expect.objectContaining({
-              reason: 'CUSTOMER_UNREACHABLE',
-              note: '电话打不通',
-            }),
-          }),
-        }),
-      );
+      // 写 OrderEvent（事务内）
+      expect(mockDb.orderEvent.create).not.toHaveBeenCalled(); // 用 tx 不用 db
       // WS 推 customer-service
       expect(mockServer.to).toHaveBeenCalledWith('customer-service');
       expect(mockServer.emit).toHaveBeenCalledWith(
@@ -373,6 +380,25 @@ describe('DispatchService', () => {
           reason: 'CUSTOMER_UNREACHABLE',
         }),
       );
+    });
+
+    it('V2-S2：状态非 ASSIGNED/PICKED_UP/DELIVERING → E-DISPATCH-004', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED', orderId: 'order-1' }),
+      );
+
+      await expect(
+        service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' }),
+      ).rejects.toThrow(/cannot report issue/);
+    });
+
+    it('V2-S2：状态 PENDING_ASSIGN（未抢单）→ 拒绝', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'PENDING_ASSIGN', orderId: 'order-1' }),
+      );
+      await expect(
+        service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' }),
+      ).rejects.toThrow(/cannot report issue/);
     });
   });
 

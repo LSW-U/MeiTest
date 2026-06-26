@@ -26,6 +26,7 @@ import {
   HttpStatus,
   Headers,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { CreateOrderRequest, CancelOrderRequest } from '@meimart/api-contract';
@@ -94,11 +95,17 @@ export class OrderController {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
 
-    // M2：UUID 校验（非 UUID 视为没传，向后兼容）
-    const idempotencyKeyParsed = IdempotencyKeyHeader.safeParse(rawIdempotencyKey);
-    const idempotencyKey = idempotencyKeyParsed.success
-      ? idempotencyKeyParsed.data
-      : undefined;
+    // M2 / V2-S4 修复：严格模式 — 非 UUID 直接 400 拒绝（防失去幂等保护）
+    if (rawIdempotencyKey !== undefined) {
+      const parsed = IdempotencyKeyHeader.safeParse(rawIdempotencyKey);
+      if (!parsed.success) {
+        throw new BadRequestException({
+          code: 'E-COMMON-001',
+          message: 'idempotency-key header must be a valid UUID',
+        });
+      }
+    }
+    const idempotencyKey = rawIdempotencyKey; // 通过校验，原值传入
 
     const input: CreateOrderInput = {
       userId: user.sub,

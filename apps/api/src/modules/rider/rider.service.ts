@@ -297,15 +297,26 @@ export class RiderService {
     }
     const isOnline = await this.isOnline(riderId);
 
-    // S6 修复：DB status 与 Redis isOnline 不一致时，以 Redis 为准
-    // - profile.status=ONLINE/BUSY 但 Redis 失效（TTL 过期/Redis 异常）→ 强制 OFFLINE
-    // - profile.status=OFFLINE 但 Redis 仍在（理论不应发生，updateDuty 已 DEL）→ 信任 DB
-    let consistentStatus = profile.status;
-    if ((consistentStatus === 'ONLINE' || consistentStatus === 'BUSY') && !isOnline) {
-      consistentStatus = 'OFFLINE';
+    // S6 / V2-S3 修复：DB status 与 Redis isOnline 不一致时
+    //   - 客户端视角：以 Redis 为准（强制返回 OFFLINE）
+    //   - admin 视角：异步 UPDATE DB 修正（不阻塞响应，失败仅 warn）
+    if ((profile.status === 'ONLINE' || profile.status === 'BUSY') && !isOnline) {
+      db.riderProfile
+        .update({
+          where: { userId: riderId },
+          data: { status: 'OFFLINE' },
+        })
+        .catch((e) => {
+          logger.warn({
+            msg: 'RIDER_STATUS_RECONCILE_FAILED',
+            riderId,
+            error: (e as Error).message,
+          });
+        });
+      return this.toView({ ...profile, status: 'OFFLINE' as const }, false);
     }
 
-    return this.toView({ ...profile, status: consistentStatus }, isOnline);
+    return this.toView(profile, isOnline);
   }
 
   /** 列出待审核申请（admin 用） */
@@ -344,7 +355,7 @@ export class RiderService {
       vehicleType: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
       vehiclePlate: string | null;
       status: 'OFFLINE' | 'ONLINE' | 'BUSY';
-      applicationStatus: string | null;
+      applicationStatus: string; // V2-S6 修复：schema 改 NOT NULL，去掉 | null
       totalDeliveries: number;
       rating: { toNumber(): number };
       preferredWarehouseIds: string[];
@@ -361,7 +372,8 @@ export class RiderService {
       vehicleType: p.vehicleType,
       vehiclePlate: p.vehiclePlate,
       status: p.status,
-      applicationStatus: (p.applicationStatus ?? 'PENDING') as ApplicationStatus,
+      // V2-S6 修复：NOT NULL 后无需 ?? 兜底
+      applicationStatus: p.applicationStatus as ApplicationStatus,
       totalDeliveries: p.totalDeliveries,
       rating: typeof p.rating === 'number' ? p.rating : p.rating?.toNumber() ?? 5,
       preferredWarehouseIds: p.preferredWarehouseIds ?? [],

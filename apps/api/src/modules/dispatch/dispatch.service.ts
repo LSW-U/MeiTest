@@ -373,6 +373,9 @@ export class DispatchService {
   /**
    * 异常上报（标记 task FAILED + 写 OrderEvent + WS 推客服）
    *
+   * V2-S1 修复：deliveryTask.update + orderEvent.create 包事务
+   * V2-S2 修复：加状态前置校验（仅 ASSIGNED/PICKED_UP/DELIVERING 可报异常）
+   *
    * S5 修复：
    *   - 写 OrderEvent(ISSUE_REPORTED) → 订单维度查得到异常记录
    *   - WS 推 'customer-service' room → 客服实时介入
@@ -390,37 +393,69 @@ export class DispatchService {
       });
     }
 
-    const updated = await db.deliveryTask.update({
-      where: { id: input.taskId },
-      data: {
-        status: 'FAILED',
-        note: `[ISSUE:${input.reason}]${input.note ? ' ' + input.note : ''}`,
-      },
-      include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, status: true } },
-        warehouse: { select: { code: true } },
-      },
+    // V2-S2 修复：状态前置校验（仅这几个状态允许报异常）
+    const ALLOWED_STATUSES_FOR_ISSUE = ['ASSIGNED', 'PICKED_UP', 'DELIVERING'];
+    if (!ALLOWED_STATUSES_FOR_ISSUE.includes(task.status)) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-004',
+        message: `Task status ${task.status} cannot report issue (only ${ALLOWED_STATUSES_FOR_ISSUE.join('/')} allowed)`,
+      });
+    }
+
+    // 查 order.status 用于 OrderEvent（事务外预查，事务内不再读）
+    const orderSnapshot = await db.order.findUnique({
+      where: { id: task.orderId },
+      select: { status: true },
     });
 
-    // 写 OrderEvent（订单维度审计）
-    await db.orderEvent.create({
-      data: {
-        orderId: task.orderId,
-        eventType: 'ISSUE_REPORTED',
-        fromStatus: updated.order?.status ?? null,
-        toStatus: updated.order?.status ?? null,
-        operatorId: input.riderId,
-        deviceType: 'RIDER_APP',
-        perspective: null,
-        metadata: {
-          reason: input.reason,
-          note: input.note,
-          taskId: input.taskId,
-        } as Prisma.InputJsonValue,
-      },
+    // V2-S1 修复：双 DB 写操作包事务（deliveryTask.update + orderEvent.create）
+    const updated = await withTransaction(async (tx: Tx) => {
+      const t = await tx.deliveryTask.update({
+        where: { id: input.taskId },
+        data: {
+          status: 'FAILED',
+          note: `[ISSUE:${input.reason}]${input.note ? ' ' + input.note : ''}`,
+        },
+        include: {
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, status: true } },
+          warehouse: { select: { code: true } },
+        },
+      });
+
+      // 写 OrderEvent（同事务，避免 task FAILED 但 OrderEvent 缺失）
+      // ISSUE_REPORTED 是审计事件，订单状态不变（fromStatus = toStatus = 当前 status）
+      const currentOrderStatus = (orderSnapshot?.status ?? 'PICKED') as
+        | 'PENDING_PAYMENT'
+        | 'PENDING_CONFIRM'
+        | 'CONFIRMED'
+        | 'PICKED'
+        | 'OUT_FOR_DELIVERY'
+        | 'DELIVERED_PAID'
+        | 'DELIVERED_UNPAID'
+        | 'DELIVERED'
+        | 'COMPLETED'
+        | 'CANCELLED';
+      await tx.orderEvent.create({
+        data: {
+          orderId: task.orderId,
+          eventType: 'ISSUE_REPORTED',
+          fromStatus: currentOrderStatus,
+          toStatus: currentOrderStatus,
+          operatorId: input.riderId,
+          deviceType: 'RIDER_APP',
+          perspective: null,
+          metadata: {
+            reason: input.reason,
+            note: input.note,
+            taskId: input.taskId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      return t;
     });
 
-    // WS 推客服 room（客服端订阅 'customer-service' 实时收到异常）
+    // WS 推客服 room（事务外，避免 WS 失败回滚业务）
     try {
       this.realtime.server.to('customer-service').emit('dispatch:issue-reported', {
         taskId: input.taskId,

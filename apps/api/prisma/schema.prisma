@@ -684,7 +684,8 @@ model RiderProfile {
 
   // W3 流程 C:入驻审核 + 实名认证（mock）+ 偏好仓库
   // applicationStatus: PENDING / APPROVED / REJECTED（不用 enum，TEXT 避免与流程 W/M enum 撞）
-  applicationStatus       String?     @default("PENDING") @map("application_status")
+  // V2-S6 修复：去掉 ? 让 schema 与 migration (NOT NULL DEFAULT 'PENDING') 对齐
+  applicationStatus       String      @default("PENDING") @map("application_status")
   idCardNumber            String?     @map("id_card_number")
   reviewedById            String?     @map("reviewed_by_id")
   reviewedAt              DateTime?   @map("reviewed_at")

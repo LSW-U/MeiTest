@@ -272,16 +272,27 @@ describe('RiderService', () => {
     });
   });
 
-  describe('getProfile - S6 修复', () => {
-    it('DB status=ONLINE 但 Redis TTL 失效 → 强制返回 OFFLINE', async () => {
+  describe('getProfile - S6 / V2-S3 修复', () => {
+    it('DB status=ONLINE 但 Redis TTL 失效 → 强制返回 OFFLINE + 异步 UPDATE DB', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
       );
       mockRedis.exists.mockResolvedValue(0); // TTL 过期
+      mockDb.riderProfile.update.mockResolvedValue({}); // 异步 UPDATE 不阻塞
 
       const result = await service.getProfile('user-1');
       expect(result.status).toBe('OFFLINE'); // 强制修正
       expect(result.isOnline).toBe(false);
+
+      // V2-S3 修复：异步 UPDATE DB 让 admin 视角也修正
+      // 注意：异步触发，需要等微任务
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          data: { status: 'OFFLINE' },
+        }),
+      );
     });
 
     it('DB status=ONLINE 且 Redis 仍在 → 正常返回 ONLINE', async () => {
@@ -293,6 +304,8 @@ describe('RiderService', () => {
       const result = await service.getProfile('user-1');
       expect(result.status).toBe('ONLINE');
       expect(result.isOnline).toBe(true);
+      // 不触发异步 UPDATE
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
     });
   });
 });
