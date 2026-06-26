@@ -1,0 +1,60 @@
+{
+  "settlement": {
+    "title": "Settlements",
+    "subjectType": {
+      "label": "Asuntu",
+      "MERCHANT": "Comerciante",
+      "RIDER": "Rider"
+    },
+    "status": {
+      "label": "Status",
+      "PENDING": "Hein",
+      "CONFIRMED": "Konfirma ona",
+      "PAID": "Solta ona",
+      "DISPUTED": "Diskusaun"
+    },
+    "periodDate": "Períodu",
+    "orderCount": "Orden",
+    "grossAmount": "Total",
+    "commission": "Komisaun",
+    "refundAmount": "Devolvesaun",
+    "netAmount": "Limpes",
+    "confirmedAt": "Data Konfirma",
+    "paidAt": "Data Solta",
+    "manualRun": "Halo Manual",
+    "runByDate": "Halo tuir Data",
+    "empty": "Seidauk iha settlement"
+  },
+  "withdrawal": {
+    "title": "Pedidu Levantamentu",
+    "amount": "Valor",
+    "status": {
+      "label": "Status",
+      "PENDING": "Hein Revisa",
+      "APPROVED": "Aprova ona",
+      "REJECTED": "Rejeita ona",
+      "PAID": "Solta ona",
+      "FAILED": "Faila (solta faila)"
+    },
+    "payoutAccount": "Konta Pagamentu",
+    "payoutReference": "Referénsia Pagamentu",
+    "requestedAt": "Data Pedidu",
+    "reviewedAt": "Data Revisa",
+    "paidAt": "Data Solta",
+    "review": "Revisa",
+    "approve": "Aprova",
+    "reject": "Rejeita",
+    "markPaid": "Tande Solta ona",
+    "cancel": "Kansela",
+    "create": "Halo Pedidu Levantamentu",
+    "availableBalance": "Saldu Disponivel",
+    "empty": "Seidauk iha pedidu levantamentu"
+  },
+  "errors": {
+    "E-SETTLE-001": "Valor levantamentu menus liu uza saldu disponivel",
+    "E-SETTLE-002": "Pedidu levantamentu la hetan",
+    "E-SETTLE-003": "Status levantamentu la bele halo asaun ne'e",
+    "E-SETTLE-004": "Settlement la hetan",
+    "E-SETTLE-005": "Frequénsia settlement la duni (tenke day/week/month)"
+  }
+}

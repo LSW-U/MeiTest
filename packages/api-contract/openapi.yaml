@@ -43,6 +43,10 @@ tags:
     description: 支付
   - name: platform
     description: 平台 dashboard / 审计 / 系统配置
+  - name: settle
+    description: 结算单 + 提现审核（M W3）
+  - name: im
+    description: IM 自建 WebSocket 用户签名（M W3）
 components:
   schemas:
     JwtPayload:
@@ -167,7 +171,7 @@ components:
               nullable: true
             status:
               type: string
-              enum: &a15
+              enum: &a16
                 - ACTIVE
                 - SUSPENDED
                 - DELETED
@@ -256,7 +260,7 @@ components:
           minLength: 1
         scene:
           type: string
-          enum: &a16
+          enum: &a17
             - REGISTER
             - LOGIN
             - RESET_PASSWORD
@@ -330,7 +334,7 @@ components:
           enum: *a1
         status:
           type: string
-          enum: &a17
+          enum: &a18
             - ACTIVE
             - SUSPENDED
             - DELETED
@@ -530,7 +534,7 @@ components:
           format: uuid
         type:
           type: string
-          enum: &a18
+          enum: &a19
             - ORDER_UPDATE
             - PROMOTION
             - SYSTEM
@@ -1153,7 +1157,7 @@ components:
             type: string
         linkType:
           type: string
-          enum: &a27
+          enum: &a28
             - PRODUCT
             - CATEGORY
             - URL
@@ -1165,7 +1169,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a28
+          enum: &a29
             - ACTIVE
             - INACTIVE
         createdAt:
@@ -2060,6 +2064,155 @@ components:
           type: string
       required:
         - value
+    ImSignature:
+      type: object
+      properties:
+        url:
+          type: string
+          minLength: 1
+        namespace:
+          type: string
+          minLength: 1
+        transport:
+          type: string
+          enum: &a30
+            - websocket
+            - polling
+          default: websocket
+        authScheme:
+          type: string
+          enum: &a31
+            - bearer
+        userId:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: &a32
+            - customer
+            - rider
+            - super_admin
+            - customer_service
+        serverEvents:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        clientEvents:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        conversationFormats:
+          type: object
+          properties:
+            customerMerchant:
+              type: object
+              properties:
+                template:
+                  type: string
+                  minLength: 1
+                placeholders:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+              required:
+                - template
+                - placeholders
+            customerRider:
+              type: object
+              properties:
+                template:
+                  type: string
+                  minLength: 1
+                placeholders:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+              required:
+                - template
+                - placeholders
+            customerService:
+              type: object
+              properties:
+                template:
+                  type: string
+                  minLength: 1
+                placeholders:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+              required:
+                - template
+                - placeholders
+          required:
+            - customerMerchant
+            - customerRider
+            - customerService
+        serverTime:
+          type: string
+          format: date-time
+        messageRetentionDays:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+      required:
+        - url
+        - namespace
+        - authScheme
+        - userId
+        - role
+        - serverEvents
+        - clientEvents
+        - conversationFormats
+        - serverTime
+        - messageRetentionDays
+    ImMessage:
+      type: object
+      properties:
+        messageId:
+          type: string
+          minLength: 1
+        conversationId:
+          type: string
+          minLength: 1
+        conversationType:
+          type: string
+          enum: &a15
+            - customer_merchant
+            - customer_rider
+            - customer_service
+        senderId:
+          type: string
+          minLength: 1
+        senderRole:
+          type: string
+          enum:
+            - customer
+            - rider
+            - super_admin
+            - customer_service
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        timestamp:
+          type: integer
+          minimum: 0
+      required:
+        - messageId
+        - conversationId
+        - conversationType
+        - senderId
+        - senderRole
+        - content
+        - timestamp
+    ConversationType:
+      type: string
+      enum: *a15
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -2113,7 +2266,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a15
+                        enum: *a16
                     required:
                       - id
                       - role
@@ -2210,7 +2363,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a15
+                        enum: *a16
                     required:
                       - id
                       - role
@@ -2272,7 +2425,7 @@ paths:
                   minLength: 1
                 scene:
                   type: string
-                  enum: *a16
+                  enum: *a17
                   default: LOGIN
               required:
                 - phone
@@ -2464,7 +2617,7 @@ paths:
                         nullable: true
                       status:
                         type: string
-                        enum: *a15
+                        enum: *a16
                     required:
                       - id
                       - role
@@ -2621,7 +2774,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a17
+                    enum: *a18
                   createdAt:
                     type: string
                     format: date-time
@@ -2682,7 +2835,7 @@ paths:
                     enum: *a1
                   status:
                     type: string
-                    enum: *a17
+                    enum: *a18
                   createdAt:
                     type: string
                     format: date-time
@@ -3108,7 +3261,7 @@ paths:
                       format: uuid
                     type:
                       type: string
-                      enum: *a18
+                      enum: *a19
                     title:
                       type: object
                       additionalProperties:
@@ -3443,7 +3596,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a19
+                        mon: &a20
                           type: object
                           properties:
                             open:
@@ -3455,12 +3608,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a19
-                        wed: *a19
-                        thu: *a19
-                        fri: *a19
-                        sat: *a19
-                        sun: *a19
+                        tue: *a20
+                        wed: *a20
+                        thu: *a20
+                        fri: *a20
+                        sat: *a20
+                        sun: *a20
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -3559,7 +3712,7 @@ paths:
                       type: object
                       nullable: true
                       properties:
-                        mon: &a20
+                        mon: &a21
                           type: object
                           properties:
                             open:
@@ -3571,12 +3724,12 @@ paths:
                           required:
                             - open
                             - close
-                        tue: *a20
-                        wed: *a20
-                        thu: *a20
-                        fri: *a20
-                        sat: *a20
-                        sun: *a20
+                        tue: *a21
+                        wed: *a21
+                        thu: *a21
+                        fri: *a21
+                        sat: *a21
+                        sun: *a21
                     deliveryFee:
                       type: integer
                       minimum: 0
@@ -3649,7 +3802,7 @@ paths:
                   type: object
                   nullable: true
                   properties:
-                    mon: &a21
+                    mon: &a22
                       type: object
                       properties:
                         open:
@@ -3661,12 +3814,12 @@ paths:
                       required:
                         - open
                         - close
-                    tue: *a21
-                    wed: *a21
-                    thu: *a21
-                    fri: *a21
-                    sat: *a21
-                    sun: *a21
+                    tue: *a22
+                    wed: *a22
+                    thu: *a22
+                    fri: *a22
+                    sat: *a22
+                    sun: *a22
                 deliveryFee:
                   type: integer
                   minimum: 0
@@ -3748,7 +3901,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a22
+                      mon: &a23
                         type: object
                         properties:
                           open:
@@ -3760,12 +3913,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a22
-                      wed: *a22
-                      thu: *a22
-                      fri: *a22
-                      sat: *a22
-                      sun: *a22
+                      tue: *a23
+                      wed: *a23
+                      thu: *a23
+                      fri: *a23
+                      sat: *a23
+                      sun: *a23
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -3891,7 +4044,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a23
+                      mon: &a24
                         type: object
                         properties:
                           open:
@@ -3903,12 +4056,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a23
-                      wed: *a23
-                      thu: *a23
-                      fri: *a23
-                      sat: *a23
-                      sun: *a23
+                      tue: *a24
+                      wed: *a24
+                      thu: *a24
+                      fri: *a24
+                      sat: *a24
+                      sun: *a24
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -4010,7 +4163,7 @@ paths:
                   type: object
                   nullable: true
                   properties:
-                    mon: &a24
+                    mon: &a25
                       type: object
                       properties:
                         open:
@@ -4022,12 +4175,12 @@ paths:
                       required:
                         - open
                         - close
-                    tue: *a24
-                    wed: *a24
-                    thu: *a24
-                    fri: *a24
-                    sat: *a24
-                    sun: *a24
+                    tue: *a25
+                    wed: *a25
+                    thu: *a25
+                    fri: *a25
+                    sat: *a25
+                    sun: *a25
                 deliveryFee:
                   type: integer
                   minimum: 0
@@ -4109,7 +4262,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a25
+                      mon: &a26
                         type: object
                         properties:
                           open:
@@ -4121,12 +4274,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a25
-                      wed: *a25
-                      thu: *a25
-                      fri: *a25
-                      sat: *a25
-                      sun: *a25
+                      tue: *a26
+                      wed: *a26
+                      thu: *a26
+                      fri: *a26
+                      sat: *a26
+                      sun: *a26
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -4306,7 +4459,7 @@ paths:
                     type: object
                     nullable: true
                     properties:
-                      mon: &a26
+                      mon: &a27
                         type: object
                         properties:
                           open:
@@ -4318,12 +4471,12 @@ paths:
                         required:
                           - open
                           - close
-                      tue: *a26
-                      wed: *a26
-                      thu: *a26
-                      fri: *a26
-                      sat: *a26
-                      sun: *a26
+                      tue: *a27
+                      wed: *a27
+                      thu: *a27
+                      fri: *a27
+                      sat: *a27
+                      sun: *a27
                   deliveryFee:
                     type: integer
                     minimum: 0
@@ -4676,7 +4829,7 @@ paths:
                         type: string
                     linkType:
                       type: string
-                      enum: *a27
+                      enum: *a28
                     linkValue:
                       type: string
                       nullable: true
@@ -4684,7 +4837,7 @@ paths:
                       type: integer
                     status:
                       type: string
-                      enum: *a28
+                      enum: *a29
                     createdAt:
                       type: string
                       format: date-time
@@ -5186,7 +5339,7 @@ paths:
                       type: string
                   linkType:
                     type: string
-                    enum: *a27
+                    enum: *a28
                   linkValue:
                     type: string
                     nullable: true
@@ -5194,7 +5347,7 @@ paths:
                     type: integer
                   status:
                     type: string
-                    enum: *a28
+                    enum: *a29
                   createdAt:
                     type: string
                     format: date-time
@@ -7407,6 +7560,145 @@ paths:
           description: 订单已确认
         "409":
           description: PAYMENT_NOT_PAID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/im/signature:
+    get:
+      tags:
+        - im
+      description: 获取 IM 自建 WS 连接信息（URL / namespace / 事件名 / 会话 ID 模板）。三端 SDK
+        启动时调用一次。鉴权方式 = bearer（复用 access token）
+      responses:
+        "200":
+          description: IM 连接信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    minLength: 1
+                  namespace:
+                    type: string
+                    minLength: 1
+                  transport:
+                    type: string
+                    enum: *a30
+                    default: websocket
+                  authScheme:
+                    type: string
+                    enum: *a31
+                  userId:
+                    type: string
+                    minLength: 1
+                  role:
+                    type: string
+                    enum: *a32
+                  serverEvents:
+                    type: array
+                    items:
+                      type: string
+                    minItems: 1
+                  clientEvents:
+                    type: array
+                    items:
+                      type: string
+                    minItems: 1
+                  conversationFormats:
+                    type: object
+                    properties:
+                      customerMerchant:
+                        type: object
+                        properties:
+                          template:
+                            type: string
+                            minLength: 1
+                          placeholders:
+                            type: array
+                            items:
+                              type: string
+                            minItems: 1
+                        required:
+                          - template
+                          - placeholders
+                      customerRider:
+                        type: object
+                        properties:
+                          template:
+                            type: string
+                            minLength: 1
+                          placeholders:
+                            type: array
+                            items:
+                              type: string
+                            minItems: 1
+                        required:
+                          - template
+                          - placeholders
+                      customerService:
+                        type: object
+                        properties:
+                          template:
+                            type: string
+                            minLength: 1
+                          placeholders:
+                            type: array
+                            items:
+                              type: string
+                            minItems: 1
+                        required:
+                          - template
+                          - placeholders
+                    required:
+                      - customerMerchant
+                      - customerRider
+                      - customerService
+                  serverTime:
+                    type: string
+                    format: date-time
+                  messageRetentionDays:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                required:
+                  - url
+                  - namespace
+                  - authScheme
+                  - userId
+                  - role
+                  - serverEvents
+                  - clientEvents
+                  - conversationFormats
+                  - serverTime
+                  - messageRetentionDays
+        "401":
+          description: UNAUTHORIZED
           content:
             application/json:
               schema:

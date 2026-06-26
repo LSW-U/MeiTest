@@ -15,6 +15,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CartModule } from './modules/cart/cart.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
+import { ImModule } from './modules/im/im.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
@@ -26,15 +27,15 @@ import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { UserModule } from './modules/user/user.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { IdempotencyModule } from './shared/idempotency/idempotency.module';
+import { QueueModule } from './shared/queue';
 import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
-import { IdempotencyModule } from './shared/idempotency/idempotency.module';
-import { QueueModule } from './shared/queue';
 
 @Module({
-  // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Dispatch → Inventory →
+  // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Dispatch → Im → Inventory →
   //   Order → Payment → Platform → Pricing → Realtime → Rider → Settle → Shop →
   //   User → Warehouse + Idempotency + Queue
   imports: [
@@ -42,6 +43,7 @@ import { QueueModule } from './shared/queue';
     CartModule,
     CatalogModule,
     DispatchModule,
+    ImModule,
     InventoryModule,
     OrderModule,
     PaymentModule,

@@ -1,0 +1,60 @@
+{
+  "settlement": {
+    "title": "结算单",
+    "subjectType": {
+      "label": "结算主体",
+      "MERCHANT": "商家",
+      "RIDER": "骑手"
+    },
+    "status": {
+      "label": "状态",
+      "PENDING": "待确认",
+      "CONFIRMED": "已确认",
+      "PAID": "已打款",
+      "DISPUTED": "有争议"
+    },
+    "periodDate": "结算周期",
+    "orderCount": "订单数",
+    "grossAmount": "总金额",
+    "commission": "平台抽成",
+    "refundAmount": "退款",
+    "netAmount": "应结金额",
+    "confirmedAt": "确认时间",
+    "paidAt": "打款时间",
+    "manualRun": "手动触发",
+    "runByDate": "按日期生成",
+    "empty": "暂无结算单"
+  },
+  "withdrawal": {
+    "title": "提现申请",
+    "amount": "金额",
+    "status": {
+      "label": "状态",
+      "PENDING": "待审核",
+      "APPROVED": "已通过",
+      "REJECTED": "已驳回",
+      "PAID": "已打款",
+      "FAILED": "打款失败"
+    },
+    "payoutAccount": "收款账户",
+    "payoutReference": "打款凭证",
+    "requestedAt": "申请时间",
+    "reviewedAt": "审核时间",
+    "paidAt": "打款时间",
+    "review": "审核",
+    "approve": "通过",
+    "reject": "驳回",
+    "markPaid": "标记已打款",
+    "cancel": "撤销",
+    "create": "申请提现",
+    "availableBalance": "可用余额",
+    "empty": "暂无提现申请"
+  },
+  "errors": {
+    "E-SETTLE-001": "提现金额超过应结余额",
+    "E-SETTLE-002": "提现申请不存在",
+    "E-SETTLE-003": "提现申请状态不允许此操作",
+    "E-SETTLE-004": "结算单不存在",
+    "E-SETTLE-005": "结算频率配置无效（必须 day/week/month 之一）"
+  }
+}

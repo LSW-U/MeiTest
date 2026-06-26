@@ -1,0 +1,60 @@
+{
+  "settlement": {
+    "title": "Settlements",
+    "subjectType": {
+      "label": "Subject Type",
+      "MERCHANT": "Merchant",
+      "RIDER": "Rider"
+    },
+    "status": {
+      "label": "Status",
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "PAID": "Paid",
+      "DISPUTED": "Disputed"
+    },
+    "periodDate": "Period",
+    "orderCount": "Orders",
+    "grossAmount": "Gross",
+    "commission": "Commission",
+    "refundAmount": "Refunds",
+    "netAmount": "Net",
+    "confirmedAt": "Confirmed At",
+    "paidAt": "Paid At",
+    "manualRun": "Manual Run",
+    "runByDate": "Run by Date",
+    "empty": "No settlements yet"
+  },
+  "withdrawal": {
+    "title": "Withdrawal Requests",
+    "amount": "Amount",
+    "status": {
+      "label": "Status",
+      "PENDING": "Pending Review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "PAID": "Paid",
+      "FAILED": "Failed (payout failed)"
+    },
+    "payoutAccount": "Payout Account",
+    "payoutReference": "Payout Reference",
+    "requestedAt": "Requested At",
+    "reviewedAt": "Reviewed At",
+    "paidAt": "Paid At",
+    "review": "Review",
+    "approve": "Approve",
+    "reject": "Reject",
+    "markPaid": "Mark as Paid",
+    "cancel": "Cancel",
+    "create": "Request Withdrawal",
+    "availableBalance": "Available Balance",
+    "empty": "No withdrawal requests"
+  },
+  "errors": {
+    "E-SETTLE-001": "Withdrawal amount exceeds available balance",
+    "E-SETTLE-002": "Withdrawal request not found",
+    "E-SETTLE-003": "Withdrawal status does not allow this action",
+    "E-SETTLE-004": "Settlement not found",
+    "E-SETTLE-005": "Invalid settlement frequency (must be day/week/month)"
+  }
+}

@@ -42,6 +42,21 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  // 审查报告 P1 #6：生产部署在 nginx TLS-terminating 反代后，req.protocol 默认是 http
+  // 导致 im-signature.resolveWsUrl 推断出 ws://（mixed-content 拒绝）
+  // 信任一级反代（X-Forwarded-Proto），req.protocol 正确反映客户端协议
+  const expressInstance = app.getHttpAdapter().getInstance();
+  if (typeof expressInstance.set === 'function') {
+    expressInstance.set('trust proxy', 1);
+  }
+
+  // 审查报告 P1 #6：prod 强制 WS_URL 配置（避免反代场景推断出错）
+  if (process.env.NODE_ENV === 'production' && !process.env.WS_URL?.trim()) {
+    throw new Error(
+      'WS_URL must be set in production (e.g. wss://api.meimart.com) — TLS-terminating reverse proxies cannot infer ws/wss scheme from req.protocol without explicit config',
+    );
+  }
+
   // 替换 NestJS 默认 logger 为 pino（在 listen 前注入，启动日志也走 pino）
   app.useLogger(nestLogger);
 
