@@ -459,7 +459,7 @@ export class OrderService {
 
     await this.cancelOrderInternal(orderId, {
       operatorId: ctx.operatorId,
-      deviceType: 'admin_web', // S3 修复：用现有值表达"系统后台操作"（不新增枚举）
+      deviceType: 'system', // V2-S5 修复：用 'system' 表达 BullMQ 自动操作（不再混淆 admin_web）
       perspective: 'system',
       reason: ctx.reason,
     });

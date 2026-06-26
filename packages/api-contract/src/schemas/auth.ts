@@ -22,8 +22,12 @@ export const Role = z.enum([
 ]);
 export type Role = z.infer<typeof Role>;
 
-/** 设备类型（3 端，前端 App 配置写死，服务端用于审计 + token 策略） */
-export const DeviceType = z.enum(['client_app', 'rider_app', 'admin_web']);
+/**
+ * 设备类型（4 值：3 端 + system 用于内部操作）
+ *
+ * V2-S5：加 'system' 用于内部操作（BullMQ / cron / 回调）— 后端持久化时用，不在 JWT 出现
+ */
+export const DeviceType = z.enum(['client_app', 'rider_app', 'admin_web', 'system']);
 export type DeviceType = z.infer<typeof DeviceType>;
 
 /** 后台视角（仅审计字段，后端 RBAC 不感知） */

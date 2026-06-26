@@ -3,6 +3,7 @@
  *
  * 设计要点：
  *   - BullModule.forRoot：从 REDIS_URL 读取配置，与 shared/cache 共用同一 Redis 实例
+ *   - V2-S8 修复：BullMQ 用独立 keyPrefix 'bull:'（避免运维清缓存误删 BullMQ 任务）
  *   - @Global()：让 feature 模块直接 registerQueue 即可，不需 import QueueModule
  *   - 队列注册（registerQueue）由各 feature 模块自己声明（保持模块边界）
  *
@@ -21,7 +22,11 @@ import { BullModule } from '@nestjs/bullmq';
         url: process.env.REDIS_URL ?? 'redis://localhost:6379',
         maxRetriesPerRequest: null,
         enableReadyCheck: true,
-        keyPrefix: process.env.REDIS_KEY_PREFIX ?? 'meimart:',
+        // V2-S8 修复：独立 keyPrefix，与业务 cache (meimart:) 隔离
+        //   - 业务缓存：meimart:cart:* / meimart:rider:online:* / meimart:jwt-blacklist:*
+        //   - BullMQ 队列：bull:* （内部 key 格式 bull:<queue>:<id>）
+        //   - 运维 redis-cli --scan --pattern 'meimart:*' | xargs del 不会误删队列
+        keyPrefix: process.env.BULLMQ_KEY_PREFIX ?? 'bull:',
       },
     }),
   ],

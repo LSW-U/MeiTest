@@ -25,11 +25,12 @@ export interface JwtPayload {
 
 export type TokenType = 'access' | 'refresh';
 
-/** 分端 access TTL（秒） */
+/** 分端 access TTL（秒）— V2-S5：system 不会被 JWT 使用，留 0 占位 */
 export const ACCESS_TTL_SECONDS: Record<DeviceType, number> = {
   client_app: 30 * 24 * 60 * 60, // 30 天
   rider_app: 12 * 60 * 60, // 12 小时
   admin_web: 2 * 60 * 60, // 2 小时
+  system: 0, // 系统操作不签发 JWT，0 占位（不实际使用）
 };
 
 /** refresh 统一 60 天 */
