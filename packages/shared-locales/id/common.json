@@ -28,6 +28,104 @@
       "warehouse": "Gudang",
       "support": "Dukungan",
       "rider-mgmt": "Manajemen Rider"
+    },
+    "dashboard": {
+      "title": "Dasbor"
+    },
+    "products": {
+      "title": "Produk",
+      "create": "Buat Produk",
+      "listDesc": "Kelola produk, buat baru, ubah status.",
+      "searchPlaceholder": "Cari berdasarkan nama...",
+      "emptyDesc": "Klik 'Buat Produk' untuk menambah produk pertama.",
+      "createDesc": "Isi nama (EN wajib), gambar, dan satuan.",
+      "detailDesc": "Edit info dasar atau kelola SKU.",
+      "nameEn": "Nama (Inggris)",
+      "nameOptional": "Nama (bahasa lain, opsional)",
+      "mainImageRequired": "URL Gambar Utama",
+      "unitRequired": "Satuan (EN wajib)",
+      "detail": "Detail Produk"
+    },
+    "categories": {
+      "title": "Kategori",
+      "listDesc": "Kelola kategori produk (MVP: daftar datar, tanpa pohon).",
+      "emptyDesc": "Gunakan 'Buat Kategori' untuk menambahkan.",
+      "newCat": "Kategori Baru",
+      "iconUrlRequired": "URL Ikon",
+      "deleteTitle": "Hapus kategori?",
+      "deleteDesc": "Ini akan menonaktifkan kategori. Produk mempertahankan categoryId tetapi tidak muncul di kategori aktif.",
+      "deleted": "Kategori dihapus"
+    },
+    "warehouses": {
+      "title": "Gudang",
+      "create": "Buat Gudang",
+      "listDesc": "Kelola gudang, area jangkauan, inventaris.",
+      "searchPlaceholder": "Cari kode atau nama...",
+      "emptyDesc": "Klik 'Buat Gudang' untuk menambahkan.",
+      "createDesc": "Kode, nama, alamat, GPS, ongkos kirim.",
+      "detailDesc": "Edit info, area jangkauan, atau inventaris.",
+      "centerLat": "Latitude Pusat",
+      "centerLng": "Longitude Pusat",
+      "coverageHint": "Tempel GeoJSON Polygon lengkap. UI peta datang di W4.",
+      "coverageSaved": "Area jangkauan disimpan",
+      "invalidJson": "JSON tidak valid",
+      "detail": "Detail Gudang"
+    },
+    "action": {
+      "save": "Simpan",
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "edit": "Edit",
+      "create": "Buat",
+      "back": "Kembali",
+      "confirm": "Konfirmasi",
+      "search": "Cari",
+      "retry": "Coba lagi",
+      "saving": "Menyimpan...",
+      "creating": "Membuat...",
+      "deleting": "Menghapus..."
+    },
+    "status": {
+      "active": "Aktif",
+      "inactive": "Nonaktif",
+      "out_of_stock": "Stok habis",
+      "toggle_off": "Tarik",
+      "toggle_on": "Pasang"
+    },
+    "feedback": {
+      "saved": "Berhasil disimpan",
+      "failed": "Operasi gagal",
+      "created": "Berhasil dibuat",
+      "updated": "Berhasil diperbarui",
+      "deleted": "Berhasil dihapus"
+    },
+    "table": {
+      "actions": "Aksi",
+      "empty": "Tidak ada data"
+    },
+    "label": {
+      "basic_info": "Info Dasar",
+      "name": "Nama",
+      "description": "Deskripsi",
+      "status": "Status",
+      "category": "Kategori",
+      "image": "Gambar",
+      "price": "Harga",
+      "sku": "SKU",
+      "code": "Kode",
+      "address": "Alamat",
+      "delivery_fee": "Ongkos Kirim",
+      "quantity": "Jumlah",
+      "reason": "Alasan",
+      "sort_order": "Urutan",
+      "is_active": "Aktif"
+    },
+    "tab": {
+      "basic": "Info Dasar",
+      "skus": "SKU",
+      "coverage": "Area Jangkauan",
+      "inventory": "Inventaris",
+      "logs": "Log Perubahan"
     }
   }
 }

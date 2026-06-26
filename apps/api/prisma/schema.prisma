@@ -72,6 +72,11 @@ enum SkuStatus {
   INACTIVE
 }
 
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
 /// 订单状态机(v0.3 决策:加 PENDING_PAYMENT 给预付,DELIVERED_PAID/DELIVERED_UNPAID 给 COD)
 /// 状态流转:
 ///   CART → PENDING_PAYMENT(预付:WECHAT/PAYPAL/STRIPE)
@@ -374,12 +379,13 @@ model Sku {
 }
 
 model Category {
-  id        String  @id @default(uuid())
+  id        String         @id @default(uuid())
   /// 多语言分类名 Record<string, string>
   name      Json
-  iconUrl   String  @map("icon_url")
-  parentId  String? @map("parent_id")
-  sortOrder Int     @default(0) @map("sort_order")
+  iconUrl   String         @map("icon_url")
+  parentId  String?        @map("parent_id")
+  sortOrder Int            @default(0) @map("sort_order")
+  status    CategoryStatus @default(ACTIVE)
 
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children Category[] @relation("CategoryTree")
@@ -785,19 +791,21 @@ model CartItem {
 }
 
 model Address {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
   name      String
   phone     String
   /// 多语言区域(来自 GET /common/regions)
   region    Json
   detail    String
-  lat       Decimal? @db.Decimal(10, 7)
-  lng       Decimal? @db.Decimal(10, 7)
-  isDefault Boolean  @default(false) @map("is_default")
+  lat       Decimal?  @db.Decimal(10, 7)
+  lng       Decimal?  @db.Decimal(10, 7)
+  isDefault Boolean   @default(false) @map("is_default")
   tag       String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  /// 软删除标记（null = 未删除；非 null = 删除时间）。订单等历史引用需要保留地址。
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
 

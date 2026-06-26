@@ -11,7 +11,7 @@
  * - 客户端列表只返回 ACTIVE 商品，后台可看全部
  * - 搜索按 i18n name 匹配（4 语言任一命中）
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
 
@@ -120,7 +120,12 @@ export class CatalogService {
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
   }) {
     const shop = await db.shop.findFirst();
-    if (!shop) throw new Error('Shop not initialized');
+    if (!shop) {
+      throw new BadRequestException({
+        code: 'E-SHOP-001',
+        message: 'Shop not initialized',
+      });
+    }
 
     const created = await db.product.create({
       data: {
@@ -172,7 +177,8 @@ export class CatalogService {
   async deleteProduct(id: string) {
     const existing = await db.product.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
-    await db.product.delete({ where: { id } });
+    // 软删除：商品可能被 SKU / OrderItem / Favorite 引用，硬删会丢历史订单详情
+    await db.product.update({ where: { id }, data: { status: 'INACTIVE' } });
   }
 
   // ===== SKU =====
@@ -241,7 +247,8 @@ export class CatalogService {
   async deleteSku(skuId: string) {
     const existing = await db.sku.findUnique({ where: { id: skuId } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Sku not found' });
-    await db.sku.delete({ where: { id: skuId } });
+    // 软删除：SKU 可能被 Stock / OrderItem 引用，硬删会丢历史订单详情
+    await db.sku.update({ where: { id: skuId }, data: { status: 'INACTIVE' } });
     await this.recomputeProductPriceMin(existing.productId);
   }
 
@@ -323,7 +330,8 @@ export class CatalogService {
   async deleteCategory(id: string) {
     const existing = await db.category.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
-    await db.category.delete({ where: { id } });
+    // 软删除：分类可能被 Product 引用，硬删会丢商品归类
+    await db.category.update({ where: { id }, data: { status: 'INACTIVE' } });
   }
 
   // ===== Banner =====

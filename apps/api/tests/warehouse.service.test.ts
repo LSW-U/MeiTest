@@ -162,11 +162,15 @@ describe('WarehouseService', () => {
   });
 
   describe('deleteWarehouse', () => {
-    it('删除存在的仓库', async () => {
+    it('软删除（update status=INACTIVE，不调用 delete）', async () => {
       mocks.warehouseFindUnique.mockResolvedValueOnce(mockRow);
-      mocks.warehouseDelete.mockResolvedValueOnce({});
+      mocks.warehouseUpdate.mockResolvedValueOnce({ ...mockRow, status: 'INACTIVE' });
       await service.deleteWarehouse('wh-1');
-      expect(mocks.warehouseDelete).toHaveBeenCalledWith({ where: { id: 'wh-1' } });
+      expect(mocks.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { status: 'INACTIVE' },
+      });
+      expect(mocks.warehouseDelete).not.toHaveBeenCalled();
     });
 
     it('找不到抛 NotFoundException', async () => {

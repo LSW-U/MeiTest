@@ -32,7 +32,7 @@ export class WarehouseService {
   async getWarehouse(id: string) {
     const w = await db.warehouse.findUnique({ where: { id } });
     if (!w) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
+      throw new NotFoundException({ code: 'E-WAREHOUSE-003', message: 'Warehouse not found' });
     }
     const coverage = await this.getCoverageGeoJson(id);
     return {
@@ -110,7 +110,7 @@ export class WarehouseService {
   ) {
     const existing = await db.warehouse.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
+      throw new NotFoundException({ code: 'E-WAREHOUSE-003', message: 'Warehouse not found' });
     }
 
     const updated = await db.warehouse.update({
@@ -146,7 +146,7 @@ export class WarehouseService {
   async updateCoverage(id: string, coverage: GeoJSONPolygon) {
     const existing = await db.warehouse.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
+      throw new NotFoundException({ code: 'E-WAREHOUSE-003', message: 'Warehouse not found' });
     }
     await setWarehouseGeometry(
       db,
@@ -160,9 +160,10 @@ export class WarehouseService {
   async deleteWarehouse(id: string) {
     const existing = await db.warehouse.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
+      throw new NotFoundException({ code: 'E-WAREHOUSE-003', message: 'Warehouse not found' });
     }
-    await db.warehouse.delete({ where: { id } });
+    // 软删除：仓库可能被 Stock / Order 引用，硬删会 FK cascade 或丢历史订单
+    await db.warehouse.update({ where: { id }, data: { status: 'INACTIVE' } });
   }
 
   /** 用 raw SQL 取 coverageArea GeoJSON（prisma Unsupported 字段不能直接 select） */

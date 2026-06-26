@@ -259,11 +259,15 @@ describe('UserService', () => {
   });
 
   describe('deleteAddress', () => {
-    it('删除存在的地址', async () => {
-      dbMocks.addressFindFirst.mockResolvedValueOnce({ id: 'addr-1' });
-      dbMocks.addressDelete.mockResolvedValueOnce({});
+    it('软删除（update deletedAt=Date，不调用 delete）', async () => {
+      dbMocks.addressFindFirst.mockResolvedValueOnce({ id: 'addr-1', userId: 'user-1' });
+      dbMocks.addressUpdate.mockResolvedValueOnce({ id: 'addr-1', deletedAt: new Date() });
       await service.deleteAddress('user-1', 'addr-1');
-      expect(dbMocks.addressDelete).toHaveBeenCalledWith({ where: { id: 'addr-1' } });
+      expect(dbMocks.addressUpdate).toHaveBeenCalledWith({
+        where: { id: 'addr-1' },
+        data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+      });
+      expect(dbMocks.addressDelete).not.toHaveBeenCalled();
     });
 
     it('找不到地址抛 NotFoundException', async () => {

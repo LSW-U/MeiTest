@@ -10,7 +10,7 @@
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
-import { Injectable, UnauthorizedException, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { genId } from '@meimart/shared-utils';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -196,16 +196,24 @@ export class AuthService {
     return prismaRole.toLowerCase() as Role;
   }
 
-  /** 密码登录：找 user + verify password + 签 token pair */
+  /** 密码登录：找 user + verify password + 签 token pair
+   *
+   * 安全：E-USER-001/002 不区分「手机号未注册」vs「密码错」，统一返回 E-USER-006
+   * 避免攻击者通过错误码差异枚举已注册手机号（东帝汶市场小，手机号段有限，风险高）。
+   * 注：MVP 阶段不做时间侧信道 dummy verify（bcrypt 复杂度已足够），W6 切真 SMS 时一并加固。
+   */
   async loginWithPassword(phone: string, password: string): Promise<TokenPair & { userId: string; role: Role }> {
+    const GENERIC_AUTH_FAIL = {
+      code: 'E-USER-006',
+      message: 'Phone or password invalid',
+    } as const;
+
     const user = await db.user.findUnique({ where: { phone } });
     if (!user) {
-      throw new UnauthorizedException({
-        code: 'E-USER-001',
-        message: 'Phone not registered',
-      });
+      throw new UnauthorizedException(GENERIC_AUTH_FAIL);
     }
     if (user.status !== 'ACTIVE') {
+      // 用户禁用：也是「无法登录」，但攻击者已知手机号注册了；返回 E-USER-005 暴露注册状态可接受（禁用 = 主动禁用）
       throw new UnauthorizedException({
         code: 'E-USER-005',
         message: `User status is ${user.status}, login disabled`,
@@ -213,10 +221,7 @@ export class AuthService {
     }
     const ok = await passwordStrategy.verifyPassword(user.password, password);
     if (!ok) {
-      throw new UnauthorizedException({
-        code: 'E-USER-002',
-        message: 'Wrong password',
-      });
+      throw new UnauthorizedException(GENERIC_AUTH_FAIL);
     }
 
     const deviceType = this.inferDeviceTypeFromRole(this.toContractRole(user.role));
@@ -251,6 +256,20 @@ export class AuthService {
     let user = await db.user.findUnique({ where: { phone } });
     if (!user) {
       // SMS 登录找不到用户时自动注册（OTP-only onboarding，仅 customer 角色）
+      // 安全守卫：仅在 development / test 环境启用，staging/prod 不存在用户时返回 E-USER-006
+      // 防止：dev stub 固定验证码 123456 意外暴露到公网时，任意手机号自动开户刷脏用户表
+      const nodeEnv = process.env.NODE_ENV || 'development';
+      if (nodeEnv !== 'development' && nodeEnv !== 'test') {
+        logger.warn({
+          msg: 'SMS_LOGIN_AUTO_REGISTER_BLOCKED',
+          phone,
+          reason: `NODE_ENV=${nodeEnv} (only allowed in development/test)`,
+        });
+        throw new UnauthorizedException({
+          code: 'E-USER-006',
+          message: 'Phone or password invalid',
+        });
+      }
       user = await db.user.create({
         data: {
           phone,
@@ -359,7 +378,11 @@ export class AuthService {
     return { expireIn: result.expireIn };
   }
 
-  /** SMS 找回密码：verify SMS + 改密 */
+  /** SMS 找回密码：verify SMS + 改密
+   *
+   * 安全（v1.1 审查补漏）：不区分「用户不存在」vs「SMS code 错」，统一返回 E-USER-003。
+   * 防止攻击者通过错误码差异枚举已注册手机号（resetPassword 也是泄漏点）。
+   */
   async resetPassword(input: {
     phone: string;
     smsCode: string;
@@ -367,9 +390,10 @@ export class AuthService {
   }): Promise<void> {
     const user = await db.user.findUnique({ where: { phone: input.phone } });
     if (!user) {
-      throw new NotFoundException({
-        code: 'E-USER-001',
-        message: 'Phone not registered',
+      // 不暴露"用户不存在"，统一返回 SMS code 错误码（攻击者无法区分）
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'SMS code invalid or expired',
       });
     }
     const verified = await this.verifySmsCode(input.phone, input.smsCode, 'RESET_PASSWORD');

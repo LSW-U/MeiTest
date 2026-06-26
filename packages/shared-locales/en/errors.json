@@ -55,12 +55,16 @@
   "E-RIDER-003": "Rider is already on another task",
   "E-RIDER-004": "Vehicle info missing",
   "E-RIDER-005": "Rider not approved yet",
-  "E-RIDER-005": "Rider not approved yet",
   "E-PLATFORM-002": "System config key not found",
   "E-SETTLE-001": "Withdrawal amount exceeds available balance",
   "E-SETTLE-002": "Withdrawal request not found",
   "E-SETTLE-003": "Withdrawal status does not allow this action",
   "E-SETTLE-004": "Settlement not found",
   "E-SETTLE-005": "Invalid settlement frequency (must be day/week/month)",
-  "E-AUDIT-001": "Audit log not found"
+  "E-AUDIT-001": "Audit log not found",
+  "E-WAREHOUSE-003": "Warehouse not found",
+  "E-INVENTORY-003": "Invalid stock quantity (must be > 0)",
+  "E-INVENTORY-004": "Stock record not found",
+  "E-USER-006": "Phone or password invalid",
+  "E-USER-007": "Resource not found"
 }

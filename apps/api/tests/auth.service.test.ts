@@ -322,7 +322,7 @@ describe('AuthService', () => {
       expect(userUpdate).toHaveBeenCalled();
     });
 
-    it('用户不存在抛 E-USER-001', async () => {
+    it('用户不存在混淆为 SMS code 错（防撞库，v1.1 审查补漏）', async () => {
       userFindUnique.mockResolvedValueOnce(null);
       await expect(
         service.resetPassword({
@@ -330,7 +330,7 @@ describe('AuthService', () => {
           smsCode: '123456',
           newPassword: 'NewPass1234',
         }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('SMS 错误抛 E-USER-003', async () => {

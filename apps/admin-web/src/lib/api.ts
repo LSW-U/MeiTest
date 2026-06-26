@@ -97,7 +97,15 @@ export async function apiFetch<T = unknown>(
     );
   }
 
-  return res.json() as Promise<T>;
+  // 204 No Content 或空 body 不解析 JSON（避免 "Unexpected end of JSON input"）
+  if (res.status === 204) {
+    return null as T;
+  }
+  const text = await res.text();
+  if (!text) {
+    return null as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 /** 标准响应包装：{ success: true, data } */
