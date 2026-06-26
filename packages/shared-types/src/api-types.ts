@@ -4531,7 +4531,7 @@ export interface components {
             /** @enum {string} */
             role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
             /** @enum {string} */
-            deviceType: "client_app" | "rider_app" | "admin_web";
+            deviceType: "client_app" | "rider_app" | "admin_web" | "system";
             iat: number;
             exp: number;
             /** Format: uuid */

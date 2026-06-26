@@ -55,6 +55,7 @@ enum DeviceType {
   CLIENT_APP // 客户端 RN + Expo
   RIDER_APP // 骑手端 RN + Expo
   ADMIN_WEB // 后台 Next.js
+  SYSTEM // V2-S5：系统自动操作（BullMQ worker / cron / 内部回调）
 }
 
 /// 视角(仅前端用,后端只通过 X-Perspective header 写 AuditLog,RBAC 不感知)
@@ -112,6 +113,7 @@ enum OrderEventType {
   CANCELLED // 取消
   REFUND_REQUESTED // 申请退款
   REFUNDED // 已退款
+  ISSUE_REPORTED // W3-C S5:骑手异常上报（CUSTOMER_UNREACHABLE / REJECTED 等）
 }
 
 /// 支付方式(v0.3 决策 D:全预留 5 枚举,2 真实 + 3 mock/stub)
@@ -207,6 +209,8 @@ model User {
   riderProfile    RiderProfile?
   warehouseStaff  WarehouseStaff?
   customerService CustomerService?
+  // V2-S7：审核人关联（admin 审核 RiderProfile 申请时记录）
+  reviewedRiders  RiderProfile[] @relation("ReviewedRiders")
 
   @@index([role, status])
   @@map("users")
@@ -687,6 +691,18 @@ model RiderProfile {
 
   // v0.3:不在此表存 currentLat/currentLng,拆到 RiderLocation 表
 
+  // W3 流程 C:入驻审核 + 实名认证（mock）+ 偏好仓库
+  // applicationStatus: PENDING / APPROVED / REJECTED（不用 enum，TEXT 避免与流程 W/M enum 撞）
+  // V2-S6 修复：去掉 ? 让 schema 与 migration (NOT NULL DEFAULT 'PENDING') 对齐
+  applicationStatus       String      @default("PENDING") @map("application_status")
+  idCardNumber            String?     @map("id_card_number")
+  // V2-S7 修复：加 User relation（FK 约束，admin 硬删时 SET NULL）
+  reviewedById            String?     @map("reviewed_by_id")
+  reviewedBy              User?       @relation("ReviewedRiders", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt              DateTime?   @map("reviewed_at")
+  rejectReason            String?     @map("reject_reason")
+  preferredWarehouseIds   String[]    @default([]) @map("preferred_warehouse_ids")
+
   user              User                   @relation(fields: [userId], references: [id])
   orders            Order[]
   deliveryTasks     DeliveryTask[]
@@ -694,6 +710,7 @@ model RiderProfile {
   currentLocation   RiderLocation?
   locationHistories RiderLocationHistory[]
 
+  @@index([applicationStatus])
   @@map("rider_profiles")
 }
 

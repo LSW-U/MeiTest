@@ -65,6 +65,7 @@ components:
             - client_app
             - rider_app
             - admin_web
+            - system
         iat:
           type: integer
         exp:

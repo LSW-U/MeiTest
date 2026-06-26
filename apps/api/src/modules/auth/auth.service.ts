@@ -175,7 +175,7 @@ export class AuthService {
   }
 
   /** contract DeviceType (lowercase) → Prisma DeviceType enum (UPPERCASE) */
-  private toPrismaDeviceType(deviceType: DeviceType): 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB' {
+  private toPrismaDeviceType(deviceType: DeviceType): 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB' | 'SYSTEM' {
     switch (deviceType) {
       case 'client_app':
         return 'CLIENT_APP';
@@ -183,6 +183,8 @@ export class AuthService {
         return 'RIDER_APP';
       case 'admin_web':
         return 'ADMIN_WEB';
+      case 'system':
+        return 'SYSTEM';
     }
   }
 

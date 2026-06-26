@@ -9,15 +9,19 @@ import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
 // 三流程 merge：按字母序排列 imports（避免再次冲突）
 // FLOW W（供给/仓储/浏览）: Catalog / Inventory / Pricing / Shop / User / Warehouse
-// FLOW C（交易/配送）: Cart / Order / Payment
+// FLOW C（交易/配送）: Cart / Dispatch / Order / Payment / Rider
+// FLOW M（治理/财务）: Platform / Settle
+// Shared: Idempotency / Queue
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CartModule } from './modules/cart/cart.module';
+import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { RiderModule } from './modules/rider/rider.module';
 import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { UserModule } from './modules/user/user.module';
@@ -26,24 +30,31 @@ import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
+import { IdempotencyModule } from './shared/idempotency/idempotency.module';
+import { QueueModule } from './shared/queue';
 
 @Module({
-  // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Inventory → Order →
-  //   Payment → Platform → Pricing → Realtime → Settle → Shop → User → Warehouse
+  // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Dispatch → Inventory →
+  //   Order → Payment → Platform → Pricing → Realtime → Rider → Settle → Shop →
+  //   User → Warehouse + Idempotency + Queue
   imports: [
     AuthModule,
     CartModule,
     CatalogModule,
+    DispatchModule,
     InventoryModule,
     OrderModule,
     PaymentModule,
     PlatformModule,
     PricingModule,
     RealtimeModule,
+    RiderModule,
     SettleModule,
     ShopModule,
     UserModule,
     WarehouseModule,
+    IdempotencyModule,
+    QueueModule,
   ],
   controllers: [HealthController, MeController],
   providers: [

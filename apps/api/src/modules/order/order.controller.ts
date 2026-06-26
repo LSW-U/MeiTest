@@ -26,6 +26,7 @@ import {
   HttpStatus,
   Headers,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { CreateOrderRequest, CancelOrderRequest } from '@meimart/api-contract';
@@ -33,6 +34,7 @@ import { OrderService } from './order.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
+import { IdempotencyService } from '../../shared/idempotency';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { CreateOrderInput, PaymentMethodValue, OrderStatusValue } from './order.types';
 
@@ -55,6 +57,9 @@ const ListOrdersQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
+/** M2：Idempotency-Key header UUID 校验，避免客户端传 "1"/"test" 占用表空间 */
+const IdempotencyKeyHeader = z.string().uuid().min(1).max(64).optional();
+
 interface RequestWithUser {
   user?: RequestUser;
   headers: Record<string, string | string | undefined>;
@@ -63,13 +68,19 @@ interface RequestWithUser {
 @Controller('api/v1/client/orders')
 @Roles('customer')
 export class OrderController {
-  constructor(@Inject(OrderService) private readonly orderService: OrderService) {}
+  constructor(
+    @Inject(OrderService) private readonly orderService: OrderService,
+    @Inject(IdempotencyService) private readonly idempotencyService: IdempotencyService,
+  ) {}
 
   /**
    * 创建订单（同步事务）
    *
    * Idempotency-Key header 防重复下单（客户端生成 UUID，重试用同一个 key）
-   * W2 阶段 IdempotencyKey 表已建但暂未接入（W3 cart 模块联调时统一接入）
+   * W3 接入：IdempotencyService.withIdempotency 包装 createOrder
+   *   - 首次请求 → 执行 createOrder + 缓存 responsePayload
+   *   - 同 key 重试 → 直接回放缓存（不再扣库存）
+   *   - 并发同 key → 409 IdempotencyConcurrentException
    */
   @Post()
   @Audit({ resource: 'Order' })
@@ -77,13 +88,24 @@ export class OrderController {
     @Body(new ZodValidationPipe(CreateOrderRequest)) body: z.infer<typeof CreateOrderRequest>,
     @Req() req: RequestWithUser,
     @Headers('x-perspective') perspective: string | undefined,
+    @Headers('idempotency-key') rawIdempotencyKey: string | undefined,
   ) {
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
 
-    // W3 cart 联调时接入 IdempotencyKey 表防重复下单（header: Idempotency-Key）
+    // M2 / V2-S4 修复：严格模式 — 非 UUID 直接 400 拒绝（防失去幂等保护）
+    if (rawIdempotencyKey !== undefined) {
+      const parsed = IdempotencyKeyHeader.safeParse(rawIdempotencyKey);
+      if (!parsed.success) {
+        throw new BadRequestException({
+          code: 'E-COMMON-001',
+          message: 'idempotency-key header must be a valid UUID',
+        });
+      }
+    }
+    const idempotencyKey = rawIdempotencyKey; // 通过校验，原值传入
 
     const input: CreateOrderInput = {
       userId: user.sub,
@@ -95,7 +117,11 @@ export class OrderController {
       perspective,
     };
 
-    const order = await this.orderService.createOrder(input);
+    const order = await this.idempotencyService.withIdempotency(
+      'ORDER_CREATE',
+      idempotencyKey,
+      () => this.orderService.createOrder(input),
+    );
     return { success: true as const, data: order };
   }
 

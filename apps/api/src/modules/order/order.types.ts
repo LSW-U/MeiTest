@@ -71,13 +71,15 @@ export interface OrderEventContext {
 }
 
 /** Prisma deviceType enum（大写）— 用于 OrderEvent / AuditLog 持久化 */
-export type PrismaDeviceType = 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB';
+export type PrismaDeviceType = 'CLIENT_APP' | 'RIDER_APP' | 'ADMIN_WEB' | 'SYSTEM';
 
 /**
  * JWT 小写 deviceType（contract 'client_app' 等）→ Prisma enum 大写（'CLIENT_APP' 等）
  *
  * 用于 OrderEvent.deviceType / AuditLog.deviceType 字段持久化。
  * 与 shared/interceptors/audit.interceptor.ts:toPrismaDeviceType 同语义。
+ *
+ * V2-S5 修复：新增 'system' → 'SYSTEM'（用于 BullMQ / cron / 内部回调）
  *
  * @returns null 当 d 为 undefined（数据库字段允许 null）
  */
@@ -87,5 +89,7 @@ export function toPrismaDeviceType(
   if (!d) return null;
   if (d === 'client_app') return 'CLIENT_APP';
   if (d === 'rider_app') return 'RIDER_APP';
-  return 'ADMIN_WEB';
+  if (d === 'admin_web') return 'ADMIN_WEB';
+  if (d === 'system') return 'SYSTEM';
+  return null;
 }
