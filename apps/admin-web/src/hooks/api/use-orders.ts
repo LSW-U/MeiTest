@@ -72,27 +72,35 @@ export interface OrderDetail extends OrderListItem {
 
 export interface ListOrdersParams {
   status?: OrderStatus;
+  userId?: string;
+  warehouseId?: string;
+  orderNo?: string;
   limit?: number;
   cursor?: string;
 }
 
-/**
- * 列表（W4 后端实现后启用）
- * 当前调用会返回 404/403，UI 会显示"接口待实现"占位
- */
+export interface OrderListResult {
+  items: OrderListItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/** 列表（W4 后端已实现） */
 export function useOrders(params: ListOrdersParams = {}) {
   const searchParams = new URLSearchParams();
   if (params.status) searchParams.set('status', params.status);
+  if (params.userId) searchParams.set('userId', params.userId);
+  if (params.warehouseId) searchParams.set('warehouseId', params.warehouseId);
+  if (params.orderNo) searchParams.set('orderNo', params.orderNo);
   if (params.limit) searchParams.set('limit', String(params.limit));
   if (params.cursor) searchParams.set('cursor', params.cursor);
   const query = searchParams.toString();
-  return useQuery<OrderListItem[]>({
+  return useQuery<OrderListResult>({
     queryKey: ['orders', params],
     queryFn: () =>
-      apiFetch<ApiSuccess<OrderListItem[]>>(
+      apiFetch<ApiSuccess<OrderListResult>>(
         `/admin/orders${query ? `?${query}` : ''}`,
       ).then((res) => res.data),
-    retry: false,
   });
 }
 
@@ -103,7 +111,6 @@ export function useOrderDetail(id: string | undefined) {
     queryFn: () =>
       apiFetch<ApiSuccess<OrderDetail>>(`/admin/orders/${id}`).then((res) => res.data),
     enabled: !!id,
-    retry: false,
   });
 }
 
