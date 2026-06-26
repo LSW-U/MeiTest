@@ -10,6 +10,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { OrderController } from './order.controller';
+import { AdminOrderController } from './admin-order.controller';
 import { OrderService } from './order.service';
 import { OrderNoService } from './order-no.service';
 import { OrderTimeoutProcessor } from './order-timeout.processor';
@@ -25,7 +26,7 @@ import { CartModule, CART_SERVICE_TOKEN } from '../cart/cart.module';
     forwardRef(() => CartModule),
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
   ],
-  controllers: [OrderController],
+  controllers: [OrderController, AdminOrderController],
   providers: [
     OrderService,
     OrderNoService,

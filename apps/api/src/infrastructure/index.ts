@@ -26,3 +26,19 @@ export type { MapClient, GeocodeResult, ReverseGeocodeInput, DistanceResult } fr
 
 // 对象存储（MinIO dev / 阿里云 OSS prod）
 export { minio, DEFAULT_BUCKET, uploadFile, deleteFile, presignUpload } from './oss/minio';
+
+// 通知（4 策略 stub，W6 切真）
+export {
+  NotifyFactory,
+  EmailNotifyStrategy,
+  SmsNotifyStrategy,
+  PushNotifyStrategy,
+  WhatsAppNotifyStrategy,
+} from './notify';
+export type {
+  NotifyChannel,
+  NotifyType,
+  NotifyRequest,
+  NotifyResult,
+  NotifyStrategy,
+} from './notify';

@@ -147,6 +147,85 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  // ==========================================================================
+  // W4：业务事件广播 helper（service 层调用，广播到订阅了对应 room 的客户端）
+  // ==========================================================================
+
+  /**
+   * 订单状态变更（broadcast 到 order room）
+   *
+   * 触发点（W5 串接）：
+   *   - OrderService.markPaid（PENDING_PAYMENT → CONFIRMED）
+   *   - OrderService.cancelOrder（任何状态 → CANCELLED）
+   *   - DispatchService.acceptTask（CONFIRMED → PICKED）
+   *   - DispatchService.deliverTask（OUT_FOR_DELIVERY → DELIVERED_*）
+   *
+   * 客户端订阅：socket.emit('join:order', { orderId }) 后自动收到
+   */
+  broadcastOrderStatusChange(
+    orderId: string,
+    payload: {
+      fromStatus: string;
+      toStatus: string;
+      operatorId?: string;
+      reason?: string;
+      timestamp?: string;
+    },
+  ): void {
+    if (!this.server) return;
+    const room = `${ORDER_ROOM_PREFIX}${orderId}`;
+    this.server.to(room).emit('order:status-changed', {
+      orderId,
+      ...payload,
+      timestamp: payload.timestamp ?? new Date().toISOString(),
+    });
+    this.wsLogger.debug({
+      msg: 'ws_order_status_changed',
+      orderId,
+      from: payload.fromStatus,
+      to: payload.toStatus,
+      room,
+    });
+  }
+
+  /**
+   * 配送任务被接单（broadcast 到 riders room + order room）
+   *
+   * 客户端订阅：
+   *   - 所有 rider 自动在 riders room，收到该事件表示有新单可抢
+   *   - 订单的 customer/merchant 在 order room，收到该事件表示订单已派单
+   */
+  broadcastDeliveryAssigned(payload: {
+    orderId: string;
+    taskId: string;
+    riderId: string;
+    riderName?: string;
+    warehouseId: string;
+  }): void {
+    if (!this.server) return;
+    const room = `${ORDER_ROOM_PREFIX}${payload.orderId}`;
+    // 客户/商家：收到骑手已接单
+    this.server.to(room).emit('delivery:assigned', payload);
+    // 所有 rider：从抢单池移除该任务（避免重复抢单）
+    this.server.to(RIDERS_ROOM).emit('dispatch:task-removed', { taskId: payload.taskId });
+  }
+
+  /**
+   * 库存告警（broadcast 到 warehouse room）
+   *
+   * 触发点：库存低于安全阈值（10），warehouse_staff 应收到通知补货
+   */
+  broadcastInventoryAlert(payload: {
+    warehouseId: string;
+    skuId: string;
+    currentQty: number;
+    threshold: number;
+  }): void {
+    if (!this.server) return;
+    const room = `warehouse:${payload.warehouseId}`;
+    this.server.to(room).emit('inventory:low-stock', payload);
+  }
+
   handleDisconnect(client: Socket): void {
     const user = (client.data as { user?: WsUser }).user;
     if (user) {

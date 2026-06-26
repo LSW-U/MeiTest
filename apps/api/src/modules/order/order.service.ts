@@ -675,6 +675,69 @@ export class OrderService {
     };
   }
 
+  /**
+   * 查询全部订单（admin 视角，跨用户）
+   *
+   * W4 新增：admin-web /orders 页面需要
+   *
+   * 支持筛选：status / userId / warehouseId / orderNo / 时间范围
+   */
+  async listAllOrders(
+    options: {
+      status?: OrderStatusValue;
+      userId?: string;
+      warehouseId?: string;
+      orderNo?: string;
+      cursor?: string;
+      limit?: number;
+    },
+  ): Promise<{ items: OrderWithRelations[]; nextCursor: string | null; hasMore: boolean }> {
+    const limit = Math.min(options.limit ?? 20, 100);
+    const where: Record<string, unknown> = {};
+    if (options.status) where.status = options.status;
+    if (options.userId) where.userId = options.userId;
+    if (options.warehouseId) where.warehouseId = options.warehouseId;
+    if (options.orderNo) where.orderNo = { contains: options.orderNo, mode: 'insensitive' };
+
+    const orders = await db.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+      include: {
+        items: { orderBy: { id: 'asc' } },
+        events: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    const hasMore = orders.length > limit;
+    const items = hasMore ? orders.slice(0, limit) : orders;
+
+    return {
+      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o)),
+      nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
+      hasMore,
+    };
+  }
+
+  /** admin 取订单详情（不校验 userId 归属） */
+  async adminGetOrderDetail(orderId: string): Promise<OrderWithRelations> {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { orderBy: { id: 'asc' } },
+        events: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!order) {
+      throw new NotFoundException({
+        code: 'E-ORDER-004',
+        message: `Order not found: ${orderId}`,
+      });
+    }
+    return this.toOrderWithRelations(order);
+  }
+
   /** Prisma Order → API DTO（DateTime → ISO 字符串） */
   private toOrderWithRelations(order: unknown): OrderWithRelations {
     const o = order as {

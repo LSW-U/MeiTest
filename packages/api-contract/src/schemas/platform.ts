@@ -90,12 +90,19 @@ export const AuditLogDetail = AuditLogListItem.extend({
 });
 export type AuditLogDetailType = z.infer<typeof AuditLogDetail>;
 
-/** 列表查询参数 */
+/** 列表查询参数（W4 加 ip/userAgent/traceId/resourceId 高级筛选） */
 export const AuditLogQuery = z.object({
   userId: z.string().uuid().optional(),
   resourceType: z.string().optional(),
+  resourceId: z.string().optional(),
   action: z.string().optional(),
   perspective: z.string().optional(),
+  /** W4 新增：按 IP 筛选（安全审计用，比如查可疑 IP） */
+  ip: z.string().optional(),
+  /** W4 新增：按 User-Agent 模糊匹配 */
+  userAgent: z.string().optional(),
+  /** W4 新增：按 traceId 精确查找（链路追踪用） */
+  traceId: z.string().optional(),
   from: IsoTimestamp.optional(),
   to: IsoTimestamp.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),

@@ -2012,9 +2012,17 @@ components:
           format: uuid
         resourceType:
           type: string
+        resourceId:
+          type: string
         action:
           type: string
         perspective:
+          type: string
+        ip:
+          type: string
+        userAgent:
+          type: string
+        traceId:
           type: string
         from:
           type: string
@@ -6140,12 +6148,32 @@ paths:
         - schema:
             type: string
           required: false
+          name: resourceId
+          in: query
+        - schema:
+            type: string
+          required: false
           name: action
           in: query
         - schema:
             type: string
           required: false
           name: perspective
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: ip
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: userAgent
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: traceId
           in: query
         - schema:
             type: string
@@ -6373,12 +6401,32 @@ paths:
         - schema:
             type: string
           required: false
+          name: resourceId
+          in: query
+        - schema:
+            type: string
+          required: false
           name: action
           in: query
         - schema:
             type: string
           required: false
           name: perspective
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: ip
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: userAgent
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: traceId
           in: query
         - schema:
             type: string

@@ -3428,8 +3428,12 @@ export interface paths {
                 query?: {
                     userId?: string;
                     resourceType?: string;
+                    resourceId?: string;
                     action?: string;
                     perspective?: string;
+                    ip?: string;
+                    userAgent?: string;
+                    traceId?: string;
                     from?: string;
                     to?: string;
                     limit?: number;
@@ -3576,8 +3580,12 @@ export interface paths {
                 query?: {
                     userId?: string;
                     resourceType?: string;
+                    resourceId?: string;
                     action?: string;
                     perspective?: string;
+                    ip?: string;
+                    userAgent?: string;
+                    traceId?: string;
                     from?: string;
                     to?: string;
                     limit?: number;
@@ -5436,8 +5444,12 @@ export interface components {
             /** Format: uuid */
             userId?: string;
             resourceType?: string;
+            resourceId?: string;
             action?: string;
             perspective?: string;
+            ip?: string;
+            userAgent?: string;
+            traceId?: string;
             /** Format: date-time */
             from?: string;
             /** Format: date-time */

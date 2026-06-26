@@ -123,8 +123,15 @@ export class AuditService {
     return {
       ...(query.userId ? { userId: query.userId } : {}),
       ...(query.resourceType ? { resourceType: query.resourceType } : {}),
+      ...(query.resourceId ? { resourceId: query.resourceId } : {}),
       ...(query.action ? { action: { contains: query.action } } : {}),
       ...(query.perspective ? { perspective: query.perspective } : {}),
+      // W4 新增：IP 精确匹配（安全审计用）
+      ...(query.ip ? { ip: query.ip } : {}),
+      // W4 新增：User-Agent 模糊匹配
+      ...(query.userAgent ? { userAgent: { contains: query.userAgent } } : {}),
+      // W4 新增：traceId 精确查找（链路追踪用）
+      ...(query.traceId ? { traceId: query.traceId } : {}),
       ...(query.from || query.to
         ? {
             createdAt: {
