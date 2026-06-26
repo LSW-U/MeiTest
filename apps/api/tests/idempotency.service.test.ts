@@ -207,6 +207,31 @@ describe('IdempotencyService', () => {
       expect(result).toEqual({ recovered: true });
       expect(mockDb.idempotencyKey.delete).toHaveBeenCalledWith({ where: { id: 'id-stuck' } });
     });
+
+    it('V2-B1：delete 连续失败导致 create 反复撞 unique → 抛 RECURSION_LIMIT（max=3）', async () => {
+      // 场景：create 永远撞 unique（delete 后另一线程又写入）+ findUnique 永远返回过期记录
+      // 触发 handleExistingKey 反复 delete + withIdempotency 重建
+      mockDb.idempotencyKey.create.mockRejectedValue(uniqueViolation());
+      mockDb.idempotencyKey.findUnique.mockResolvedValue({
+        id: 'id-loop',
+        status: 'PENDING',
+        responsePayload: null,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() - 60_000), // 过期 → 触发 delete
+      });
+      mockDb.idempotencyKey.delete.mockResolvedValue({});
+      mockDb.idempotencyKey.update.mockResolvedValue({});
+
+      const fn = vi.fn().mockResolvedValue({ never: true });
+      await expect(
+        service.withIdempotency('ORDER_CREATE', 'key-loop', fn),
+      ).rejects.toThrow(/RECURSION_LIMIT/);
+
+      // fn 不应被执行（限制触发前）
+      expect(fn).not.toHaveBeenCalled();
+      // delete 至少 3 次（depth=0/1/2 都触发了 delete）
+      expect(mockDb.idempotencyKey.delete.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
   });
 
   describe('withIdempotency - 过期清理', () => {

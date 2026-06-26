@@ -40,6 +40,11 @@ const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
  */
 const STUCK_PENDING_MS = 5 * 60 * 1000; // 5 分钟
 
+/**
+ * 递归深度上限：防 delete 失败导致无限循环（V2-B1 修复）
+ */
+const MAX_RECURSION_DEPTH = 3;
+
 /** 并发冲突异常（前端可换新 key 重试） */
 export class IdempotencyConcurrentException extends ConflictException {
   constructor(scene: string, key: string, status: string) {
@@ -54,14 +59,31 @@ export class IdempotencyConcurrentException extends ConflictException {
 export class IdempotencyService {
   /**
    * 在幂等键保护下执行 fn
+   *
+   * @param scene 业务场景
+   * @param key 客户端传入的 UUID（undefined 时不启用幂等，直接执行）
+   * @param fn 业务函数
+   * @param depth 递归深度（内部用，外部调用不传）— V2-B1 修复：限制 max=3 防 delete 失败导致无限循环
    */
   async withIdempotency<T>(
     scene: IdempotencyScene,
     key: string | undefined,
     fn: () => Promise<T>,
+    depth = 0,
   ): Promise<T> {
     if (!key) {
       return fn();
+    }
+
+    // V2-B1 修复：入口深度校验（防极端场景栈溢出）
+    if (depth >= MAX_RECURSION_DEPTH) {
+      logger.error({
+        msg: 'IDEMPOTENCY_RECURSION_LIMIT',
+        scene,
+        key,
+        depth,
+      });
+      throw new IdempotencyConcurrentException(scene, key, 'RECURSION_LIMIT');
     }
 
     const expiresAt = new Date(Date.now() + DEFAULT_TTL_MS);
@@ -72,7 +94,8 @@ export class IdempotencyService {
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        return this.handleExistingKey(scene, key, fn);
+        // V2-B1 修复：透传 depth 到 handleExistingKey
+        return this.handleExistingKey(scene, key, fn, depth);
       }
       throw e;
     }
@@ -113,8 +136,8 @@ export class IdempotencyService {
     fn: () => Promise<T>,
     depth = 0,
   ): Promise<T> {
-    // M7：递归深度限制（默认 max=3，防 delete 失败导致无限循环）
-    if (depth >= 3) {
+    // V2-B1 修复：递归深度限制（之前 M7 写了限制但 depth 永远=0，完全无效）
+    if (depth >= MAX_RECURSION_DEPTH) {
       logger.error({
         msg: 'IDEMPOTENCY_RECURSION_LIMIT',
         scene,
@@ -148,7 +171,8 @@ export class IdempotencyService {
         reason: isExpired ? 'expired' : 'stuck-pending',
         depth,
       });
-      return this.withIdempotency(scene as IdempotencyScene, key, fn);
+      // V2-B1 修复：透传 depth+1（之前漏传，导致限制永远不触发）
+      return this.withIdempotency(scene as IdempotencyScene, key, fn, depth + 1);
     }
 
     if (existing.status === 'SUCCESS') {
