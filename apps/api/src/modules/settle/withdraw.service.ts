@@ -8,7 +8,7 @@
  *
  * MVP 简化：不接真实支付平台（无主体），全部走线下打款 + 凭证录入
  */
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { db, withTransaction } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import type {
@@ -110,12 +110,13 @@ export class WithdrawalService {
     return this.toDto(row);
   }
 
-  /** 平台审核（APPROVE / REJECT） */
+  /** 平台审核（APPROVE / REJECT） — review2-fix-3：防状态机 race */
   async review(
     id: string,
     input: WithdrawalReviewInputType,
     reviewerId: string,
   ): Promise<WithdrawalRequestType> {
+    // 单线程读 + 校验状态（快速失败给清晰错误码）
     const row = await db.withdrawalRequest.findUnique({ where: { id } });
     if (!row) {
       throw new NotFoundException({
@@ -130,8 +131,10 @@ export class WithdrawalService {
       });
     }
 
-    const updated = await db.withdrawalRequest.update({
-      where: { id },
+    // review2-fix-3：把 status='PENDING' 推到 WHERE 子句
+    // 两个 admin 同时点 APPROVE + REJECT 时，第二个 updateMany.count === 0 → 抛 ConflictException
+    const result = await db.withdrawalRequest.updateMany({
+      where: { id, status: 'PENDING' },
       data: {
         status: input.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
         rejectReason: input.action === 'REJECT' ? input.rejectReason : null,
@@ -139,7 +142,15 @@ export class WithdrawalService {
         reviewedAt: new Date(),
       },
     });
+    if (result.count === 0) {
+      throw new ConflictException({
+        code: 'E-SETTLE-003',
+        message: `Withdrawal ${id} status changed concurrently (race detected)`,
+      });
+    }
 
+    // updateMany 不返回完整 row，回查
+    const updated = (await db.withdrawalRequest.findUnique({ where: { id } }))!;
     logger.info({
       msg: 'WITHDRAWAL_REVIEWED',
       id,
@@ -150,7 +161,7 @@ export class WithdrawalService {
     return this.toDto(updated);
   }
 
-  /** 线下打款完成标记（super_admin 录入凭证） */
+  /** 线下打款完成标记（super_admin 录入凭证） — review2-fix-3：防状态机 race */
   async markPaid(
     id: string,
     input: WithdrawalMarkPaidInputType,
@@ -170,15 +181,23 @@ export class WithdrawalService {
       });
     }
 
-    const updated = await db.withdrawalRequest.update({
-      where: { id },
+    // review2-fix-3：把 status='APPROVED' 推到 WHERE 子句
+    const result = await db.withdrawalRequest.updateMany({
+      where: { id, status: 'APPROVED' },
       data: {
         status: 'PAID',
         payoutReference: input.payoutReference,
         paidAt: new Date(),
       },
     });
+    if (result.count === 0) {
+      throw new ConflictException({
+        code: 'E-SETTLE-003',
+        message: `Withdrawal ${id} status changed concurrently (race detected)`,
+      });
+    }
 
+    const updated = (await db.withdrawalRequest.findUnique({ where: { id } }))!;
     logger.info({
       msg: 'WITHDRAWAL_PAID',
       id,

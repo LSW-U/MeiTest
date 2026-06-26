@@ -34,7 +34,7 @@
       "APPROVED": "Aprovado",
       "REJECTED": "Rejeitado",
       "PAID": "Pago",
-      "CANCELLED": "Cancelado"
+      "FAILED": "Falha (pagamento falhou)"
     },
     "payoutAccount": "Conta de Pagamento",
     "payoutReference": "Referência de Pagamento",

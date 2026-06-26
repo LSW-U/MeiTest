@@ -2,11 +2,20 @@
  * Withdrawal Controller — 提现申请 + 审核 + 打款标记
  *
  * 路径：
- *   POST /api/v1/admin/settle/withdrawals           商家/骑手创建提现申请
+ *   POST /api/v1/admin/settle/withdrawals           创建提现申请（super_admin 代录）
  *   GET  /api/v1/admin/settle/withdrawals           列表
  *   GET  /api/v1/admin/settle/withdrawals/:id       详情
  *   POST /api/v1/admin/settle/withdrawals/:id/review    super_admin 审核（APPROVE/REJECT）
  *   POST /api/v1/admin/settle/withdrawals/:id/mark-paid super_admin 标记线下打款完成
+ *
+ * 权限模型（review2-fix-1 修复）：
+ *   - 所有写操作限 super_admin（MVP 单一商家 = 平台自营，admin 代录是唯一路径）
+ *   - 列表/详情允许 warehouse_staff/customer_service 只读（运营查进度）
+ *   - W6 多商家开放后拆分：
+ *     · /client/withdrawals — customer/rider 自申请，强制 requesterId = req.user.sub
+ *     · /admin/withdrawals/on-behalf-of — 代录专用，写审计时区分 onBehalfOf
+ *   - review2 安全建议：原 @Roles('super_admin','warehouse_staff','customer_service') 写操作
+ *     让 warehouse_staff/customer_service 可代任意 shopId/riderId 发起提现，已收紧
  */
 import {
   Controller,
@@ -39,14 +48,13 @@ export class WithdrawalController {
   constructor(@Inject(WithdrawalService) private readonly withdraw: WithdrawalService) {}
 
   /**
-   * 创建提现申请
+   * 创建提现申请（super_admin 代录）
    *
-   * 权限：商家/骑手自己申请（admin 代申请也走此端点）
-   * 角色放宽到 super_admin + warehouse_staff（W2 阶段所有 admin 视角可调，
-   * 真实业务接入后改为商家/骑手专用端点 + admin 代申请端点分离）
+   * 业务：MVP 单一商家场景下，所有提现由平台运营代为录入
+   * 审计：service 写 WITHDRAWAL_CREATED 日志含 userId（执行代录的 admin）
    */
   @Post()
-  @Roles('super_admin', 'warehouse_staff', 'customer_service')
+  @Roles('super_admin')
   @Audit({ resource: 'WithdrawalRequest' })
   async create(
     @Body(new ZodValidationPipe(WithdrawalCreateInput)) body: unknown,

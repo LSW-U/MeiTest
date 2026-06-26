@@ -34,7 +34,7 @@
       "APPROVED": "Disetujui",
       "REJECTED": "Ditolak",
       "PAID": "Dibayar",
-      "CANCELLED": "Dibatalkan"
+      "FAILED": "Gagal (pembayaran gagal)"
     },
     "payoutAccount": "Akun Pembayaran",
     "payoutReference": "Referensi Pembayaran",

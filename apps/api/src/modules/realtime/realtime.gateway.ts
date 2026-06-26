@@ -492,7 +492,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
 
     if (convType === 'cm') {
-      // customer ↔ merchant：customer 必须是 customerId；merchant 端走 super_admin 视角已放过
+      // customer ↔ merchant：customer 必须是 customerId
+      //
+      // TODO(W6+ 多商家开放)：
+      //   - 当前 MVP 单一商家（平台自营），"商家方"由 super_admin / customer_service 代理
+      //   - 多商家开放后，需要：
+      //     · 扩 Role 加 'merchant_staff'
+      //     · 新增 verifyShopMembership(shopId, user.sub) 校验 staff 属于该 shop
+      //     · 此分支改为：
+      //         if (user.role === 'customer' && user.sub === customerId) return ok;
+      //         if (user.role === 'merchant_staff' && await verifyShopMembership(partyB, user.sub)) return ok;
+      //   - 同时 customer_service 是否真需要介入 cm（当前是放过的）需要业务确认
       if (user.role === 'customer' && user.sub === customerId) {
         return { ok: true };
       }

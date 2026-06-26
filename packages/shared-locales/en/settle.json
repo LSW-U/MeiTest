@@ -34,7 +34,7 @@
       "APPROVED": "Approved",
       "REJECTED": "Rejected",
       "PAID": "Paid",
-      "CANCELLED": "Cancelled"
+      "FAILED": "Failed (payout failed)"
     },
     "payoutAccount": "Payout Account",
     "payoutReference": "Payout Reference",

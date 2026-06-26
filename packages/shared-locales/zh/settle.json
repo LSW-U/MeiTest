@@ -34,7 +34,7 @@
       "APPROVED": "已通过",
       "REJECTED": "已驳回",
       "PAID": "已打款",
-      "CANCELLED": "已撤销"
+      "FAILED": "打款失败"
     },
     "payoutAccount": "收款账户",
     "payoutReference": "打款凭证",

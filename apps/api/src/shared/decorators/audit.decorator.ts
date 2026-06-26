@@ -30,6 +30,10 @@ export const Audit = (options: AuditOptions = {}) => SetMetadata(AUDIT_KEY, opti
  * 默认 mask 的敏感字段（精确小写匹配，避免 includes 误杀 tokenType/secretQuestion 等）
  *
  * 注意：必须用全等比较，不能 includes。比如 'token' includes 会误杀 tokenType。
+ *
+ * review2-fix-2：加 'payoutaccount' — WithdrawalRequest.payoutAccount 含银行账号 PII，
+ *   不 mask 会随 @Audit interceptor 写进 AuditLog.after JSON，DB 备份/泄露即 PII 泄露。
+ *   mask 后审计仍能看到 channel + account 掩码（如 ***1234），保留审计能力。
  */
 export const DEFAULT_MASK_FIELDS = [
   'password',
@@ -42,4 +46,5 @@ export const DEFAULT_MASK_FIELDS = [
   'idcard',
   'creditcard',
   'cvv',
+  'payoutaccount',
 ];

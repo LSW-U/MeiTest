@@ -34,7 +34,7 @@
       "APPROVED": "Aprova ona",
       "REJECTED": "Rejeita ona",
       "PAID": "Solta ona",
-      "CANCELLED": "Kansela ona"
+      "FAILED": "Faila (solta faila)"
     },
     "payoutAccount": "Konta Pagamentu",
     "payoutReference": "Referénsia Pagamentu",

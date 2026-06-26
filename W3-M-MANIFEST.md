@@ -277,9 +277,81 @@ allowBuilds:
 
 ---
 
-**版本**：v1.1（v1.0 + 审查报告修复）
+**版本**：v1.2（v1.1 + 第二轮审查报告 P0+P1 修复）
 **输出位置**：`W3-M-MANIFEST.md`（repo 根目录）
 **主 AI 整合顺序**：W → C → M（M 已就绪，可直接 rsync 独占文件 + 按 §2 合并共享文件）
+
+---
+
+## 附录 B：第二轮审查报告 P0+P1 修复（v1.2 增量）
+
+依据 `W3-M-代码审查报告-v2.md` 修复 4 项安全/正确性问题 + 1 项文档 TODO。
+
+### B.1 P1 #1 — withdraw.controller 收紧 @Roles 防水平越权
+
+**问题**：原 `@Roles('super_admin', 'warehouse_staff', 'customer_service')` 让 warehouse_staff / customer_service 可代任意 shopId/riderId 发起提现申请（信任 body.requesterId），把他人余额提到自己控制的账户。
+
+**修复**：`apps/api/src/modules/settle/withdraw.controller.ts`
+- 写操作（POST/POST/:id/review/POST/:id/mark-paid）限 `@Roles('super_admin')` —— MVP 单一商家场景所有提现都是平台运营代录
+- 读操作（GET/GET/:id）保留宽松角色（warehouse_staff/customer_service 可查进度）
+- 注释说明 W6+ 多商家开放时拆分自申请 vs 代录路径
+
+### B.2 P1 #2 — payoutAccount 银行 PII 加 mask
+
+**问题**：`payoutAccount: { bank, account }` 含银行账号 PII，原 `DEFAULT_MASK_FIELDS` 不含。每次提现创建/审核/打款，`@Audit` interceptor 把 `payoutAccount` 明文写进 `AuditLog.after` JSON。DB 备份/泄露即 PII 泄露。
+
+**修复**：`apps/api/src/shared/decorators/audit.decorator.ts` `DEFAULT_MASK_FIELDS` 加 `'payoutaccount'`。所有 controller 无需改，全局生效。
+
+### B.3 P1 #3 — withdraw review/markPaid 状态机 race
+
+**问题**：`findUnique + 校验 status + update` 三步非原子。两个 admin 并发点 APPROVE + REJECT，第二个 `update` 覆盖第一个，最终状态取决于谁后到。
+
+**修复**：`apps/api/src/modules/settle/withdraw.service.ts`
+- `review`：`updateMany({ where: { id, status: 'PENDING' } })` 把状态条件推到 DB
+- `markPaid`：`updateMany({ where: { id, status: 'APPROVED' } })` 同上
+- `count === 0` → `ConflictException`（E-SETTLE-003，并发赢家已改）
+- 补 2 个并发 race 用例：mock updateMany 返回 count=0 → 验证抛 ConflictException
+
+### B.4 P1 #4 — i18n withdrawal.status CANCELLED → FAILED（与 schema 对齐）
+
+**问题**：`WithdrawalStatus` enum 是 `['PENDING','APPROVED','REJECTED','PAID','FAILED']`（无 CANCELLED）。我写的 i18n `withdrawal.status.CANCELLED` 是永远不会被代码产生的死键，而真实的 FAILED 状态在 admin-web 上会 fallback 显示原始字符串 "FAILED"。
+
+**修复**：5 语言 `settle.json` `withdrawal.status.CANCELLED` 改为 `FAILED`（文案：打款失败 / Failed / Gagal / Falha / Faila）。
+
+### B.5 P1 #5 — assertParticipant cm 分支加多商家 TODO
+
+**问题**：MVP 5 角色无 'merchant_staff'，"商家方"由 super_admin 代理。代码功能正确，但缺未来扩展注释。
+
+**修复**：`apps/api/src/modules/realtime/realtime.gateway.ts` `assertParticipant` cm 分支加 TODO 注释，说明 W6+ 多商家开放时需要：
+- 扩 Role 加 'merchant_staff'
+- 新增 `verifyShopMembership(shopId, user.sub)`
+- cm 分支补 merchant_staff 校验
+
+### B.6 跳过项
+
+- **Fix 6（抽 parseConversationId 共享解析函数）** — 当前 `extractOtherUserId` 和 `assertParticipant` 各自解析 conversationId 都正确，纯重构增加测试面，不做。如果未来发现两处解析规则偏离，再补
+- **小改进（expire 重复调 / MockOrderAggregator seed 分布 / subjects early return）** — 不影响正确性，留待后续 polish
+
+### B.7 验证
+
+| 指标 | v1.1 | v1.2 |
+|---|---|---|
+| typecheck workspace | 7 全过 | 7 全过 |
+| test spec | 23 | 23 |
+| test 用例 | 286 | **288**（+2 review/markPaid race） |
+| openapi | 61 / 69 | 不变 |
+
+### B.8 建议 commit 拆分（v1.2 增量）
+
+```
+[W3-M-review2-fix-1] withdraw.controller 收紧 @Roles 防水平越权
+[W3-M-review2-fix-2] DEFAULT_MASK_FIELDS 加 payoutaccount（PII 保护）
+[W3-M-review2-fix-3] withdraw review/markPaid 改 updateMany 防状态机 race
+[W3-M-review2-fix-4] i18n withdrawal.status CANCELLED → FAILED（与 schema 对齐）
+[W3-M-review2-fix-5] assertParticipant cm 分支加 W6 多商家 TODO
+```
+
+---
 
 ---
 

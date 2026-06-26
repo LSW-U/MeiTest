@@ -23,6 +23,7 @@ vi.mock('../src/shared/db', () => {
   const wrFindMany = vi.fn();
   const wrCreate = vi.fn();
   const wrUpdate = vi.fn();
+  const wrUpdateMany = vi.fn();
   const wrCount = vi.fn();
   const wrAggregate = vi.fn();
   const executeRaw = vi.fn().mockResolvedValue(1);
@@ -33,6 +34,7 @@ vi.mock('../src/shared/db', () => {
       findMany: wrFindMany,
       create: wrCreate,
       update: wrUpdate,
+      updateMany: wrUpdateMany,
       count: wrCount,
       aggregate: wrAggregate,
     },
@@ -59,7 +61,7 @@ const settlementAggregate = db.settlement.aggregate as unknown as ReturnType<typ
 const wrFindUnique = db.withdrawalRequest.findUnique as unknown as ReturnType<typeof vi.fn>;
 const wrFindMany = db.withdrawalRequest.findMany as unknown as ReturnType<typeof vi.fn>;
 const wrCreate = db.withdrawalRequest.create as unknown as ReturnType<typeof vi.fn>;
-const wrUpdate = db.withdrawalRequest.update as unknown as ReturnType<typeof vi.fn>;
+const wrUpdateMany = db.withdrawalRequest.updateMany as unknown as ReturnType<typeof vi.fn>;
 const wrCount = db.withdrawalRequest.count as unknown as ReturnType<typeof vi.fn>;
 const wrAggregate = db.withdrawalRequest.aggregate as unknown as ReturnType<typeof vi.fn>;
 const executeRawMock = db.$executeRaw as unknown as ReturnType<typeof vi.fn>;
@@ -182,8 +184,10 @@ describe('WithdrawalService', () => {
 
   describe('review', () => {
     it('PENDING + APPROVE → APPROVED', async () => {
-      wrFindUnique.mockResolvedValue(mockRow({ status: 'PENDING' }));
-      wrUpdate.mockResolvedValue(mockRow({ status: 'APPROVED', reviewedBy: 'admin-1' }));
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'PENDING' }))
+        .mockResolvedValueOnce(mockRow({ status: 'APPROVED', reviewedBy: 'admin-1' }));
+      wrUpdateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.review(
         'wr-1',
@@ -192,9 +196,9 @@ describe('WithdrawalService', () => {
       );
 
       expect(result.status).toBe('APPROVED');
-      expect(wrUpdate).toHaveBeenCalledWith(
+      expect(wrUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'wr-1' },
+          where: { id: 'wr-1', status: 'PENDING' },
           data: expect.objectContaining({
             status: 'APPROVED',
             reviewedBy: 'admin-1',
@@ -204,10 +208,12 @@ describe('WithdrawalService', () => {
     });
 
     it('PENDING + REJECT + reason → REJECTED', async () => {
-      wrFindUnique.mockResolvedValue(mockRow({ status: 'PENDING' }));
-      wrUpdate.mockResolvedValue(
-        mockRow({ status: 'REJECTED', rejectReason: 'suspicious' }),
-      );
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'PENDING' }))
+        .mockResolvedValueOnce(
+          mockRow({ status: 'REJECTED', rejectReason: 'suspicious' }),
+        );
+      wrUpdateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.review(
         'wr-1',
@@ -216,7 +222,7 @@ describe('WithdrawalService', () => {
       );
 
       expect(result.status).toBe('REJECTED');
-      expect(wrUpdate).toHaveBeenCalledWith(
+      expect(wrUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             status: 'REJECTED',
@@ -234,7 +240,7 @@ describe('WithdrawalService', () => {
       ).rejects.toMatchObject({
         response: { code: 'E-SETTLE-003' },
       });
-      expect(wrUpdate).not.toHaveBeenCalled();
+      expect(wrUpdateMany).not.toHaveBeenCalled();
     });
 
     it('不存在 → NotFoundException + E-SETTLE-002', async () => {
@@ -247,14 +253,29 @@ describe('WithdrawalService', () => {
       });
       expect(NotFoundException);
     });
+
+    it('review2-fix-3：updateMany.count === 0 → ConflictException（并发赢家已改）', async () => {
+      // 第一次 findUnique 返回 PENDING（通过状态校验）
+      wrFindUnique.mockResolvedValueOnce(mockRow({ status: 'PENDING' }));
+      // updateMany 返回 0 → 说明并发赢家已改 status
+      wrUpdateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.review('wr-1', { action: 'APPROVE' } as never, 'admin-1'),
+      ).rejects.toMatchObject({
+        response: { code: 'E-SETTLE-003' },
+      });
+    });
   });
 
   describe('markPaid', () => {
     it('APPROVED → PAID + payoutReference', async () => {
-      wrFindUnique.mockResolvedValue(mockRow({ status: 'APPROVED' }));
-      wrUpdate.mockResolvedValue(
-        mockRow({ status: 'PAID', payoutReference: 'TXN-001', paidAt: new Date() }),
-      );
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'APPROVED' }))
+        .mockResolvedValueOnce(
+          mockRow({ status: 'PAID', payoutReference: 'TXN-001', paidAt: new Date() }),
+        );
+      wrUpdateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.markPaid(
         'wr-1',
@@ -263,8 +284,9 @@ describe('WithdrawalService', () => {
       );
 
       expect(result.status).toBe('PAID');
-      expect(wrUpdate).toHaveBeenCalledWith(
+      expect(wrUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: { id: 'wr-1', status: 'APPROVED' },
           data: expect.objectContaining({
             status: 'PAID',
             payoutReference: 'TXN-001',
@@ -275,6 +297,17 @@ describe('WithdrawalService', () => {
 
     it('非 APPROVED → BadRequestException + E-SETTLE-003', async () => {
       wrFindUnique.mockResolvedValue(mockRow({ status: 'PENDING' }));
+
+      await expect(
+        service.markPaid('wr-1', { payoutReference: 'X' } as never, 'admin-1'),
+      ).rejects.toMatchObject({
+        response: { code: 'E-SETTLE-003' },
+      });
+    });
+
+    it('review2-fix-3：updateMany.count === 0 → ConflictException', async () => {
+      wrFindUnique.mockResolvedValueOnce(mockRow({ status: 'APPROVED' }));
+      wrUpdateMany.mockResolvedValue({ count: 0 });
 
       await expect(
         service.markPaid('wr-1', { payoutReference: 'X' } as never, 'admin-1'),
