@@ -15,7 +15,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { PerspectiveGuard } from '@/components/PerspectiveGuard';
-import { apiJson, ApiError } from '@/lib/fetch';
+import { apiFetch as apiJson, ApiError } from '@/lib/api';
 import type { components } from '@meimart/shared-types';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
@@ -70,7 +70,7 @@ function DashboardInner() {
     let cancelled = false;
     setError(null);
     apiJson<{ success: true; data: DashboardSummary }>(
-      `/api/v1/admin/platform/dashboard/summary?range=${range}`,
+      `/admin/platform/dashboard/summary?range=${range}`,
     )
       .then((res) => {
         if (!cancelled) setData(res.data);

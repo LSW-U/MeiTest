@@ -166,27 +166,33 @@ export class SettlementService {
    *   - 未来可由订单流程末尾自动触发（C 流程完成后接）
    */
   async confirm(id: string, confirmerId: string): Promise<SettlementType> {
-    const row = await db.settlement.findUnique({ where: { id } });
-    if (!row) {
-      throw new NotFoundException({
-        code: 'E-SETTLE-004',
-        message: `Settlement not found: ${id}`,
-      });
-    }
-    if (row.status !== 'PENDING') {
+    // P1-4 修复：race condition 防护（参考 withdraw review/markPaid 模式）
+    // 原 findUnique + update 两步并发会双过校验 → update 都成功（confirmedAt 被覆盖）
+    // 改 updateMany where status=PENDING + count===0 校验
+    const result = await db.settlement.updateMany({
+      where: { id, status: 'PENDING' },
+      data: {
+        status: 'CONFIRMED',
+        confirmedAt: new Date(),
+      },
+    });
+
+    if (result.count === 0) {
+      // 二次查询区分：不存在 vs 状态不对
+      const row = await db.settlement.findUnique({ where: { id } });
+      if (!row) {
+        throw new NotFoundException({
+          code: 'E-SETTLE-004',
+          message: `Settlement not found: ${id}`,
+        });
+      }
       throw new ConflictException({
         code: 'E-SETTLE-003',
         message: `Settlement status ${row.status} cannot be confirmed (must be PENDING)`,
       });
     }
 
-    const updated = await db.settlement.update({
-      where: { id },
-      data: {
-        status: 'CONFIRMED',
-        confirmedAt: new Date(),
-      },
-    });
+    const updated = await db.settlement.findUnique({ where: { id } });
 
     logger.info({
       msg: 'SETTLEMENT_CONFIRMED',
@@ -194,7 +200,7 @@ export class SettlementService {
       confirmerId,
     });
 
-    return this.toDto(updated);
+    return this.toDto(updated!);
   }
 
   /** 列表查询（游标分页简化为 offset 分页） */

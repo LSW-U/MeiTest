@@ -39,6 +39,8 @@ const WS_NAMESPACE = '/realtime';
 
 /** 骑手全局 room（所有在线骑手） */
 const RIDERS_ROOM = 'riders';
+/** 客服/管理员 room：dispatch.reportIssue 推送 dispatch:issue-reported 事件 */
+const CUSTOMER_SERVICE_ROOM = 'customer-service';
 
 /** 订单 room 前缀（按 orderId 拼接） */
 const ORDER_ROOM_PREFIX = 'order:';
@@ -121,6 +123,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
       if (user.role === 'rider') {
         await client.join(RIDERS_ROOM);
+      }
+      // 审查报告 P0-2 修复：customer_service + super_admin 自动加入 customer-service room
+      // dispatch.reportIssue 推 'dispatch:issue-reported' 到这个 room，否则客服收不到 WS 推送
+      if (user.role === 'customer_service' || user.role === 'super_admin') {
+        await client.join(CUSTOMER_SERVICE_ROOM);
       }
 
       logger.info({
@@ -214,6 +221,25 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
     if (!data?.orderId || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
       return { ok: false, error: 'invalid payload (need orderId, lat, lng)' };
+    }
+
+    // P1-9 修复：骑手-订单绑定校验（防骑手 A 给骑手 B 的订单推伪造位置）
+    const order = await db.order.findUnique({
+      where: { id: data.orderId },
+      select: { riderId: true },
+    });
+    if (!order) {
+      return { ok: false, error: 'order not found' };
+    }
+    // riderId 可能为 null（订单未派单），但已派单时必须本人
+    if (order.riderId && order.riderId !== user.sub) {
+      this.wsLogger.warn({
+        msg: 'ws_location_forbidden_rider_mismatch',
+        userId: user.sub,
+        orderId: data.orderId,
+        assignedRiderId: order.riderId,
+      });
+      return { ok: false, error: 'order not assigned to this rider' };
     }
 
     const room = `${ORDER_ROOM_PREFIX}${data.orderId}`;

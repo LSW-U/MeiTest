@@ -22,6 +22,7 @@ vi.mock('../src/shared/db', () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       count: vi.fn(),
     },
   },
@@ -45,6 +46,7 @@ const dbMock = db.settlement as unknown as {
   findUnique: ReturnType<typeof vi.fn>;
   create: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
+  updateMany: ReturnType<typeof vi.fn>;
   count: ReturnType<typeof vi.fn>;
 };
 
@@ -250,17 +252,19 @@ describe('SettlementService', () => {
 
   describe('confirm（审查报告 P0 #5 — 状态机闭环）', () => {
     it('PENDING → CONFIRMED + confirmedAt 设置', async () => {
-      dbMock.findUnique.mockResolvedValue(mockRow({ status: 'PENDING' }));
-      dbMock.update.mockResolvedValue(
+      // P1-4 修复后改用 updateMany（race 防护），不再用 update
+      dbMock.updateMany.mockResolvedValue({ count: 1 });
+      // count=1 时只调一次 findUnique 取详情（返回 CONFIRMED 后的状态）
+      dbMock.findUnique.mockResolvedValueOnce(
         mockRow({ status: 'CONFIRMED', confirmedAt: new Date('2026-06-25T10:00:00Z') }),
       );
 
       const result = await service.confirm('set-1', 'admin-1');
 
       expect(result.status).toBe('CONFIRMED');
-      expect(dbMock.update).toHaveBeenCalledWith(
+      expect(dbMock.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'set-1' },
+          where: { id: 'set-1', status: 'PENDING' },
           data: expect.objectContaining({
             status: 'CONFIRMED',
             confirmedAt: expect.any(Date),
@@ -270,14 +274,15 @@ describe('SettlementService', () => {
     });
 
     it('非 PENDING（如已 PAID）→ ConflictException + E-SETTLE-003', async () => {
+      dbMock.updateMany.mockResolvedValue({ count: 0 });
       dbMock.findUnique.mockResolvedValue(mockRow({ status: 'PAID' }));
       await expect(service.confirm('set-1', 'admin-1')).rejects.toMatchObject({
         response: { code: 'E-SETTLE-003' },
       });
-      expect(dbMock.update).not.toHaveBeenCalled();
     });
 
     it('不存在 → NotFoundException + E-SETTLE-004', async () => {
+      dbMock.updateMany.mockResolvedValue({ count: 0 });
       dbMock.findUnique.mockResolvedValue(null);
       await expect(service.confirm('set-x', 'admin-1')).rejects.toMatchObject({
         response: { code: 'E-SETTLE-004' },

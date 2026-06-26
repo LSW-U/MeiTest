@@ -493,7 +493,11 @@ export class OrderService {
         include: { items: true },
       });
       if (!order) {
-        throw new Error(`ORDER_NOT_FOUND: ${orderId}`);
+        // P1-3 修复：raw Error → 业务错误码
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found: ${orderId}`,
+        });
       }
       if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
         // 幂等：已终态直接 return（避免重复取消报错）
@@ -555,7 +559,11 @@ export class OrderService {
     await withTransaction(async (tx: Tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) {
-        throw new Error(`ORDER_NOT_FOUND: ${orderId}`);
+        // P1-3 修复：raw Error → 业务错误码
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found: ${orderId}`,
+        });
       }
       // 已付幂等（重复回调直接 return）
       if (order.paymentStatus === 'PAID') {

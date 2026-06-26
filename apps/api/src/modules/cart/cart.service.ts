@@ -202,6 +202,20 @@ export class CartService {
 
     const cart = await this.getOrCreateCart(input.userId);
 
+    // P1-6 修复：累加后上限校验（避免 99 + 99 = 198 超 cart 单 item 上限）
+    const MAX_CART_ITEM_QTY = 999;
+    const existing = await db.cartItem.findUnique({
+      where: { cartId_skuId: { cartId: cart.id, skuId: sku.id } },
+      select: { quantity: true },
+    });
+    const newQty = (existing?.quantity ?? 0) + input.quantity;
+    if (newQty > MAX_CART_ITEM_QTY) {
+      throw new ConflictException({
+        code: 'E-CART-001',
+        message: `Cart item quantity would exceed limit (${MAX_CART_ITEM_QTY}): current ${existing?.quantity ?? 0} + adding ${input.quantity} = ${newQty}`,
+      });
+    }
+
     // upsert：同 skuId 累加数量
     await db.cartItem.upsert({
       where: { cartId_skuId: { cartId: cart.id, skuId: sku.id } },

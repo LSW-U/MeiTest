@@ -2,15 +2,12 @@
  * use-categories — 商品分类 CRUD hooks
  *
  * 后端：apps/api/src/modules/catalog/catalog.controller.ts
- *   - GET    /admin/categories                列表（不走 /admin/products/categories，会被 :id 拦截）
- *   - POST   /admin/products/categories       新建
- *   - PATCH  /admin/categories/:id            更新
- *   - DELETE /admin/categories/:id            删除
+ *   - GET    /admin/categories          列表（AdminCategoryController）
+ *   - POST   /admin/categories          新建
+ *   - PATCH  /admin/categories/:id      更新
+ *   - DELETE /admin/categories/:id      删除
  *
- * ⚠️ 后端 route ordering bug：AdminProductController 上同时有 @Get(':id') 和 @Get('categories')，
- *    NestJS 优先匹配 :id，导致 GET /admin/products/categories 被当作 productId 处理（返回 E-CATALOG-001）。
- *    临时方案：list 走 /admin/categories（AdminCatalogController）；create/update/delete 也走 /admin/categories。
- *    后端修复建议：将 @Get('categories') 移到 @Get(':id') 之前，或重命名为不冲突的路径。
+ * 路径说明：分类是独立的 endpoint（不在 /admin/products 下面），无 route ordering 风险。
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, type ApiSuccess } from '@/lib/api';

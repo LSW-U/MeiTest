@@ -27,6 +27,18 @@ initSentry();
 // P0-1：JWT secret 校验紧随 Sentry 之后（漏配时 fail-fast，bootstrap 直接挂）
 assertAllJwtSecrets();
 
+// P1-8 修复：prod 强制 WS_URL 配置（漏配时 IM 客户端会拿到错误的兜底 wsUrl）
+// dev/staging 不强制（兜底 ws://localhost:3001 可用）
+if (
+  process.env.NODE_ENV === 'production' &&
+  !process.env.WS_URL?.trim()
+) {
+  throw new Error(
+    'WS_URL must be set in production (e.g. wss://im.meimart.com). ' +
+      'Dev/staging falls back to ws://localhost:3001, but prod must be explicit to avoid IM clients getting wrong endpoint.',
+  );
+}
+
 /** pino wrapper（适配 NestJS LoggerService 接口） */
 const nestLogger: LoggerService = {
   log: (msg: unknown) => pinoLogger.info({ msg }),

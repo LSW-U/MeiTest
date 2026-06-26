@@ -35,7 +35,11 @@ export default function LoginPage() {
       window.localStorage.setItem('admin_token', data.data.accessToken);
       window.localStorage.setItem('admin_refresh_token', data.data.refreshToken);
       window.localStorage.setItem('admin_perspective', 'platform');
-      window.location.href = '/platform';
+      // 同时同步 zustand store（与 PerspectiveSwitcher/Sidebar 一致）
+      const { usePerspectiveStore } = await import('@/stores/perspective');
+      usePerspectiveStore.getState().setPerspective('platform');
+      // 跳新 dashboard 首页（不是 legacy /platform）
+      window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {

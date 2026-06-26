@@ -266,6 +266,10 @@ describe('DispatchService', () => {
       mockDb.deliveryTask.update.mockResolvedValue(
         buildTask({ riderId: 'r1', status: 'DELIVERED' }),
       );
+      // P1-2 修复后 deliverTask 走 withTransaction，mock 让 tx 复用 mockDb
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
     }
 
     it('collectedAmount = payableAmount → cashResult=PAID + Order DELIVERED_PAID', async () => {

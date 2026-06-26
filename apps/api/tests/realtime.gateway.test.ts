@@ -22,6 +22,15 @@ import type { WsUser } from '../src/modules/realtime/realtime.gateway';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-at-least-32-characters-long';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-at-least-32-characters-long';
 
+// P1-9 修复后 handleLocationUpdate 调 db.order.findUnique 校验 riderId 绑定
+vi.mock('../src/shared/db', () => ({
+  db: {
+    order: {
+      findUnique: vi.fn().mockResolvedValue({ riderId: 'rider-1' }),  // 默认匹配 rider-1
+    },
+  },
+}));
+
 function createGateway(): RealtimeGateway {
   const { JwtService } = require('@nestjs/jwt');
   return new RealtimeGateway(new JwtService({}));

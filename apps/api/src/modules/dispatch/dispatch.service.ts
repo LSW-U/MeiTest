@@ -307,42 +307,48 @@ export class DispatchService {
       }
     }
 
-    const updated = await db.deliveryTask.update({
-      where: { id: input.taskId },
-      data: {
-        status: 'DELIVERED',
-        deliveredAt: new Date(),
-        note: input.note ?? task.note,
-      },
-      include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
-        warehouse: { select: { code: true } },
-      },
-    });
-
-    const nextOrderStatus =
+    const nextOrderStatus: 'DELIVERED' | 'DELIVERED_PAID' | 'DELIVERED_UNPAID' =
       !isCod
         ? 'DELIVERED'
         : cashResult === 'PAID' || cashResult === 'SHORT'
           ? 'DELIVERED_PAID'
           : 'DELIVERED_UNPAID';
 
-    await db.order.update({
-      where: { id: task.orderId },
-      data: { status: nextOrderStatus, deliveredAt: new Date() },
-    });
-
-    if (isCod && input.collectedAmount !== undefined) {
-      await db.cashCollection.create({
+    // P1-2 修复：deliverTask 多步操作包进事务（task.update + order.update + cashCollection.create）
+    const { updated, cashRecord } = await withTransaction(async (tx: Tx) => {
+      const t = await tx.deliveryTask.update({
+        where: { id: input.taskId },
         data: {
-          orderId: task.orderId,
-          riderId: input.riderId,
-          collectedAmount: input.collectedAmount,
-          result: cashResult ?? 'UNPAID',
-          note: input.note,
+          status: 'DELIVERED',
+          deliveredAt: new Date(),
+          note: input.note ?? task.note,
+        },
+        include: {
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          warehouse: { select: { code: true } },
         },
       });
-    }
+
+      await tx.order.update({
+        where: { id: task.orderId },
+        data: { status: nextOrderStatus, deliveredAt: new Date() },
+      });
+
+      let cash: { id: string } | null = null;
+      if (isCod && input.collectedAmount !== undefined) {
+        cash = await tx.cashCollection.create({
+          data: {
+            orderId: task.orderId,
+            riderId: input.riderId,
+            collectedAmount: input.collectedAmount,
+            result: cashResult ?? 'UNPAID',
+            note: input.note,
+          },
+          select: { id: true },
+        });
+      }
+      return { updated: t, cashRecord: cash };
+    });
 
     logger.info({
       msg: 'DISPATCH_TASK_DELIVERED',
@@ -508,7 +514,12 @@ export class DispatchService {
       },
     });
     if (!order) {
-      throw new Error(`ORDER_NOT_FOUND: ${orderId}`);
+      // P1-1 修复：raw Error → 业务错误码（避免全局 filter 映射为 500 无错误码）
+      // 保留 message 里的 ORDER_NOT_FOUND 前缀以兼容现有测试期望
+      throw new NotFoundException({
+        code: 'E-ORDER-004',
+        message: `ORDER_NOT_FOUND: ${orderId}`,
+      });
     }
 
     const warehouse = order.warehouse;
