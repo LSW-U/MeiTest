@@ -34,14 +34,98 @@
     },
     "products": {
       "title": "Produtu",
-      "create": "Kria Produtu"
+      "create": "Kria Produtu",
+      "listDesc": "Jere produtu, kria foun, muda status.",
+      "searchPlaceholder": "Buka tuir naran...",
+      "emptyDesc": "Klik 'Kria Produtu' atu aumenta produtu uluk.",
+      "createDesc": "Hahan naran (EN presiza), imajen, no unidade.",
+      "detailDesc": "Hadia info ka jere SKU.",
+      "nameEn": "Naran (Inggris)",
+      "nameOptional": "Naran (lia seluk, opzionale)",
+      "mainImageRequired": "URL Imajen Prinsipal",
+      "unitRequired": "Unidade (EN presiza)",
+      "detail": "Detalle Produtu"
     },
     "categories": {
-      "title": "Kategoria"
+      "title": "Kategoria",
+      "listDesc": "Jere kategoria produtu (MVP: lista planu)",
+      "emptyDesc": "Halan 'Kria Kategoria' atu aumenta uluk.",
+      "newCat": "Kategoria Foun",
+      "iconUrlRequired": "URL Íkone",
+      "deleteTitle": "Hapus kategoria?",
+      "deleteDesc": "Ne'e taka kategoria. Produtu mantein categoryId ma la hatudu iha kategoria ativu.",
+      "deleted": "Kategoria hapus tiona"
     },
     "warehouses": {
       "title": "Armazén",
-      "create": "Kria Armazén"
+      "create": "Kria Armazén",
+      "listDesc": "Jere armazén, area cobertura, inventáriu.",
+      "searchPlaceholder": "Buka kódigu ka naran...",
+      "emptyDesc": "Klik 'Kria Armazén' atu aumenta uluk.",
+      "createDesc": "Kódigu, naran, enderesu, GPS, taxa entrega.",
+      "detailDesc": "Hadia info, area cobertura ka inventáriu.",
+      "centerLat": "Latitude Sentral",
+      "centerLng": "Longitude Sentral",
+      "coverageHint": "Kolla GeoJSON Polygon kompleto. UI mapa iha W4.",
+      "coverageSaved": "Area cobertura salva tiona",
+      "invalidJson": "JSON la diak",
+      "detail": "Detalle Armazén"
+    },
+    "action": {
+      "save": "Sálva",
+      "cancel": "Kansa",
+      "delete": "Hapus",
+      "edit": "Hadia",
+      "create": "Kria",
+      "back": "Fili",
+      "confirm": "Konfirma",
+      "search": "Buka",
+      "retry": "Tenta fali",
+      "saving": "Sálva hela...",
+      "creating": "Kria hela...",
+      "deleting": "Hapus hela..."
+    },
+    "status": {
+      "active": "Ativu",
+      "inactive": "Inativu",
+      "out_of_stock": "Esgotadu",
+      "toggle_off": "Taka",
+      "toggle_on": "Loke"
+    },
+    "feedback": {
+      "saved": "Sálva diak",
+      "failed": "Operasaun halo",
+      "created": "Kria diak",
+      "updated": "Hadja diak",
+      "deleted": "Hapus diak"
+    },
+    "table": {
+      "actions": "Aksaun",
+      "empty": "La iha data"
+    },
+    "label": {
+      "basic_info": "Informasaun Bázika",
+      "name": "Naran",
+      "description": "Deskrisaun",
+      "status": "Status",
+      "category": "Kategoria",
+      "image": "Imajen",
+      "price": "Presu",
+      "sku": "SKU",
+      "code": "Kódigu",
+      "address": "Enderesu",
+      "delivery_fee": "Taxa entrega",
+      "quantity": "Kuantidade",
+      "reason": "Razaun",
+      "sort_order": "Orden",
+      "is_active": "Ativu"
+    },
+    "tab": {
+      "basic": "Informasaun Bázika",
+      "skus": "SKU sira",
+      "coverage": "Area cobertura",
+      "inventory": "Inventáriu",
+      "logs": "Log mudansa"
     }
   }
 }

@@ -318,13 +318,14 @@ function DeleteCategoryDialog({
   onConfirm: () => void;
 }) {
   const { toast } = useToast();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
 
   const handleConfirm = () => {
     onConfirm();
     setOpen(false);
     toast({
-      title: 'Category deleted',
+      title: t('w.categories.deleted'),
       description: `"${category.name?.en ?? category.id}" has been removed.`,
       variant: 'info',
     });

@@ -34,14 +34,98 @@
     },
     "products": {
       "title": "商品",
-      "create": "新建商品"
+      "create": "新建商品",
+      "listDesc": "管理商品、新建、上下架。",
+      "searchPlaceholder": "按名称搜索...",
+      "emptyDesc": "点「新建商品」加第一个商品。",
+      "createDesc": "填名称（EN 必填）、图片、单位。",
+      "detailDesc": "编辑基本信息或管理 SKU。",
+      "nameEn": "名称（英文）",
+      "nameOptional": "名称（其他语言，可选）",
+      "mainImageRequired": "主图 URL",
+      "unitRequired": "单位（EN 必填）",
+      "detail": "商品详情"
     },
     "categories": {
-      "title": "分类"
+      "title": "分类",
+      "listDesc": "管理商品分类（MVP：扁平列表，无树）。",
+      "emptyDesc": "用「新建分类」加第一个。",
+      "newCat": "新建分类",
+      "iconUrlRequired": "图标 URL",
+      "deleteTitle": "删除分类？",
+      "deleteDesc": "会停用该分类。商品的 categoryId 保留但不会显示在活动分类下。",
+      "deleted": "分类已删除"
     },
     "warehouses": {
       "title": "仓库",
-      "create": "新建仓库"
+      "create": "新建仓库",
+      "listDesc": "管理仓库、配送范围、库存。",
+      "searchPlaceholder": "按代码或名称搜索...",
+      "emptyDesc": "点「新建仓库」加第一个。",
+      "createDesc": "代码、名称、地址、GPS、配送费。",
+      "detailDesc": "编辑信息、配送范围或库存。",
+      "centerLat": "中心纬度",
+      "centerLng": "中心经度",
+      "coverageHint": "粘贴完整 GeoJSON Polygon。地图绘制 UI 在 W4 加。",
+      "coverageSaved": "配送范围已保存",
+      "invalidJson": "JSON 格式错误",
+      "detail": "仓库详情"
+    },
+    "action": {
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "edit": "编辑",
+      "create": "新建",
+      "back": "返回",
+      "confirm": "确认",
+      "search": "搜索",
+      "retry": "重试",
+      "saving": "保存中...",
+      "creating": "创建中...",
+      "deleting": "删除中..."
+    },
+    "status": {
+      "active": "已上架",
+      "inactive": "已下架",
+      "out_of_stock": "缺货",
+      "toggle_off": "下架",
+      "toggle_on": "上架"
+    },
+    "feedback": {
+      "saved": "保存成功",
+      "failed": "操作失败",
+      "created": "创建成功",
+      "updated": "更新成功",
+      "deleted": "删除成功"
+    },
+    "table": {
+      "actions": "操作",
+      "empty": "暂无数据"
+    },
+    "label": {
+      "basic_info": "基本信息",
+      "name": "名称",
+      "description": "描述",
+      "status": "状态",
+      "category": "分类",
+      "image": "图片",
+      "price": "价格",
+      "sku": "SKU",
+      "code": "代码",
+      "address": "地址",
+      "delivery_fee": "配送费",
+      "quantity": "数量",
+      "reason": "原因",
+      "sort_order": "排序",
+      "is_active": "启用"
+    },
+    "tab": {
+      "basic": "基本信息",
+      "skus": "SKU 列表",
+      "coverage": "配送范围",
+      "inventory": "库存",
+      "logs": "变更日志"
     }
   }
 }

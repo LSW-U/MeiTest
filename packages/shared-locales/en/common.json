@@ -34,14 +34,98 @@
     },
     "products": {
       "title": "Products",
-      "create": "Create Product"
+      "create": "Create Product",
+      "listDesc": "Manage products, create new ones, toggle status.",
+      "searchPlaceholder": "Search by name...",
+      "emptyDesc": "Click 'Create Product' to add your first product.",
+      "createDesc": "Fill in name (EN required), image, and unit.",
+      "detailDesc": "Edit basic info or manage SKUs.",
+      "nameEn": "Name (English)",
+      "nameOptional": "Name (other languages, optional)",
+      "mainImageRequired": "Main Image URL",
+      "unitRequired": "Unit (EN required)",
+      "detail": "Product Detail"
     },
     "categories": {
-      "title": "Categories"
+      "title": "Categories",
+      "listDesc": "Manage product categories (MVP: flat list, no tree).",
+      "emptyDesc": "Use 'Create Category' to add the first one.",
+      "newCat": "New Category",
+      "iconUrlRequired": "Icon URL",
+      "deleteTitle": "Delete category?",
+      "deleteDesc": "This will deactivate the category. Products keep their categoryId but won't show under any active category.",
+      "deleted": "Category deleted"
     },
     "warehouses": {
       "title": "Warehouses",
-      "create": "Create Warehouse"
+      "create": "Create Warehouse",
+      "listDesc": "Manage warehouses, coverage areas, inventory.",
+      "searchPlaceholder": "Search by code or name...",
+      "emptyDesc": "Click 'Create Warehouse' to add the first one.",
+      "createDesc": "Code, name, address, GPS, delivery fee.",
+      "detailDesc": "Edit info, coverage area, or inventory.",
+      "centerLat": "Center Latitude",
+      "centerLng": "Center Longitude",
+      "coverageHint": "Paste full GeoJSON Polygon. Map drawing UI comes in W4.",
+      "coverageSaved": "Coverage saved",
+      "invalidJson": "Invalid JSON",
+      "detail": "Warehouse Detail"
+    },
+    "action": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "create": "Create",
+      "back": "Back",
+      "confirm": "Confirm",
+      "search": "Search",
+      "retry": "Retry",
+      "saving": "Saving...",
+      "creating": "Creating...",
+      "deleting": "Deleting..."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "out_of_stock": "Out of stock",
+      "toggle_off": "Take down",
+      "toggle_on": "Put up"
+    },
+    "feedback": {
+      "saved": "Saved successfully",
+      "failed": "Operation failed",
+      "created": "Created successfully",
+      "updated": "Updated successfully",
+      "deleted": "Deleted successfully"
+    },
+    "table": {
+      "actions": "Actions",
+      "empty": "No data"
+    },
+    "label": {
+      "basic_info": "Basic Info",
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "category": "Category",
+      "image": "Image",
+      "price": "Price",
+      "sku": "SKU",
+      "code": "Code",
+      "address": "Address",
+      "delivery_fee": "Delivery Fee",
+      "quantity": "Quantity",
+      "reason": "Reason",
+      "sort_order": "Sort Order",
+      "is_active": "Active"
+    },
+    "tab": {
+      "basic": "Basic Info",
+      "skus": "SKUs",
+      "coverage": "Coverage Area",
+      "inventory": "Inventory",
+      "logs": "Change Logs"
     }
   }
 }

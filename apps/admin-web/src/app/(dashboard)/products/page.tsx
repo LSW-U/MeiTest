@@ -86,12 +86,12 @@ export default function ProductsListPage() {
   return (
     <>
       <PageHeader
-        title={t('w.products.title') as string}
-        description="Manage products, create new ones, toggle status."
+        title={t('w.products.title')}
+        description={t('w.products.listDesc')}
         action={
           <Button onClick={() => router.push('/products/create')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Product
+            {t('w.products.create')}
           </Button>
         }
       />
@@ -104,13 +104,13 @@ export default function ProductsListPage() {
           <DataTableToolbar
             searchValue={immediateValue}
             onSearchChange={setImmediateValue}
-            searchPlaceholder="Search by name..."
+            searchPlaceholder={t('w.products.searchPlaceholder')}
           />
         }
         emptyState={
           <EmptyState
-            title="No products"
-            description="Click 'New Product' to create your first product."
+            title={t('w.table.empty')}
+            description={t('w.products.emptyDesc')}
           />
         }
         errorState={
@@ -130,7 +130,7 @@ export default function ProductsListPage() {
                 });
               }}
             >
-              {row.status === 'ACTIVE' ? '下架' : '上架'}
+              {row.status === 'ACTIVE' ? t('w.status.toggle_off') : t('w.status.toggle_on')}
             </Button>
           </div>
         )}

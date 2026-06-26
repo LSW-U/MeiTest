@@ -47,6 +47,7 @@ import {
   useUpdateWarehouseCoverage,
 } from '@/hooks/api/use-warehouses';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from 'next-intl';
 import { useStocks, useStockLogs, useAdjustStock, type Stock, type StockLog } from '@/hooks/api/use-inventory';
 import type { I18nText } from '@/hooks/api/use-products';
 
@@ -65,6 +66,7 @@ export default function WarehouseDetailPage() {
   const stocksQ = useStocks({ warehouseId: id });
   const logsQ = useStockLogs(id);
   const { toast } = useToast();
+  const t = useTranslations();
 
   const [name, setName] = useState<I18nText>({});
   const [address, setAddress] = useState('');
@@ -105,10 +107,10 @@ export default function WarehouseDetailPage() {
     try {
       const parsed = JSON.parse(coverageJson);
       await coverageMutation.mutateAsync({ id, input: { coverageArea: parsed } });
-      toast({ title: 'Coverage saved', variant: 'success' });
+      toast({ title: t('w.warehouses.coverageSaved'), variant: 'success' });
     } catch (e) {
       toast({
-        title: 'Invalid JSON',
+        title: t('w.warehouses.invalidJson'),
         description: (e as Error).message,
         variant: 'destructive',
       });

@@ -34,14 +34,98 @@
     },
     "products": {
       "title": "Produtos",
-      "create": "Criar Produto"
+      "create": "Criar Produto",
+      "listDesc": "Gerenciar produtos, criar novos, alterar status.",
+      "searchPlaceholder": "Buscar por nome...",
+      "emptyDesc": "Clique em 'Criar Produto' para adicionar seu primeiro produto.",
+      "createDesc": "Preencha nome (EN obrigatório), imagem e unidade.",
+      "detailDesc": "Editar informações básicas ou gerenciar SKUs.",
+      "nameEn": "Nome (Inglês)",
+      "nameOptional": "Nome (outros idiomas, opcional)",
+      "mainImageRequired": "URL da Imagem Principal",
+      "unitRequired": "Unidade (EN obrigatório)",
+      "detail": "Detalhe do Produto"
     },
     "categories": {
-      "title": "Categorias"
+      "title": "Categorias",
+      "listDesc": "Gerenciar categorias de produtos (MVP: lista plana).",
+      "emptyDesc": "Use 'Criar Categoria' para adicionar.",
+      "newCat": "Nova Categoria",
+      "iconUrlRequired": "URL do Ícone",
+      "deleteTitle": "Excluir categoria?",
+      "deleteDesc": "Isso desativará a categoria. Produtos mantêm categoryId mas não aparecem em categorias ativas.",
+      "deleted": "Categoria excluída"
     },
     "warehouses": {
       "title": "Armazéns",
-      "create": "Criar Armazém"
+      "create": "Criar Armazém",
+      "listDesc": "Gerenciar armazéns, áreas de cobertura, inventário.",
+      "searchPlaceholder": "Buscar por código ou nome...",
+      "emptyDesc": "Clique em 'Criar Armazém' para adicionar o primeiro.",
+      "createDesc": "Código, nome, endereço, GPS, taxa de entrega.",
+      "detailDesc": "Editar informações, área de cobertura ou inventário.",
+      "centerLat": "Latitude Central",
+      "centerLng": "Longitude Central",
+      "coverageHint": "Cole o GeoJSON Polygon completo. UI de mapa virá em W4.",
+      "coverageSaved": "Área de cobertura salva",
+      "invalidJson": "JSON inválido",
+      "detail": "Detalhe do Armazém"
+    },
+    "action": {
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "delete": "Excluir",
+      "edit": "Editar",
+      "create": "Criar",
+      "back": "Voltar",
+      "confirm": "Confirmar",
+      "search": "Buscar",
+      "retry": "Tentar novamente",
+      "saving": "Salvando...",
+      "creating": "Criando...",
+      "deleting": "Excluindo..."
+    },
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "out_of_stock": "Sem estoque",
+      "toggle_off": "Retirar",
+      "toggle_on": "Publicar"
+    },
+    "feedback": {
+      "saved": "Salvo com sucesso",
+      "failed": "Operação falhou",
+      "created": "Criado com sucesso",
+      "updated": "Atualizado com sucesso",
+      "deleted": "Excluído com sucesso"
+    },
+    "table": {
+      "actions": "Ações",
+      "empty": "Sem dados"
+    },
+    "label": {
+      "basic_info": "Informações Básicas",
+      "name": "Nome",
+      "description": "Descrição",
+      "status": "Status",
+      "category": "Categoria",
+      "image": "Imagem",
+      "price": "Preço",
+      "sku": "SKU",
+      "code": "Código",
+      "address": "Endereço",
+      "delivery_fee": "Taxa de Entrega",
+      "quantity": "Quantidade",
+      "reason": "Motivo",
+      "sort_order": "Ordem",
+      "is_active": "Ativo"
+    },
+    "tab": {
+      "basic": "Informações Básicas",
+      "skus": "SKUs",
+      "coverage": "Área de Cobertura",
+      "inventory": "Inventário",
+      "logs": "Logs de Mudança"
     }
   }
 }
