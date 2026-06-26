@@ -32,6 +32,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/common/empty-state';
 import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
@@ -123,18 +135,11 @@ export default function CategoriesPage() {
                 onSave={(input) => updateMutation.mutate({ id: row.id, input })}
                 pending={updateMutation.isPending}
               />
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={deleteMutation.isPending}
-                onClick={() => {
-                  if (window.confirm(`Delete category "${row.name?.en ?? row.id}"?`)) {
-                    deleteMutation.mutate(row.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <DeleteCategoryDialog
+                category={row}
+                pending={deleteMutation.isPending}
+                onConfirm={() => deleteMutation.mutate(row.id)}
+              />
             </div>
           )}
         />
@@ -300,5 +305,57 @@ function EditCategoryDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeleteCategoryDialog({
+  category,
+  pending,
+  onConfirm,
+}: {
+  category: Category;
+  pending: boolean;
+  onConfirm: () => void;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const handleConfirm = () => {
+    onConfirm();
+    setOpen(false);
+    toast({
+      title: 'Category deleted',
+      description: `"${category.name?.en ?? category.id}" has been removed.`,
+      variant: 'info',
+    });
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="icon" disabled={pending}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete category?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will deactivate &ldquo;{category.name?.en ?? category.id}&rdquo;. Products in this
+            category will keep their categoryId but won&rsquo;t show under any active category.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={pending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {pending ? 'Deleting...' : 'Delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
