@@ -149,7 +149,11 @@ describe('SettlementService', () => {
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
-      const expectedPeriod = yesterday.toISOString().slice(0, 10);
+      // P0 #2 修复后 service 用 Asia/Dili 时区（UTC+9），测试期望也要用 Dili 时区
+      // 避免 UTC vs Dili 跨日时不一致（Dili 比 UTC 早 9 小时）
+      const expectedPeriod = yesterday.toLocaleDateString('en-CA', {
+        timeZone: 'Asia/Dili',
+      });
 
       await service.runSettlement({
         subjectType: 'RIDER',

@@ -315,7 +315,7 @@ export class DispatchService {
           : 'DELIVERED_UNPAID';
 
     // P1-2 修复：deliverTask 多步操作包进事务（task.update + order.update + cashCollection.create）
-    const { updated, cashRecord } = await withTransaction(async (tx: Tx) => {
+    const { updated } = await withTransaction(async (tx: Tx) => {
       const t = await tx.deliveryTask.update({
         where: { id: input.taskId },
         data: {
@@ -334,9 +334,8 @@ export class DispatchService {
         data: { status: nextOrderStatus, deliveredAt: new Date() },
       });
 
-      let cash: { id: string } | null = null;
       if (isCod && input.collectedAmount !== undefined) {
-        cash = await tx.cashCollection.create({
+        await tx.cashCollection.create({
           data: {
             orderId: task.orderId,
             riderId: input.riderId,
@@ -347,7 +346,7 @@ export class DispatchService {
           select: { id: true },
         });
       }
-      return { updated: t, cashRecord: cash };
+      return { updated: t };
     });
 
     logger.info({

@@ -4,20 +4,33 @@
  * 设计：
  *   - 按当前 perspective 过滤可见菜单项
  *   - lucide-react 图标
- *   - W 流程只放 W 流程相关菜单（Dashboard / Products / Categories / Warehouses）
- *     订单/骑手/促销/结算 等菜单归其他流程，不在此处
+ *   - 三流程菜单合并：Dashboard / Products / Categories / Warehouses（W 流程）
+ *     + Orders（C 流程 admin 视角）+ Riders（C 流程 rider-mgmt 视角）
+ *     + Settings（M 流程 platform 视角）+ 占位页 Customers / Promotions / Statistics
  *
  * 视角可见性：
- *   - platform：看全部 W 流程菜单（可看全平台商品/仓库）
- *   - merchant：看 Products / Categories（管自己商品）
- *   - warehouse：看 Warehouses（管本仓库存）
- *   - support / rider-mgmt：W 流程菜单不可见（不是本视角职责）
+ *   - platform：看全部菜单（W + C + M + 占位）
+ *   - merchant：Products / Categories / Orders
+ *   - warehouse：Warehouses / Orders
+ *   - support：Orders（客服视角）
+ *   - rider-mgmt：Riders
  */
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, FolderTree, Warehouse } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Package,
+  FolderTree,
+  Warehouse,
+  ShoppingCart,
+  Bike,
+  Users,
+  Tag,
+  BarChart3,
+  Settings,
+} from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +65,42 @@ const NAV_ITEMS: NavItem[] = [
     href: '/warehouses',
     icon: Warehouse,
     perspectives: ['platform', 'warehouse'],
+  },
+  {
+    label: 'Orders',
+    href: '/orders',
+    icon: ShoppingCart,
+    perspectives: ['platform', 'merchant', 'warehouse', 'support'],
+  },
+  {
+    label: 'Riders',
+    href: '/riders',
+    icon: Bike,
+    perspectives: ['platform', 'rider-mgmt'],
+  },
+  {
+    label: 'Customers',
+    href: '/customers',
+    icon: Users,
+    perspectives: ['platform'],
+  },
+  {
+    label: 'Promotions',
+    href: '/promotions',
+    icon: Tag,
+    perspectives: ['platform'],
+  },
+  {
+    label: 'Statistics',
+    href: '/statistics',
+    icon: BarChart3,
+    perspectives: ['platform'],
+  },
+  {
+    label: 'Settings',
+    href: '/settings',
+    icon: Settings,
+    perspectives: ['platform'],
   },
 ];
 
