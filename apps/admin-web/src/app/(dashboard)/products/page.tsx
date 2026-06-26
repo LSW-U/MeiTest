@@ -6,7 +6,6 @@
  */
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
@@ -20,13 +19,14 @@ import { Button } from '@/components/ui/button';
 import { useProducts, type Product } from '@/hooks/api/use-products';
 import { useUpdateProductStatus } from '@/hooks/api/use-products';
 import { formatCurrency } from '@/lib/utils';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
 export default function ProductsListPage() {
   const t = useTranslations();
   const router = useRouter();
-  const [search, setSearch] = useState('');
+  const { immediateValue, debouncedValue, setImmediateValue } = useDebouncedSearch('');
 
-  const { data, isLoading, error, refetch } = useProducts({ search });
+  const { data, isLoading, error, refetch } = useProducts({ search: debouncedValue });
   const statusMutation = useUpdateProductStatus();
 
   const items: Product[] = Array.isArray(data?.data) ? data.data : [];
@@ -102,8 +102,8 @@ export default function ProductsListPage() {
         onRowClick={(row) => router.push(`/products/${row.id}`)}
         toolbar={
           <DataTableToolbar
-            searchValue={search}
-            onSearchChange={(v) => setSearch(v)}
+            searchValue={immediateValue}
+            onSearchChange={setImmediateValue}
             searchPlaceholder="Search by name..."
           />
         }
