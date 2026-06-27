@@ -91,11 +91,23 @@ export class DashboardService {
 
   private async countOnlineRiders(now: Date): Promise<number> {
     // P0-2 修复：改查 Redis（rider:online:{riderId} SETEX 60s，由 rider.service heartbeat 维护）
-    // 原 db.riderLocation.count 是死表（WS handler 没写库），永远返回 0
-    void now; // 保留参数签名兼容（Redis TTL 自管过期，不需 now）
+    // P1-NEW 修复（验证报告 §2）：redis.keys → SCAN 游标迭代（避免阻塞 Redis 单线程）
+    void now;
     try {
-      const keys = await redis.keys('rider:online:*');
-      return keys.length;
+      let count = 0;
+      let cursor = '0';
+      do {
+        const [next, batch] = await redis.scan(
+          cursor,
+          'MATCH',
+          'rider:online:*',
+          'COUNT',
+          100,
+        );
+        cursor = next;
+        count += batch.length;
+      } while (cursor !== '0');
+      return count;
     } catch (e) {
       logger.warn({
         msg: 'DASHBOARD_ONLINE_RIDERS_REDIS_FAILED',

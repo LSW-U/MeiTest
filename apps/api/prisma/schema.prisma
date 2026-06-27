@@ -635,7 +635,9 @@ model AuditLog {
 }
 
 // ============================================================================
-// 10. RiderLocation + RiderLocationHistory(v0.3:WS+轮询双轨,历史轨迹回放)
+// 10. RiderLocation + RiderLocationHistory 已删除（W4.5 P0-2）
+// 在线状态走 Redis rider:online:{riderId} SETEX 60s（rider.service heartbeat 维护）
+// 历史轨迹推 W5/W6 真做配送追踪时再加回来
 // ============================================================================
 
 // RiderLocation + RiderLocationHistory 在 W4.5 P0-2 修复时删除
@@ -659,7 +661,7 @@ model RiderProfile {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
-  // v0.3:不在此表存 currentLat/currentLng,拆到 RiderLocation 表
+  // 在线状态走 Redis rider:online:{riderId} SETEX 60s（W4.5 P0-2 删 RiderLocation 表）
 
   // W3 流程 C:入驻审核 + 实名认证（mock）+ 偏好仓库
   // applicationStatus: PENDING / APPROVED / REJECTED（不用 enum，TEXT 避免与流程 W/M enum 撞）
