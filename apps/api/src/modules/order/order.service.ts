@@ -122,6 +122,30 @@ export class OrderService {
     private readonly dispatchService: DispatchServiceLike | null,
     @Inject('CART_SERVICE_TOKEN')
     private readonly cartService: CartServiceLike | null,
+    @Inject('RealtimeGatewayToken')
+    private readonly realtime: {
+      broadcastOrderStatusChange: (
+        orderId: string,
+        payload: {
+          fromStatus: string;
+          toStatus: string;
+          operatorId?: string;
+          reason?: string;
+        },
+      ) => void;
+    } | null,
+    @Inject('NotifyFactoryToken')
+    private readonly notifyFactory: {
+      sendMulti: (
+        request: {
+          userId: string;
+          type: string;
+          title: Record<string, string>;
+          body: Record<string, string>;
+        },
+        channels: string[],
+      ) => Promise<unknown>;
+    } | null,
   ) {}
 
   /**
@@ -487,6 +511,12 @@ export class OrderService {
       reason: string;
     },
   ): Promise<void> {
+    // 事务外查 order（broadcast 用，事务内再查一次校验一致性）
+    const orderForBroadcast = await db.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+
     await withTransaction(async (tx: Tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -545,6 +575,23 @@ export class OrderService {
       });
       void updated;
     });
+
+    // W4-REVIEW P0-3 修复：取消订单后广播业务事件
+    try {
+      this.realtime?.broadcastOrderStatusChange(orderId, {
+        fromStatus: orderForBroadcast?.status ?? 'UNKNOWN',
+        toStatus: 'CANCELLED',
+        operatorId: ctx.operatorId,
+        reason: ctx.reason,
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'WS_BROADCAST_FAILED',
+        orderId,
+        event: 'order:status-changed',
+        error: (e as Error).message,
+      });
+    }
   }
 
   /**
@@ -556,6 +603,12 @@ export class OrderService {
    *   - 写 OrderEvent(PAYMENT_SUCCESS)
    */
   async markPaid(orderId: string, eventCtx: OrderEventContext): Promise<void> {
+    // 事务外查 order（broadcast/notify 用），事务内再查一次校验状态一致性
+    const orderForNotify = await db.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true, orderNo: true, status: true, paymentStatus: true },
+    });
+
     await withTransaction(async (tx: Tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order) {
@@ -615,6 +668,54 @@ export class OrderService {
         logger.error({
           msg: 'DISPATCH_TASK_CREATE_FAILED',
           orderId,
+          error: (e as Error).message,
+        });
+      }
+    }
+
+    // W4-REVIEW P0-3 修复：串接 RealtimeGateway 业务事件 + NotifyFactory 通知
+    // 失败容忍：WS/通知失败不阻塞订单流程
+    try {
+      this.realtime?.broadcastOrderStatusChange(orderId, {
+        fromStatus: 'PENDING_PAYMENT',
+        toStatus: 'CONFIRMED',
+        operatorId: eventCtx.operatorId,
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'WS_BROADCAST_FAILED',
+        orderId,
+        event: 'order:status-changed',
+        error: (e as Error).message,
+      });
+    }
+
+    if (this.notifyFactory && orderForNotify) {
+      try {
+        await this.notifyFactory.sendMulti(
+          {
+            userId: orderForNotify.userId,
+            type: 'PAYMENT_SUCCESS',
+            title: {
+              en: 'Order Confirmed',
+              zh: '订单已确认',
+              id: 'Pesanan Dikonfirmasi',
+              pt: 'Pedido Confirmado',
+            },
+            body: {
+              en: `Your order ${orderForNotify.orderNo} has been confirmed and is being prepared.`,
+              zh: `您的订单 ${orderForNotify.orderNo} 已确认，正在备货。`,
+              id: `Pesanan Anda ${orderForNotify.orderNo} telah dikonfirmasi.`,
+              pt: `Seu pedido ${orderForNotify.orderNo} foi confirmado.`,
+            },
+          },
+          ['EMAIL', 'SMS'],
+        );
+      } catch (e) {
+        logger.warn({
+          msg: 'NOTIFY_SEND_FAILED',
+          orderId,
+          type: 'PAYMENT_SUCCESS',
           error: (e as Error).message,
         });
       }

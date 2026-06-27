@@ -35,6 +35,7 @@
   "E-ORDER-003": "Order status does not allow this action",
   "E-ORDER-004": "Order not found",
   "E-ORDER-005": "Some SKUs are invalid or inactive",
+  "E-ORDER-006": "La bele kansasa pesanza neébele ona saatu, uza fluxu refunzu",
   "E-PAYMENT-001": "Payment method not supported",
   "E-PAYMENT-002": "Payment timed out, please retry",
   "E-PAYMENT-003": "Payment failed, please retry or change method",

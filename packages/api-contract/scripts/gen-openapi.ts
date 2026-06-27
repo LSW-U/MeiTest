@@ -97,6 +97,8 @@ import {
   SystemConfigResponse,
   UpdateSystemConfigRequest,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
+  // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
+  RiderProfile,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1173,6 +1175,164 @@ registry.registerPath({
       content: { 'application/json': { schema: ImSignature } },
     },
     401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
+// 后端已实现，OpenAPI 之前漏注册导致跨 repo 契约 drift
+// ============================================================================
+
+// ---- Admin Orders（3 endpoints）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/orders',
+  tags: ['order'],
+  description:
+    'Admin 订单列表（W4 新增）。按 status/userId/warehouseId/orderNo 筛选 + 游标分页。' +
+    'Role: super_admin / warehouse_staff / customer_service。',
+  request: {
+    query: z.object({
+      status: OrderStatus.optional(),
+      userId: Id.optional(),
+      warehouseId: Id.optional(),
+      orderNo: z.string().optional(),
+      cursor: Id.optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '订单列表（含 items + events）',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              items: z.array(Order),
+              nextCursor: Id.nullable(),
+              hasMore: z.boolean(),
+            }),
+          }),
+        },
+      },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/orders/{id}',
+  tags: ['order'],
+  description: 'Admin 订单详情（含 items + events，不校验 userId 归属）。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '订单详情',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: Order,
+          }),
+        },
+      },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/orders/{id}/cancel',
+  tags: ['order'],
+  description:
+    'Admin 取消订单（任何状态可取消，写 OrderEvent）。' +
+    'W4-REVIEW P0-2：若 paymentStatus=PAID 抛 E-ORDER-006 防资金损失（推 W5 refund）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: CancelOrderRequest } } },
+  },
+  responses: {
+    200: {
+      description: '取消成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ id: Id, status: OrderStatus }),
+          }),
+        },
+      },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'PAID_ORDER_CANNOT_CANCEL', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- Admin Rider Applications（2 endpoints）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/rider-applications',
+  tags: ['rider'],
+  description: '骑手入驻申请列表（按 applicationStatus 过滤）。Role: super_admin。',
+  request: {
+    query: z.object({
+      status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '申请列表',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ items: z.array(RiderProfile) }),
+          }),
+        },
+      },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/rider-applications/{id}/review',
+  tags: ['rider'],
+  description: '审核骑手申请（APPROVED/REJECTED）。Role: super_admin。',
+  request: {
+    params: z.object({ id: Id }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            decision: z.enum(['APPROVED', 'REJECTED']),
+            rejectReason: z.string().max(500).optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '审核成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: RiderProfile,
+          }),
+        },
+      },
+    },
+    404: { description: 'APPLICATION_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'APPLICATION_ALREADY_PROCESSED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

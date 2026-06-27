@@ -36,9 +36,16 @@ import {
 
 const STATUS_FILTERS: ApplicationStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
 
+const STATUS_LABEL: Record<ApplicationStatus, string> = {
+  PENDING: '待审核',
+  APPROVED: '已通过',
+  REJECTED: '已拒绝',
+};
+
 export default function RidersListPage() {
   const t = useTranslations();
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus>('PENDING');
+  const [approveTarget, setApproveTarget] = useState<RiderApplication | null>(null);
   const [rejectTarget, setRejectTarget] = useState<RiderApplication | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -48,18 +55,25 @@ export default function RidersListPage() {
   });
   const reviewMutation = useReviewApplication();
 
-  const items: RiderApplication[] = Array.isArray(data) ? data : [];
+  // W4-REVIEW P0-6 修复：data 是 { items: [...] } 不是数组
+  const items: RiderApplication[] = data?.items ?? [];
 
-  function handleApprove(app: RiderApplication) {
-    if (confirm(`确认通过 ${app.riderName} 的骑手申请？`)) {
-      reviewMutation.mutate({ id: app.id, input: { action: 'approve' } });
-    }
+  function handleApproveSubmit() {
+    if (!approveTarget) return;
+    reviewMutation.mutate(
+      { id: approveTarget.id, input: { decision: 'APPROVED' } },
+      {
+        onSuccess: () => {
+          setApproveTarget(null);
+        },
+      },
+    );
   }
 
   function handleRejectSubmit() {
     if (!rejectTarget) return;
     reviewMutation.mutate(
-      { id: rejectTarget.id, input: { action: 'reject', rejectReason } },
+      { id: rejectTarget.id, input: { decision: 'REJECTED', rejectReason } },
       {
         onSuccess: () => {
           setRejectTarget(null);
@@ -90,13 +104,6 @@ export default function RidersListPage() {
       ),
     },
     {
-      key: 'idCardNumber',
-      header: 'ID Card',
-      render: (row) => (
-        <span className="text-muted-foreground">{row.idCardNumber ?? '—'}</span>
-      ),
-    },
-    {
       key: 'createdAt',
       header: 'Applied At',
       render: (row) => (
@@ -106,19 +113,19 @@ export default function RidersListPage() {
       ),
     },
     {
-      key: 'status',
+      key: 'applicationStatus',
       header: 'Status',
-      render: (row) => <ApplicationStatusBadge status={row.status} />,
+      render: (row) => <ApplicationStatusBadge status={row.applicationStatus} />,
     },
     {
       key: 'actions',
       header: '',
       render: (row) =>
-        row.status === 'PENDING' ? (
+        row.applicationStatus === 'PENDING' ? (
           <div className="flex gap-2">
             <Button
               size="sm"
-              onClick={() => handleApprove(row)}
+              onClick={() => setApproveTarget(row)}
               disabled={reviewMutation.isPending}
             >
               通过
@@ -140,13 +147,13 @@ export default function RidersListPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.riders')} description="骑手入驻审核 + 在线骑手监控" />
+      <PageHeader title={t('admin.riders.title')} description={t('admin.riders.description')} />
 
       <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ApplicationStatus)}>
         <TabsList>
           {STATUS_FILTERS.map((s) => (
             <TabsTrigger key={s} value={s}>
-              {s === 'PENDING' ? '待审核' : s === 'APPROVED' ? '已通过' : '已拒绝'}
+              {STATUS_LABEL[s]}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -158,13 +165,34 @@ export default function RidersListPage() {
         <div className="rounded-md border p-8 text-center text-muted-foreground">加载中...</div>
       ) : items.length === 0 ? (
         <EmptyState
-          title={`无${statusFilter === 'PENDING' ? '待审核' : statusFilter === 'APPROVED' ? '已通过' : '已拒绝'}申请`}
+          title={`无${STATUS_LABEL[statusFilter]}申请`}
           description="骑手入驻申请将在此显示"
         />
       ) : (
         <DataTable data={items} columns={columns} />
       )}
 
+      {/* 审核通过确认弹窗（W4-REVIEW P1-3 修复：替代原生 confirm()） */}
+      <Dialog open={!!approveTarget} onOpenChange={(open) => !open && setApproveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认通过骑手申请</DialogTitle>
+            <DialogDescription>
+              {approveTarget?.riderName}（{approveTarget?.phone}）通过后骑手可上线接单
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveTarget(null)}>
+              取消
+            </Button>
+            <Button onClick={handleApproveSubmit} disabled={reviewMutation.isPending}>
+              {reviewMutation.isPending ? '提交中...' : '确认通过'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 审核拒绝确认弹窗 */}
       <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -202,7 +230,5 @@ export default function RidersListPage() {
 }
 
 function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
-  const label =
-    status === 'PENDING' ? '待审核' : status === 'APPROVED' ? '已通过' : '已拒绝';
-  return <StatusBadge status={status} label={label} />;
+  return <StatusBadge status={status} label={STATUS_LABEL[status]} />;
 }

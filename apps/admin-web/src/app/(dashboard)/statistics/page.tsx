@@ -14,7 +14,7 @@ export default function StatisticsPage() {
   const t = useTranslations();
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.statistics')} description="深度统计报表（W6 待实现）" />
+      <PageHeader title={t('admin.statistics.title')} description={t('admin.statistics.description')} />
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>占位页</AlertTitle>

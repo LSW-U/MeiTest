@@ -4616,6 +4616,571 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 订单列表（W4 新增）。按 status/userId/warehouseId/orderNo 筛选 + 游标分页。Role: super_admin / warehouse_staff / customer_service。 */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                    userId?: string;
+                    warehouseId?: string;
+                    orderNo?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单列表（含 items + events） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    orderNo: string;
+                                    /** Format: uuid */
+                                    userId: string;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    /** @enum {string} */
+                                    status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                    items: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        /** Format: uuid */
+                                        productId: string;
+                                        /** Format: uuid */
+                                        skuId: string;
+                                        productName: string;
+                                        productImage: string;
+                                        skuName: string;
+                                        unitPrice: number;
+                                        quantity: number;
+                                        subtotal: number;
+                                    }[];
+                                    totalAmount: number;
+                                    deliveryFee: number;
+                                    /** @default 0 */
+                                    discountAmount: number;
+                                    payableAmount: number;
+                                    deliveryAddress: {
+                                        name: string;
+                                        phone: string;
+                                        detail: string;
+                                        lat: number | null;
+                                        lng: number | null;
+                                    };
+                                    remark: string | null;
+                                    /** Format: uuid */
+                                    riderId: string | null;
+                                    /** @enum {string} */
+                                    paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                    /** @enum {string} */
+                                    paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    confirmedAt: string | null;
+                                    /** Format: date-time */
+                                    pickedAt: string | null;
+                                    /** Format: date-time */
+                                    deliveringAt: string | null;
+                                    /** Format: date-time */
+                                    deliveredAt: string | null;
+                                    /** Format: date-time */
+                                    cancelledAt: string | null;
+                                    cancelReason: string | null;
+                                }[];
+                                /** Format: uuid */
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 订单详情（含 items + events，不校验 userId 归属）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** Format: uuid */
+                                userId: string;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    productId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: string;
+                                    productImage: string;
+                                    skuName: string;
+                                    unitPrice: number;
+                                    quantity: number;
+                                    subtotal: number;
+                                }[];
+                                totalAmount: number;
+                                deliveryFee: number;
+                                /** @default 0 */
+                                discountAmount: number;
+                                payableAmount: number;
+                                deliveryAddress: {
+                                    name: string;
+                                    phone: string;
+                                    detail: string;
+                                    lat: number | null;
+                                    lng: number | null;
+                                };
+                                remark: string | null;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** @enum {string} */
+                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                /** @enum {string} */
+                                paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                confirmedAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
+                                /** Format: date-time */
+                                deliveringAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                /** Format: date-time */
+                                cancelledAt: string | null;
+                                cancelReason: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Admin 取消订单（任何状态可取消，写 OrderEvent）。W4-REVIEW P0-2：若 paymentStatus=PAID 抛 E-ORDER-006 防资金损失（推 W5 refund）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 取消成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PAID_ORDER_CANNOT_CANCEL */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/rider-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手入驻申请列表（按 applicationStatus 过滤）。Role: super_admin。 */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING" | "APPROVED" | "REJECTED";
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 申请列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    userId: string;
+                                    riderName: string;
+                                    phone: string;
+                                    /** @enum {string} */
+                                    vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                    vehiclePlate: string | null;
+                                    /** @enum {string} */
+                                    status: "OFFLINE" | "ONLINE" | "BUSY";
+                                    totalDeliveries: number;
+                                    rating: number;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/rider-applications/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 审核骑手申请（APPROVED/REJECTED）。Role: super_admin。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        decision: "APPROVED" | "REJECTED";
+                        rejectReason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 审核成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description APPLICATION_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description APPLICATION_ALREADY_PROCESSED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

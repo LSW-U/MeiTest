@@ -17,6 +17,8 @@ import {
   Query,
   Req,
   Headers,
+  HttpException,
+  HttpStatus,
   Inject,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -85,7 +87,16 @@ export class AdminOrderController {
     return { success: true as const, data: order };
   }
 
-  /** admin 取消订单（任何状态可取消） */
+  /**
+   * admin 取消订单
+   *
+   * W4-REVIEW P0-2 修复：防资金损失。
+   * - paymentStatus=UNPAID → 直接取消
+   * - paymentStatus=PAID → 抛 E-ORDER-006 拒绝（推 W5 refund 流程处理）
+   *
+   * 长期方案（W5）：实现 RefundService 后，PAID 订单走 refund 流程，
+   * admin cancel 自动触发 RefundService.create 原路回款。
+   */
   @Post(':id/cancel')
   @Audit({ resource: 'Order', resourceIdParam: 'id' })
   async cancel(
@@ -95,15 +106,32 @@ export class AdminOrderController {
     @Headers('x-perspective') perspective: string | undefined,
   ) {
     if (!req.user) {
-      throw new Error('auth required');
+      // P1-1 修复：raw Error → 业务错误码
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'Authentication required' },
+        HttpStatus.UNAUTHORIZED,
+      );
     }
+
+    // P0-2 修复：已付款订单拒绝直接取消（资金损失防护）
+    const order = await this.orderService.adminGetOrderDetail(id);
+    if (order.paymentStatus === 'PAID') {
+      throw new HttpException(
+        {
+          code: 'E-ORDER-006',
+          message: `Cannot cancel paid order ${order.orderNo} directly, please use the refund flow`,
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
     await this.orderService.cancelOrderInternal(id, {
       operatorId: req.user.sub,
       deviceType: req.user.deviceType as DeviceType,
       perspective,
       reason: body.reason,
     });
-    const order = await this.orderService.adminGetOrderDetail(id);
-    return { success: true as const, data: { id: order.id, status: order.status } };
+    const cancelled = await this.orderService.adminGetOrderDetail(id);
+    return { success: true as const, data: { id: cancelled.id, status: cancelled.status } };
   }
 }

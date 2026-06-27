@@ -127,5 +127,92 @@
       "inventory": "Inventory",
       "logs": "Change Logs"
     }
+  },
+  "admin": {
+    "orders": {
+      "title": "Orders",
+      "description": "Order Management System",
+      "statusAll": "All",
+      "statusPendingPayment": "Pending Payment",
+      "statusPendingConfirm": "Pending Confirm",
+      "statusConfirmed": "Confirmed",
+      "statusOutForDelivery": "Out for Delivery",
+      "statusDeliveredPaid": "Delivered",
+      "statusCancelled": "Cancelled",
+      "searchPlaceholder": "Search by order number (e.g. MM2026062...)",
+      "empty": "No orders",
+      "emptyDescription": "No orders yet",
+      "columnOrderNo": "Order No",
+      "columnStatus": "Status",
+      "columnPaymentStatus": "Payment",
+      "columnPaymentMethod": "Payment Method",
+      "columnPayableAmount": "Payable",
+      "columnCreatedAt": "Created At",
+      "detailPaymentTime": "Payment Time",
+      "detailItems": "Order Items",
+      "detailAmount": "Amount Detail",
+      "detailProductTotal": "Product Total",
+      "detailDeliveryFee": "Delivery Fee",
+      "detailDiscount": "Discount",
+      "detailPayable": "Payable",
+      "detailCancelReason": "Cancel Reason",
+      "detailCancelTime": "Cancel Time",
+      "cancelButton": "Cancel Order",
+      "cancelDialogTitle": "Cancel Order",
+      "cancelDialogDescription": "Please provide a reason (admin cancel will notify customer)",
+      "cancelDialogReasonLabel": "Cancel Reason",
+      "cancelDialogReasonPlaceholder": "e.g. Out of stock, please contact support",
+      "cancelDialogConfirm": "Confirm Cancel",
+      "cancelDialogSubmitting": "Submitting..."
+    },
+    "riders": {
+      "title": "Riders",
+      "description": "Rider application review + online rider monitoring",
+      "statusPending": "Pending Review",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected",
+      "empty": "No {status} applications",
+      "emptyDescription": "Rider applications will appear here",
+      "columnName": "Name",
+      "columnPhone": "Phone",
+      "columnVehicle": "Vehicle",
+      "columnAppliedAt": "Applied At",
+      "columnStatus": "Status",
+      "approveButton": "Approve",
+      "rejectButton": "Reject",
+      "approveDialogTitle": "Confirm Approve Rider Application",
+      "approveDialogDescription": "After approval, rider can go online to accept orders",
+      "approveDialogConfirm": "Confirm Approve",
+      "rejectDialogTitle": "Reject Rider Application",
+      "rejectDialogDescription": "Please provide a rejection reason",
+      "rejectDialogReasonLabel": "Rejection Reason",
+      "rejectDialogReasonPlaceholder": "e.g. Invalid ID, please resubmit",
+      "rejectDialogConfirm": "Confirm Reject",
+      "commonCancel": "Cancel"
+    },
+    "customers": {
+      "title": "Customers",
+      "description": "Customer Management (W4/W5 TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Backend /admin/customers endpoint TBD for W4/W5. Current user module only supports client view, admin list/detail not done."
+    },
+    "promotions": {
+      "title": "Promotions",
+      "description": "Marketing Campaigns (not in MVP, reserved route)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Promotions / coupons / discounts not in MVP scope (CLAUDE.md business decision 4). Reserved for W6+ extension."
+    },
+    "statistics": {
+      "title": "Statistics",
+      "description": "Advanced Reports (W6 TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform module has dashboard summary; advanced reports (trend/funnel/conversion) TBD for W6."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "System Configuration (W4 admin UI TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform/system-config backend ready (CRUD + Redis cache-aside); admin UI TBD for W4."
+    }
   }
 }

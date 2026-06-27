@@ -99,7 +99,7 @@ export default function OrdersListPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.orders')} description="订单管理系统" />
+      <PageHeader title={t('admin.orders.title')} description={t('admin.orders.description')} />
 
       <div className="flex flex-wrap items-center gap-3">
         <Tabs

@@ -35,6 +35,7 @@
   "E-ORDER-003": "O estado da encomenda não permite esta ação",
   "E-ORDER-004": "Encomenda não encontrada",
   "E-ORDER-005": "Alguns SKUs são inválidos ou inativos",
+  "E-ORDER-006": "Não é possível cancelar pedido pago, use o fluxo de reembolso",
   "E-PAYMENT-001": "Método de pagamento não suportado",
   "E-PAYMENT-002": "Pagamento expirou, tente novamente",
   "E-PAYMENT-003": "Pagamento falhou, tente novamente ou mude de método",

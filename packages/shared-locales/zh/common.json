@@ -127,5 +127,92 @@
       "inventory": "库存",
       "logs": "变更日志"
     }
+  },
+  "admin": {
+    "orders": {
+      "title": "订单管理",
+      "description": "订单管理系统",
+      "statusAll": "All",
+      "statusPendingPayment": "Pending Payment",
+      "statusPendingConfirm": "Pending Confirm",
+      "statusConfirmed": "Confirmed",
+      "statusOutForDelivery": "Out for Delivery",
+      "statusDeliveredPaid": "Delivered",
+      "statusCancelled": "Cancelled",
+      "searchPlaceholder": "Search by order number (e.g. MM2026062...)",
+      "empty": "No orders",
+      "emptyDescription": "No orders yet",
+      "columnOrderNo": "Order No",
+      "columnStatus": "Status",
+      "columnPaymentStatus": "Payment",
+      "columnPaymentMethod": "Payment Method",
+      "columnPayableAmount": "Payable",
+      "columnCreatedAt": "Created At",
+      "detailPaymentTime": "Payment Time",
+      "detailItems": "Order Items",
+      "detailAmount": "Amount Detail",
+      "detailProductTotal": "Product Total",
+      "detailDeliveryFee": "Delivery Fee",
+      "detailDiscount": "Discount",
+      "detailPayable": "Payable",
+      "detailCancelReason": "Cancel Reason",
+      "detailCancelTime": "Cancel Time",
+      "cancelButton": "Cancel Order",
+      "cancelDialogTitle": "Cancel Order",
+      "cancelDialogDescription": "Please provide a reason (admin cancel will notify customer)",
+      "cancelDialogReasonLabel": "Cancel Reason",
+      "cancelDialogReasonPlaceholder": "e.g. Out of stock, please contact support",
+      "cancelDialogConfirm": "Confirm Cancel",
+      "cancelDialogSubmitting": "Submitting..."
+    },
+    "riders": {
+      "title": "骑手管理",
+      "description": "骑手入驻审核 + 在线骑手监控",
+      "statusPending": "Pending Review",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected",
+      "empty": "No {status} applications",
+      "emptyDescription": "Rider applications will appear here",
+      "columnName": "Name",
+      "columnPhone": "Phone",
+      "columnVehicle": "Vehicle",
+      "columnAppliedAt": "Applied At",
+      "columnStatus": "Status",
+      "approveButton": "Approve",
+      "rejectButton": "Reject",
+      "approveDialogTitle": "Confirm Approve Rider Application",
+      "approveDialogDescription": "After approval, rider can go online to accept orders",
+      "approveDialogConfirm": "Confirm Approve",
+      "rejectDialogTitle": "Reject Rider Application",
+      "rejectDialogDescription": "Please provide a rejection reason",
+      "rejectDialogReasonLabel": "Rejection Reason",
+      "rejectDialogReasonPlaceholder": "e.g. Invalid ID, please resubmit",
+      "rejectDialogConfirm": "Confirm Reject",
+      "commonCancel": "Cancel"
+    },
+    "customers": {
+      "title": "客户管理",
+      "description": "客户管理（W4/W5 待实现）",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Backend /admin/customers endpoint TBD for W4/W5. Current user module only supports client view, admin list/detail not done."
+    },
+    "promotions": {
+      "title": "营销管理",
+      "description": "营销活动（MVP 不做，预留路由）",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Promotions / coupons / discounts not in MVP scope (CLAUDE.md business decision 4). Reserved for W6+ extension."
+    },
+    "statistics": {
+      "title": "统计报表",
+      "description": "深度统计报表（W6 待实现）",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform module has dashboard summary; advanced reports (trend/funnel/conversion) TBD for W6."
+    },
+    "settings": {
+      "title": "系统设置",
+      "description": "系统配置（W4 admin UI 待补）",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform/system-config backend ready (CRUD + Redis cache-aside); admin UI TBD for W4."
+    }
   }
 }

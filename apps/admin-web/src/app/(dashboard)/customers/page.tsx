@@ -14,7 +14,7 @@ export default function CustomersPage() {
   const t = useTranslations();
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.customers')} description="客户管理（W4/W5 待实现）" />
+      <PageHeader title={t('admin.customers.title')} description={t('admin.customers.description')} />
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>占位页</AlertTitle>

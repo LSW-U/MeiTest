@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const t = useTranslations();
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.settings')} description="系统配置（W4 admin UI 待补）" />
+      <PageHeader title={t('admin.settings.title')} description={t('admin.settings.description')} />
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>占位页</AlertTitle>

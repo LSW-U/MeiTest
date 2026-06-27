@@ -127,5 +127,92 @@
       "inventory": "Inventáriu",
       "logs": "Log mudansa"
     }
+  },
+  "admin": {
+    "orders": {
+      "title": "Order",
+      "description": "Sistema jestaun Order",
+      "statusAll": "All",
+      "statusPendingPayment": "Pending Payment",
+      "statusPendingConfirm": "Pending Confirm",
+      "statusConfirmed": "Confirmed",
+      "statusOutForDelivery": "Out for Delivery",
+      "statusDeliveredPaid": "Delivered",
+      "statusCancelled": "Cancelled",
+      "searchPlaceholder": "Search by order number (e.g. MM2026062...)",
+      "empty": "No orders",
+      "emptyDescription": "No orders yet",
+      "columnOrderNo": "Order No",
+      "columnStatus": "Status",
+      "columnPaymentStatus": "Payment",
+      "columnPaymentMethod": "Payment Method",
+      "columnPayableAmount": "Payable",
+      "columnCreatedAt": "Created At",
+      "detailPaymentTime": "Payment Time",
+      "detailItems": "Order Items",
+      "detailAmount": "Amount Detail",
+      "detailProductTotal": "Product Total",
+      "detailDeliveryFee": "Delivery Fee",
+      "detailDiscount": "Discount",
+      "detailPayable": "Payable",
+      "detailCancelReason": "Cancel Reason",
+      "detailCancelTime": "Cancel Time",
+      "cancelButton": "Cancel Order",
+      "cancelDialogTitle": "Cancel Order",
+      "cancelDialogDescription": "Please provide a reason (admin cancel will notify customer)",
+      "cancelDialogReasonLabel": "Cancel Reason",
+      "cancelDialogReasonPlaceholder": "e.g. Out of stock, please contact support",
+      "cancelDialogConfirm": "Confirm Cancel",
+      "cancelDialogSubmitting": "Submitting..."
+    },
+    "riders": {
+      "title": "Rider",
+      "description": "Revizaun aplikasaun rider + monitorizaun",
+      "statusPending": "Pending Review",
+      "statusApproved": "Approved",
+      "statusRejected": "Rejected",
+      "empty": "No {status} applications",
+      "emptyDescription": "Rider applications will appear here",
+      "columnName": "Name",
+      "columnPhone": "Phone",
+      "columnVehicle": "Vehicle",
+      "columnAppliedAt": "Applied At",
+      "columnStatus": "Status",
+      "approveButton": "Approve",
+      "rejectButton": "Reject",
+      "approveDialogTitle": "Confirm Approve Rider Application",
+      "approveDialogDescription": "After approval, rider can go online to accept orders",
+      "approveDialogConfirm": "Confirm Approve",
+      "rejectDialogTitle": "Reject Rider Application",
+      "rejectDialogDescription": "Please provide a rejection reason",
+      "rejectDialogReasonLabel": "Rejection Reason",
+      "rejectDialogReasonPlaceholder": "e.g. Invalid ID, please resubmit",
+      "rejectDialogConfirm": "Confirm Reject",
+      "commonCancel": "Cancel"
+    },
+    "customers": {
+      "title": "Kliente",
+      "description": "Jestaun Kliente (W4/W5 TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Backend /admin/customers endpoint TBD for W4/W5. Current user module only supports client view, admin list/detail not done."
+    },
+    "promotions": {
+      "title": "Promosaun",
+      "description": "Kampanha Marketing (la MVP)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "Promotions / coupons / discounts not in MVP scope (CLAUDE.md business decision 4). Reserved for W6+ extension."
+    },
+    "statistics": {
+      "title": "Statistika",
+      "description": "Relatoriu Avansadu (W6 TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform module has dashboard summary; advanced reports (trend/funnel/conversion) TBD for W6."
+    },
+    "settings": {
+      "title": "Konfigurasaun",
+      "description": "Konfigurasaun Sistema (W4 UI TBD)",
+      "placeholderTitle": "Placeholder",
+      "placeholderDescription": "M flow platform/system-config backend ready (CRUD + Redis cache-aside); admin UI TBD for W4."
+    }
   }
 }

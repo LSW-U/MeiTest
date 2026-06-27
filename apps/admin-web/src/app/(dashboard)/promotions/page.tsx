@@ -14,7 +14,7 @@ export default function PromotionsPage() {
   const t = useTranslations();
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title={t('nav.promotions')} description="营销活动（MVP 不做，预留路由）" />
+      <PageHeader title={t('admin.promotions.title')} description={t('admin.promotions.description')} />
       <Alert>
         <Info className="h-4 w-4" />
         <AlertTitle>占位页</AlertTitle>

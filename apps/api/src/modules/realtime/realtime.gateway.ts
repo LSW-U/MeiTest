@@ -129,6 +129,25 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       if (user.role === 'customer_service' || user.role === 'super_admin') {
         await client.join(CUSTOMER_SERVICE_ROOM);
       }
+      // W4-REVIEW P0-4 修复：warehouse_staff 自动加入 warehouse:{warehouseId} room
+      // broadcastInventoryAlert 推 'inventory:low-stock' 到这个 room
+      if (user.role === 'warehouse_staff') {
+        try {
+          const staff = await db.warehouseStaff.findMany({
+            where: { userId: user.sub },
+            select: { warehouseId: true },
+          });
+          for (const s of staff) {
+            await client.join(`warehouse:${s.warehouseId}`);
+          }
+        } catch (e) {
+          this.wsLogger.warn({
+            msg: 'ws_warehouse_room_join_failed',
+            userId: user.sub,
+            error: (e as Error).message,
+          });
+        }
+      }
 
       logger.info({
         msg: 'ws_connected',
