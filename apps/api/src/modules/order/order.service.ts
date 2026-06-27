@@ -762,7 +762,7 @@ export class OrderService {
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
       include: {
         items: { orderBy: { id: 'asc' } },
-        events: { orderBy: { createdAt: 'asc' } },
+        events: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
     });
 
@@ -807,7 +807,7 @@ export class OrderService {
       ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
       include: {
         items: { orderBy: { id: 'asc' } },
-        events: { orderBy: { createdAt: 'asc' } },
+        events: { orderBy: { createdAt: 'desc' }, take: 1 },
       },
     });
 

@@ -22,10 +22,16 @@ vi.mock('../src/shared/db', () => ({
       groupBy: vi.fn(),
       count: vi.fn(),
     },
-    riderLocation: { count: vi.fn() },
     warehouse: { findMany: vi.fn() },
     // $queryRaw 是 tagged template，mock 成返回空数组的函数
     $queryRaw: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+// P0-2 修复后 countOnlineRiders 改查 Redis（rider:online:* keys）
+vi.mock('../src/shared/cache', () => ({
+  redis: {
+    keys: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -41,10 +47,13 @@ const dbMock = db as unknown as {
     groupBy: ReturnType<typeof vi.fn>;
     count: ReturnType<typeof vi.fn>;
   };
-  riderLocation: { count: ReturnType<typeof vi.fn> };
   warehouse: { findMany: ReturnType<typeof vi.fn> };
   $queryRaw: ReturnType<typeof vi.fn>;
 };
+
+// P0-2: redis mock for countOnlineRiders
+import { redis } from '../src/shared/cache';
+const redisMock = redis as unknown as { keys: ReturnType<typeof vi.fn> };
 
 describe('DashboardService', () => {
   let service: DashboardService;
@@ -57,7 +66,7 @@ describe('DashboardService', () => {
   describe('GMV_ORDER_STATUSES 排除规则（M2 修复）', () => {
     it('GMV 聚合 where.status.in 不包含 DELIVERED_UNPAID', async () => {
       dbMock.order.groupBy.mockResolvedValue([]);
-      dbMock.riderLocation.count.mockResolvedValue(0);
+      redisMock.keys.mockResolvedValue([]);
       dbMock.order.count.mockResolvedValue(0);
       dbMock.warehouse.findMany.mockResolvedValue([]);
 
@@ -72,7 +81,7 @@ describe('DashboardService', () => {
 
     it('GMV 包含 CONFIRMED / PICKED / OUT_FOR_DELIVERY / DELIVERED_PAID / DELIVERED / COMPLETED', async () => {
       dbMock.order.groupBy.mockResolvedValue([]);
-      dbMock.riderLocation.count.mockResolvedValue(0);
+      redisMock.keys.mockResolvedValue([]);
       dbMock.order.count.mockResolvedValue(0);
       dbMock.warehouse.findMany.mockResolvedValue([]);
 
@@ -93,7 +102,7 @@ describe('DashboardService', () => {
   describe('countAbnormalOrders 加 range（M1 修复）', () => {
     it('statusCount where 包含 createdAt range', async () => {
       dbMock.order.groupBy.mockResolvedValue([]);
-      dbMock.riderLocation.count.mockResolvedValue(0);
+      redisMock.keys.mockResolvedValue([]);
       dbMock.order.count.mockResolvedValue(0);
       dbMock.warehouse.findMany.mockResolvedValue([]);
 
@@ -120,7 +129,7 @@ describe('DashboardService', () => {
       // 其他调用 mock 默认
       dbMock.order.groupBy.mockResolvedValue([]);
       dbMock.order.count.mockResolvedValue(0);
-      dbMock.riderLocation.count.mockResolvedValue(0);
+      redisMock.keys.mockResolvedValue([]);
 
       // 直接调私有方法（通过类型断言）
       const result = await (
@@ -177,7 +186,7 @@ describe('DashboardService', () => {
       dbMock.order.groupBy.mockResolvedValue([
         { status: 'COMPLETED', _sum: { payableAmount: 5000 }, _count: { _all: 10 } },
       ]);
-      dbMock.riderLocation.count.mockResolvedValue(3);
+      redisMock.keys.mockResolvedValue([1,2,3]);
       dbMock.order.count.mockResolvedValue(2);
       dbMock.warehouse.findMany.mockResolvedValue([]);
       dbMock.$queryRaw.mockResolvedValue([
@@ -205,7 +214,7 @@ describe('DashboardService', () => {
           { status: 'COMPLETED', _sum: { payableAmount: 5000 }, _count: { _all: 10 } },
         ])
         .mockResolvedValueOnce([]); // prev 段
-      dbMock.riderLocation.count.mockResolvedValue(0);
+      redisMock.keys.mockResolvedValue([]);
       dbMock.order.count.mockResolvedValue(0);
       dbMock.warehouse.findMany.mockResolvedValue([]);
       dbMock.$queryRaw.mockResolvedValue([]);

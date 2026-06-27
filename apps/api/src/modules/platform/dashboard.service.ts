@@ -5,7 +5,7 @@
  *
  * MVP 阶段（W2-W5）数据策略：
  *   - GMV：用 Order.payableAmount 良性状态聚合（payment 数据 W5 切真，当前用订单估算）
- *   - 在线骑手：RiderLocation.updatedAt 最近 60s 内视为在线
+ *   - 在线骑手：Redis `rider:online:{riderId}` SETEX 60s（由 rider.service heartbeat 维护）
  *   - 异常订单：CANCELLED + DELIVERED_UNPAID（拒付）+ 超时未确认（30 分钟）
  *   - growthPct：与上一周期对比
  *
@@ -14,6 +14,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
+import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 import { buildRange, growthPct, type Range } from './platform-time';
 import type {
@@ -38,9 +39,6 @@ const GMV_ORDER_STATUSES = [
 
 /** 异常订单状态 */
 const ABNORMAL_ORDER_STATUSES = ['CANCELLED', 'DELIVERED_UNPAID'] as const;
-
-/** 视为在线的骑手位置超时阈值（秒） */
-const RIDER_ONLINE_TTL_SEC = 60;
 
 /** 超时未确认订单阈值（分钟） */
 const PENDING_TIMEOUT_MIN = 30;
@@ -92,11 +90,19 @@ export class DashboardService {
   }
 
   private async countOnlineRiders(now: Date): Promise<number> {
-    const cutoff = new Date(now.getTime() - RIDER_ONLINE_TTL_SEC * 1000);
-    const count = await db.riderLocation.count({
-      where: { updatedAt: { gte: cutoff } },
-    });
-    return count;
+    // P0-2 修复：改查 Redis（rider:online:{riderId} SETEX 60s，由 rider.service heartbeat 维护）
+    // 原 db.riderLocation.count 是死表（WS handler 没写库），永远返回 0
+    void now; // 保留参数签名兼容（Redis TTL 自管过期，不需 now）
+    try {
+      const keys = await redis.keys('rider:online:*');
+      return keys.length;
+    } catch (e) {
+      logger.warn({
+        msg: 'DASHBOARD_ONLINE_RIDERS_REDIS_FAILED',
+        error: (e as Error).message,
+      });
+      return 0;
+    }
   }
 
   private async countAbnormalOrders(now: Date, range: Range): Promise<number> {

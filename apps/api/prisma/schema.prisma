@@ -638,39 +638,9 @@ model AuditLog {
 // 10. RiderLocation + RiderLocationHistory(v0.3:WS+轮询双轨,历史轨迹回放)
 // ============================================================================
 
-/// 骑手当前位置(高频 UPSERT,WS 每 5s 推)
-model RiderLocation {
-  riderId   String         @id @map("rider_id")
-  lat       Decimal        @db.Decimal(10, 7)
-  lng       Decimal        @db.Decimal(10, 7)
-  heading   Decimal?       @db.Decimal(5, 2) // 方向 0-360
-  speed     Decimal?       @db.Decimal(5, 2) // 速度 km/h
-  source    LocationSource @default(WEBSOCKET) // 上报来源
-  updatedAt DateTime       @updatedAt @map("updated_at")
-
-  rider RiderProfile @relation(fields: [riderId], references: [id], onDelete: Cascade)
-
-  @@map("rider_locations")
-}
-
-/// 骑手历史轨迹(每个订单一份,完成时归档;用于轨迹回放和纠纷仲裁)
-model RiderLocationHistory {
-  id         String         @id @default(uuid())
-  riderId    String         @map("rider_id")
-  orderId    String?        @map("order_id") // 配送中的订单,完成后保留
-  lat        Decimal        @db.Decimal(10, 7)
-  lng        Decimal        @db.Decimal(10, 7)
-  heading    Decimal?       @db.Decimal(5, 2)
-  speed      Decimal?       @db.Decimal(5, 2)
-  source     LocationSource @default(WEBSOCKET)
-  recordedAt DateTime       @default(now()) @map("recorded_at")
-
-  rider RiderProfile @relation(fields: [riderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId, recordedAt])
-  @@index([riderId, recordedAt])
-  @@map("rider_location_histories")
-}
+// RiderLocation + RiderLocationHistory 在 W4.5 P0-2 修复时删除
+// 在线骑手状态用 Redis `rider:online:{riderId}` SETEX 维护（rider.service heartbeat）
+// 历史轨迹推 W5/W6 真做配送追踪时再补
 
 // ============================================================================
 // 辅助表:RiderProfile / DeliveryTask / CashCollection
@@ -707,8 +677,6 @@ model RiderProfile {
   orders            Order[]
   deliveryTasks     DeliveryTask[]
   cashCollections   CashCollection[]
-  currentLocation   RiderLocation?
-  locationHistories RiderLocationHistory[]
 
   @@index([applicationStatus])
   @@map("rider_profiles")
