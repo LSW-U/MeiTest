@@ -38,8 +38,8 @@ export default function LoginPage() {
       // 同时同步 zustand store（与 PerspectiveSwitcher/Sidebar 一致）
       const { usePerspectiveStore } = await import('@/stores/perspective');
       usePerspectiveStore.getState().setPerspective('platform');
-      // 跳新 dashboard 首页（不是 legacy /platform）
-      window.location.href = '/';
+      // 跳 dashboard 内容页（/ 是 server component 永远 redirect /login，跳 /products）
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
     } finally {
