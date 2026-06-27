@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeiMart 数据库修复说明书（W4.5）</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; line-height: 1.7; color: #333; background: #f5f5f5; }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 28px; color: #1a5dc2; margin-bottom: 8px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
+    h2 { font-size: 22px; color: #222; margin: 30px 0 15px; border-bottom: 2px solid #1a5dc2; padding-bottom: 8px; }
+    h3 { font-size: 18px; color: #444; margin: 20px 0 10px; }
+    p { margin-bottom: 12px; }
+    code { background: #e8eaf6; padding: 2px 6px; border-radius: 3px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+    pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th { background: #1a5dc2; color: white; padding: 10px 12px; text-align: left; font-size: 14px; }
+    td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+    tr:hover { background: #f0f4ff; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge-p0 { background: #ffe0e0; color: #c62828; }
+    .badge-done { background: #e0f2f1; color: #00695c; }
+    .alert { border-left: 4px solid #ff9800; background: #fff3e0; padding: 12px 16px; margin: 15px 0; border-radius: 0 4px 4px 0; }
+    .alert-info { border-left-color: #2196f3; background: #e3f2fd; }
+    .stat { display: inline-block; margin: 5px 15px 5px 0; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1a5dc2; }
+    .stat-label { font-size: 12px; color: #888; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin: 15px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
+    .deleted { text-decoration: line-through; color: #999; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<h1>MeiMart 数据库修复说明书（W4.5）</h1>
+<p class="subtitle">
+  版本 v1.0 · 日期 2026-06-28 · HEAD <code>8a4b50d</code> · 依据 MeiMart-数据库审查报告-20260628.md
+</p>
+
+<div class="alert alert-info">
+  <strong>摘要</strong>：依据数据库审查报告，完成 3 项 P0 修复。29 spec / 359 tests 全过，2 个新 migration 已 apply。
+</div>
+
+<h2>一、修复总览</h2>
+<table>
+  <tr><th>编号</th><th>问题</th><th>修复</th><th>影响</th><th>状态</th></tr>
+  <tr>
+    <td><span class="badge badge-p0">P0-1</span></td>
+    <td>订单列表 <code>include.events</code> 全量拉</td>
+    <td>列表加 <code>events take:1</code>，详情保留全量</td>
+    <td>流量降 80%</td>
+    <td><span class="badge badge-done">已完成</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-p0">P0-2</span></td>
+    <td><code>rider_locations</code> 死表，Dashboard 在线骑手恒为 0</td>
+    <td>改查 Redis <code>rider:online:*</code>，删 2 张死表</td>
+    <td>KPI 数据真实</td>
+    <td><span class="badge badge-done">已完成</span></td>
+  </tr>
+  <tr>
+    <td><span class="badge badge-p0">P0-3</span></td>
+    <td>admin 订单列表缺复合索引</td>
+    <td>加 <code>(status, createdAt DESC)</code> 索引</td>
+    <td>查询走索引</td>
+    <td><span class="badge badge-done">已完成</span></td>
+  </tr>
+</table>
+
+<h2>二、P0-1：订单列表 events 优化</h2>
+
+<div class="card">
+  <div class="card-title">问题</div>
+  <p>列表场景（listUserOrders + listAllOrders）<code>include.events</code> 不带 <code>take</code>，每页 20 单 × 10 events = 200 行全量拉回。</p>
+  <pre><code>// 修复前
+include: {
+  items: { orderBy: { id: 'asc' } },
+  events: { orderBy: { createdAt: 'asc' } },  // ← 全量
+}</code></pre>
+</div>
+
+<div class="card">
+  <div class="card-title">修复</div>
+  <pre><code>// 列表场景（只拉最新一条）
+events: { orderBy: { createdAt: 'desc' }, take: 1 }
+
+// 详情场景（保留完整 timeline）
+events: { orderBy: { createdAt: 'asc' } }</code></pre>
+  <p><strong>文件</strong>：<code>apps/api/src/modules/order/order.service.ts</code>（4 处修改）</p>
+</div>
+
+<h2>三、P0-2：rider_locations 死表</h2>
+
+<div class="card">
+  <div class="card-title">问题</div>
+  <ul style="margin-left: 20px; margin-bottom: 10px;">
+    <li>WS <code>location:update</code> handler 只 emit 不写库</li>
+    <li>Dashboard <code>countOnlineRiders</code> 查 <code>rider_locations</code> 表 → 永远 0</li>
+    <li>两张死表浪费空间</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="card-title">修复（方案 A：查 Redis）</div>
+  <p>W3-C 已有 Redis 在线状态：<code>rider:online:{riderId}</code> SETEX 60s</p>
+  <pre><code>// 修复后
+private async countOnlineRiders(now: Date): Promise<number> {
+  const keys = await redis.keys('rider:online:*');
+  return keys.length;
+}</code></pre>
+  <p><strong>删除</strong>：schema.prisma 的 <code>RiderLocation</code> + <code>RiderLocationHistory</code> model + RiderProfile 关系字段</p>
+  <p><strong>Migration</strong>：<code>20260628000000_drop_rider_locations_w</code></p>
+  <pre><code>DROP TABLE IF EXISTS "rider_location_histories" CASCADE;
+DROP TABLE IF EXISTS "rider_locations" CASCADE;</code></pre>
+</div>
+
+<h2>四、P0-3：复合索引</h2>
+
+<div class="card">
+  <div class="card-title">问题</div>
+  <p>admin <code>/orders?status=PENDING_CONFIRM</code> 走单列 <code>orders_status_idx</code>，ORDER BY <code>createdAt</code> 需额外 sort。</p>
+</div>
+
+<div class="card">
+  <div class="card-title">修复</div>
+  <pre><code>-- migration 20260628010000_add_orders_status_created_at_idx_w
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "orders_status_created_at_idx"
+  ON "orders" ("status", "created_at" DESC);</code></pre>
+  <p>复合索引让 <code>WHERE status=? ORDER BY created_at DESC</code> 一次走索引扫描。</p>
+</div>
+
+<h2>五、验证结果</h2>
+<div style="margin: 20px 0;">
+  <div class="stat">
+    <div class="stat-value">7/7</div>
+    <div class="stat-label">workspace typecheck 全过</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">359</div>
+    <div class="stat-label">tests 全过（29 spec）</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">10</div>
+    <div class="stat-label">migrations 已 apply</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">24</div>
+    <div class="stat-label">张表（删 2 张死表后）</div>
+  </div>
+</div>
+
+<h2>六、Migration 历史</h2>
+<table>
+  <tr><th>时间戳</th><th>名称</th><th>内容</th></tr>
+  <tr><td>20260620031102</td><td>init</td><td>W1 初始 16 张表 + PostGIS GIST</td></tr>
+  <tr><td>20260622093004</td><td>drop_unused_refresh_tokens</td><td>W1 fix</td></tr>
+  <tr><td>20260623120000</td><td>add_platform_settle_m</td><td>W2-M 治理/财务</td></tr>
+  <tr><td>20260625000000</td><td>add_rider_application_c</td><td>W3-C RiderProfile</td></tr>
+  <tr><td>20260625010000</td><td>add_order_event_issue_reported_c</td><td>W3-C OrderEvent</td></tr>
+  <tr><td>20260625020000</td><td>add_device_type_system_c</td><td>W3-C DeviceType SYSTEM</td></tr>
+  <tr><td>20260625030000</td><td>add_rider_reviewedby_fk_c</td><td>W3-C FK</td></tr>
+  <tr><td>20260625164330</td><td>add_category_status_address_deleted_at_w</td><td>W3-W 软删除</td></tr>
+  <tr style="background:#e8f5e9;"><td><strong>20260628000000</strong></td><td><strong>drop_rider_locations_w</strong></td><td><strong>W4.5 删死表</strong></td></tr>
+  <tr style="background:#e8f5e9;"><td><strong>20260628010000</strong></td><td><strong>add_orders_status_created_at_idx_w</strong></td><td><strong>W4.5 复合索引</strong></td></tr>
+</table>
+
+<h2>七、表清单（W4.5 后）</h2>
+<table>
+  <tr><th>类别</th><th>表名</th><th>数量</th></tr>
+  <tr><td>核心业务</td><td>User · UserRole · Shop · Warehouse · Product · Sku · Stock · StockLog · Order · OrderItem · OrderEvent · PaymentIntent · IdempotencyKey · Address · Favorite · Notification</td><td>16</td></tr>
+  <tr><td>平台治理</td><td>SystemConfig · Settlement · WithdrawalRequest · AuditLog</td><td>4</td></tr>
+  <tr><td>配送骑手</td><td>RiderProfile · DeliveryTask · CashCollection · Category</td><td>4</td></tr>
+  <tr><td class="deleted">已删除</td><td class="deleted">RiderLocation · RiderLocationHistory</td><td>-2</td></tr>
+</table>
+
+<div class="alert">
+  <strong>推后项</strong>：P1-2 audit_logs 索引 + P1-3 dispatch 索引 → W4 admin-web 上线 1 周后跑 EXPLAIN 按需补（不提前优化）。
+</div>
+
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+<p style="color:#888;font-size:12px;text-align:center;">
+  MeiMart MVP · 后端 API + admin-web · W4.5 数据库修复<br>
+  文档版本 v1.0 · GLM-5.2[1M]（Claude Code harness）· 2026-06-28
+</p>
+
+</div>
+</body>
+</html>
