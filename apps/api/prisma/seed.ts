@@ -97,6 +97,23 @@ async function main() {
   });
   console.log(`  ✅ super_admin: ${admin.email} (phone: ${admin.phone})`);
 
+  // ===== 1b. customer（联调用测试账号，W5-prepare） =====
+  const customer = await prisma.user.upsert({
+    where: { phone: '+67088888888' },
+    update: { password: SEED_PASSWORD_HASH },
+    create: {
+      phone: '+67088888888',
+      email: 'customer@meimart.dev',
+      password: SEED_PASSWORD_HASH,
+      name: 'Test Customer',
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      phoneVerified: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`  ✅ customer: ${customer.email} (phone: ${customer.phone})`);
+
   // ===== 2. shop（单一商家） =====
   const shop = await prisma.shop.upsert({
     where: { id: '00000000-0000-0000-0000-000000000001' },
