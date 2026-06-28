@@ -5181,6 +5181,740 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/rider/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手入驻申请（创建 RiderProfile applicationStatus=PENDING） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        riderName: string;
+                        phone: string;
+                        /** @enum {string} */
+                        vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                        vehiclePlate?: string;
+                        idCardNumber: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 申请成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description ALREADY_EXISTS */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取当前骑手资料（含 applicationStatus + 在线状态） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 骑手资料 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROFILE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/duty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 切换上下班状态（ONLINE → Redis SETEX 60s；OFFLINE → Redis DEL） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "OFFLINE" | "ONLINE" | "BUSY";
+                        /** @enum {string} */
+                        acceptMode?: "GRAB" | "AUTO_DISPATCH";
+                    };
+                };
+            };
+            responses: {
+                /** @description 切换成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description NOT_APPROVED */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/rider/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 续期成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                renewed: boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取待抢配送任务列表（status=PENDING_ASSIGN） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 任务列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    orderId: string;
+                                    /** Format: uuid */
+                                    riderId: string | null;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    /** @enum {string} */
+                                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    pickupAddress: string;
+                                    pickupLat: number;
+                                    pickupLng: number;
+                                    dropoffAddress: string;
+                                    dropoffLat: number;
+                                    dropoffLng: number;
+                                    /** Format: date-time */
+                                    assignedAt: string | null;
+                                    /** Format: date-time */
+                                    pickedUpAt: string | null;
+                                    /** Format: date-time */
+                                    deliveredAt: string | null;
+                                    note: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手接单（乐观锁：UPDATE WHERE status=PENDING_ASSIGN） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        taskId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 接单成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description TASK_ALREADY_ASSIGNED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks/{id}/pickup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手确认取货（PICKED_UP 状态） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        taskId: string;
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 取货成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description TASK_STATUS_INVALID */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks/{id}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手确认送达（DELIVERED + COD 收款确认 + 创建 CashCollection） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        taskId: string;
+                        collectedAmount?: number;
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 送达成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description TASK_STATUS_INVALID */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks/{id}/report-issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手报告配送异常（WS 推 customer-service room + OrderEvent ISSUE_REPORTED） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        taskId: string;
+                        /** @enum {string} */
+                        reason: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER";
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 异常上报成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

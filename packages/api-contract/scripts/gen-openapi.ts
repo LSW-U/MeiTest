@@ -99,6 +99,12 @@ import {
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
+  UpdateDutyStatusRequest,
+  DeliveryTask,
+  AcceptTaskRequest,
+  PickupTaskRequest,
+  DeliverTaskRequest,
+  ReportIssueRequest,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1333,6 +1339,192 @@ registry.registerPath({
     },
     404: { description: 'APPLICATION_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'APPLICATION_ALREADY_PROCESSED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// W5 联调准备：骑手 App 端点 path 注册（9 endpoints）
+// 后端 controller 已实现，此处补 OpenAPI 注册让前端 sync-api.sh 能拉到类型
+// ============================================================================
+
+// ---- 骑手入驻申请 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/rider/apply',
+  tags: ['rider'],
+  description: '骑手入驻申请（创建 RiderProfile applicationStatus=PENDING）',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            riderName: z.string(),
+            phone: z.string(),
+            vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']),
+            vehiclePlate: z.string().optional(),
+            idCardNumber: z.string(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '申请成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: RiderProfile }),
+        },
+      },
+    },
+    409: { description: 'ALREADY_EXISTS', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 骑手资料 ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/profile',
+  tags: ['rider'],
+  description: '获取当前骑手资料（含 applicationStatus + 在线状态）',
+  responses: {
+    200: {
+      description: '骑手资料',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderProfile }) } },
+    },
+    404: { description: 'PROFILE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 上/下班 ----
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/rider/duty',
+  tags: ['rider'],
+  description: '切换上下班状态（ONLINE → Redis SETEX 60s；OFFLINE → Redis DEL）',
+  request: {
+    body: { content: { 'application/json': { schema: UpdateDutyStatusRequest } } },
+  },
+  responses: {
+    200: {
+      description: '切换成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderProfile }) } },
+    },
+    403: { description: 'NOT_APPROVED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 心跳 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/heartbeat',
+  tags: ['rider'],
+  description: '心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）',
+  responses: {
+    200: {
+      description: '续期成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: z.object({ renewed: z.boolean() }) }),
+        },
+      },
+    },
+  },
+});
+
+// ---- 抢单大厅 ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/dispatch/tasks',
+  tags: ['dispatch'],
+  description: '获取待抢配送任务列表（status=PENDING_ASSIGN）',
+  responses: {
+    200: {
+      description: '任务列表',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ items: z.array(DeliveryTask) }),
+          }),
+        },
+      },
+    },
+  },
+});
+
+// ---- 接单 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/accept',
+  tags: ['dispatch'],
+  description: '骑手接单（乐观锁：UPDATE WHERE status=PENDING_ASSIGN）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AcceptTaskRequest } } },
+  },
+  responses: {
+    200: {
+      description: '接单成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
+    409: { description: 'TASK_ALREADY_ASSIGNED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 取货 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/pickup',
+  tags: ['dispatch'],
+  description: '骑手确认取货（PICKED_UP 状态）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: PickupTaskRequest } } },
+  },
+  responses: {
+    200: {
+      description: '取货成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
+    409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 送达 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/deliver',
+  tags: ['dispatch'],
+  description: '骑手确认送达（DELIVERED + COD 收款确认 + 创建 CashCollection）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: DeliverTaskRequest } } },
+  },
+  responses: {
+    200: {
+      description: '送达成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
+    409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 报异常 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/report-issue',
+  tags: ['dispatch'],
+  description: '骑手报告配送异常（WS 推 customer-service room + OrderEvent ISSUE_REPORTED）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: ReportIssueRequest } } },
+  },
+  responses: {
+    200: {
+      description: '异常上报成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
   },
 });
 

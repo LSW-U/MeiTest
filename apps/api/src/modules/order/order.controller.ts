@@ -35,6 +35,7 @@ import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import { IdempotencyService } from '../../shared/idempotency';
+import { db } from '../../shared/db';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { CreateOrderInput, PaymentMethodValue, OrderStatusValue } from './order.types';
 
@@ -164,6 +165,57 @@ export class OrderController {
     }
     const order = await this.orderService.getOrderDetail(id, user.sub);
     return { success: true as const, data: order };
+  }
+
+  /**
+   * 配送追踪（HTTP 轮询兜底，WS 断线时前端降级使用）
+   *
+   * CLAUDE.md §配送追踪双轨：WS 主通道 + HTTP 轮询兜底（30s 间隔）
+   *
+   * 返回：订单状态 + 骑手信息 + 配送任务状态
+   * 位置数据 W5 补（当前 rider_locations 已删，用 Redis rider:online 判断在线）
+   */
+  @Get(':id/tracking')
+  async getTracking(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const order = await this.orderService.getOrderDetail(id, user.sub);
+
+    // 从 delivery_tasks 查配送任务状态
+    const task = await db.deliveryTask.findFirst({
+      where: { orderId: id },
+      select: {
+        id: true,
+        status: true,
+        riderId: true,
+        pickedUpAt: true,
+        deliveredAt: true,
+      },
+    });
+
+    return {
+      success: true as const,
+      data: {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        orderStatus: order.status,
+        paymentStatus: order.paymentStatus,
+        task: task
+          ? {
+              taskId: task.id,
+              taskStatus: task.status,
+              riderId: task.riderId,
+              pickedUpAt: task.pickedUpAt,
+              deliveredAt: task.deliveredAt,
+              // 位置数据 W5 补（当前 rider_locations 已删）
+              riderLocation: null,
+              estimatedArrival: null,
+            }
+          : null,
+      },
+    };
   }
 
   /**
