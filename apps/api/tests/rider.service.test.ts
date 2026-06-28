@@ -20,6 +20,9 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    user: {
+      update: vi.fn().mockResolvedValue({}),
+    },
   },
   mockRedis: {
     set: vi.fn(),

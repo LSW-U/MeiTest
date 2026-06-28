@@ -163,13 +163,20 @@ export class RiderService {
         applicationStatus: input.decision,
         reviewedById: input.reviewerId,
         reviewedAt: new Date(),
-        // M6：APPROVED 时保留原 rejectReason（不主动 nullify，便于未来"重新审核"功能）
         rejectReason:
           input.decision === 'REJECTED'
             ? input.rejectReason
             : profile.rejectReason,
       },
     });
+
+    // 审核通过时更新 User.role 为 RIDER（否则重登后 role 还是 CUSTOMER，调 /rider/* 会 403）
+    if (input.decision === 'APPROVED') {
+      await db.user.update({
+        where: { id: profile.userId },
+        data: { role: 'RIDER' },
+      });
+    }
 
     logger.info({
       msg: 'RIDER_APPLICATION_REVIEWED',
