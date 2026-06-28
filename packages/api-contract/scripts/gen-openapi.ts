@@ -74,6 +74,7 @@ import {
   OrderNo,
   PaymentMethod,
   OrderStatus,
+  PaymentStatus,
   // cart
   Cart,
   CartItem,
@@ -112,6 +113,7 @@ import {
   // common
   ErrorResponse,
   Id,
+  IsoTimestamp,
 } from '../src/index.js';
 
 const registry = new OpenAPIRegistry();
@@ -1525,6 +1527,96 @@ registry.registerPath({
       description: '异常上报成功',
       content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
     },
+  },
+});
+
+// ============================================================================
+// W5-prepare：mock-login + tracking 注册到 OpenAPI（联调前端需要类型）
+// ============================================================================
+
+// ---- mock-login（dev/staging 专用，prod AuthModule 不注册此 controller）----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/mock-login',
+  tags: ['auth'],
+  description:
+    'Mock 登录（仅 dev/staging，prod 不注册）。跳过密码校验，接受任意 role + deviceType 组合。' +
+    '默认 userId = seed super_admin。',
+  'x-internal': true,
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            role: z.enum(['super_admin', 'customer', 'rider', 'warehouse_staff', 'customer_service']),
+            deviceType: z.enum(['client_app', 'rider_app', 'admin_web']),
+            userId: z.string().uuid().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: '登录成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              userId: z.string().uuid(),
+              role: z.string(),
+              accessToken: z.string(),
+              refreshToken: z.string(),
+              accessExpiresAt: z.number(),
+              refreshExpiresAt: z.number(),
+            }),
+          }),
+        },
+      },
+    },
+    404: { description: 'MOCK_USER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- tracking（HTTP 轮询兜底，WS 断线时前端降级）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders/{id}/tracking',
+  tags: ['order'],
+  description: '配送追踪 HTTP 轮询兜底（WS 断线时前端 30s 降级轮询）。返回订单状态 + 配送任务状态。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '配送追踪信息',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              orderId: Id,
+              orderNo: OrderNo,
+              orderStatus: OrderStatus,
+              paymentStatus: PaymentStatus,
+              task: z
+                .object({
+                  taskId: Id,
+                  taskStatus: z.string(),
+                  riderId: z.string().nullable(),
+                  pickedUpAt: IsoTimestamp.nullable(),
+                  deliveredAt: IsoTimestamp.nullable(),
+                  riderLocation: z.unknown().nullable(),
+                  estimatedArrival: z.unknown().nullable(),
+                })
+                .nullable(),
+            }),
+          }),
+        },
+      },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

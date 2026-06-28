@@ -5915,6 +5915,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/auth/mock-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Mock 登录（仅 dev/staging，prod 不注册）。跳过密码校验，接受任意 role + deviceType 组合。默认 userId = seed super_admin。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                        /** @enum {string} */
+                        deviceType: "client_app" | "rider_app" | "admin_web";
+                        /** Format: uuid */
+                        userId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 登录成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                userId: string;
+                                role: string;
+                                accessToken: string;
+                                refreshToken: string;
+                                accessExpiresAt: number;
+                                refreshExpiresAt: number;
+                            };
+                        };
+                    };
+                };
+                /** @description MOCK_USER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{id}/tracking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 配送追踪 HTTP 轮询兜底（WS 断线时前端 30s 降级轮询）。返回订单状态 + 配送任务状态。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 配送追踪信息 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                orderId: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                orderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                /** @enum {string} */
+                                paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                                task: {
+                                    /** Format: uuid */
+                                    taskId: string;
+                                    taskStatus: string;
+                                    riderId: string | null;
+                                    /** Format: date-time */
+                                    pickedUpAt: string | null;
+                                    /** Format: date-time */
+                                    deliveredAt: string | null;
+                                    riderLocation?: unknown;
+                                    estimatedArrival?: unknown;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

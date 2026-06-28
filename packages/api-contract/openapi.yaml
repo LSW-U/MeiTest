@@ -9702,3 +9702,210 @@ paths:
                 required:
                   - success
                   - data
+  /api/v1/common/auth/mock-login:
+    post:
+      tags:
+        - auth
+      description: Mock 登录（仅 dev/staging，prod 不注册）。跳过密码校验，接受任意 role + deviceType 组合。默认
+        userId = seed super_admin。
+      x-internal: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum:
+                    - super_admin
+                    - customer
+                    - rider
+                    - warehouse_staff
+                    - customer_service
+                deviceType:
+                  type: string
+                  enum:
+                    - client_app
+                    - rider_app
+                    - admin_web
+                userId:
+                  type: string
+                  format: uuid
+              required:
+                - role
+                - deviceType
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        format: uuid
+                      role:
+                        type: string
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+                      accessExpiresAt:
+                        type: number
+                      refreshExpiresAt:
+                        type: number
+                    required:
+                      - userId
+                      - role
+                      - accessToken
+                      - refreshToken
+                      - accessExpiresAt
+                      - refreshExpiresAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: MOCK_USER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/orders/{id}/tracking:
+    get:
+      tags:
+        - order
+      description: 配送追踪 HTTP 轮询兜底（WS 断线时前端 30s 降级轮询）。返回订单状态 + 配送任务状态。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 配送追踪信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      orderId:
+                        type: string
+                        format: uuid
+                      orderNo:
+                        type: string
+                        pattern: ^MM\d{14}$
+                      orderStatus:
+                        type: string
+                        enum: *a11
+                      paymentStatus:
+                        type: string
+                        enum: *a12
+                      task:
+                        type: object
+                        nullable: true
+                        properties:
+                          taskId:
+                            type: string
+                            format: uuid
+                          taskStatus:
+                            type: string
+                          riderId:
+                            type: string
+                            nullable: true
+                          pickedUpAt:
+                            type: string
+                            nullable: true
+                            format: date-time
+                          deliveredAt:
+                            type: string
+                            nullable: true
+                            format: date-time
+                          riderLocation:
+                            nullable: true
+                          estimatedArrival:
+                            nullable: true
+                        required:
+                          - taskId
+                          - taskStatus
+                          - riderId
+                          - pickedUpAt
+                          - deliveredAt
+                    required:
+                      - orderId
+                      - orderNo
+                      - orderStatus
+                      - paymentStatus
+                      - task
+                required:
+                  - success
+                  - data
+        "404":
+          description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
