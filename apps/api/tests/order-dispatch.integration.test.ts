@@ -100,6 +100,9 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
           return { id, ...data };
         }),
       },
+      riderProfile: {
+        findUnique: vi.fn().mockResolvedValue({ id: 'rider-1' }),
+      },
       $executeRaw: vi.fn(),
       _tables: tables,
     },

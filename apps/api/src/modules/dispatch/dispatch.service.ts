@@ -120,6 +120,8 @@ export class DispatchService {
    * S2 修复：UPDATE delivery_tasks + UPDATE order.riderId 同事务，避免进程崩溃后状态分裂
    */
   async acceptTask(input: AcceptTaskInput): Promise<DeliveryTaskView> {
+    // riderId 实际是 User.id（JWT sub），delivery_tasks.rider_id 引用 RiderProfile.id
+    const riderId = await this.resolveRiderProfileId(input.riderId);
     const now = new Date();
 
     // 先查 orderId（用于事务内的 order.update）
@@ -146,7 +148,7 @@ export class DispatchService {
       const updated = await tx.$executeRaw`
         UPDATE "delivery_tasks"
         SET status = 'ASSIGNED',
-            rider_id = ${input.riderId},
+            rider_id = ${riderId},
             assigned_at = ${now},
             updated_at = ${now}
         WHERE id = ${input.taskId}
@@ -157,7 +159,7 @@ export class DispatchService {
       }
       await tx.order.update({
         where: { id: taskBefore.orderId },
-        data: { riderId: input.riderId },
+        data: { riderId: riderId },
       });
       return { ok: true as const };
     });
@@ -187,7 +189,7 @@ export class DispatchService {
     logger.info({
       msg: 'DISPATCH_TASK_ACCEPTED',
       taskId: input.taskId,
-      riderId: input.riderId,
+      riderId: riderId,
       orderId: task.orderId,
     });
 
@@ -195,7 +197,7 @@ export class DispatchService {
     try {
       this.realtime.server.to('riders').emit('dispatch:task-accepted', {
         taskId: input.taskId,
-        riderId: input.riderId,
+        riderId: riderId,
       });
     } catch (e) {
       logger.warn({
@@ -210,11 +212,12 @@ export class DispatchService {
 
   /** 上报取货（ASSIGNED → PICKED_UP） */
   async pickupTask(input: PickupTaskInput): Promise<DeliveryTaskView> {
+    const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
     if (!task) {
       throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
     }
-    if (task.riderId !== input.riderId) {
+    if (task.riderId !== riderId) {
       throw new ConflictException({
         code: 'E-DISPATCH-003',
         message: 'Task not assigned to this rider',
@@ -273,6 +276,7 @@ export class DispatchService {
    * 预付场景：collectedAmount 留空 → DELIVERED
    */
   async deliverTask(input: DeliverTaskInput): Promise<DeliveryTaskView> {
+    const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: { order: true },
@@ -280,7 +284,7 @@ export class DispatchService {
     if (!task) {
       throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
     }
-    if (task.riderId !== input.riderId) {
+    if (task.riderId !== riderId) {
       throw new ConflictException({
         code: 'E-DISPATCH-003',
         message: 'Task not assigned to this rider',
@@ -338,7 +342,7 @@ export class DispatchService {
         await tx.cashCollection.create({
           data: {
             orderId: task.orderId,
-            riderId: input.riderId,
+            riderId: riderId,
             collectedAmount: input.collectedAmount,
             result: cashResult ?? 'UNPAID',
             note: input.note,
@@ -387,11 +391,12 @@ export class DispatchService {
    *   - Order.status 保持（需客服介入决定后续状态推进）
    */
   async reportIssue(input: ReportIssueInput): Promise<DeliveryTaskView> {
+    const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
     if (!task) {
       throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
     }
-    if (task.riderId !== input.riderId) {
+    if (task.riderId !== riderId) {
       throw new ConflictException({
         code: 'E-DISPATCH-003',
         message: 'Task not assigned to this rider',
@@ -446,7 +451,7 @@ export class DispatchService {
           eventType: 'ISSUE_REPORTED',
           fromStatus: currentOrderStatus,
           toStatus: currentOrderStatus,
-          operatorId: input.riderId,
+          operatorId: riderId,
           deviceType: 'RIDER_APP',
           perspective: null,
           metadata: {
@@ -465,7 +470,7 @@ export class DispatchService {
       this.realtime.server.to('customer-service').emit('dispatch:issue-reported', {
         taskId: input.taskId,
         orderId: task.orderId,
-        riderId: input.riderId,
+        riderId: riderId,
         reason: input.reason,
         note: input.note,
         timestamp: new Date().toISOString(),
@@ -481,7 +486,7 @@ export class DispatchService {
     logger.warn({
       msg: 'DISPATCH_TASK_ISSUE_REPORTED',
       taskId: input.taskId,
-      riderId: input.riderId,
+      riderId: riderId,
       reason: input.reason,
     });
 
@@ -585,6 +590,27 @@ export class DispatchService {
     });
 
     return this.toView(task);
+  }
+
+  /**
+   * User.id（JWT sub）→ RiderProfile.id 解析
+   *
+   * dispatch.controller 传的 riderId 实际是 user.sub（User.id），
+   * 但 delivery_tasks.rider_id / orders.rider_id 外键引用 RiderProfile.id。
+   * 此方法在 service 入口统一解析，避免 FK 违反。
+   */
+  private async resolveRiderProfileId(userId: string): Promise<string> {
+    const profile = await db.riderProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!profile) {
+      throw new NotFoundException({
+        code: 'E-RIDER-001',
+        message: 'Rider profile not found (please apply first)',
+      });
+    }
+    return profile.id;
   }
 
   /** 转换为 API 视图（Decimal → number，Date → ISO 字符串） */

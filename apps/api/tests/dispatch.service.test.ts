@@ -36,6 +36,9 @@ const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
       cashCollection: {
         create: vi.fn(),
       },
+      riderProfile: {
+        findUnique: vi.fn().mockResolvedValue({ id: 'rider-profile-1' }),
+      },
       $executeRaw: vi.fn(),
     },
     mockHelpers: {
@@ -101,6 +104,9 @@ describe('DispatchService', () => {
     mockHelpers.withTransaction.mockReset();
     mockServer.to.mockClear();
     mockServer.emit.mockClear();
+    // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
+    // 测试用 riderId='r1'，所以 mock 返回 id='r1' 保持一致
+    mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1' });
   });
 
   describe('listPendingTasks', () => {
