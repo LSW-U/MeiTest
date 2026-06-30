@@ -118,12 +118,16 @@ export class AdminOrderController {
 
     // PAID 订单 → 自动退款（admin 发起 = 商家同意，直接 COMPLETED）
     if (order.paymentStatus === 'PAID') {
-      await this.refundService.createRefund({
+      const refund = await this.refundService.createRefund({
         orderId: id,
         userId: order.userId,
         reason: 'OTHER',
         reasonDetail: `Admin cancelled: ${body.reason}`,
       });
+      // 接单后状态（CONFIRMED+）refund 是 PENDING，admin 发起 = 直接通过
+      if (refund.status === 'PENDING') {
+        await this.refundService.reviewRefund(refund.id, req.user.sub, 'APPROVE', `Auto-approved: admin cancel`);
+      }
     }
 
     await this.orderService.cancelOrderInternal(id, {
