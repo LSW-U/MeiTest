@@ -48,3 +48,8 @@ backups/
 
 # Misc
 .cache/
+fix_role.js
+seed_test_order.js
+test_final.js
+test_rider_api.js
+test_rider_scenarios.js
