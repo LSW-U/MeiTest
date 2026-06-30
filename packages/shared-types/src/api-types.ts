@@ -6074,6 +6074,558 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的退款列表 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 退款列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 客户申请退款（接单前自动通过，接单后待商家审核） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        orderId: string;
+                        /** @enum {string} */
+                        reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                        reasonDetail?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 退款创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description REFUND_IN_PROGRESS */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/refunds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 退款详情 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 退款详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description REFUND_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/refunds/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户撤回退款申请（仅 PENDING 可撤） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 撤回成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 退款列表（admin 可按 status 筛选） */
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 退款列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 退款详情（admin） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 退款详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description REFUND_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 审核退款（APPROVE → mock 退款 COMPLETED / REJECT） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        refundId: string;
+                        /** @enum {string} */
+                        action: "APPROVE" | "REJECT";
+                        reviewNote?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 审核成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description REFUND_NOT_REVIEWABLE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

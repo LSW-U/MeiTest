@@ -22,6 +22,7 @@ import { DispatchModule, DISPATCH_SERVICE_TOKEN } from '../dispatch/dispatch.mod
 import { CartModule, CART_SERVICE_TOKEN } from '../cart/cart.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { RefundModule } from '../refund/refund.module';
 import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrategy, WhatsAppNotifyStrategy } from '../../infrastructure';
 
 @Module({
@@ -30,6 +31,7 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
     forwardRef(() => DispatchModule),
     forwardRef(() => CartModule),
     RealtimeModule,
+    RefundModule,
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
   ],
   controllers: [OrderController, AdminOrderController],

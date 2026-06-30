@@ -22,6 +22,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { RefundModule } from './modules/refund/refund.module';
 import { RiderModule } from './modules/rider/rider.module';
 import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
@@ -50,6 +51,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     PlatformModule,
     PricingModule,
     RealtimeModule,
+    RefundModule,
     RiderModule,
     SettleModule,
     ShopModule,

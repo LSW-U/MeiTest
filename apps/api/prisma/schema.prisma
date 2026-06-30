@@ -211,6 +211,7 @@ model User {
   customerService CustomerService?
   // V2-S7：审核人关联（admin 审核 RiderProfile 申请时记录）
   reviewedRiders  RiderProfile[] @relation("ReviewedRiders")
+  refunds         Refund[]
 
   @@index([role, status])
   @@map("users")
@@ -504,6 +505,7 @@ model Order {
   @@index([status])
   @@index([riderId])
   @@index([orderNo])
+  refunds Refund[]
   @@map("orders")
 }
 
@@ -940,6 +942,33 @@ model WithdrawalRequest {
   @@index([requesterType, status])
   @@index([status, createdAt])
   @@map("withdrawal_requests")
+}
+
+/// 退款（W5 流程 C：客户申请退款 + 商家审核）
+model Refund {
+  id             String        @id @default(uuid())
+  orderId        String        @map("order_id")
+  userId         String        @map("user_id")
+  amount         Int           // 退款金额（分），= Order.payableAmount
+  reason         String        // OUT_OF_STOCK / QUALITY_ISSUE / WRONG_ITEM / DELIVERY_TOO_SLOW / CUSTOMER_CHANGE_MIND / OTHER
+  reasonDetail   String?       @map("reason_detail")
+  status         String        @default("PENDING") // PENDING / APPROVED / REJECTED / COMPLETED / FAILED / CANCELLED
+  transactionId  String?       @map("transaction_id") // 退款流水号（mock 标 MOCK_ 前缀）
+  refundMethod   String        @map("refund_method") // 与原 PaymentIntent.method 一致
+  reviewedBy     String?       @map("reviewed_by")
+  reviewedAt     DateTime?     @map("reviewed_at")
+  reviewNote     String?       @map("review_note")
+  completedAt    DateTime?     @map("completed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt        @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("refunds")
 }
 
 // ============================================================================

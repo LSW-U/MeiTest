@@ -9909,3 +9909,822 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/refunds:
+    post:
+      tags:
+        - refund
+      description: 客户申请退款（接单前自动通过，接单后待商家审核）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  enum: &a36
+                    - OUT_OF_STOCK
+                    - QUALITY_ISSUE
+                    - WRONG_ITEM
+                    - DELIVERY_TOO_SLOW
+                    - CUSTOMER_CHANGE_MIND
+                    - OTHER
+                reasonDetail:
+                  type: string
+                  maxLength: 500
+              required:
+                - orderId
+                - reason
+      responses:
+        "200":
+          description: 退款创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a36
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: &a37
+                          - PENDING
+                          - APPROVED
+                          - REJECTED
+                          - COMPLETED
+                          - FAILED
+                          - CANCELLED
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "409":
+          description: REFUND_IN_PROGRESS
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    get:
+      tags:
+        - refund
+      description: 我的退款列表
+      responses:
+        "200":
+          description: 退款列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderId:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        amount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        reason:
+                          type: string
+                          enum: *a36
+                        reasonDetail:
+                          type: string
+                          nullable: true
+                          maxLength: 500
+                        status:
+                          type: string
+                          enum: *a37
+                        transactionId:
+                          type: string
+                          nullable: true
+                        refundMethod:
+                          type: string
+                        reviewedBy:
+                          type: string
+                          nullable: true
+                          format: uuid
+                        reviewedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        reviewNote:
+                          type: string
+                          nullable: true
+                        completedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderId
+                        - userId
+                        - amount
+                        - reason
+                        - reasonDetail
+                        - status
+                        - transactionId
+                        - refundMethod
+                        - reviewedBy
+                        - reviewedAt
+                        - reviewNote
+                        - completedAt
+                        - createdAt
+                        - updatedAt
+                required:
+                  - success
+                  - data
+  /api/v1/client/refunds/{id}:
+    get:
+      tags:
+        - refund
+      description: 退款详情
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 退款详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a36
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: *a37
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: REFUND_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/client/refunds/{id}/cancel:
+    post:
+      tags:
+        - refund
+      description: 客户撤回退款申请（仅 PENDING 可撤）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 撤回成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a36
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: *a37
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+  /api/v1/admin/refunds:
+    get:
+      tags:
+        - refund
+      description: 退款列表（admin 可按 status 筛选）
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: status
+          in: query
+      responses:
+        "200":
+          description: 退款列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderId:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        amount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        reason:
+                          type: string
+                          enum: *a36
+                        reasonDetail:
+                          type: string
+                          nullable: true
+                          maxLength: 500
+                        status:
+                          type: string
+                          enum: *a37
+                        transactionId:
+                          type: string
+                          nullable: true
+                        refundMethod:
+                          type: string
+                        reviewedBy:
+                          type: string
+                          nullable: true
+                          format: uuid
+                        reviewedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        reviewNote:
+                          type: string
+                          nullable: true
+                        completedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderId
+                        - userId
+                        - amount
+                        - reason
+                        - reasonDetail
+                        - status
+                        - transactionId
+                        - refundMethod
+                        - reviewedBy
+                        - reviewedAt
+                        - reviewNote
+                        - completedAt
+                        - createdAt
+                        - updatedAt
+                required:
+                  - success
+                  - data
+  /api/v1/admin/refunds/{id}:
+    get:
+      tags:
+        - refund
+      description: 退款详情（admin）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 退款详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a36
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: *a37
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: REFUND_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/refunds/{id}/review:
+    post:
+      tags:
+        - refund
+      description: 审核退款（APPROVE → mock 退款 COMPLETED / REJECT）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refundId:
+                  type: string
+                  format: uuid
+                action:
+                  type: string
+                  enum:
+                    - APPROVE
+                    - REJECT
+                reviewNote:
+                  type: string
+                  maxLength: 500
+              required:
+                - refundId
+                - action
+      responses:
+        "200":
+          description: 审核成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a36
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: *a37
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "409":
+          description: REFUND_NOT_REVIEWABLE
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error

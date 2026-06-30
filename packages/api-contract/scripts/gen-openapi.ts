@@ -106,6 +106,10 @@ import {
   PickupTaskRequest,
   DeliverTaskRequest,
   ReportIssueRequest,
+  // refund（W5 流程 C）
+  Refund as RefundSchema,
+  CreateRefundRequest as CreateRefundRequestSchema,
+  ReviewRefundRequest as ReviewRefundRequestSchema,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1617,6 +1621,89 @@ registry.registerPath({
       },
     },
     404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// W5：Refund 端点注册（7 endpoints）
+// ============================================================================
+
+// ---- 客户端 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/refunds',
+  tags: ['refund'],
+  description: '客户申请退款（接单前自动通过，接单后待商家审核）',
+  request: { body: { content: { 'application/json': { schema: CreateRefundRequestSchema } } } },
+  responses: {
+    200: { description: '退款创建成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } },
+    409: { description: 'REFUND_IN_PROGRESS', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/refunds',
+  tags: ['refund'],
+  description: '我的退款列表',
+  responses: { 200: { description: '退款列表', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RefundSchema) }) } } } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/refunds/{id}',
+  tags: ['refund'],
+  description: '退款详情',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '退款详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } },
+    404: { description: 'REFUND_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/refunds/{id}/cancel',
+  tags: ['refund'],
+  description: '客户撤回退款申请（仅 PENDING 可撤）',
+  request: { params: z.object({ id: Id }) },
+  responses: { 200: { description: '撤回成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } } },
+});
+
+// ---- Admin ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/refunds',
+  tags: ['refund'],
+  description: '退款列表（admin 可按 status 筛选）',
+  request: { query: z.object({ status: z.string().optional() }) },
+  responses: { 200: { description: '退款列表', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RefundSchema) }) } } } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/refunds/{id}',
+  tags: ['refund'],
+  description: '退款详情（admin）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '退款详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } },
+    404: { description: 'REFUND_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/refunds/{id}/review',
+  tags: ['refund'],
+  description: '审核退款（APPROVE → mock 退款 COMPLETED / REJECT）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: ReviewRefundRequestSchema } } },
+  },
+  responses: {
+    200: { description: '审核成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } },
+    409: { description: 'REFUND_NOT_REVIEWABLE', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

@@ -6,7 +6,7 @@
  * 端点：
  *   GET    /                列表（按 status/userId/warehouseId/orderNo 筛选 + 游标分页）
  *   GET    /:id             详情（含 items + events，不校验 userId 归属）
- *   POST   /:id/cancel      admin 取消订单（任何状态可取消，写 OrderEvent）
+ *   POST   /:id/cancel      admin 取消订单（PAID 订单自动触发 refund）
  */
 import {
   Controller,
@@ -29,6 +29,8 @@ import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { DeviceType } from '@meimart/api-contract';
 import type { OrderStatusValue } from './order.types';
+
+import { RefundService } from '../refund/refund.service';
 
 interface RequestWithUser {
   user?: RequestUser;
@@ -64,7 +66,10 @@ const AdminCancelOrderRequest = z.object({
 @Controller('api/v1/admin/orders')
 @Roles('super_admin', 'warehouse_staff', 'customer_service')
 export class AdminOrderController {
-  constructor(@Inject(OrderService) private readonly orderService: OrderService) {}
+  constructor(
+    @Inject(OrderService) private readonly orderService: OrderService,
+    @Inject(RefundService) private readonly refundService: RefundService,
+  ) {}
 
   /** 列表（按 status/userId/warehouseId/orderNo 筛选 + 游标分页） */
   @Get()
@@ -90,12 +95,9 @@ export class AdminOrderController {
   /**
    * admin 取消订单
    *
-   * W4-REVIEW P0-2 修复：防资金损失。
+   * W5 升级（W4 P0-2 → W5）：
    * - paymentStatus=UNPAID → 直接取消
-   * - paymentStatus=PAID → 抛 E-ORDER-006 拒绝（推 W5 refund 流程处理）
-   *
-   * 长期方案（W5）：实现 RefundService 后，PAID 订单走 refund 流程，
-   * admin cancel 自动触发 RefundService.create 原路回款。
+   * - paymentStatus=PAID → 自动创建 Refund(COMPLETED，admin 发起 = 商家同意) + 取消订单
    */
   @Post(':id/cancel')
   @Audit({ resource: 'Order', resourceIdParam: 'id' })
@@ -106,23 +108,22 @@ export class AdminOrderController {
     @Headers('x-perspective') perspective: string | undefined,
   ) {
     if (!req.user) {
-      // P1-1 修复：raw Error → 业务错误码
       throw new HttpException(
         { code: 'E-AUTH-002', message: 'Authentication required' },
         HttpStatus.UNAUTHORIZED,
       );
     }
 
-    // P0-2 修复：已付款订单拒绝直接取消（资金损失防护）
     const order = await this.orderService.adminGetOrderDetail(id);
+
+    // PAID 订单 → 自动退款（admin 发起 = 商家同意，直接 COMPLETED）
     if (order.paymentStatus === 'PAID') {
-      throw new HttpException(
-        {
-          code: 'E-ORDER-006',
-          message: `Cannot cancel paid order ${order.orderNo} directly, please use the refund flow`,
-        },
-        HttpStatus.CONFLICT,
-      );
+      await this.refundService.createRefund({
+        orderId: id,
+        userId: order.userId,
+        reason: 'OTHER',
+        reasonDetail: `Admin cancelled: ${body.reason}`,
+      });
     }
 
     await this.orderService.cancelOrderInternal(id, {
