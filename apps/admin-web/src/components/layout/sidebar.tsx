@@ -25,6 +25,7 @@ import {
   FolderTree,
   Warehouse,
   ShoppingCart,
+  RotateCcw,
   Bike,
   Users,
   Tag,
@@ -71,6 +72,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/orders',
     icon: ShoppingCart,
     perspectives: ['platform', 'merchant', 'warehouse', 'support'],
+  },
+  {
+    label: 'Refunds',
+    href: '/refunds',
+    icon: RotateCcw,
+    perspectives: ['platform', 'merchant', 'customer_service'],
   },
   {
     label: 'Riders',
