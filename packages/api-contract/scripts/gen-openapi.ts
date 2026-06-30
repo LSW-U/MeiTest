@@ -1707,6 +1707,26 @@ registry.registerPath({
   },
 });
 
+// W6 P1: admin confirm 订单
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/orders/{id}/confirm',
+  tags: ['order'],
+  description: 'Admin 确认订单（COD 订单 PENDING_CONFIRM → CONFIRMED + 自动创建 dispatch 任务）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '确认成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: z.object({ id: Id, status: OrderStatus }) }),
+        },
+      },
+    },
+    409: { description: 'ORDER_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ===== 生成 =====
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({

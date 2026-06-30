@@ -723,6 +723,100 @@ export class OrderService {
   }
 
   /**
+   * Admin 确认订单（COD 订单：PENDING_CONFIRM → CONFIRMED + 创建 dispatch 任务）
+   *
+   * W6 审查报告 P1 修复：COD 订单下单后卡在 PENDING_CONFIRM，
+   * 仓库管理员需要通过 API 确认订单才能进入配送流程。
+   */
+  async adminConfirmOrder(
+    orderId: string,
+    eventCtx: OrderEventContext,
+  ): Promise<void> {
+    const orderForBroadcast = await db.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+
+    await withTransaction(async (tx: Tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found: ${orderId}`,
+        });
+      }
+      // 幂等：已确认直接 return
+      if (order.status !== 'PENDING_CONFIRM') {
+        throw new ConflictException({
+          code: 'E-ORDER-003',
+          message: `Order status ${order.status} cannot be confirmed (must be PENDING_CONFIRM)`,
+        });
+      }
+
+      assertCanTransition(order.status, 'CONFIRMED');
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'CONFIRMED',
+          confirmedAt: new Date(),
+        },
+      });
+
+      await tx.orderEvent.create({
+        data: {
+          orderId,
+          eventType: 'CONFIRMED',
+          fromStatus: order.status,
+          toStatus: 'CONFIRMED',
+          operatorId: eventCtx.operatorId ?? null,
+          deviceType: toPrismaDeviceType(eventCtx.deviceType),
+          perspective: eventCtx.perspective ?? null,
+          metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+        },
+      });
+    });
+
+    // 取消超时 job
+    await cancelOrderTimeout(this.timeoutQueue, orderId);
+
+    // CONFIRMED → 自动创建 DeliveryTask（与 markPaid 一致）
+    if (this.dispatchService) {
+      try {
+        await this.dispatchService.createTaskForOrder(orderId);
+      } catch (e) {
+        logger.error({
+          msg: 'DISPATCH_TASK_CREATE_FAILED',
+          orderId,
+          error: (e as Error).message,
+        });
+      }
+    }
+
+    // WS 广播
+    try {
+      this.realtime?.broadcastOrderStatusChange(orderId, {
+        fromStatus: orderForBroadcast?.status ?? 'PENDING_CONFIRM',
+        toStatus: 'CONFIRMED',
+        operatorId: eventCtx.operatorId,
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'WS_BROADCAST_FAILED',
+        orderId,
+        event: 'order:status-changed',
+        error: (e as Error).message,
+      });
+    }
+
+    logger.info({
+      msg: 'ORDER_ADMIN_CONFIRMED',
+      orderId,
+      operatorId: eventCtx.operatorId,
+    });
+  }
+
+  /**
    * 查询订单详情（含 items + events）
    */
   async getOrderDetail(orderId: string, userId: string): Promise<OrderWithRelations> {

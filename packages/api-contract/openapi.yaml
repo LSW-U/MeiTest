@@ -10728,3 +10728,71 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/orders/{id}/confirm:
+    post:
+      tags:
+        - order
+      description: Admin 确认订单（COD 订单 PENDING_CONFIRM → CONFIRMED + 自动创建 dispatch 任务）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: *a11
+                    required:
+                      - id
+                      - status
+                required:
+                  - success
+                  - data
+        "409":
+          description: ORDER_STATUS_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error

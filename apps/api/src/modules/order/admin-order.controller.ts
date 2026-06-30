@@ -93,6 +93,34 @@ export class AdminOrderController {
   }
 
   /**
+   * Admin 确认订单（COD 订单：PENDING_CONFIRM → CONFIRMED）
+   *
+   * W6 审查报告 P1 修复：COD 订单下单后卡在 PENDING_CONFIRM，
+   * 仓库管理员确认后进入配送流程（自动创建 dispatch task）。
+   */
+  @Post(':id/confirm')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async confirm(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+    @Headers('x-perspective') perspective: string | undefined,
+  ) {
+    if (!req.user) {
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'Authentication required' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    await this.orderService.adminConfirmOrder(id, {
+      operatorId: req.user.sub,
+      deviceType: req.user.deviceType as DeviceType,
+      perspective,
+    });
+    const order = await this.orderService.adminGetOrderDetail(id);
+    return { success: true as const, data: { id: order.id, status: order.status } };
+  }
+
+  /**
    * admin 取消订单
    *
    * W5 升级（W4 P0-2 → W5）：
