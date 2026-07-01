@@ -121,6 +121,36 @@ export class AdminOrderController {
   }
 
   /**
+   * Admin 拣货完成（CONFIRMED → PICKED）
+   *
+   * W7 补功能：仓库拣货完成后推进订单状态，骑手可取货出发。
+   */
+  @Post(':id/pick')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async pick(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+    @Headers('x-perspective') perspective: string | undefined,
+  ) {
+    if (!req.user) {
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'Authentication required' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    await this.orderService.adminPickOrder(id, {
+      operatorId: req.user.sub,
+      deviceType: req.user.deviceType as DeviceType,
+      perspective,
+      metadata: { source: 'admin_pick_endpoint' },
+    });
+
+    const order = await this.orderService.adminGetOrderDetail(id);
+    return { success: true as const, data: { id: order.id, status: order.status } };
+  }
+
+  /**
    * admin 取消订单
    *
    * W5 升级（W4 P0-2 → W5）：
@@ -144,7 +174,16 @@ export class AdminOrderController {
 
     const order = await this.orderService.adminGetOrderDetail(id);
 
+    // P1 修复：前置 status 校验（已 CANCELLED → 409，避免 admin 误以为成功）
+    if (order.status === 'CANCELLED') {
+      throw new HttpException(
+        { code: 'E-ORDER-003', message: 'Order already cancelled' },
+        HttpStatus.CONFLICT,
+      );
+    }
+
     // PAID 订单 → 自动退款（admin 发起 = 商家同意，直接 COMPLETED）
+    let refundId: string | undefined;
     if (order.paymentStatus === 'PAID') {
       const refund = await this.refundService.createRefund({
         orderId: id,
@@ -152,18 +191,39 @@ export class AdminOrderController {
         reason: 'OTHER',
         reasonDetail: `Admin cancelled: ${body.reason}`,
       });
+      refundId = refund.id;
       // 接单后状态（CONFIRMED+）refund 是 PENDING，admin 发起 = 直接通过
       if (refund.status === 'PENDING') {
-        await this.refundService.reviewRefund(refund.id, req.user.sub, 'APPROVE', `Auto-approved: admin cancel`);
+        await this.refundService.reviewRefund(
+          refund.id,
+          req.user.sub,
+          'APPROVE',
+          `Auto-approved: admin cancel (${body.reason})`,
+        );
       }
     }
 
-    await this.orderService.cancelOrderInternal(id, {
-      operatorId: req.user.sub,
-      deviceType: req.user.deviceType as DeviceType,
-      perspective,
-      reason: body.reason,
-    });
+    // P1 修复：refund 写入成功后 cancelOrderInternal 失败时记录异常（风险极低，人工介入兜底）
+    try {
+      await this.orderService.cancelOrderInternal(id, {
+        operatorId: req.user.sub,
+        deviceType: req.user.deviceType as DeviceType,
+        perspective,
+        reason: body.reason,
+      });
+    } catch (err) {
+      // refund 已写入但订单取消失败 → 记录异常，需人工介入或脚本修复
+      if (refundId) {
+        console.error({
+          msg: 'ADMIN_CANCEL_REFUND_SUCCESS_ORDER_CANCEL_FAILED',
+          orderId: id,
+          refundId,
+          error: err instanceof Error ? err.message : String(err),
+          action: 'Manual intervention required: refund COMPLETED but order not cancelled',
+        });
+      }
+      throw err;
+    }
     const cancelled = await this.orderService.adminGetOrderDetail(id);
     return { success: true as const, data: { id: cancelled.id, status: cancelled.status } };
   }

@@ -1727,6 +1727,25 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/orders/{id}/pick',
+  tags: ['order'],
+  description: 'Admin 拣货完成（CONFIRMED → PICKED，骑手可取货出发）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '拣货成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: z.object({ id: Id, status: OrderStatus }) }),
+        },
+      },
+    },
+    409: { description: 'ORDER_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ===== 生成 =====
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({

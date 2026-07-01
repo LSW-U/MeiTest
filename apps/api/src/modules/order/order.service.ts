@@ -817,6 +817,83 @@ export class OrderService {
   }
 
   /**
+   * Admin 拣货完成（CONFIRMED → PICKED）
+   *
+   * W7 补功能：仓库拣货完成后推进订单状态，骑手可取货出发。
+   */
+  async adminPickOrder(
+    orderId: string,
+    eventCtx: OrderEventContext,
+  ): Promise<void> {
+    const orderForBroadcast = await db.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+
+    await withTransaction(async (tx: Tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found: ${orderId}`,
+        });
+      }
+      // 幂等：已拣货直接 return
+      if (order.status !== 'CONFIRMED') {
+        throw new ConflictException({
+          code: 'E-ORDER-003',
+          message: `Order status ${order.status} cannot be picked (must be CONFIRMED)`,
+        });
+      }
+
+      assertCanTransition(order.status, 'PICKED');
+
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'PICKED',
+          pickedAt: new Date(),
+        },
+      });
+
+      await tx.orderEvent.create({
+        data: {
+          orderId,
+          eventType: 'PICKED',
+          fromStatus: order.status,
+          toStatus: 'PICKED',
+          operatorId: eventCtx.operatorId ?? null,
+          deviceType: toPrismaDeviceType(eventCtx.deviceType),
+          perspective: eventCtx.perspective ?? null,
+          metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+        },
+      });
+    });
+
+    // WS 广播
+    try {
+      this.realtime?.broadcastOrderStatusChange(orderId, {
+        fromStatus: orderForBroadcast?.status ?? 'CONFIRMED',
+        toStatus: 'PICKED',
+        operatorId: eventCtx.operatorId,
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'WS_BROADCAST_FAILED',
+        orderId,
+        event: 'order:status-changed',
+        error: (e as Error).message,
+      });
+    }
+
+    logger.info({
+      msg: 'ORDER_ADMIN_PICKED',
+      orderId,
+      operatorId: eventCtx.operatorId,
+    });
+  }
+
+  /**
    * 查询订单详情（含 items + events）
    */
   async getOrderDetail(orderId: string, userId: string): Promise<OrderWithRelations> {

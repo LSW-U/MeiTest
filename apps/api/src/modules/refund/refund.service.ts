@@ -12,9 +12,11 @@
  *   PENDING → CANCELLED（客户撤回）
  *   APPROVED → FAILED（第三方退款失败，mock 不触发）
  */
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
+import { OrderService } from '../order/order.service';
 
 /** 接单前可自动通过的状态 */
 const AUTO_APPROVE_STATUSES = ['PENDING_PAYMENT', 'PENDING_CONFIRM'];
@@ -46,12 +48,14 @@ export interface RefundView {
 
 @Injectable()
 export class RefundService {
+  constructor(@Inject(ModuleRef) private readonly moduleRef: ModuleRef) {}
+
   /**
    * 客户申请退款
    *
    * 规则：
    *   - 同一订单只能有一个非终态 refund（PENDING/APPROVED）
-   *   - 接单前状态自动通过 + mock 退款完成
+   *   - 接单前状态自动通过 + mock 退款完成 + 自动取消订单释放库存
    *   - 接单后状态需商家审核
    */
   async createRefund(input: CreateRefundInput): Promise<RefundView> {
@@ -123,13 +127,46 @@ export class RefundService {
 
     // 自动通过时同步取消订单 + 释放库存
     if (autoApprove) {
-      logger.info({
-        msg: 'REFUND_AUTO_COMPLETED',
-        refundId: refund.id,
-        orderId: input.orderId,
-        amount: order.payableAmount,
-        reason: 'order not yet confirmed',
-      });
+      // P0 修复：接单前退款必须同步取消订单 + 释放库存
+      // 动态注入 OrderService（避免循环依赖，复用 W3 的 ModuleRef token 注入模式）
+      try {
+        const orderService = this.moduleRef.get(OrderService, { strict: false });
+
+        if (!orderService) {
+          logger.error({
+            msg: 'REFUND_AUTO_APPROVE_ORDER_SERVICE_NULL',
+            refundId: refund.id,
+            orderId: input.orderId,
+          });
+          // OrderService null 不阻塞 refund 返回（但订单状态不一致，需人工介入）
+          return this.toView(refund);
+        }
+
+        await orderService.cancelOrderInternal(input.orderId, {
+          operatorId: order.userId,
+          deviceType: 'client_app',
+          perspective: 'customer',
+          reason: 'REFUND_AUTO_APPROVED',
+        });
+
+        logger.info({
+          msg: 'REFUND_AUTO_COMPLETED_WITH_ORDER_CANCEL',
+          refundId: refund.id,
+          orderId: input.orderId,
+          amount: order.payableAmount,
+          reason: 'order not yet confirmed, stock released',
+        });
+      } catch (err) {
+        // cancelOrderInternal 失败 → 记录异常，不阻塞 refund 返回（但订单状态不一致）
+        logger.error({
+          msg: 'REFUND_AUTO_APPROVE_CANCEL_ORDER_FAILED',
+          refundId: refund.id,
+          orderId: input.orderId,
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        // 不抛异常，让 refund 正常返回（后续人工介入或脚本修复）
+      }
     } else {
       logger.info({
         msg: 'REFUND_CREATED',

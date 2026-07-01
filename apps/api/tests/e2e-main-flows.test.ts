@@ -223,6 +223,11 @@ describe('e2e: 退款全链路', () => {
     // PENDING_CONFIRM = 接单前 → 自动 COMPLETED
     expect(refundRes.data.status).toBe('COMPLETED');
     expect(refundRes.data.transactionId).toContain('MOCK_REFUND_');
+
+    // P1 修复：补订单状态断言（覆盖 P0 bug）
+    const orderAfter = await apiCall(`/client/orders/${orderRes.data.id}`, customerToken);
+    expect(orderAfter.success).toBe(true);
+    expect(orderAfter.data.status).toBe('CANCELLED');
   });
 
   it('接单后退款（PENDING → admin 审核通过 → COMPLETED）', async () => {
