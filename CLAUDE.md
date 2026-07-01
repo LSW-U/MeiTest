@@ -168,10 +168,14 @@
 - **一旦 apply 不能修改**,只能新增 migration 修正
 - PostGIS GIST 索引走 raw SQL:`prisma migrate dev --create-only` → 手改 SQL → `prisma migrate dev`
 
-### 4. 测试
+### 4. 测试（W3 起升级为 TDD 强制）
 - 关键逻辑必须单测(Vitest),覆盖率 ≥ 70%
 - 鉴权 / 支付 / 库存 必须有 e2e 测试
 - PostGIS 单测用 testcontainers 起真实容器,**禁止 mock PostGIS 函数**
+- **TDD 强制模块**（W3 起生效）：支付/库存/订单状态机/抢单并发/settle 结算
+  - 必须先写失败测试（RED），再写最小实现让测试通过（GREEN），最后重构（REFACTOR）
+  - 红绿循环：先写测试 → 跑测试确认失败 → 写实现 → 跑测试确认通过 → 重构 → 再跑确认仍通过
+  - 禁止"先写代码后补测试"，PR 自检 checklist 中必须附测试运行截图或输出
 
 ### 5. 失败处理
 - 任务失败**不要重试**,看 `failure_mode` 回退或停下问用户
@@ -183,6 +187,31 @@
 - 后端错误消息 → 用错误码 `E-MODULE-NUMBER`,前端查 i18n key 显示
 - 错误码格式:`E-AUTH-001` / `E-ORDER-042` / `E-PAYMENT-003` 等
 - 前端 fetch wrapper 自动注入 `Accept-Language` 和 `X-Perspective` header
+
+### 7. 功能 spec 层（W3 起新增）
+- 复杂模块（>3 个子任务）在写代码前，先在 `docs/specs/` 下写一个简短 spec.md
+- 文件名格式：`docs/specs/{week}-{flow}-{module}-spec.md`，如 `docs/specs/w3-c-dispatch-spec.md`
+- spec.md 内容（3-5 段即可，不要写成需求文档）：
+  - **用户故事**：谁要做什么、为什么
+  - **功能边界**：做什么、不做什么
+  - **关键约束**：并发/性能/安全要求
+- 写完 spec.md 后再按 W-M-C-T 任务分解执行
+- 简单模块（≤3 个子任务）不需要 spec，直接按 W-M-C-T 执行
+
+### 8. 探索先行（W3 起新增）
+- 遇到不熟悉的技术（PostGIS Polygon / BullMQ 延迟队列 / Socket.IO room / 乐观锁并发）：
+  1. 先读官方文档或权威来源，写一个最小 POC 验证可行性
+  2. POC 通过后再写正式代码
+  3. POC 代码放 `docs/poc/` 下，不进 production 代码
+
+### 9. 代码自审（W3 起新增，参考 addyosmani/agent-skills）
+- 每个 task 完成后、commit 前，跑一遍自审 checklist：
+  - [ ] typecheck 通过
+  - [ ] test 通过（TDD 模块附测试输出）
+  - [ ] **重读自己写的代码**：检查明显 bug / 安全问题 / 硬编码字符串 / 缺失 i18n key
+  - [ ] 改动范围：只改了应该改的文件，没有动其他流程的独占文件
+  - [ ] 错误码：新模块预留了 001-099 段（§3.4）
+- 自审通过后再 commit，自审发现问题先修再 commit
 
 ---
 

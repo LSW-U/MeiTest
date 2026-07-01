@@ -48,6 +48,12 @@ export interface DeliveryTaskView {
   orderNo?: string;
   /** 仓库代码（前端筛选用） */
   warehouseCode?: string;
+  /** W7 补字段：订单应付金额（骑手 COD 收款参考） */
+  payableAmount?: number;
+  /** W7 补字段：配送费 */
+  deliveryFee?: number;
+  /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
+  itemsSummary?: string;
 }
 
 /** 抢单上下文 */
@@ -617,11 +623,34 @@ export class DispatchService {
   private toView(
     t: Prisma.DeliveryTaskGetPayload<{
       include: {
-        order: { select: { orderNo: true; payableAmount: true; paymentMethod: true } };
-        warehouse: { select: { code: true } };
+        order?: {
+          select?: {
+            orderNo?: true;
+            payableAmount?: true;
+            deliveryFee?: true;
+            items?: {
+              select?: {
+                productName?: true;
+                quantity?: true;
+              };
+            };
+          };
+        };
+        warehouse?: { select?: { code?: true } };
       };
     }>,
   ): DeliveryTaskView {
+    // W7 补：订单项摘要（从 productName JSON 取当前语言，fallback en）
+    // 注意：order.items 可能不存在（查询时没 include），需要 null 检查
+    const items = (t.order as any)?.items as Array<{ productName: unknown; quantity: number }> | undefined;
+    const itemsSummary = items
+      ?.map((item) => {
+        const nameObj = item.productName as Record<string, string> | null;
+        const name = nameObj?.en ?? nameObj?.zh ?? nameObj?.id ?? nameObj?.pt ?? 'Unknown';
+        return `${name} x${item.quantity}`;
+      })
+      .join(', ');
+
     return {
       id: t.id,
       orderId: t.orderId,
@@ -640,8 +669,11 @@ export class DispatchService {
       note: t.note,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
-      orderNo: t.order?.orderNo,
-      warehouseCode: t.warehouse?.code,
+      orderNo: (t.order as any)?.orderNo,
+      warehouseCode: (t.warehouse as any)?.code,
+      payableAmount: (t.order as any)?.payableAmount,
+      deliveryFee: (t.order as any)?.deliveryFee,
+      itemsSummary,
     };
   }
 }
