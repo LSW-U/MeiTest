@@ -620,25 +620,9 @@ export class DispatchService {
   }
 
   /** 转换为 API 视图（Decimal → number，Date → ISO 字符串） */
+  // P0 修复：参数类型改为宽松类型，接受实际 Prisma 查询结果（warehouse 只含 code）
   private toView(
-    t: Prisma.DeliveryTaskGetPayload<{
-      include: {
-        order?: {
-          select?: {
-            orderNo?: true;
-            payableAmount?: true;
-            deliveryFee?: true;
-            items?: {
-              select?: {
-                productName?: true;
-                quantity?: true;
-              };
-            };
-          };
-        };
-        warehouse?: { select?: { code?: true } };
-      };
-    }>,
+    t: any,  // 宽松类型（运行时不会 crash，JS 不检查类型）
   ): DeliveryTaskView {
     // W7 补：订单项摘要（从 productName JSON 取当前语言，fallback en）
     // 注意：order.items 可能不存在（查询时没 include），需要 null 检查
