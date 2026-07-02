@@ -13,13 +13,13 @@
 
 set -e
 
-# 配置
-BACKUP_DIR="/opt/meimart/backups"
+# 配置（支持环境变量覆盖）
+BACKUP_DIR=${BACKUP_DIR:-/opt/meimart/backups}
 DB_NAME="meimart"
 DB_USER="postgres"
 DB_HOST="localhost"
 DB_PORT="5432"
-KEEP_DAYS=7  # 保留最近 7 天备份
+KEEP_DAYS=${KEEP_DAYS:-7}  # 保留最近 7 天备份
 
 # 创建备份目录
 mkdir -p "$BACKUP_DIR"
