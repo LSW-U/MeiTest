@@ -114,3 +114,40 @@ export const NotificationItem = z.object({
 export const MarkNotificationReadResponse = z.object({
   success: z.boolean(),
 });
+
+/** 后台用户列表项（W7 P1-2） */
+export const AdminUserListItem = z.object({
+  id: Id,
+  phone: z.string(),
+  email: z.string().email().nullable(),
+  name: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  role: Role,
+  status: UserStatus,
+  phoneVerified: z.boolean(),
+  emailVerified: z.boolean(),
+  lastLoginAt: IsoTimestamp.nullable(),
+  createdAt: IsoTimestamp,
+  /** 订单数（不含 CANCELLED） */
+  orderCount: z.number().int().nonnegative(),
+  /** 已成交订单 payableAmount 总和（DELIVERED_PAID + COMPLETED，单位：分） */
+  totalSpent: z.number().int().nonnegative(),
+});
+
+/** 后台用户列表响应 data */
+export const AdminUserListResponseData = z.object({
+  items: z.array(AdminUserListItem),
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1).max(100),
+  total: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+});
+
+/** 后台用户列表 query */
+export const ListUsersQuery = z.object({
+  keyword: z.string().max(100).optional(),
+  role: z.enum(['SUPER_ADMIN', 'CUSTOMER', 'RIDER', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE']).optional(),
+  status: UserStatus.optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});

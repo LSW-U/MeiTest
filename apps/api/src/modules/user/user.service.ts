@@ -12,11 +12,32 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { db } from '../../shared/db';
+import { Prisma } from '../../prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { Address, NotificationItem } from '@meimart/api-contract';
 
 type AddressDTO = z.infer<typeof Address>;
 type NotificationDTO = z.infer<typeof NotificationItem>;
+
+/** 后台用户列表项（W7 P1-2） */
+export interface AdminUserListItem {
+  id: string;
+  phone: string;
+  email: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+  /** contract 小写角色（'customer' / 'rider' / 等） */
+  role: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  /** 订单数（不含 CANCELLED） */
+  orderCount: number;
+  /** 已成交订单 payableAmount 总和（DELIVERED_PAID + COMPLETED，单位：分） */
+  totalSpent: number;
+}
 
 @Injectable()
 export class UserService {
@@ -302,5 +323,102 @@ export class UserService {
       where: { userId, isRead: false },
     });
     return { count };
+  }
+
+  // ===== Admin: 用户管理 =====
+
+  /**
+   * 后台用户列表（W7 P1-2）
+   *
+   * 筛选：keyword（name/phone/email 模糊）/ role / status
+   * 分页：page + pageSize（offset-based，简单分页足够 MVP）
+   * 聚合：orderCount（用户订单数）+ totalSpent（DELIVERED_PAID/COMPLETED 订单 payableAmount 总和）
+   *
+   * 不返回 password 字段（敏感）。
+   */
+  async listUsers(opts: {
+    keyword?: string;
+    role?: 'SUPER_ADMIN' | 'CUSTOMER' | 'RIDER' | 'WAREHOUSE_STAFF' | 'CUSTOMER_SERVICE';
+    status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+    page?: number;
+    pageSize?: number;
+  } = {}): Promise<{
+    items: AdminUserListItem[];
+    page: number;
+    pageSize: number;
+    total: number;
+    hasMore: boolean;
+  }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const skip = (page - 1) * pageSize;
+
+    const where: Prisma.UserWhereInput = {};
+    if (opts.role) where.role = opts.role;
+    if (opts.status) where.status = opts.status;
+    if (opts.keyword && opts.keyword.trim().length > 0) {
+      const kw = opts.keyword.trim();
+      where.OR = [
+        { phone: { contains: kw } },
+        { email: { contains: kw, mode: 'insensitive' } },
+        { name: { contains: kw, mode: 'insensitive' } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      db.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      db.user.count({ where }),
+    ]);
+
+    // 聚合 orderCount + totalSpent（一次查所有用户 ID，避免 N+1）
+    const userIds = items.map((u) => u.id);
+    const orderAgg = userIds.length
+      ? await db.order.groupBy({
+          by: ['userId'],
+          where: {
+            userId: { in: userIds },
+            status: { in: ['DELIVERED_PAID', 'COMPLETED'] },
+          },
+          _count: { _all: true },
+          _sum: { payableAmount: true },
+        })
+      : [];
+    const aggMap = new Map<string, { count: number; total: number }>();
+    for (const a of orderAgg) {
+      aggMap.set(a.userId, {
+        count: a._count._all,
+        total: a._sum.payableAmount ?? 0,
+      });
+    }
+
+    return {
+      items: items.map((u) => {
+        const agg = aggMap.get(u.id) ?? { count: 0, total: 0 };
+        return {
+          id: u.id,
+          phone: u.phone,
+          email: u.email,
+          name: u.name,
+          avatarUrl: u.avatarUrl,
+          role: this.auth.toContractRole(u.role),
+          status: u.status,
+          phoneVerified: u.phoneVerified,
+          emailVerified: u.emailVerified,
+          lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+          createdAt: u.createdAt.toISOString(),
+          orderCount: agg.count,
+          totalSpent: agg.total,
+        };
+      }),
+      page,
+      pageSize,
+      total,
+      hasMore: skip + items.length < total,
+    };
   }
 }

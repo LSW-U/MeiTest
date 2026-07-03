@@ -12,11 +12,18 @@ import {
   FavoriteController,
   NotificationController,
 } from './user.controller';
+import { AdminUserController } from './admin-user.controller';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [AuthModule],
-  controllers: [UserController, AddressController, FavoriteController, NotificationController],
+  controllers: [
+    UserController,
+    AddressController,
+    FavoriteController,
+    NotificationController,
+    AdminUserController,
+  ],
   providers: [UserService],
   exports: [UserService],
 })

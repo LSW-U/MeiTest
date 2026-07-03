@@ -44,6 +44,10 @@ import {
   FavoriteToggleResponse,
   NotificationItem,
   MarkNotificationReadResponse,
+  // admin users（W7 P1-2）
+  AdminUserListItem,
+  AdminUserListResponseData,
+  ListUsersQuery,
   // shop
   Shop,
   UpdateShopRequest,
@@ -155,6 +159,9 @@ registry.register('FavoriteToggleRequest', FavoriteToggleRequest);
 registry.register('FavoriteToggleResponse', FavoriteToggleResponse);
 registry.register('NotificationItem', NotificationItem);
 registry.register('MarkNotificationReadResponse', MarkNotificationReadResponse);
+registry.register('AdminUserListItem', AdminUserListItem);
+registry.register('AdminUserListResponseData', AdminUserListResponseData);
+registry.register('ListUsersQuery', ListUsersQuery);
 
 registry.register('Shop', Shop);
 registry.register('UpdateShopRequest', UpdateShopRequest);
@@ -1214,6 +1221,24 @@ registry.registerPath({
 // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
 // 后端已实现，OpenAPI 之前漏注册导致跨 repo 契约 drift
 // ============================================================================
+
+// ---- Admin Users（W7 P1-2）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/users',
+  tags: ['user'],
+  description:
+    '后台用户列表（W7 P1-2）。支持 keyword/role/status 筛选 + 分页，含 orderCount + totalSpent 聚合。',
+  request: {
+    query: ListUsersQuery,
+  },
+  responses: {
+    200: {
+      description: '用户列表',
+      content: { 'application/json': { schema: AdminUserListResponseData } },
+    },
+  },
+});
 
 // ---- Admin Orders（3 endpoints）----
 registry.registerPath({
