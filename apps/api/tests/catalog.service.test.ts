@@ -100,16 +100,23 @@ describe('CatalogService', () => {
     it('返回 ACTIVE 商品分页列表', async () => {
       m.productFindMany.mockResolvedValueOnce([mockProduct]);
       m.productCount.mockResolvedValueOnce(1);
+      // P0-2: batchGetDefaultSkuIds 用 sku.findMany
+      m.skuFindMany.mockResolvedValueOnce([
+        { id: 'sku-default', productId: 'prod-1' },
+      ]);
 
       const result = await service.listProducts({ page: 1, pageSize: 20 });
       expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.items[0].name.en).toBe('Milk');
+      // P0-2: defaultSkuId 应返回最低价 ACTIVE SKU id
+      expect(result.items[0].defaultSkuId).toBe('sku-default');
     });
 
     it('按 keyword 搜索', async () => {
       m.productFindMany.mockResolvedValueOnce([mockProduct]);
       m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
 
       await service.listProducts({ keyword: 'Milk' });
       expect(m.productFindMany).toHaveBeenCalledWith(
@@ -122,10 +129,19 @@ describe('CatalogService', () => {
         }),
       );
     });
+
+    it('无 ACTIVE SKU 时 defaultSkuId 为 null', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+      expect(result.items[0].defaultSkuId).toBeNull();
+    });
   });
 
   describe('getProduct', () => {
-    it('详情含 SKU 列表', async () => {
+    it('详情含 SKU 列表 + defaultSkuId 取最低价', async () => {
       m.productFindUnique.mockResolvedValueOnce({
         ...mockProduct,
         skus: [
@@ -146,6 +162,14 @@ describe('CatalogService', () => {
       expect(detail.id).toBe('prod-1');
       expect(detail.skus).toHaveLength(1);
       expect(detail.skus[0].price).toBe(1500);
+      // P0-2: defaultSkuId 取 skus[0].id（已按 price asc 排序）
+      expect(detail.defaultSkuId).toBe('sku-1');
+    });
+
+    it('无 SKU 时 defaultSkuId 为 null', async () => {
+      m.productFindUnique.mockResolvedValueOnce({ ...mockProduct, skus: [] });
+      const detail = await service.getProduct('prod-1');
+      expect(detail.defaultSkuId).toBeNull();
     });
 
     it('找不到抛 NotFoundException', async () => {
@@ -157,6 +181,7 @@ describe('CatalogService', () => {
   describe('getRecommendations', () => {
     it('按 salesCount desc 返 top N', async () => {
       m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.skuFindMany.mockResolvedValueOnce([]);
       const result = await service.getRecommendations(6);
       expect(result).toHaveLength(1);
       expect(m.productFindMany).toHaveBeenCalledWith(

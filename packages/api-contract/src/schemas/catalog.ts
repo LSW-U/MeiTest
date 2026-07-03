@@ -28,6 +28,8 @@ export const Product = z.object({
   status: ProductStatus,
   unit: I18nText,
   priceMin: Money,
+  /** 默认 SKU id（最低价 ACTIVE SKU），前端列表"加购物车"直接用 */
+  defaultSkuId: Id.nullable(),
   salesCount: z.number().int(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
@@ -39,6 +41,8 @@ export const ProductSummary = z.object({
   name: I18nText,
   mainImage: z.string(),
   priceMin: Money,
+  /** 默认 SKU id（最低价 ACTIVE SKU），前端列表"加购物车"直接用 */
+  defaultSkuId: Id.nullable(),
   status: ProductStatus,
   salesCount: z.number().int(),
 });

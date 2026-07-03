@@ -55,8 +55,13 @@ export class CatalogService {
       db.product.count({ where }),
     ]);
 
+    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+
     return {
-      items: items.map((p) => this.toProductDTO(p)),
+      items: items.map((p) => ({
+        ...this.toProductDTO(p),
+        defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      })),
       page,
       pageSize,
       total,
@@ -75,6 +80,7 @@ export class CatalogService {
     }
     return {
       ...this.toProductDTO(product),
+      defaultSkuId: product.skus[0]?.id ?? null,
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -86,7 +92,11 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    return items.map((p) => this.toProductDTO(p));
+    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    return items.map((p) => ({
+      ...this.toProductDTO(p),
+      defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+    }));
   }
 
   /** 再买一次（按用户历史简化：返回销量 top N 偏移 limit） */
@@ -97,7 +107,11 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    return items.map((p) => this.toProductDTO(p));
+    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    return items.map((p) => ({
+      ...this.toProductDTO(p),
+      defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+    }));
   }
 
   // ===== 后台：商品 CRUD =====
@@ -107,7 +121,11 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    return items.map((p) => this.toProductDTO(p));
+    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    return items.map((p) => ({
+      ...this.toProductDTO(p),
+      defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+    }));
   }
 
   async createProduct(input: {
@@ -427,6 +445,30 @@ export class CatalogService {
   }
 
   // ===== DTO helpers =====
+
+  /**
+   * 批量查询每个商品的默认 SKU id（最低价 ACTIVE SKU）
+   *
+   * 用于商品列表/推荐场景，避免 N+1 查询。
+   * 一次查所有相关 ACTIVE SKU，按 price asc 排序后每个 productId 取第一条。
+   *
+   * 默认 SKU 选取规则与 recomputeProductPriceMin 一致：最低价 ACTIVE SKU。
+   */
+  private async batchGetDefaultSkuIds(productIds: string[]): Promise<Map<string, string>> {
+    if (productIds.length === 0) return new Map();
+    const skus = await db.sku.findMany({
+      where: { productId: { in: productIds }, status: 'ACTIVE' },
+      orderBy: { price: 'asc' },
+      select: { id: true, productId: true },
+    });
+    const result = new Map<string, string>();
+    for (const s of skus) {
+      if (!result.has(s.productId)) {
+        result.set(s.productId, s.id);
+      }
+    }
+    return result;
+  }
 
   private toProductDTO(p: {
     id: string;

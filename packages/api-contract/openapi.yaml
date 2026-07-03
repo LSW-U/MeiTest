@@ -872,6 +872,10 @@ components:
           type: integer
           minimum: 0
           maximum: 999999
+        defaultSkuId:
+          type: string
+          nullable: true
+          format: uuid
         salesCount:
           type: integer
         createdAt:
@@ -891,6 +895,7 @@ components:
         - status
         - unit
         - priceMin
+        - defaultSkuId
         - salesCount
         - createdAt
         - updatedAt
@@ -910,6 +915,10 @@ components:
           type: integer
           minimum: 0
           maximum: 999999
+        defaultSkuId:
+          type: string
+          nullable: true
+          format: uuid
         status:
           type: string
           enum: *a5
@@ -920,6 +929,7 @@ components:
         - name
         - mainImage
         - priceMin
+        - defaultSkuId
         - status
         - salesCount
     CreateProductRequest:
@@ -4571,6 +4581,10 @@ paths:
                           type: integer
                           minimum: 0
                           maximum: 999999
+                        defaultSkuId:
+                          type: string
+                          nullable: true
+                          format: uuid
                         status:
                           type: string
                           enum: *a5
@@ -4581,6 +4595,7 @@ paths:
                         - name
                         - mainImage
                         - priceMin
+                        - defaultSkuId
                         - status
                         - salesCount
                   total:
@@ -4645,6 +4660,10 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  defaultSkuId:
+                    type: string
+                    nullable: true
+                    format: uuid
                   salesCount:
                     type: integer
                   createdAt:
@@ -4664,6 +4683,7 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - defaultSkuId
                   - salesCount
                   - createdAt
                   - updatedAt
@@ -4724,6 +4744,10 @@ paths:
                       type: integer
                       minimum: 0
                       maximum: 999999
+                    defaultSkuId:
+                      type: string
+                      nullable: true
+                      format: uuid
                     status:
                       type: string
                       enum: *a5
@@ -4734,6 +4758,7 @@ paths:
                     - name
                     - mainImage
                     - priceMin
+                    - defaultSkuId
                     - status
                     - salesCount
   /api/v1/client/products/search:
@@ -4764,6 +4789,10 @@ paths:
                       type: integer
                       minimum: 0
                       maximum: 999999
+                    defaultSkuId:
+                      type: string
+                      nullable: true
+                      format: uuid
                     status:
                       type: string
                       enum: *a5
@@ -4774,6 +4803,7 @@ paths:
                     - name
                     - mainImage
                     - priceMin
+                    - defaultSkuId
                     - status
                     - salesCount
   /api/v1/client/categories:
@@ -4948,6 +4978,10 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  defaultSkuId:
+                    type: string
+                    nullable: true
+                    format: uuid
                   salesCount:
                     type: integer
                   createdAt:
@@ -4967,6 +5001,7 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - defaultSkuId
                   - salesCount
                   - createdAt
                   - updatedAt
@@ -5051,6 +5086,10 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  defaultSkuId:
+                    type: string
+                    nullable: true
+                    format: uuid
                   salesCount:
                     type: integer
                   createdAt:
@@ -5070,6 +5109,7 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - defaultSkuId
                   - salesCount
                   - createdAt
                   - updatedAt
@@ -5139,6 +5179,10 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  defaultSkuId:
+                    type: string
+                    nullable: true
+                    format: uuid
                   salesCount:
                     type: integer
                   createdAt:
@@ -5158,6 +5202,7 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - defaultSkuId
                   - salesCount
                   - createdAt
                   - updatedAt
