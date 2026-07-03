@@ -36,3 +36,25 @@ export const PaymentIntent = z.object({
 export const UploadReceiptRequest = z.object({
   receiptUrl: z.string().url(),
 });
+
+/** 支付方式列表项（W7 P1-1） */
+export const PaymentMethodItem = z.object({
+  code: PaymentMethod,
+  /** 多语言名称（按 Accept-Language 取值） */
+  name: z.record(z.string(), z.string()),
+  /** 多语言副标题（描述/提示） */
+  subtitle: z.record(z.string(), z.string()),
+  /** 图标标识（前端按 code 渲染本地资源） */
+  icon: z.string(),
+  /** 是否为默认方式（前端列表默认选中） */
+  isDefault: z.boolean(),
+  /** 是否启用（false 时不在列表展示） */
+  enabled: z.boolean(),
+  /** 是否为 mock/stub 实现（dev/staging WECHAT/PAYPAL/STRIPE 为 true） */
+  mockFlag: z.boolean(),
+});
+
+/** 支付方式列表响应 */
+export const PaymentMethodListResponseData = z.object({
+  items: z.array(PaymentMethodItem),
+});

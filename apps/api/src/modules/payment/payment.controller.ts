@@ -4,6 +4,7 @@
  * 路由前缀 /api/v1/client/payments（deviceType=client_app）
  *
  * 端点：
+ *   GET    /methods                       列出可用支付方式（W7 P1-1）
  *   GET    /:orderId                       查询 PaymentIntent 状态
  *   POST   /:orderId/mock-callback         dev/staging 模拟支付成功
  *   POST   /:orderId/receipt               银行转账凭证上传（ multipart 由 OSS 中间件处理 URL）
@@ -37,6 +38,13 @@ export class PaymentController {
     @Inject(PAYMENT_SERVICE_TOKEN) private readonly paymentService: PaymentService,
     @Inject(OrderService) private readonly orderService: OrderService,
   ) {}
+
+  /** 列出可用支付方式（W7 P1-1） */
+  @Get('methods')
+  async listMethods() {
+    const items = await this.paymentService.listMethods();
+    return { success: true as const, data: { items } };
+  }
 
   /** 查询 PaymentIntent 状态 */
   @Get(':orderId')

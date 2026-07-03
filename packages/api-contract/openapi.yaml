@@ -1826,6 +1826,73 @@ components:
           format: uri
       required:
         - receiptUrl
+    PaymentMethodItem:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: *a10
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        subtitle:
+          type: object
+          additionalProperties:
+            type: string
+        icon:
+          type: string
+        isDefault:
+          type: boolean
+        enabled:
+          type: boolean
+        mockFlag:
+          type: boolean
+      required:
+        - code
+        - name
+        - subtitle
+        - icon
+        - isDefault
+        - enabled
+        - mockFlag
+    PaymentMethodListResponseData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                enum: *a10
+              name:
+                type: object
+                additionalProperties:
+                  type: string
+              subtitle:
+                type: object
+                additionalProperties:
+                  type: string
+              icon:
+                type: string
+              isDefault:
+                type: boolean
+              enabled:
+                type: boolean
+              mockFlag:
+                type: boolean
+            required:
+              - code
+              - name
+              - subtitle
+              - icon
+              - isDefault
+              - enabled
+              - mockFlag
+      required:
+        - items
     DashboardSummary:
       type: object
       properties:
@@ -7471,6 +7538,54 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/payments/methods:
+    get:
+      tags:
+        - payment
+      description: 列出可用支付方式（W7 P1-1）。返回 5 种方式的多语言 name/subtitle + icon + isDefault +
+        enabled + mockFlag。
+      responses:
+        "200":
+          description: 支付方式列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          enum: *a10
+                        name:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        subtitle:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        icon:
+                          type: string
+                        isDefault:
+                          type: boolean
+                        enabled:
+                          type: boolean
+                        mockFlag:
+                          type: boolean
+                      required:
+                        - code
+                        - name
+                        - subtitle
+                        - icon
+                        - isDefault
+                        - enabled
+                        - mockFlag
+                required:
+                  - items
   /api/v1/client/payments/{orderId}:
     get:
       tags:

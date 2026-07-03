@@ -85,6 +85,8 @@ import {
   // payment
   PaymentIntent,
   UploadReceiptRequest,
+  PaymentMethodItem,
+  PaymentMethodListResponseData,
   // platform
   DashboardSummary,
   DashboardTimeRange,
@@ -193,6 +195,8 @@ registry.register('CheckoutPreview', CheckoutPreview);
 
 registry.register('PaymentIntent', PaymentIntent);
 registry.register('UploadReceiptRequest', UploadReceiptRequest);
+registry.register('PaymentMethodItem', PaymentMethodItem);
+registry.register('PaymentMethodListResponseData', PaymentMethodListResponseData);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
@@ -1115,6 +1119,19 @@ registry.registerPath({
       content: { 'application/json': { schema: CheckoutPreview } },
     },
     409: { description: 'NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/payments/methods',
+  tags: ['payment'],
+  description: '列出可用支付方式（W7 P1-1）。返回 5 种方式的多语言 name/subtitle + icon + isDefault + enabled + mockFlag。',
+  responses: {
+    200: {
+      description: '支付方式列表',
+      content: { 'application/json': { schema: PaymentMethodListResponseData } },
+    },
   },
 });
 

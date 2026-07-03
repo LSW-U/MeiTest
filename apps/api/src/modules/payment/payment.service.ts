@@ -25,6 +25,7 @@ import {
   type PaymentMethodCode,
 } from '../../infrastructure';
 import type { PaymentMethodValue } from '../order/order.types';
+import { PAYMENT_METHODS_CONFIG } from './payment-methods.config';
 
 /** createIntentForOrder 入参 */
 export interface CreateIntentInput {
@@ -56,6 +57,18 @@ export interface PaymentIntentView {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** 支付方式列表项（W7 P1-1） */
+export interface PaymentMethodView {
+  code: PaymentMethodCode;
+  name: Record<string, string>;
+  subtitle: Record<string, string>;
+  icon: string;
+  isDefault: boolean;
+  enabled: boolean;
+  /** 是否为 mock/stub 实现（WECHAT/PAYPAL/STRIPE 当前为 true） */
+  mockFlag: boolean;
 }
 
 /**
@@ -296,6 +309,30 @@ export class PaymentService {
     });
 
     return this.toView(updated);
+  }
+
+  /**
+   * 列出可用支付方式（W7 P1-1）
+   *
+   * 返回 5 种方式的多语言 name/subtitle + icon + isDefault + enabled + mockFlag。
+   * mockFlag 从 strategy.isMock 派生（dev/staging WECHAT/PAYPAL/STRIPE 为 true），
+   * 其他字段在 payment-methods.config.ts 静态配置。
+   *
+   * 前端下单页用此接口渲染选项，避免硬编码方式列表。
+   */
+  async listMethods(): Promise<PaymentMethodView[]> {
+    return PAYMENT_METHODS_CONFIG.map((cfg) => {
+      const strategy = getPaymentStrategy(cfg.code);
+      return {
+        code: cfg.code,
+        name: cfg.name,
+        subtitle: cfg.subtitle,
+        icon: cfg.icon,
+        isDefault: cfg.isDefault,
+        enabled: cfg.enabled,
+        mockFlag: strategy.isMock,
+      };
+    });
   }
 
   /** DB PaymentIntent → API view */
