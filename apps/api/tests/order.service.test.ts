@@ -24,6 +24,7 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart } = v
     address: { findUnique: vi.fn() },
     sku: { findMany: vi.fn() },
     order: { findUnique: vi.fn(), update: vi.fn() },
+    orderItem: { findMany: vi.fn() },
     orderEvent: { create: vi.fn() },
   },
   mockHelpers: {
@@ -86,6 +87,7 @@ function mockCreatedOrder(overrides: Partial<{
     payableAmount: 200,
     paymentMethod: 'COD',
     paymentStatus: 'PENDING',
+    createdAt: new Date('2026-06-25T00:00:00.000Z'),
     ...overrides,
   };
 }
@@ -102,6 +104,9 @@ describe('OrderService.createOrder', () => {
     mockPayment.createIntentForOrder.mockReset();
     mockQueue.add.mockReset();
     mockCart.clearOrderedItems.mockReset();
+
+    // 默认空 items 列表（createOrder 末尾查 OrderItem 用，可被具体 case 覆盖）
+    mockDb.orderItem.findMany.mockResolvedValue([]);
 
     service = new OrderService(
       new (class { nextOrderNo = mockOrderNo.nextOrderNo })(),
@@ -318,6 +323,20 @@ describe('OrderService.createOrder', () => {
       clientSecret: undefined,
       mockFlag: false,
     });
+    // 查 OrderItem 返回完整记录（与 DB 写入一致）
+    mockDb.orderItem.findMany.mockResolvedValue([
+      {
+        id: 'oi-1',
+        productId: 'p-1',
+        skuId: 'sku-1',
+        productName: { en: 'Milk' },
+        productImage: 'img',
+        skuName: { en: '1L' },
+        unitPrice: 100,
+        quantity: 2,
+        subtotal: 200,
+      },
+    ]);
 
     const result = await service.createOrder({
       userId: 'user-1',
@@ -330,6 +349,17 @@ describe('OrderService.createOrder', () => {
     expect(result.id).toBe('order-1');
     expect(result.orderNo).toBe('MM20260625010000001');
     expect(result.payableAmount).toBe(200);
+    // P0-1 修复：items 字段返回完整快照
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      id: 'oi-1',
+      productId: 'p-1',
+      skuId: 'sku-1',
+      unitPrice: 100,
+      quantity: 2,
+      subtotal: 200,
+    });
+    expect(result.createdAt).toBe('2026-06-25T00:00:00.000Z');
 
     // enqueueOrderTimeout 被调用（mock 模块捕获）
     const { enqueueOrderTimeout } = await import('../src/modules/order/order-timeout.helper');

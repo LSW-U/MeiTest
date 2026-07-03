@@ -50,7 +50,22 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
         }),
       },
       orderItem: {
-        createMany: vi.fn(),
+        createMany: vi.fn(({ data }: { data: any }) => {
+          const arr = Array.isArray(data) ? data : [data];
+          const created = arr.map((d: any, idx: number) => {
+            const id = `oi-${tables.orderItems.size + idx + 1}`;
+            const item = { id, ...d };
+            tables.orderItems.set(id, item);
+            return item;
+          });
+          return { count: created.length };
+        }),
+        findMany: vi.fn(({ where }: { where: { orderId?: string } }) => {
+          if (!where.orderId) return [];
+          return Array.from(tables.orderItems.values()).filter(
+            (i: any) => i.orderId === where.orderId,
+          );
+        }),
       },
       orderEvent: {
         create: vi.fn(({ data }: { data: any }) => {
@@ -255,6 +270,8 @@ describe('Order → Dispatch 全链路集成测试', () => {
         paidAt: null,
         pickedAt: null,
         deliveredAt: null,
+        createdAt: new Date('2026-07-04T00:00:00.000Z'),
+        updatedAt: new Date('2026-07-04T00:00:00.000Z'),
       };
       mockDb._tables.orders.set('order-1', order);
       return order;

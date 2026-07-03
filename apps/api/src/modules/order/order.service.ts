@@ -384,6 +384,12 @@ export class OrderService {
         }
       }
 
+      // 查 OrderItem 完整记录（含 id），与 GET /client/orders/:id 返回结构一致
+      const persistedItems = await db.orderItem.findMany({
+        where: { orderId: created.id },
+        orderBy: { id: 'asc' },
+      });
+
       return {
         id: created.id,
         orderNo: created.orderNo,
@@ -397,6 +403,18 @@ export class OrderService {
         paymentStatus: created.paymentStatus,
         paymentClientSecret,
         paymentMockFlag,
+        items: persistedItems.map((i) => ({
+          id: i.id,
+          productId: i.productId,
+          skuId: i.skuId,
+          productName: i.productName as Record<string, string>,
+          productImage: i.productImage,
+          skuName: i.skuName as Record<string, string>,
+          unitPrice: i.unitPrice,
+          quantity: i.quantity,
+          subtotal: i.subtotal,
+        })),
+        createdAt: created.createdAt.toISOString(),
       };
     } catch (e) {
       // 库存不足错误 → E-ORDER-002

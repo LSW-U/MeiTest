@@ -59,6 +59,22 @@ export interface CreatedOrder {
   paymentClientSecret?: string;
   /** mock/stub 标识（前端展示"测试模式"badge） */
   paymentMockFlag: boolean;
+  /** 订单商品快照列表（与 GET /client/orders/:id 一致） */
+  items: CreatedOrderItem[];
+  createdAt: string;
+}
+
+/** 订单商品快照（创建时多语言 JSON 已写入 OrderItem） */
+export interface CreatedOrderItem {
+  id: string;
+  productId: string;
+  skuId: string;
+  productName: Record<string, string>;
+  productImage: string;
+  skuName: Record<string, string>;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
 }
 
 /** OrderEvent 写入上下文（OrderEvent 表用） */
