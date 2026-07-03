@@ -11,6 +11,7 @@ export * from './schemas/auth';
 export * from './schemas/cart';
 export * from './schemas/catalog';
 export * from './schemas/dispatch';
+export * from './schemas/geo';
 export * from './schemas/im';
 export * from './schemas/order';
 export * from './schemas/payment';

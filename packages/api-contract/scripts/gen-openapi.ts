@@ -114,6 +114,9 @@ import {
   ImSignature,
   ConversationType,
   ImMessage,
+  // geo（W7 P0-3 地址 geocoding）
+  GeocodeRequest,
+  GeocodeResponseData,
   // common
   ErrorResponse,
   Id,
@@ -1743,6 +1746,28 @@ registry.registerPath({
       },
     },
     409: { description: 'ORDER_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== Geo（W7 P0-3 地址 geocoding） =====
+registry.register('GeocodeRequest', GeocodeRequest);
+registry.register('GeocodeResponseData', GeocodeResponseData);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/geo/geocode',
+  tags: ['geo'],
+  description:
+    '地址 → 经纬度 geocoding（W7 P0-3）。后端调 Nominatim OpenStreetMap，失败/无结果 fallback Dili 中心坐标。前端保存地址时调一次，避免依赖 Google Maps SDK。',
+  request: {
+    query: GeocodeRequest,
+  },
+  responses: {
+    200: {
+      description: 'Geocoding 结果',
+      content: { 'application/json': { schema: GeocodeResponseData } },
+    },
+    400: { description: 'ADDRESS_TOO_SHORT / ADDRESS_TOO_LONG', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

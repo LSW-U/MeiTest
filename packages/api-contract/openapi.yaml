@@ -2231,6 +2231,39 @@ components:
     ConversationType:
       type: string
       enum: *a15
+    GeocodeRequest:
+      type: object
+      properties:
+        address:
+          type: string
+          minLength: 2
+          maxLength: 500
+      required:
+        - address
+    GeocodeResponseData:
+      type: object
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+        source:
+          type: string
+          enum: &a38
+            - nominatim
+            - fallback
+        formattedAddress:
+          type: string
+          nullable: true
+      required:
+        - lat
+        - lng
+        - source
+        - formattedAddress
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -10882,6 +10915,76 @@ paths:
                   - data
         "409":
           description: ORDER_STATUS_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/geo/geocode:
+    get:
+      tags:
+        - geo
+      description: 地址 → 经纬度 geocoding（W7 P0-3）。后端调 Nominatim OpenStreetMap，失败/无结果
+        fallback Dili 中心坐标。前端保存地址时调一次，避免依赖 Google Maps SDK。
+      parameters:
+        - schema:
+            type: string
+            minLength: 2
+            maxLength: 500
+          required: true
+          name: address
+          in: query
+      responses:
+        "200":
+          description: Geocoding 结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lat:
+                    type: number
+                    minimum: -90
+                    maximum: 90
+                  lng:
+                    type: number
+                    minimum: -180
+                    maximum: 180
+                  source:
+                    type: string
+                    enum: *a38
+                  formattedAddress:
+                    type: string
+                    nullable: true
+                required:
+                  - lat
+                  - lng
+                  - source
+                  - formattedAddress
+        "400":
+          description: ADDRESS_TOO_SHORT / ADDRESS_TOO_LONG
           content:
             application/json:
               schema:

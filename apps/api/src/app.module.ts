@@ -14,6 +14,7 @@ import { AuthModule } from './modules/auth/auth.module';
 // Shared: Idempotency / Queue
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CartModule } from './modules/cart/cart.module';
+import { CommonModule } from './modules/common/common.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { ImModule } from './modules/im/im.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
@@ -43,6 +44,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     AuthModule,
     CartModule,
     CatalogModule,
+    CommonModule,
     DispatchModule,
     ImModule,
     InventoryModule,
