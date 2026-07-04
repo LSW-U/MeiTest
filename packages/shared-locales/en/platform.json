@@ -13,7 +13,19 @@
     "auditLogs": "Audit Logs",
     "systemConfig": "System Config",
     "im": "Messages",
-    "settle": "Settlement"
+    "settle": "Settlement",
+    "products": "Products",
+    "categories": "Categories",
+    "warehouses": "Warehouses",
+    "orders": "Orders",
+    "refunds": "Refunds",
+    "riders": "Riders",
+    "customers": "Customers",
+    "promotions": "Promotions",
+    "statistics": "Statistics",
+    "settings": "Settings",
+    "footerFlow": "W3-W flow",
+    "perspectiveLabel": "Perspective"
   },
   "dashboard": {
     "title": "Platform Dashboard",
@@ -30,7 +42,13 @@
     "trendTitle": "GMV / Order Trend",
     "warehouseBreakdownTitle": "Warehouse Breakdown",
     "warehouseName": "Warehouse",
-    "abnormalCount": "Abnormal"
+    "abnormalCount": "Abnormal",
+    "description": "Real-time business KPIs + trend analysis",
+    "fallback": "Current perspective {name} doesn't have a dedicated dashboard. Switch to platform perspective for full KPIs (GMV / Orders / Online Riders / Abnormal Orders).",
+    "noTrendData": "No trend data",
+    "noWarehouseData": "No warehouse data",
+    "dataRangeLabel": "Data range:",
+    "breakdownItem": "{orders} orders · {abnormal} abnormal"
   },
   "audit": {
     "title": "Audit Logs",

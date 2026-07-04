@@ -1,64 +1,64 @@
 {
   "order": {
     "list": {
-      "title": "My orders",
-      "empty": "No orders yet"
+      "title": "Hau-nia order",
+      "empty": "Seidauk iha order"
     },
     "detail": {
-      "title": "Order detail"
+      "title": "Detalle order"
     },
-    "place": "Place order",
-    "cancel": "Cancel order",
-    "cancelReason": "Cancel reason",
-    "confirmReceive": "Confirm received",
-    "reorder": "Re-order",
-    "number": "Order number",
-    "createdAt": "Created at",
-    "warehouse": "Warehouse",
-    "remark": "Remark"
+    "place": "Halo order",
+    "cancel": "Kansa order",
+    "cancelReason": "Razaun kansa",
+    "confirmReceive": "Konfirma simu",
+    "reorder": "Order fali",
+    "number": "Numeru order",
+    "createdAt": "Kria iha",
+    "warehouse": "Armazén",
+    "remark": "Observasaun"
   },
   "status": {
-    "pendingPayment": "Pending payment",
-    "pendingConfirm": "Pending confirm",
-    "confirmed": "Confirmed",
-    "picked": "Picked",
-    "outForDelivery": "Out for delivery",
-    "deliveredPaid": "Delivered (paid)",
-    "delivered": "Delivered",
-    "deliveredUnpaid": "Delivered (unpaid)",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "pendingPayment": "Halinainr pagamentu",
+    "pendingConfirm": "Halinainr konfirma",
+    "confirmed": "Konfirma tiona",
+    "picked": "Sima tiona",
+    "outForDelivery": "Halo hela entrega",
+    "deliveredPaid": "Entrega tiona (saun tiona)",
+    "delivered": "Entrega tiona",
+    "deliveredUnpaid": "Entrega tiona (seidauk saun)",
+    "completed": "Hotu tiona",
+    "cancelled": "Kansa tiona"
   },
   "items": {
-    "title": "Items",
-    "quantity": "Quantity",
-    "unitPrice": "Unit price",
+    "title": "Item",
+    "quantity": "Kuantidade",
+    "unitPrice": "Presu unidade",
     "subtotal": "Subtotal"
   },
   "address": {
-    "title": "Delivery address",
-    "recipient": "Recipient",
-    "phone": "Phone",
-    "detail": "Address"
+    "title": "Enderesu entrega",
+    "recipient": "Reseptor",
+    "phone": "Telefón",
+    "detail": "Enderesu"
   },
   "amount": {
     "total": "Total",
-    "delivery": "Delivery fee",
-    "discount": "Discount",
-    "payable": "Payable"
+    "delivery": "Taxa entrega",
+    "discount": "Diskontaun",
+    "payable": "Pagavel"
   },
   "tracking": {
-    "title": "Order tracking",
+    "title": "Halo order tracking",
     "rider": "Rider",
-    "riderName": "Rider name",
-    "riderPhone": "Rider phone",
-    "eta": "Estimated arrival",
-    "distance": "Distance"
+    "riderName": "Naran rider",
+    "riderPhone": "Telefón rider",
+    "eta": "Estimasaun tiba",
+    "distance": "Distánsia"
   },
   "review": {
-    "title": "Write a review",
+    "title": "Hakerek review",
     "rating": "Rating",
-    "content": "Review content",
-    "submit": "Submit review"
+    "content": "Kontende review",
+    "submit": "Haruka review"
   }
 }

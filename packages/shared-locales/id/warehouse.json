@@ -1,33 +1,33 @@
 {
   "warehouse": {
-    "title": "Warehouse",
-    "code": "Code",
-    "name": "Name",
-    "address": "Address",
+    "title": "Gudang",
+    "code": "Kode",
+    "name": "Nama",
+    "address": "Alamat",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Aktif",
+      "inactive": "Nonaktif"
     }
   },
   "location": {
-    "title": "Location",
-    "scan": "Scan location"
+    "title": "Lokasi",
+    "scan": "Pindai lokasi"
   },
   "stock": {
-    "title": "Stock",
-    "in": "Inbound",
-    "out": "Outbound",
-    "adjust": "Adjust",
-    "current": "Current quantity",
-    "safety": "Safety stock",
-    "lowWarning": "Low stock warning"
+    "title": "Stok",
+    "in": "Masuk",
+    "out": "Keluar",
+    "adjust": "Sesuaikan",
+    "current": "Jumlah saat ini",
+    "safety": "Stok aman",
+    "lowWarning": "Peringatan stok rendah"
   },
   "dispatch": {
-    "assign": "Assign order",
-    "pick": "Pick items"
+    "assign": "Tugaskan pesanan",
+    "pick": "Ambil barang"
   },
   "delivery": {
-    "fee": "Delivery fee",
-    "range": "Delivery range"
+    "fee": "Ongkos kirim",
+    "range": "Jangkauan pengiriman"
   }
 }

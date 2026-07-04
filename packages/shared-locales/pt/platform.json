@@ -13,7 +13,19 @@
     "auditLogs": "Registos de Auditoria",
     "systemConfig": "Configuração do Sistema",
     "im": "Mensagens",
-    "settle": "Liquidação"
+    "settle": "Liquidação",
+    "products": "Produtos",
+    "categories": "Categorias",
+    "warehouses": "Armazéns",
+    "orders": "Pedidos",
+    "refunds": "Reembolsos",
+    "riders": "Motoboys",
+    "customers": "Clientes",
+    "promotions": "Promoções",
+    "statistics": "Estatísticas",
+    "settings": "Configurações",
+    "footerFlow": "Fluxo W3-W",
+    "perspectiveLabel": "Perspectiva"
   },
   "dashboard": {
     "title": "Painel da Plataforma",
@@ -30,7 +42,13 @@
     "trendTitle": "Tendência GMV / Encomendas",
     "warehouseBreakdownTitle": "Distribuição por Armazém",
     "warehouseName": "Armazém",
-    "abnormalCount": "Anormal"
+    "abnormalCount": "Anormal",
+    "description": "KPIs de negócios em tempo real + análise de tendências",
+    "fallback": "A perspectiva {name} atual não tem um painel dedicado. Mude para a perspectiva de plataforma para KPIs completos (GMV / Pedidos / Riders Online / Pedidos Anormais).",
+    "noTrendData": "Sem dados de tendência",
+    "noWarehouseData": "Sem dados de armazém",
+    "dataRangeLabel": "Intervalo de dados:",
+    "breakdownItem": "{orders} pedidos · {abnormal} anormal"
   },
   "audit": {
     "title": "Registos de Auditoria",

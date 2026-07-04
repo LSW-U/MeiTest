@@ -17,7 +17,7 @@ import { useWarehouses, type Warehouse } from '@/hooks/api/use-warehouses';
 import { formatCurrency } from '@/lib/utils';
 
 export default function WarehousesListPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const router = useRouter();
   const { data, isLoading, error, refetch } = useWarehouses();
 
@@ -26,22 +26,22 @@ export default function WarehousesListPage() {
   const columns: Column<Warehouse>[] = [
     {
       key: 'code',
-      header: 'Code',
+      header: t('w.warehouses.columnCode'),
       render: (row) => <code className="text-xs font-mono">{row.code}</code>,
     },
     {
       key: 'name',
-      header: 'Name (EN)',
+      header: t('w.warehouses.columnNameEn'),
       render: (row) => <span className="font-medium">{row.name?.en ?? row.name?.zh ?? '—'}</span>,
     },
     {
       key: 'address',
-      header: 'Address',
+      header: t('w.warehouses.columnAddress'),
       render: (row) => <span className="text-muted-foreground">{row.address}</span>,
     },
     {
       key: 'center',
-      header: 'Center (lat, lng)',
+      header: t('w.warehouses.columnCenter'),
       render: (row) => (
         <span className="font-mono text-xs">
           {row.centerLat.toFixed(4)}, {row.centerLng.toFixed(4)}
@@ -50,17 +50,19 @@ export default function WarehousesListPage() {
     },
     {
       key: 'deliveryFee',
-      header: 'Delivery Fee',
+      header: t('w.warehouses.columnDeliveryFee'),
       render: (row) => (
         <span className="font-mono text-xs">{formatCurrency(row.deliveryFee)}</span>
       ),
     },
     {
       key: 'isActive',
-      header: 'Status',
+      header: t('w.warehouses.columnIsActive'),
       render: (row) => (
         <span className={row.isActive ? 'text-green-600' : 'text-muted-foreground'}>
-          {row.isActive ? '🟢 ACTIVE' : '🔴 INACTIVE'}
+          {row.isActive
+            ? t('w.warehouses.placeholderStatusActive')
+            : t('w.warehouses.placeholderStatusInactive')}
         </span>
       ),
     },
@@ -70,11 +72,11 @@ export default function WarehousesListPage() {
     <>
       <PageHeader
         title={t('w.warehouses.title') as string}
-        description="Manage warehouses, coverage areas, inventory."
+        description={t('w.warehouses.listDesc')}
         action={
           <Button onClick={() => router.push('/warehouses/create')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Warehouse
+            {t('w.warehouses.newWarehouse')}
           </Button>
         }
       />
@@ -85,8 +87,8 @@ export default function WarehousesListPage() {
         onRowClick={(row) => router.push(`/warehouses/${row.id}`)}
         emptyState={
           <EmptyState
-            title="No warehouses"
-            description="Click 'New Warehouse' to create the first one."
+            title={t('w.warehouses.emptyTitle')}
+            description={t('w.warehouses.emptyHint')}
           />
         }
         errorState={

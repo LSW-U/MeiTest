@@ -1,29 +1,29 @@
 {
   "profile": {
-    "title": "My profile",
-    "edit": "Edit profile",
-    "name": "Name",
+    "title": "Meu perfil",
+    "edit": "Editar perfil",
+    "name": "Nome",
     "avatar": "Avatar",
-    "phone": "Phone",
-    "email": "Email"
+    "phone": "Telefone",
+    "email": "E-mail"
   },
   "address": {
-    "title": "Addresses",
-    "add": "Add address",
-    "edit": "Edit",
-    "delete": "Delete",
-    "default": "Default",
-    "setAsDefault": "Set as default",
-    "name": "Recipient name",
-    "phone": "Recipient phone",
-    "region": "Region",
-    "detail": "Detail address",
-    "tag": "Tag (Home/Work)"
+    "title": "Endereços",
+    "add": "Adicionar endereço",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "default": "Padrão",
+    "setAsDefault": "Definir como padrão",
+    "name": "Nome do destinatário",
+    "phone": "Telefone do destinatário",
+    "region": "Região",
+    "detail": "Endereço detalhado",
+    "tag": "Etiqueta (Casa/Trabalho)"
   },
   "favorites": {
-    "title": "Favorites",
-    "add": "Add to favorites",
-    "remove": "Remove from favorites",
-    "empty": "No favorites yet"
+    "title": "Favoritos",
+    "add": "Adicionar aos favoritos",
+    "remove": "Remover dos favoritos",
+    "empty": "Sem favoritos"
   }
 }

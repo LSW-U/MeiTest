@@ -7,16 +7,13 @@
  *   - GET /admin/inventory/stocks?warehouseId=xxx
  *   - PATCH /admin/inventory/stocks
  *   - GET /admin/inventory/logs?warehouseId=xxx
- *
- * 三个 Tab：
- *   - Basic Info（基本信息编辑 + 启停 switch）
- *   - Coverage（配送范围 GeoJSON textarea）
- *   - Inventory（库存列表 + 调整 dialog + 变更日志）
  */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,22 +37,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
 import {
   useWarehouse,
   useUpdateWarehouse,
   useUpdateWarehouseCoverage,
 } from '@/hooks/api/use-warehouses';
 import { useToast } from '@/hooks/use-toast';
-import { useTranslations } from 'next-intl';
 import { useStocks, useStockLogs, useAdjustStock, type Stock, type StockLog } from '@/hooks/api/use-inventory';
 import type { I18nText } from '@/hooks/api/use-products';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
-// useAdjustStock 在 AdjustStockDialog 内部调用（每次打开 dialog 创建独立 mutation 实例）
-
 export default function WarehouseDetailPage() {
+  const t = useTranslations('common');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -66,7 +60,6 @@ export default function WarehouseDetailPage() {
   const stocksQ = useStocks({ warehouseId: id });
   const logsQ = useStockLogs(id);
   const { toast } = useToast();
-  const t = useTranslations();
 
   const [name, setName] = useState<I18nText>({});
   const [address, setAddress] = useState('');
@@ -141,17 +134,17 @@ export default function WarehouseDetailPage() {
   const stockColumns: Column<Stock>[] = [
     {
       key: 'skuId',
-      header: 'SKU ID',
+      header: t('w.warehouses.columnSkuId'),
       render: (row) => <code className="text-xs">{row.skuId.slice(0, 8)}...</code>,
     },
     {
       key: 'quantity',
-      header: 'Quantity',
+      header: t('w.warehouses.columnQuantity'),
       render: (row) => <span className="font-mono">{row.quantity}</span>,
     },
     {
       key: 'safetyStock',
-      header: 'Safety',
+      header: t('w.warehouses.columnSafety'),
       render: (row) => (
         <span className="text-muted-foreground">{row.safetyStock ?? '—'}</span>
       ),
@@ -161,7 +154,7 @@ export default function WarehouseDetailPage() {
   const logColumns: Column<StockLog>[] = [
     {
       key: 'createdAt',
-      header: 'Time',
+      header: t('w.warehouses.columnTime'),
       render: (row) => (
         <span className="font-mono text-xs">
           {new Date(row.createdAt).toLocaleString()}
@@ -170,12 +163,12 @@ export default function WarehouseDetailPage() {
     },
     {
       key: 'skuId',
-      header: 'SKU',
+      header: t('w.warehouses.columnSku'),
       render: (row) => <code className="text-xs">{row.skuId.slice(0, 8)}...</code>,
     },
     {
       key: 'change',
-      header: 'Change',
+      header: t('w.warehouses.columnChange'),
       render: (row) => (
         <span className={row.change >= 0 ? 'text-green-600' : 'text-destructive'}>
           {row.change >= 0 ? '+' : ''}
@@ -185,12 +178,12 @@ export default function WarehouseDetailPage() {
     },
     {
       key: 'afterQuantity',
-      header: 'After',
+      header: t('w.warehouses.columnAfter'),
       render: (row) => <span className="font-mono">{row.afterQuantity}</span>,
     },
     {
       key: 'reason',
-      header: 'Reason',
+      header: t('w.warehouses.columnReason'),
       render: (row) => (
         <span className="text-muted-foreground">{row.reason ?? '—'}</span>
       ),
@@ -202,13 +195,12 @@ export default function WarehouseDetailPage() {
       <PageHeader
         title={`${warehouse.code} · ${warehouse.name?.en ?? warehouse.name?.zh ?? warehouse.id}`}
         breadcrumb={[
-          { label: 'Warehouses', href: '/warehouses' },
-          { label: warehouse.code,
-          },
+          { label: t('w.warehouses.title'), href: '/warehouses' },
+          { label: warehouse.code },
         ]}
         action={
           <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">Active</Label>
+            <Label className="text-xs text-muted-foreground">{t('w.form.active')}</Label>
             <Switch
               checked={isActive}
               onCheckedChange={toggleActive}
@@ -220,21 +212,21 @@ export default function WarehouseDetailPage() {
 
       <Tabs defaultValue="basic">
         <TabsList>
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="coverage">Coverage Area</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="logs">Change Logs</TabsTrigger>
+          <TabsTrigger value="basic">{t('w.warehouses.tabBasic')}</TabsTrigger>
+          <TabsTrigger value="coverage">{t('w.warehouses.tabCoverage')}</TabsTrigger>
+          <TabsTrigger value="inventory">{t('w.warehouses.tabInventory')}</TabsTrigger>
+          <TabsTrigger value="logs">{t('w.warehouses.tabLogs')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Edit Warehouse</CardTitle>
+              <CardTitle>{t('w.warehouses.editWarehouseTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {i18nInputs('Name', name, setName)}
+              {i18nInputs(t('w.form.name'), name, setName)}
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>{t('w.form.address')}</Label>
                 <Input value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
               <div className="flex justify-end gap-2 pt-2">
@@ -243,19 +235,19 @@ export default function WarehouseDetailPage() {
                   variant="outline"
                   onClick={() => router.push('/warehouses')}
                 >
-                  Back
+                  {t('w.form.back')}
                 </Button>
                 <Button
                   type="button"
                   onClick={saveBasic}
                   disabled={updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? 'Saving...' : 'Save'}
+                  {updateMutation.isPending ? t('w.form.saving') : t('w.form.save')}
                 </Button>
               </div>
               {updateMutation.error && (
                 <p className="text-sm text-destructive">
-                  Save failed: {updateMutation.error.message}
+                  {t('w.form.saveFailed', { message: updateMutation.error.message })}
                 </p>
               )}
             </CardContent>
@@ -265,11 +257,11 @@ export default function WarehouseDetailPage() {
         <TabsContent value="coverage" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Delivery Coverage Area (GeoJSON Polygon)</CardTitle>
+              <CardTitle>{t('w.warehouses.coverageAreaTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                粘贴完整 GeoJSON Polygon（W3-W MVP 暂用 textarea，地图绘制 UI 推 W4）。格式：
+                {t('w.warehouses.coverageHintFormat')}{' '}
                 <code className="ml-1 rounded bg-muted px-1">
                   {`{"type":"Polygon","coordinates":[[[lng,lat],...]]}`}
                 </code>
@@ -287,12 +279,14 @@ export default function WarehouseDetailPage() {
                   onClick={saveCoverage}
                   disabled={coverageMutation.isPending}
                 >
-                  {coverageMutation.isPending ? 'Saving...' : 'Save Coverage'}
+                  {coverageMutation.isPending
+                    ? t('w.form.saving')
+                    : t('w.warehouses.saveCoverage')}
                 </Button>
               </div>
               {coverageMutation.error && (
                 <p className="text-sm text-destructive">
-                  Save failed: {coverageMutation.error.message}
+                  {t('w.form.saveFailed', { message: coverageMutation.error.message })}
                 </p>
               )}
             </CardContent>
@@ -302,7 +296,7 @@ export default function WarehouseDetailPage() {
         <TabsContent value="inventory" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Stock List</CardTitle>
+              <CardTitle>{t('w.warehouses.stockListTitle')}</CardTitle>
               <AdjustStockDialog warehouseId={id} />
             </CardHeader>
             <CardContent>
@@ -327,7 +321,7 @@ export default function WarehouseDetailPage() {
         <TabsContent value="logs" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Stock Change Logs</CardTitle>
+              <CardTitle>{t('w.warehouses.stockLogsTitle')}</CardTitle>
             </CardHeader>
             <CardContent>
               <DataTable
@@ -348,9 +342,8 @@ export default function WarehouseDetailPage() {
   );
 }
 
-// AdjustStockDialog 内部用 useAdjustStock hook 调整库存（每次打开 dialog 创建独立 mutation 实例）
-
 function AdjustStockDialog({ warehouseId }: { warehouseId: string }) {
+  const t = useTranslations('common');
   const adjustMutation = useAdjustStock();
   const [open, setOpen] = useState(false);
   const [skuId, setSkuId] = useState('');
@@ -378,47 +371,47 @@ function AdjustStockDialog({ warehouseId }: { warehouseId: string }) {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          Adjust Stock
+          {t('w.warehouses.adjustStock')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Adjust Stock</DialogTitle>
+          <DialogTitle>{t('w.warehouses.adjustStockDialogTitle')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
-            <Label>SKU ID</Label>
+            <Label>{t('w.warehouses.skuIdLabel')}</Label>
             <Input
               value={skuId}
               onChange={(e) => setSkuId(e.target.value)}
-              placeholder="Full SKU UUID"
+              placeholder={t('w.warehouses.skuIdPlaceholder')}
               required
             />
           </div>
           <div className="space-y-1">
-            <Label>Delta ( +/- )</Label>
+            <Label>{t('w.warehouses.deltaLabel')}</Label>
             <Input
               type="number"
               value={delta}
               onChange={(e) => setDelta(e.target.value)}
-              placeholder="e.g. 100 or -50"
+              placeholder={t('w.warehouses.deltaPlaceholder')}
               required
             />
           </div>
           <div className="space-y-1">
-            <Label>Reason</Label>
+            <Label>{t('w.warehouses.reasonLabel')}</Label>
             <Input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Optional"
+              placeholder={t('w.warehouses.reasonPlaceholder')}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t('w.form.cancel')}
             </Button>
             <Button type="submit" disabled={adjustMutation.isPending}>
-              {adjustMutation.isPending ? 'Adjusting...' : 'Confirm'}
+              {adjustMutation.isPending ? t('w.form.adjusting') : t('w.form.confirm')}
             </Button>
           </div>
         </form>

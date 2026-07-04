@@ -1,39 +1,39 @@
 {
   "product": {
-    "title": "Product",
-    "detail": "Product detail",
-    "addToCart": "Add to cart",
-    "buyNow": "Buy now",
-    "outOfStock": "Out of stock",
-    "sales": "Sales",
-    "priceRange": "Price range",
-    "images": "Product images"
+    "title": "Produk",
+    "detail": "Detail produk",
+    "addToCart": "Tambah ke keranjang",
+    "buyNow": "Beli sekarang",
+    "outOfStock": "Stok habis",
+    "sales": "Penjualan",
+    "priceRange": "Rentang harga",
+    "images": "Gambar produk"
   },
   "search": {
-    "title": "Search products",
-    "placeholder": "Search...",
-    "history": "Search history",
-    "hot": "Trending searches",
-    "noResult": "No products found"
+    "title": "Cari produk",
+    "placeholder": "Cari...",
+    "history": "Riwayat pencarian",
+    "hot": "Pencarian tren",
+    "noResult": "Produk tidak ditemukan"
   },
   "filter": {
     "title": "Filter",
-    "category": "Category",
-    "priceRange": "Price range",
+    "category": "Kategori",
+    "priceRange": "Rentang harga",
     "reset": "Reset",
-    "apply": "Apply"
+    "apply": "Terapkan"
   },
   "sort": {
-    "title": "Sort",
+    "title": "Urutkan",
     "default": "Default",
-    "priceAsc": "Price: Low to High",
-    "priceDesc": "Price: High to Low",
-    "salesDesc": "Best selling",
-    "newest": "Newest"
+    "priceAsc": "Harga: Rendah ke Tinggi",
+    "priceDesc": "Harga: Tinggi ke Rendah",
+    "salesDesc": "Terlaris",
+    "newest": "Terbaru"
   },
   "sku": {
-    "select": "Select specifications",
-    "quantity": "Quantity",
-    "available": "Available: {{count}}"
+    "select": "Pilih spesifikasi",
+    "quantity": "Jumlah",
+    "available": "Tersedia: {{count}}"
   }
 }

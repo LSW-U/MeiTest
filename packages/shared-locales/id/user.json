@@ -1,29 +1,29 @@
 {
   "profile": {
-    "title": "My profile",
-    "edit": "Edit profile",
-    "name": "Name",
+    "title": "Profil saya",
+    "edit": "Edit profil",
+    "name": "Nama",
     "avatar": "Avatar",
-    "phone": "Phone",
+    "phone": "Telepon",
     "email": "Email"
   },
   "address": {
-    "title": "Addresses",
-    "add": "Add address",
+    "title": "Alamat",
+    "add": "Tambah alamat",
     "edit": "Edit",
-    "delete": "Delete",
+    "delete": "Hapus",
     "default": "Default",
-    "setAsDefault": "Set as default",
-    "name": "Recipient name",
-    "phone": "Recipient phone",
-    "region": "Region",
-    "detail": "Detail address",
-    "tag": "Tag (Home/Work)"
+    "setAsDefault": "Jadikan default",
+    "name": "Nama penerima",
+    "phone": "Telepon penerima",
+    "region": "Wilayah",
+    "detail": "Alamat detail",
+    "tag": "Tag (Rumah/Kantor)"
   },
   "favorites": {
-    "title": "Favorites",
-    "add": "Add to favorites",
-    "remove": "Remove from favorites",
-    "empty": "No favorites yet"
+    "title": "Favorit",
+    "add": "Tambah ke favorit",
+    "remove": "Hapus dari favorit",
+    "empty": "Belum ada favorit"
   }
 }

@@ -1,29 +1,29 @@
 {
   "payment": {
-    "title": "Payment",
+    "title": "支付",
     "method": {
-      "title": "Payment method",
-      "cod": "Cash on delivery",
-      "bankTransfer": "Bank transfer",
-      "wechat": "WeChat Pay",
+      "title": "支付方式",
+      "cod": "货到付款",
+      "bankTransfer": "银行转账",
+      "wechat": "微信支付",
       "paypal": "PayPal",
       "stripe": "Stripe"
     },
-    "processing": "Processing payment...",
-    "success": "Payment successful",
-    "failed": "Payment failed",
+    "processing": "支付处理中...",
+    "success": "支付成功",
+    "failed": "支付失败",
     "refund": {
-      "title": "Refund",
-      "pending": "Refund processing",
-      "success": "Refund successful",
-      "failed": "Refund failed"
+      "title": "退款",
+      "pending": "退款处理中",
+      "success": "退款成功",
+      "failed": "退款失败"
     },
     "receipt": {
-      "title": "Payment receipt",
-      "upload": "Upload receipt",
-      "preview": "Preview receipt"
+      "title": "支付凭证",
+      "upload": "上传凭证",
+      "preview": "预览凭证"
     },
-    "waiting": "Waiting for payment",
-    "cancel": "Cancel payment"
+    "waiting": "等待支付",
+    "cancel": "取消支付"
   }
 }

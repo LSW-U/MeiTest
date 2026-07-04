@@ -13,7 +13,19 @@
     "auditLogs": "审计日志",
     "systemConfig": "系统配置",
     "im": "消息",
-    "settle": "结算"
+    "settle": "结算",
+    "products": "商品",
+    "categories": "分类",
+    "warehouses": "仓库",
+    "orders": "订单",
+    "refunds": "退款",
+    "riders": "骑手",
+    "customers": "客户",
+    "promotions": "营销",
+    "statistics": "统计",
+    "settings": "设置",
+    "footerFlow": "W3-W 流程",
+    "perspectiveLabel": "视角"
   },
   "dashboard": {
     "title": "平台数据看板",
@@ -30,7 +42,13 @@
     "trendTitle": "GMV / 订单趋势",
     "warehouseBreakdownTitle": "仓库维度钻取",
     "warehouseName": "仓库",
-    "abnormalCount": "异常数"
+    "abnormalCount": "异常数",
+    "description": "实时业务 KPI + 趋势分析",
+    "fallback": "当前视角 {name} 暂未提供专属仪表盘。切到 platform 视角查看完整 KPI（GMV / 订单 / 在线骑手 / 异常订单）。",
+    "noTrendData": "暂无趋势数据",
+    "noWarehouseData": "暂无仓库数据",
+    "dataRangeLabel": "数据范围：",
+    "breakdownItem": "{orders} 单 · {abnormal} 异常"
   },
   "audit": {
     "title": "审计日志",

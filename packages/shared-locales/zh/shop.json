@@ -1,19 +1,19 @@
 {
   "shop": {
-    "title": "Shop",
-    "edit": "Edit shop",
-    "name": "Shop name",
-    "phone": "Phone",
-    "address": "Address",
-    "announcement": "Announcement",
-    "businessHours": "Business hours",
+    "title": "店铺",
+    "edit": "编辑店铺",
+    "name": "店铺名称",
+    "phone": "电话",
+    "address": "地址",
+    "announcement": "公告",
+    "businessHours": "营业时间",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "营业中",
+      "inactive": "已休息"
     }
   },
   "category": {
-    "title": "Categories",
-    "list": "All categories"
+    "title": "分类",
+    "list": "全部分类"
   }
 }

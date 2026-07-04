@@ -13,7 +13,19 @@
     "auditLogs": "Log Auditoria",
     "systemConfig": "Konfigurasaun Sistema",
     "im": "Mensajen",
-    "settle": "Settlement"
+    "settle": "Settlement",
+    "products": "Produtu",
+    "categories": "Kategoria",
+    "warehouses": "Armazém",
+    "orders": "Order",
+    "refunds": "Refund",
+    "riders": "Rider",
+    "customers": "Kliente",
+    "promotions": "Promosaun",
+    "statistics": "Estatistika",
+    "settings": "Configurasaun",
+    "footerFlow": "W3-W flow",
+    "perspectiveLabel": "Perspektiva"
   },
   "dashboard": {
     "title": "Dashboard Plataforma",
@@ -30,7 +42,13 @@
     "trendTitle": "Tendénsia GMV / Order",
     "warehouseBreakdownTitle": "Distribuisaun tuir Armazéng",
     "warehouseName": "Armazéng",
-    "abnormalCount": "Anormal"
+    "abnormalCount": "Anormal",
+    "description": "KPI bisnis real-time + analize trend",
+    "fallback": "Perspektiva {name} atual la iha dashboard ekskluzivu. Troka ba perspektiva platform ba KPI kompleto (GMV / Order / Rider Online / Order Abnormal).",
+    "noTrendData": "La iha data trend",
+    "noWarehouseData": "La iha data armazén",
+    "dataRangeLabel": "Range data:",
+    "breakdownItem": "{orders} order · {abnormal} abnormal"
   },
   "audit": {
     "title": "Log Auditoria",

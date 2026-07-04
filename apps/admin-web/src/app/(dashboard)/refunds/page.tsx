@@ -7,6 +7,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -32,24 +33,33 @@ import {
 } from '@/hooks/api/use-refunds';
 import { formatCurrency } from '@/lib/utils';
 
-const STATUS_FILTERS: { value: RefundStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: '全部' },
-  { value: 'PENDING', label: '待审核' },
-  { value: 'COMPLETED', label: '已退款' },
-  { value: 'REJECTED', label: '已驳回' },
-  { value: 'CANCELLED', label: '已撤回' },
+type RefundReason =
+  | 'OUT_OF_STOCK'
+  | 'QUALITY_ISSUE'
+  | 'WRONG_ITEM'
+  | 'DELIVERY_TOO_SLOW'
+  | 'CUSTOMER_CHANGE_MIND'
+  | 'OTHER';
+
+const STATUS_FILTERS: { value: RefundStatus | 'ALL'; labelKey: string }[] = [
+  { value: 'ALL', labelKey: 'admin.refunds.statusAll' },
+  { value: 'PENDING', labelKey: 'admin.refunds.statusPending' },
+  { value: 'COMPLETED', labelKey: 'admin.refunds.statusCompleted' },
+  { value: 'REJECTED', labelKey: 'admin.refunds.statusRejected' },
+  { value: 'CANCELLED', labelKey: 'admin.refunds.statusCancelled' },
 ];
 
-const REASON_LABELS: Record<string, string> = {
-  OUT_OF_STOCK: '缺货',
-  QUALITY_ISSUE: '质量问题',
-  WRONG_ITEM: '发错货',
-  DELIVERY_TOO_SLOW: '配送太慢',
-  CUSTOMER_CHANGE_MIND: '客户改变主意',
-  OTHER: '其他',
+const REASON_LABEL_KEY: Record<RefundReason, string> = {
+  OUT_OF_STOCK: 'admin.refunds.reasonOutOfStock',
+  QUALITY_ISSUE: 'admin.refunds.reasonQualityIssue',
+  WRONG_ITEM: 'admin.refunds.reasonWrongItem',
+  DELIVERY_TOO_SLOW: 'admin.refunds.reasonDeliveryTooSlow',
+  CUSTOMER_CHANGE_MIND: 'admin.refunds.reasonCustomerChangeMind',
+  OTHER: 'admin.refunds.reasonOther',
 };
 
 export default function RefundsListPage() {
+  const t = useTranslations('common');
   const [statusFilter, setStatusFilter] = useState<RefundStatus | 'ALL'>('PENDING');
   const [rejectTarget, setRejectTarget] = useState<Refund | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -86,7 +96,7 @@ export default function RefundsListPage() {
   const columns: Column<Refund>[] = [
     {
       key: 'amount',
-      header: '退款金额',
+      header: t('admin.refunds.columnAmount'),
       render: (row) => (
         <span className="font-mono text-sm font-bold text-destructive">
           {formatCurrency(row.amount)}
@@ -95,10 +105,14 @@ export default function RefundsListPage() {
     },
     {
       key: 'reason',
-      header: '原因',
+      header: t('admin.refunds.columnReason'),
       render: (row) => (
         <div className="space-y-0.5">
-          <span className="text-sm font-medium">{REASON_LABELS[row.reason] ?? row.reason}</span>
+          <span className="text-sm font-medium">
+            {REASON_LABEL_KEY[row.reason as RefundReason]
+              ? t(REASON_LABEL_KEY[row.reason as RefundReason])
+              : row.reason}
+          </span>
           {row.reasonDetail && (
             <p className="text-xs text-muted-foreground">{row.reasonDetail}</p>
           )}
@@ -107,14 +121,14 @@ export default function RefundsListPage() {
     },
     {
       key: 'refundMethod',
-      header: '退款方式',
+      header: t('admin.refunds.columnMethod'),
       render: (row) => (
         <span className="text-muted-foreground">{row.refundMethod}</span>
       ),
     },
     {
       key: 'createdAt',
-      header: '申请时间',
+      header: t('admin.refunds.columnAppliedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
           {new Date(row.createdAt).toLocaleString()}
@@ -123,7 +137,7 @@ export default function RefundsListPage() {
     },
     {
       key: 'status',
-      header: '状态',
+      header: t('admin.refunds.columnStatus'),
       render: (row) => <StatusBadge status={row.status} label={row.status} />,
     },
     {
@@ -137,7 +151,7 @@ export default function RefundsListPage() {
               onClick={() => setApproveTarget(row)}
               disabled={reviewMutation.isPending}
             >
-              通过
+              {t('admin.refunds.approveButton')}
             </Button>
             <Button
               size="sm"
@@ -147,7 +161,7 @@ export default function RefundsListPage() {
                 setRejectNote('');
               }}
             >
-              驳回
+              {t('admin.refunds.rejectButton')}
             </Button>
           </div>
         ) : row.transactionId ? (
@@ -160,7 +174,10 @@ export default function RefundsListPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader title="退款管理" description="客户退款申请审核 + 退款进度跟踪" />
+      <PageHeader
+        title={t('admin.refunds.title')}
+        description={t('admin.refunds.description')}
+      />
 
       <Tabs
         value={statusFilter}
@@ -169,7 +186,7 @@ export default function RefundsListPage() {
         <TabsList>
           {STATUS_FILTERS.map((s) => (
             <TabsTrigger key={s.value} value={s.value}>
-              {s.label}
+              {t(s.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -178,11 +195,19 @@ export default function RefundsListPage() {
       {error ? (
         <ErrorState onRetry={() => refetch()} />
       ) : isLoading ? (
-        <div className="rounded-md border p-8 text-center text-muted-foreground">加载中...</div>
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
       ) : items.length === 0 ? (
         <EmptyState
-          title={`无${statusFilter === 'ALL' ? '' : statusFilter === 'PENDING' ? '待审核' : statusFilter === 'COMPLETED' ? '已退款' : statusFilter === 'REJECTED' ? '已驳回' : '已撤回'}退款`}
-          description="退款申请将在此显示"
+          title={t('admin.refunds.empty', {
+            status:
+              t(
+                STATUS_FILTERS.find((s) => s.value === statusFilter)?.labelKey ??
+                  'admin.refunds.statusAll',
+              ),
+          })}
+          description={t('admin.refunds.emptyDescription')}
         />
       ) : (
         <DataTable data={items} columns={columns} />
@@ -192,18 +217,22 @@ export default function RefundsListPage() {
       <Dialog open={!!approveTarget} onOpenChange={(open) => !open && setApproveTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认退款通过</DialogTitle>
+            <DialogTitle>{t('admin.refunds.approveDialogTitle')}</DialogTitle>
             <DialogDescription>
-              退款金额 {approveTarget ? formatCurrency(approveTarget.amount) : ''}将通过
-              {approveTarget?.refundMethod} 原路退回客户。通过后系统自动完成 mock 退款。
+              {t('admin.refunds.approveDialogDescription', {
+                amount: approveTarget ? formatCurrency(approveTarget.amount) : '',
+                method: approveTarget?.refundMethod ?? '',
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveTarget(null)}>
-              取消
+              {t('admin.refunds.commonCancel')}
             </Button>
             <Button onClick={handleApproveSubmit} disabled={reviewMutation.isPending}>
-              {reviewMutation.isPending ? '提交中...' : '确认退款'}
+              {reviewMutation.isPending
+                ? t('admin.refunds.approveDialogSubmitting')
+                : t('admin.refunds.approveDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -213,31 +242,33 @@ export default function RefundsListPage() {
       <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>驳回退款申请</DialogTitle>
+            <DialogTitle>{t('admin.refunds.rejectDialogTitle')}</DialogTitle>
             <DialogDescription>
-              {rejectTarget ? formatCurrency(rejectTarget.amount) : ''} — 请填写驳回原因
+              {t('admin.refunds.rejectDialogDescription', {
+                amount: rejectTarget ? formatCurrency(rejectTarget.amount) : '',
+              })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reject-note">驳回原因</Label>
+            <Label htmlFor="reject-note">{t('admin.refunds.rejectDialogReasonLabel')}</Label>
             <Textarea
               id="reject-note"
               value={rejectNote}
               onChange={(e) => setRejectNote(e.target.value)}
-              placeholder="例：商品无质量问题，不符合退款条件"
+              placeholder={t('admin.refunds.rejectDialogReasonPlaceholder')}
               rows={3}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              取消
+              {t('admin.refunds.commonCancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleRejectSubmit}
               disabled={!rejectNote.trim() || reviewMutation.isPending}
             >
-              确认驳回
+              {t('admin.refunds.rejectDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,33 +1,33 @@
 {
   "warehouse": {
-    "title": "Warehouse",
-    "code": "Code",
-    "name": "Name",
-    "address": "Address",
+    "title": "仓库",
+    "code": "代码",
+    "name": "名称",
+    "address": "地址",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "启用",
+      "inactive": "停用"
     }
   },
   "location": {
-    "title": "Location",
-    "scan": "Scan location"
+    "title": "位置",
+    "scan": "扫码定位"
   },
   "stock": {
-    "title": "Stock",
-    "in": "Inbound",
-    "out": "Outbound",
-    "adjust": "Adjust",
-    "current": "Current quantity",
-    "safety": "Safety stock",
-    "lowWarning": "Low stock warning"
+    "title": "库存",
+    "in": "入库",
+    "out": "出库",
+    "adjust": "调整",
+    "current": "当前数量",
+    "safety": "安全库存",
+    "lowWarning": "低库存预警"
   },
   "dispatch": {
-    "assign": "Assign order",
-    "pick": "Pick items"
+    "assign": "分配订单",
+    "pick": "拣货"
   },
   "delivery": {
-    "fee": "Delivery fee",
-    "range": "Delivery range"
+    "fee": "配送费",
+    "range": "配送范围"
   }
 }

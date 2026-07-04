@@ -39,7 +39,7 @@ function displayName(value: I18nText | unknown): string {
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const t = useTranslations();
+  const t = useTranslations('platform');
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
@@ -68,7 +68,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   if (error || !order) {
     return (
       <div className="space-y-6 p-6">
-        <PageHeader title={`${t('nav.orders')} #${id.slice(0, 8)}`} />
+        <PageHeader title={`${t('menu.orders')} #${id.slice(0, 8)}`} />
         <ErrorState onRetry={() => refetch()} />
       </div>
     );

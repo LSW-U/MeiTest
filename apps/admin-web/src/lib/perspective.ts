@@ -25,13 +25,13 @@ export type Perspective = (typeof PERSPECTIVES)[number];
 
 export const DEFAULT_PERSPECTIVE: Perspective = 'platform';
 
-/** 视角 → 默认落地路径 */
+/** 视角 → 默认落地路径（必须是 app/(dashboard)/ 下实际存在的路由） */
 export const PERSPECTIVE_HOME: Record<Perspective, string> = {
-  platform: '/platform',
-  merchant: '/merchant',
-  warehouse: '/warehouse',
-  support: '/support',
-  'rider-mgmt': '/rider-mgmt',
+  platform: '/dashboard',
+  merchant: '/dashboard',
+  warehouse: '/dashboard',
+  support: '/orders',
+  'rider-mgmt': '/riders',
 };
 
 /** 视角 → i18n key（platform namespace） */

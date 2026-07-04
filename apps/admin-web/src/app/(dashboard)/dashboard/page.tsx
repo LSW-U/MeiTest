@@ -9,6 +9,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, AlertCircle, ShoppingCart, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
@@ -18,17 +19,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { apiFetch, type ApiSuccess } from '@/lib/api';
 import { usePerspectiveStore } from '@/stores/perspective';
+import { PERSPECTIVE_LABEL_KEY } from '@/lib/perspective';
 import { cn } from '@/lib/utils';
 import type { components } from '@meimart/shared-types';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
 type TimeRange = 'today' | 'week' | 'month';
 
-const RANGES: { value: TimeRange; label: string }[] = [
-  { value: 'today', label: '今日' },
-  { value: 'week', label: '本周' },
-  { value: 'month', label: '本月' },
-];
+const RANGES: TimeRange[] = ['today', 'week', 'month'];
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -63,20 +61,23 @@ function useDashboardSummary(range: TimeRange) {
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('platform');
   const perspective = usePerspectiveStore((s) => s.perspective);
   const [range, setRange] = useState<TimeRange>('today');
 
   const { data, isLoading, error, refetch } = useDashboardSummary(range);
 
-  // platform 视角看完整 KPI；其他视角回退到 W 流程占位
+  // platform 视角看完整 KPI；其他视角回退到占位
   if (perspective !== 'platform') {
+    const perspectiveName = t(
+      PERSPECTIVE_LABEL_KEY[perspective].replace('platform.perspective.', 'perspective.'),
+    );
     return (
       <div className="space-y-6 p-6">
-        <PageHeader title="Dashboard" />
+        <PageHeader title={t('menu.dashboard')} />
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            当前视角 <span className="font-medium text-foreground">{perspective}</span> 暂未提供专属仪表盘。
-            切到 platform 视角查看完整 KPI（GMV / 订单 / 在线骑手 / 异常订单）。
+            {t('dashboard.fallback', { name: perspectiveName })}
           </CardContent>
         </Card>
       </div>
@@ -86,18 +87,18 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="Platform Dashboard"
-        description="实时业务 KPI + 趋势分析"
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
         action={
           <div className="flex gap-2">
             {RANGES.map((r) => (
               <Button
-                key={r.value}
+                key={r}
                 size="sm"
-                variant={range === r.value ? 'default' : 'outline'}
-                onClick={() => setRange(r.value)}
+                variant={range === r ? 'default' : 'outline'}
+                onClick={() => setRange(r)}
               >
-                {r.label}
+                {t(`dashboard.range.${r}`)}
               </Button>
             ))}
           </div>
@@ -111,27 +112,27 @@ export default function DashboardPage() {
           {/* KPI 卡片 */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <KpiCard
-              title="GMV"
+              title={t('dashboard.gmv')}
               icon={TrendingUp}
               value={data ? formatMoney(data.gmv) : undefined}
               growth={data?.gmvGrowthPct}
               loading={isLoading}
             />
             <KpiCard
-              title="订单数"
+              title={t('dashboard.orderCount')}
               icon={ShoppingCart}
               value={data ? data.orderCount.toLocaleString() : undefined}
               growth={data?.orderCountGrowthPct}
               loading={isLoading}
             />
             <KpiCard
-              title="在线骑手"
+              title={t('dashboard.onlineRiders')}
               icon={Bike}
               value={data ? data.onlineRiderCount.toString() : undefined}
               loading={isLoading}
             />
             <KpiCard
-              title="异常订单"
+              title={t('dashboard.abnormalOrders')}
               icon={AlertCircle}
               value={data ? data.abnormalOrderCount.toString() : undefined}
               loading={isLoading}
@@ -144,7 +145,7 @@ export default function DashboardPage() {
             {/* Trend（占 2 列） */}
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-sm">GMV / 订单趋势</CardTitle>
+                <CardTitle className="text-sm">{t('dashboard.trendTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -153,7 +154,7 @@ export default function DashboardPage() {
                   <TrendBars points={data.trend} />
                 ) : (
                   <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                    暂无趋势数据
+                    {t('dashboard.noTrendData')}
                   </div>
                 )}
               </CardContent>
@@ -162,7 +163,7 @@ export default function DashboardPage() {
             {/* Warehouse Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">仓库维度钻取</CardTitle>
+                <CardTitle className="text-sm">{t('dashboard.warehouseBreakdownTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -178,7 +179,10 @@ export default function DashboardPage() {
                         <div className="text-right">
                           <div className="font-mono text-xs">{formatMoney(w.gmv)}</div>
                           <div className="text-xs text-muted-foreground">
-                            {w.orderCount} 单 · {w.abnormalCount} 异常
+                            {t('dashboard.breakdownItem', {
+                              orders: w.orderCount,
+                              abnormal: w.abnormalCount,
+                            })}
                           </div>
                         </div>
                       </div>
@@ -186,7 +190,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                    暂无仓库数据
+                    {t('dashboard.noWarehouseData')}
                   </div>
                 )}
               </CardContent>
@@ -196,7 +200,7 @@ export default function DashboardPage() {
           {/* 时间范围信息 */}
           {data && (
             <div className="text-xs text-muted-foreground">
-              数据范围：{new Date(data.from).toLocaleString()} ~{' '}
+              {t('dashboard.dataRangeLabel')} {new Date(data.from).toLocaleString()} ~{' '}
               {new Date(data.to).toLocaleString()}
             </div>
           )}
@@ -216,6 +220,7 @@ interface KpiCardProps {
 }
 
 function KpiCard({ title, icon: Icon, value, growth, loading, variant }: KpiCardProps) {
+  const t = useTranslations('platform');
   return (
     <Card className={variant === 'destructive' ? 'border-destructive' : ''}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -242,7 +247,7 @@ function KpiCard({ title, icon: Icon, value, growth, loading, variant }: KpiCard
               >
                 {growth > 0 && <TrendingUp className="h-3 w-3" />}
                 {growth < 0 && <TrendingDown className="h-3 w-3" />}
-                {formatGrowth(growth)} vs 上周期
+                {formatGrowth(growth)} {t('dashboard.growth')}
               </div>
             )}
           </>

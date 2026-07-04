@@ -11,15 +11,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function PromotionsPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('admin.promotions.title')} description={t('admin.promotions.description')} />
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>占位页</AlertTitle>
+        <AlertTitle>{t('admin.promotions.placeholderTitle')}</AlertTitle>
         <AlertDescription>
-          促销 / 优惠券 / 满减不在 MVP 范围（CLAUDE.md 业务决策 4）。本页保留为 W6+ 扩展点。
+          {t('admin.promotions.placeholderDescription')}
         </AlertDescription>
       </Alert>
     </div>

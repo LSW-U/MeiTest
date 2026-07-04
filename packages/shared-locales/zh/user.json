@@ -1,29 +1,29 @@
 {
   "profile": {
-    "title": "My profile",
-    "edit": "Edit profile",
-    "name": "Name",
-    "avatar": "Avatar",
-    "phone": "Phone",
-    "email": "Email"
+    "title": "我的资料",
+    "edit": "编辑资料",
+    "name": "姓名",
+    "avatar": "头像",
+    "phone": "手机号",
+    "email": "邮箱"
   },
   "address": {
-    "title": "Addresses",
-    "add": "Add address",
-    "edit": "Edit",
-    "delete": "Delete",
-    "default": "Default",
-    "setAsDefault": "Set as default",
-    "name": "Recipient name",
-    "phone": "Recipient phone",
-    "region": "Region",
-    "detail": "Detail address",
-    "tag": "Tag (Home/Work)"
+    "title": "收货地址",
+    "add": "新增地址",
+    "edit": "编辑",
+    "delete": "删除",
+    "default": "默认",
+    "setAsDefault": "设为默认",
+    "name": "收件人姓名",
+    "phone": "收件人手机号",
+    "region": "地区",
+    "detail": "详细地址",
+    "tag": "标签（家/公司）"
   },
   "favorites": {
-    "title": "Favorites",
-    "add": "Add to favorites",
-    "remove": "Remove from favorites",
-    "empty": "No favorites yet"
+    "title": "收藏",
+    "add": "加入收藏",
+    "remove": "取消收藏",
+    "empty": "暂无收藏"
   }
 }

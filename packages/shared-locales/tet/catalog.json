@@ -1,39 +1,39 @@
 {
   "product": {
-    "title": "Product",
-    "detail": "Product detail",
-    "addToCart": "Add to cart",
-    "buyNow": "Buy now",
-    "outOfStock": "Out of stock",
-    "sales": "Sales",
-    "priceRange": "Price range",
-    "images": "Product images"
+    "title": "Produtu",
+    "detail": "Detalle produtu",
+    "addToCart": "Aumenta ba kerreka",
+    "buyNow": "Saa agora",
+    "outOfStock": "Stukuru",
+    "sales": "Sasaun",
+    "priceRange": "Range presu",
+    "images": "Imajen produtu"
   },
   "search": {
-    "title": "Search products",
-    "placeholder": "Search...",
-    "history": "Search history",
-    "hot": "Trending searches",
-    "noResult": "No products found"
+    "title": "Buka produtu",
+    "placeholder": "Buka...",
+    "history": "Istória buka",
+    "hot": "Buka populer",
+    "noResult": "La hetan produtu"
   },
   "filter": {
-    "title": "Filter",
-    "category": "Category",
-    "priceRange": "Price range",
+    "title": "Filtra",
+    "category": "Kategoria",
+    "priceRange": "Range presu",
     "reset": "Reset",
-    "apply": "Apply"
+    "apply": "Aplika"
   },
   "sort": {
-    "title": "Sort",
-    "default": "Default",
-    "priceAsc": "Price: Low to High",
-    "priceDesc": "Price: High to Low",
-    "salesDesc": "Best selling",
-    "newest": "Newest"
+    "title": "Ordena",
+    "default": "Padraun",
+    "priceAsc": "Presu: Ki'ik ba Barak",
+    "priceDesc": "Presu: Barak ba Ki'ik",
+    "salesDesc": "Sasaun barak",
+    "newest": "Foun"
   },
   "sku": {
-    "select": "Select specifications",
-    "quantity": "Quantity",
-    "available": "Available: {{count}}"
+    "select": "Hili especificasaun",
+    "quantity": "Kuantidade",
+    "available": "Disponivel: {{count}}"
   }
 }

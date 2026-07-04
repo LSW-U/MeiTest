@@ -1,19 +1,19 @@
 {
   "shop": {
-    "title": "Shop",
-    "edit": "Edit shop",
-    "name": "Shop name",
-    "phone": "Phone",
-    "address": "Address",
-    "announcement": "Announcement",
-    "businessHours": "Business hours",
+    "title": "Loja",
+    "edit": "Hadia loja",
+    "name": "Naran loja",
+    "phone": "Telefón",
+    "address": "Enderesu",
+    "announcement": "Anúnsiu",
+    "businessHours": "Oras serbisu",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Loke",
+      "inactive": "Taka"
     }
   },
   "category": {
-    "title": "Categories",
-    "list": "All categories"
+    "title": "Kategoria",
+    "list": "Kategoria hotu"
   }
 }

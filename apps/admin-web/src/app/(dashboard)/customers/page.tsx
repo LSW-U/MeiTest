@@ -11,16 +11,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function CustomersPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('admin.customers.title')} description={t('admin.customers.description')} />
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>占位页</AlertTitle>
+        <AlertTitle>{t('admin.customers.placeholderTitle')}</AlertTitle>
         <AlertDescription>
-          后端 <code className="rounded bg-muted px-1">/admin/customers</code> endpoint
-          待 W4/W5 实现。当前 user 模块仅支持客户端视角，admin 列表/详情接口未做。
+          {t('admin.customers.placeholderDescription')}
         </AlertDescription>
       </Alert>
     </div>

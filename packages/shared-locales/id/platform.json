@@ -13,7 +13,19 @@
     "auditLogs": "Log Audit",
     "systemConfig": "Konfigurasi Sistem",
     "im": "Pesan",
-    "settle": "Penyelesaian"
+    "settle": "Penyelesaian",
+    "products": "Produk",
+    "categories": "Kategori",
+    "warehouses": "Gudang",
+    "orders": "Pesanan",
+    "refunds": "Pengembalian",
+    "riders": "Kurir",
+    "customers": "Pelanggan",
+    "promotions": "Promosi",
+    "statistics": "Statistik",
+    "settings": "Pengaturan",
+    "footerFlow": "Alur W3-W",
+    "perspectiveLabel": "Perspektif"
   },
   "dashboard": {
     "title": "Dasbor Platform",
@@ -30,7 +42,13 @@
     "trendTitle": "Tren GMV / Pesanan",
     "warehouseBreakdownTitle": "Rincian per Gudang",
     "warehouseName": "Gudang",
-    "abnormalCount": "Abnormal"
+    "abnormalCount": "Abnormal",
+    "description": "KPI bisnis real-time + analisis tren",
+    "fallback": "Perspektif {name} saat ini tidak memiliki dasbor khusus. Beralih ke perspektif platform untuk KPI lengkap (GMV / Pesanan / Rider Online / Pesanan Abnormal).",
+    "noTrendData": "Tidak ada data tren",
+    "noWarehouseData": "Tidak ada data gudang",
+    "dataRangeLabel": "Rentang data:",
+    "breakdownItem": "{orders} pesanan · {abnormal} abnormal"
   },
   "audit": {
     "title": "Log Audit",

@@ -1,19 +1,19 @@
 {
   "shop": {
-    "title": "Shop",
-    "edit": "Edit shop",
-    "name": "Shop name",
-    "phone": "Phone",
-    "address": "Address",
-    "announcement": "Announcement",
-    "businessHours": "Business hours",
+    "title": "Loja",
+    "edit": "Editar loja",
+    "name": "Nome da loja",
+    "phone": "Telefone",
+    "address": "Endereço",
+    "announcement": "Anúncio",
+    "businessHours": "Horário de funcionamento",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Aberto",
+      "inactive": "Fechado"
     }
   },
   "category": {
-    "title": "Categories",
-    "list": "All categories"
+    "title": "Categorias",
+    "list": "Todas as categorias"
   }
 }

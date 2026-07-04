@@ -1,39 +1,39 @@
 {
   "product": {
-    "title": "Product",
-    "detail": "Product detail",
-    "addToCart": "Add to cart",
-    "buyNow": "Buy now",
-    "outOfStock": "Out of stock",
-    "sales": "Sales",
-    "priceRange": "Price range",
-    "images": "Product images"
+    "title": "Produto",
+    "detail": "Detalhe do produto",
+    "addToCart": "Adicionar ao carrinho",
+    "buyNow": "Comprar agora",
+    "outOfStock": "Sem estoque",
+    "sales": "Vendas",
+    "priceRange": "Faixa de preço",
+    "images": "Imagens do produto"
   },
   "search": {
-    "title": "Search products",
-    "placeholder": "Search...",
-    "history": "Search history",
-    "hot": "Trending searches",
-    "noResult": "No products found"
+    "title": "Buscar produtos",
+    "placeholder": "Buscar...",
+    "history": "Histórico de busca",
+    "hot": "Buscas em alta",
+    "noResult": "Nenhum produto encontrado"
   },
   "filter": {
-    "title": "Filter",
-    "category": "Category",
-    "priceRange": "Price range",
-    "reset": "Reset",
-    "apply": "Apply"
+    "title": "Filtrar",
+    "category": "Categoria",
+    "priceRange": "Faixa de preço",
+    "reset": "Redefinir",
+    "apply": "Aplicar"
   },
   "sort": {
-    "title": "Sort",
-    "default": "Default",
-    "priceAsc": "Price: Low to High",
-    "priceDesc": "Price: High to Low",
-    "salesDesc": "Best selling",
-    "newest": "Newest"
+    "title": "Ordenar",
+    "default": "Padrão",
+    "priceAsc": "Preço: Baixo para Alto",
+    "priceDesc": "Preço: Alto para Baixo",
+    "salesDesc": "Mais vendidos",
+    "newest": "Mais recentes"
   },
   "sku": {
-    "select": "Select specifications",
-    "quantity": "Quantity",
-    "available": "Available: {{count}}"
+    "select": "Selecionar especificações",
+    "quantity": "Quantidade",
+    "available": "Disponível: {{count}}"
   }
 }

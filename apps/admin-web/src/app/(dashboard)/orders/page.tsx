@@ -25,18 +25,18 @@ import {
 } from '@/hooks/api/use-orders';
 import { formatCurrency } from '@/lib/utils';
 
-const STATUS_FILTERS: { value: OrderStatus | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: '全部' },
-  { value: 'PENDING_PAYMENT', label: '待支付' },
-  { value: 'PENDING_CONFIRM', label: '待确认' },
-  { value: 'CONFIRMED', label: '已确认' },
-  { value: 'OUT_FOR_DELIVERY', label: '配送中' },
-  { value: 'DELIVERED_PAID', label: '已送达' },
-  { value: 'CANCELLED', label: '已取消' },
+const STATUS_FILTERS: { value: OrderStatus | 'ALL'; labelKey: string }[] = [
+  { value: 'ALL', labelKey: 'admin.orders.statusAll' },
+  { value: 'PENDING_PAYMENT', labelKey: 'admin.orders.statusPendingPayment' },
+  { value: 'PENDING_CONFIRM', labelKey: 'admin.orders.statusPendingConfirm' },
+  { value: 'CONFIRMED', labelKey: 'admin.orders.statusConfirmed' },
+  { value: 'OUT_FOR_DELIVERY', labelKey: 'admin.orders.statusOutForDelivery' },
+  { value: 'DELIVERED_PAID', labelKey: 'admin.orders.statusDeliveredPaid' },
+  { value: 'CANCELLED', labelKey: 'admin.orders.statusCancelled' },
 ];
 
 export default function OrdersListPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
@@ -52,7 +52,7 @@ export default function OrdersListPage() {
   const columns: Column<OrderListItem>[] = [
     {
       key: 'orderNo',
-      header: '订单号',
+      header: t('admin.orders.columnOrderNo'),
       render: (row) => (
         <button
           onClick={() => router.push(`/orders/${row.id}`)}
@@ -64,31 +64,31 @@ export default function OrdersListPage() {
     },
     {
       key: 'status',
-      header: '状态',
+      header: t('admin.orders.columnStatus'),
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'paymentStatus',
-      header: '支付',
+      header: t('admin.orders.columnPaymentStatus'),
       render: (row) => <StatusBadge status={row.paymentStatus} />,
     },
     {
       key: 'paymentMethod',
-      header: '支付方式',
+      header: t('admin.orders.columnPaymentMethod'),
       render: (row) => (
         <span className="text-muted-foreground">{row.paymentMethod}</span>
       ),
     },
     {
       key: 'payableAmount',
-      header: '应付金额',
+      header: t('admin.orders.columnPayableAmount'),
       render: (row) => (
         <span className="font-mono text-xs">{formatCurrency(row.payableAmount)}</span>
       ),
     },
     {
       key: 'createdAt',
-      header: '下单时间',
+      header: t('admin.orders.columnCreatedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
           {new Date(row.createdAt).toLocaleString()}
@@ -109,13 +109,13 @@ export default function OrdersListPage() {
           <TabsList>
             {STATUS_FILTERS.map((s) => (
               <TabsTrigger key={s.value} value={s.value}>
-                {s.label}
+                {t(s.labelKey)}
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
         <Input
-          placeholder="按订单号搜索（如 MM2026062...）"
+          placeholder={t('admin.orders.searchPlaceholder')}
           value={orderNoSearch}
           onChange={(e) => setOrderNoSearch(e.target.value)}
           className="w-64"
@@ -125,18 +125,18 @@ export default function OrdersListPage() {
       {error ? (
         <ErrorState onRetry={() => refetch()} />
       ) : isLoading ? (
-        <div className="rounded-md border p-8 text-center text-muted-foreground">加载中...</div>
+        <div className="rounded-md border p-8 text-center text-muted-foreground">{t('loading')}</div>
       ) : items.length === 0 ? (
         <EmptyState
-          title="暂无订单"
-          description={statusFilter === 'ALL' ? '还没有任何订单' : `无 ${statusFilter} 状态订单`}
+          title={t('admin.orders.empty')}
+          description={t('admin.orders.emptyDescription')}
         />
       ) : (
         <>
           <DataTable data={items} columns={columns} />
           {data?.hasMore && (
             <div className="text-center text-xs text-muted-foreground">
-              还有更多订单（{items.length} 已显示，游标分页加载更多待 W5 接入）
+              {t('admin.orders.loadMoreHint', { count: items.length })}
             </div>
           )}
         </>

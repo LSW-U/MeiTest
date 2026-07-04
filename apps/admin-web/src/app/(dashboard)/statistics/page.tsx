@@ -11,16 +11,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function StatisticsPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('admin.statistics.title')} description={t('admin.statistics.description')} />
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>占位页</AlertTitle>
+        <AlertTitle>{t('admin.statistics.placeholderTitle')}</AlertTitle>
         <AlertDescription>
-          M 流程 <code className="rounded bg-muted px-1">platform</code> 模块已提供 dashboard
-          summary，深度报表（趋势/漏斗/转化）待 W6 实现。
+          {t('admin.statistics.placeholderDescription')}
         </AlertDescription>
       </Alert>
     </div>

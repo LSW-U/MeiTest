@@ -5,16 +5,12 @@
  *   - GET/PATCH /admin/products/:id
  *   - PATCH /admin/products/:id/status
  *   - GET/POST /admin/products/:id/skus
- *
- * 三个 Tab：
- *   - 基本信息（编辑表单）
- *   - SKU 列表（新增/展示）
- *   - 危险操作（删除占位）
  */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -52,6 +48,7 @@ import { formatCurrency } from '@/lib/utils';
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
 export default function ProductDetailPage() {
+  const t = useTranslations('common');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -66,7 +63,6 @@ export default function ProductDetailPage() {
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
 
-  // 加载完后填表单
   useEffect(() => {
     if (productQ.data?.data) {
       setName(productQ.data.data.name ?? {});
@@ -115,12 +111,12 @@ export default function ProductDetailPage() {
   const skuColumns: Column<Sku>[] = [
     {
       key: 'name',
-      header: 'Name',
+      header: t('w.products.columnSkuName'),
       render: (row) => <span className="font-medium">{row.name?.en ?? '—'}</span>,
     },
     {
       key: 'attributes',
-      header: 'Attributes',
+      header: t('w.products.columnAttributes'),
       render: (row) =>
         row.attributes ? (
           <code className="text-xs">
@@ -134,14 +130,14 @@ export default function ProductDetailPage() {
     },
     {
       key: 'price',
-      header: 'Price',
+      header: t('w.products.columnPrice'),
       render: (row) => (
         <span className="font-mono text-xs">{formatCurrency(row.price)}</span>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('w.form.status'),
       render: (row) => <StatusBadge status={row.status} />,
     },
   ];
@@ -151,7 +147,7 @@ export default function ProductDetailPage() {
       <PageHeader
         title={product.name?.en ?? product.id}
         breadcrumb={[
-          { label: 'Products', href: '/products' },
+          { label: t('w.products.title'), href: '/products' },
           { label: product.name?.en ?? product.id },
         ]}
         action={
@@ -165,26 +161,28 @@ export default function ProductDetailPage() {
               })
             }
           >
-            {product.status === 'ACTIVE' ? '下架' : '上架'}
+            {product.status === 'ACTIVE'
+              ? t('w.status.toggle_off')
+              : t('w.status.toggle_on')}
           </Button>
         }
       />
 
       <Tabs defaultValue="basic">
         <TabsList>
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="skus">SKUs</TabsTrigger>
+          <TabsTrigger value="basic">{t('w.form.basicInfo')}</TabsTrigger>
+          <TabsTrigger value="skus">{t('w.products.skuListTitle')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Edit Product</CardTitle>
+              <CardTitle>{t('w.products.editProductTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {i18nInputs('Name', name, setName)}
+              {i18nInputs(t('w.form.name'), name, setName)}
               <div className="space-y-2">
-                <Label>Main Image URL</Label>
+                <Label>{t('w.form.mainImageUrl')}</Label>
                 <Input value={mainImage} onChange={(e) => setMainImage(e.target.value)} />
                 {mainImage && (
                   <img
@@ -194,26 +192,26 @@ export default function ProductDetailPage() {
                   />
                 )}
               </div>
-              {i18nInputs('Description', description, setDescription)}
+              {i18nInputs(t('w.form.description'), description, setDescription)}
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push('/products')}
                 >
-                  Back
+                  {t('w.form.back')}
                 </Button>
                 <Button
                   type="button"
                   onClick={handleSaveBasic}
                   disabled={updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? 'Saving...' : 'Save'}
+                  {updateMutation.isPending ? t('w.form.saving') : t('w.form.save')}
                 </Button>
               </div>
               {updateMutation.error && (
                 <p className="text-sm text-destructive">
-                  Save failed: {updateMutation.error.message}
+                  {t('w.form.saveFailed', { message: updateMutation.error.message })}
                 </p>
               )}
             </CardContent>
@@ -223,7 +221,7 @@ export default function ProductDetailPage() {
         <TabsContent value="skus" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>SKU List</CardTitle>
+              <CardTitle>{t('w.products.skuListTitle')}</CardTitle>
               <CreateSkuDialog
                 productId={id}
                 onCreate={(input) => createSkuMutation.mutate({ productId: id, input })}
@@ -262,6 +260,7 @@ function CreateSkuDialog({
   }) => void;
   pending: boolean;
 }) {
+  const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [nameEn, setNameEn] = useState('');
   const [price, setPrice] = useState('');
@@ -289,20 +288,20 @@ function CreateSkuDialog({
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          New SKU
+          {t('w.products.newSku')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create SKU for {productId}</DialogTitle>
+          <DialogTitle>{t('w.products.createSkuFor', { productId })}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
-            <Label>Name (EN)</Label>
+            <Label>{t('w.products.nameEnLabel')}</Label>
             <Input value={nameEn} onChange={(e) => setNameEn(e.target.value)} required />
           </div>
           <div className="space-y-1">
-            <Label>Price (USD)</Label>
+            <Label>{t('w.products.priceUsd')}</Label>
             <Input
               type="number"
               step="0.01"
@@ -313,28 +312,28 @@ function CreateSkuDialog({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label>Attribute Key</Label>
+              <Label>{t('w.products.attributeKey')}</Label>
               <Input
                 value={attrKey}
                 onChange={(e) => setAttrKey(e.target.value)}
-                placeholder="e.g. weight"
+                placeholder={t('w.products.attrKeyPlaceholder')}
               />
             </div>
             <div className="space-y-1">
-              <Label>Attribute Value</Label>
+              <Label>{t('w.products.attributeValue')}</Label>
               <Input
                 value={attrVal}
                 onChange={(e) => setAttrVal(e.target.value)}
-                placeholder="e.g. 500g"
+                placeholder={t('w.products.attrValPlaceholder')}
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t('w.form.cancel')}
             </Button>
             <Button type="submit" disabled={pending}>
-              Create
+              {t('w.form.create')}
             </Button>
           </div>
         </form>

@@ -1,39 +1,39 @@
 {
   "product": {
-    "title": "Product",
-    "detail": "Product detail",
-    "addToCart": "Add to cart",
-    "buyNow": "Buy now",
-    "outOfStock": "Out of stock",
-    "sales": "Sales",
-    "priceRange": "Price range",
-    "images": "Product images"
+    "title": "商品",
+    "detail": "商品详情",
+    "addToCart": "加入购物车",
+    "buyNow": "立即购买",
+    "outOfStock": "缺货",
+    "sales": "销量",
+    "priceRange": "价格区间",
+    "images": "商品图片"
   },
   "search": {
-    "title": "Search products",
-    "placeholder": "Search...",
-    "history": "Search history",
-    "hot": "Trending searches",
-    "noResult": "No products found"
+    "title": "搜索商品",
+    "placeholder": "搜索...",
+    "history": "搜索历史",
+    "hot": "热门搜索",
+    "noResult": "未找到商品"
   },
   "filter": {
-    "title": "Filter",
-    "category": "Category",
-    "priceRange": "Price range",
-    "reset": "Reset",
-    "apply": "Apply"
+    "title": "筛选",
+    "category": "分类",
+    "priceRange": "价格区间",
+    "reset": "重置",
+    "apply": "应用"
   },
   "sort": {
-    "title": "Sort",
-    "default": "Default",
-    "priceAsc": "Price: Low to High",
-    "priceDesc": "Price: High to Low",
-    "salesDesc": "Best selling",
-    "newest": "Newest"
+    "title": "排序",
+    "default": "默认",
+    "priceAsc": "价格从低到高",
+    "priceDesc": "价格从高到低",
+    "salesDesc": "销量优先",
+    "newest": "最新"
   },
   "sku": {
-    "select": "Select specifications",
-    "quantity": "Quantity",
-    "available": "Available: {{count}}"
+    "select": "选择规格",
+    "quantity": "数量",
+    "available": "可用：{{count}}"
   }
 }

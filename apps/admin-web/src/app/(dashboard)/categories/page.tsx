@@ -59,7 +59,7 @@ import {
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
 export default function CategoriesPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const categoriesQ = useCategories();
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
@@ -68,7 +68,7 @@ export default function CategoriesPage() {
   const columns: Column<Category>[] = [
     {
       key: 'icon',
-      header: 'Icon',
+      header: t('w.categories.columnIcon'),
       render: (row) =>
         row.iconUrl ? (
           <img src={row.iconUrl} alt="" className="h-8 w-8 rounded object-cover" />
@@ -80,27 +80,27 @@ export default function CategoriesPage() {
     },
     {
       key: 'name',
-      header: 'Name (EN)',
+      header: t('w.categories.columnNameEn'),
       render: (row) => <span className="font-medium">{row.name?.en ?? '—'}</span>,
     },
     {
       key: 'nameZh',
-      header: 'Name (ZH)',
+      header: t('w.categories.columnNameZh'),
       render: (row) => <span className="text-muted-foreground">{row.name?.zh ?? '—'}</span>,
     },
     {
       key: 'parentId',
-      header: 'Parent',
+      header: t('w.categories.columnParent'),
       render: (row) =>
         row.parentId ? (
           <code className="text-xs">{row.parentId.slice(0, 8)}...</code>
         ) : (
-          <span className="text-muted-foreground">—（top）</span>
+          <span className="text-muted-foreground">{t('w.categories.parentTop')}</span>
         ),
     },
     {
       key: 'sortOrder',
-      header: 'Sort',
+      header: t('w.categories.columnSort'),
       render: (row) => <span className="text-muted-foreground">{row.sortOrder ?? 0}</span>,
     },
   ];
@@ -109,7 +109,7 @@ export default function CategoriesPage() {
     <>
       <PageHeader
         title={t('w.categories.title') as string}
-        description="Manage product categories (MVP: flat list, no tree)."
+        description={t('w.categories.listDesc')}
       />
       {categoriesQ.isLoading ? (
         <LoadingSkeleton lines={5} />
@@ -124,8 +124,8 @@ export default function CategoriesPage() {
           columns={columns}
           emptyState={
             <EmptyState
-              title="No categories"
-              description="Use 'New Category' to create the first one."
+              title={t('w.categories.emptyTitle')}
+              description={t('w.categories.emptyDesc')}
             />
           }
           rowActions={(row) => (
@@ -147,7 +147,7 @@ export default function CategoriesPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>New Category</CardTitle>
+          <CardTitle>{t('w.categories.newCardTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <CreateCategoryForm
@@ -170,6 +170,7 @@ function CreateCategoryForm({
   pending: boolean;
   error?: string;
 }) {
+  const t = useTranslations('common');
   const [name, setName] = useState<I18nText>({});
   const [iconUrl, setIconUrl] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
@@ -193,7 +194,7 @@ function CreateCategoryForm({
         {(['en', 'zh', 'id', 'pt'] as Locale[]).map((locale) => (
           <div key={locale} className="space-y-1">
             <Label className="text-xs uppercase text-muted-foreground">
-              Name ({locale})
+              {t('w.categories.formNameLabel', { locale })}
             </Label>
             <Input
               value={name[locale] ?? ''}
@@ -205,7 +206,9 @@ function CreateCategoryForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label>Icon URL *</Label>
+          <Label>
+            {t('w.categories.formIconUrl')} <span className="text-destructive">*</span>
+          </Label>
           <Input
             value={iconUrl}
             onChange={(e) => setIconUrl(e.target.value)}
@@ -214,7 +217,7 @@ function CreateCategoryForm({
           />
         </div>
         <div className="space-y-1">
-          <Label>Sort Order</Label>
+          <Label>{t('w.categories.formSortOrder')}</Label>
           <Input
             type="number"
             value={sortOrder}
@@ -225,7 +228,7 @@ function CreateCategoryForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={pending}>
         <Plus className="mr-2 h-4 w-4" />
-        {pending ? 'Creating...' : 'Create Category'}
+        {pending ? t('w.categories.creating') : t('w.categories.createSubmit')}
       </Button>
     </form>
   );
@@ -240,6 +243,7 @@ function EditCategoryDialog({
   onSave: (input: { name: I18nText; iconUrl?: string; sortOrder?: number }) => void;
   pending: boolean;
 }) {
+  const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState<I18nText>(category.name ?? {});
   const [iconUrl, setIconUrl] = useState(category.iconUrl ?? '');
@@ -264,14 +268,14 @@ function EditCategoryDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Category</DialogTitle>
+          <DialogTitle>{t('w.categories.editDialogTitle')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {(['en', 'zh', 'id', 'pt'] as Locale[]).map((locale) => (
               <div key={locale} className="space-y-1">
                 <Label className="text-xs uppercase text-muted-foreground">
-                  Name ({locale})
+                  {t('w.categories.formNameLabel', { locale })}
                 </Label>
                 <Input
                   value={name[locale] ?? ''}
@@ -282,11 +286,11 @@ function EditCategoryDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Icon URL</Label>
+              <Label>{t('w.categories.formIconUrl')}</Label>
               <Input value={iconUrl} onChange={(e) => setIconUrl(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label>Sort Order</Label>
+              <Label>{t('w.categories.formSortOrder')}</Label>
               <Input
                 type="number"
                 value={sortOrder}
@@ -296,10 +300,10 @@ function EditCategoryDialog({
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t('w.categories.editCancel')}
             </Button>
             <Button type="submit" disabled={pending}>
-              Save
+              {t('w.categories.editSave')}
             </Button>
           </div>
         </form>
@@ -318,7 +322,7 @@ function DeleteCategoryDialog({
   onConfirm: () => void;
 }) {
   const { toast } = useToast();
-  const t = useTranslations();
+  const t = useTranslations('common');
   const [open, setOpen] = useState(false);
 
   const handleConfirm = () => {
@@ -340,20 +344,19 @@ function DeleteCategoryDialog({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete category?</AlertDialogTitle>
+          <AlertDialogTitle>{t('w.categories.deleteTitle')}</AlertDialogTitle>
           <AlertDialogDescription>
-            This will deactivate &ldquo;{category.name?.en ?? category.id}&rdquo;. Products in this
-            category will keep their categoryId but won&rsquo;t show under any active category.
+            {t('w.categories.deleteDesc')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('w.categories.deleteCancel')}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={pending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {pending ? 'Deleting...' : 'Delete'}
+            {pending ? t('w.categories.deleting') : t('w.categories.deleteConfirm')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

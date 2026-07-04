@@ -22,7 +22,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
 export default function ProductsListPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const router = useRouter();
   const { immediateValue, debouncedValue, setImmediateValue } = useDebouncedSearch('');
 
@@ -34,7 +34,7 @@ export default function ProductsListPage() {
   const columns: Column<Product>[] = [
     {
       key: 'mainImage',
-      header: 'Image',
+      header: t('w.products.columnImage'),
       render: (row) =>
         row.mainImage ? (
           <img
@@ -53,17 +53,17 @@ export default function ProductsListPage() {
     },
     {
       key: 'name',
-      header: 'Name (EN)',
+      header: t('w.products.columnNameEn'),
       render: (row) => <span className="font-medium">{row.name?.en ?? '—'}</span>,
     },
     {
       key: 'nameZh',
-      header: 'Name (ZH)',
+      header: t('w.products.columnNameZh'),
       render: (row) => <span className="text-muted-foreground">{row.name?.zh ?? '—'}</span>,
     },
     {
       key: 'priceMin',
-      header: 'Min Price',
+      header: t('w.products.columnMinPrice'),
       render: (row) =>
         row.priceMin != null ? (
           <span className="font-mono text-xs">{formatCurrency(row.priceMin)}</span>
@@ -73,12 +73,12 @@ export default function ProductsListPage() {
     },
     {
       key: 'salesCount',
-      header: 'Sales',
+      header: t('w.products.columnSales'),
       render: (row) => <span className="text-muted-foreground">{row.salesCount ?? 0}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('w.products.columnStatus'),
       render: (row) => <StatusBadge status={row.status} />,
     },
   ];

@@ -1,29 +1,29 @@
 {
   "profile": {
-    "title": "My profile",
-    "edit": "Edit profile",
-    "name": "Name",
+    "title": "Hau-nia profil",
+    "edit": "Hadia profil",
+    "name": "Naran",
     "avatar": "Avatar",
-    "phone": "Phone",
+    "phone": "Telefón",
     "email": "Email"
   },
   "address": {
-    "title": "Addresses",
-    "add": "Add address",
-    "edit": "Edit",
-    "delete": "Delete",
-    "default": "Default",
-    "setAsDefault": "Set as default",
-    "name": "Recipient name",
-    "phone": "Recipient phone",
-    "region": "Region",
-    "detail": "Detail address",
-    "tag": "Tag (Home/Work)"
+    "title": "Enderesu",
+    "add": "Aumenta enderesu",
+    "edit": "Hadia",
+    "delete": "Hapus",
+    "default": "Padraun",
+    "setAsDefault": "Hanesan padraun",
+    "name": "Naran reseptor",
+    "phone": "Telefón reseptor",
+    "region": "Rejiaun",
+    "detail": "Enderesu detalle",
+    "tag": "Tag (Uma/Servisu)"
   },
   "favorites": {
-    "title": "Favorites",
-    "add": "Add to favorites",
-    "remove": "Remove from favorites",
-    "empty": "No favorites yet"
+    "title": "Favoritu",
+    "add": "Aumenta ba favoritu",
+    "remove": "Hapus husi favoritu",
+    "empty": "Seidauk iha favoritu"
   }
 }

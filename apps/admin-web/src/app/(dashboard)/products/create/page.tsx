@@ -40,7 +40,7 @@ import type { I18nText } from '@/hooks/api/use-products';
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
 export default function CreateProductPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const router = useRouter();
   const createMutation = useCreateProduct();
   const categoriesQ = useCategories();
@@ -55,10 +55,7 @@ export default function CreateProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mainImage || !unit.en) {
-      // 表单已 required，理论上不会到这；防御
-      return;
-    }
+    if (!mainImage || !unit.en) return;
     try {
       const res = await createMutation.mutateAsync({
         name,
@@ -104,16 +101,16 @@ export default function CreateProductPage() {
       <PageHeader
         title={t('w.products.create') as string}
         breadcrumb={[
-          { label: 'Products', href: '/products' },
-          { label: 'Create' },
+          { label: t('w.products.title'), href: '/products' },
+          { label: t('w.products.create') },
         ]}
         action={
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
+              {t('w.form.cancel')}
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Saving...' : 'Save'}
+              {createMutation.isPending ? t('w.form.saving') : t('w.form.save')}
             </Button>
           </div>
         }
@@ -121,18 +118,20 @@ export default function CreateProductPage() {
 
       {createMutation.error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Error: {createMutation.error.message}
+          {t('w.form.errorPrefix', { message: createMutation.error.message })}
         </div>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Basic Info</CardTitle>
+          <CardTitle>{t('w.form.basicInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {i18nField('Name', name, setName, 'Product name', 'en')}
+          {i18nField(t('w.form.name'), name, setName, 'Product name', 'en')}
           <div className="space-y-2">
-            <Label>Main Image URL *</Label>
+            <Label>
+              {t('w.form.mainImageUrl')} <span className="text-destructive">*</span>
+            </Label>
             <Input
               value={mainImage}
               onChange={(e) => setMainImage(e.target.value)}
@@ -150,14 +149,20 @@ export default function CreateProductPage() {
               />
             )}
           </div>
-          {i18nField('Description', description, setDescription, 'Optional description')}
-          {i18nField('Unit *', unit, setUnit, 'e.g. bottle / 瓶 / botol', 'en')}
+          {i18nField(t('w.form.description'), description, setDescription, 'Optional description')}
+          {i18nField(
+            `${t('w.products.unit')} *`,
+            unit,
+            setUnit,
+            t('w.products.unitPlaceholder'),
+            'en',
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label>{t('w.form.category')}</Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select category (optional)" />
+                  <SelectValue placeholder={t('w.form.selectCategoryOptional')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => (
@@ -169,14 +174,14 @@ export default function CreateProductPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('w.form.status')}</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as 'ACTIVE' | 'INACTIVE')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                  <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                  <SelectItem value="ACTIVE">{t('w.status.active')}</SelectItem>
+                  <SelectItem value="INACTIVE">{t('w.status.inactive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

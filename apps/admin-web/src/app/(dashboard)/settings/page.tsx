@@ -11,16 +11,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 
 export default function SettingsPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('admin.settings.title')} description={t('admin.settings.description')} />
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>占位页</AlertTitle>
+        <AlertTitle>{t('admin.settings.placeholderTitle')}</AlertTitle>
         <AlertDescription>
-          M 流程 <code className="rounded bg-muted px-1">platform/system-config</code> 后端
-          已实现（CRUD + Redis cache-aside），admin UI 待 W4 补。
+          {t('admin.settings.placeholderDescription')}
         </AlertDescription>
       </Alert>
     </div>

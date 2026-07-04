@@ -36,14 +36,14 @@ import {
 
 const STATUS_FILTERS: ApplicationStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
 
-const STATUS_LABEL: Record<ApplicationStatus, string> = {
-  PENDING: '待审核',
-  APPROVED: '已通过',
-  REJECTED: '已拒绝',
+const STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
+  PENDING: 'admin.riders.statusPending',
+  APPROVED: 'admin.riders.statusApproved',
+  REJECTED: 'admin.riders.statusRejected',
 };
 
 export default function RidersListPage() {
-  const t = useTranslations();
+  const t = useTranslations('common');
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus>('PENDING');
   const [approveTarget, setApproveTarget] = useState<RiderApplication | null>(null);
   const [rejectTarget, setRejectTarget] = useState<RiderApplication | null>(null);
@@ -86,17 +86,17 @@ export default function RidersListPage() {
   const columns: Column<RiderApplication>[] = [
     {
       key: 'riderName',
-      header: 'Name',
+      header: t('admin.riders.columnName'),
       render: (row) => <span className="font-medium">{row.riderName}</span>,
     },
     {
       key: 'phone',
-      header: 'Phone',
+      header: t('admin.riders.columnPhone'),
       render: (row) => <span className="font-mono text-xs">{row.phone}</span>,
     },
     {
       key: 'vehicleType',
-      header: 'Vehicle',
+      header: t('admin.riders.columnVehicle'),
       render: (row) => (
         <span className="text-muted-foreground">
           {row.vehicleType} {row.vehiclePlate ? `(${row.vehiclePlate})` : ''}
@@ -105,7 +105,7 @@ export default function RidersListPage() {
     },
     {
       key: 'createdAt',
-      header: 'Applied At',
+      header: t('admin.riders.columnAppliedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
           {new Date(row.createdAt).toLocaleString()}
@@ -114,7 +114,7 @@ export default function RidersListPage() {
     },
     {
       key: 'applicationStatus',
-      header: 'Status',
+      header: t('admin.riders.columnStatus'),
       render: (row) => <ApplicationStatusBadge status={row.applicationStatus} />,
     },
     {
@@ -128,7 +128,7 @@ export default function RidersListPage() {
               onClick={() => setApproveTarget(row)}
               disabled={reviewMutation.isPending}
             >
-              通过
+              {t('admin.riders.approveButton')}
             </Button>
             <Button
               size="sm"
@@ -138,7 +138,7 @@ export default function RidersListPage() {
                 setRejectReason('');
               }}
             >
-              拒绝
+              {t('admin.riders.rejectButton')}
             </Button>
           </div>
         ) : null,
@@ -153,7 +153,7 @@ export default function RidersListPage() {
         <TabsList>
           {STATUS_FILTERS.map((s) => (
             <TabsTrigger key={s} value={s}>
-              {STATUS_LABEL[s]}
+              {t(STATUS_LABEL_KEY[s])}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -162,11 +162,13 @@ export default function RidersListPage() {
       {error ? (
         <ErrorState onRetry={() => refetch()} />
       ) : isLoading ? (
-        <div className="rounded-md border p-8 text-center text-muted-foreground">加载中...</div>
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
       ) : items.length === 0 ? (
         <EmptyState
-          title={`无${STATUS_LABEL[statusFilter]}申请`}
-          description="骑手入驻申请将在此显示"
+          title={t('admin.riders.empty', { status: t(STATUS_LABEL_KEY[statusFilter]) })}
+          description={t('admin.riders.emptyDescription')}
         />
       ) : (
         <DataTable data={items} columns={columns} />
@@ -176,17 +178,19 @@ export default function RidersListPage() {
       <Dialog open={!!approveTarget} onOpenChange={(open) => !open && setApproveTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认通过骑手申请</DialogTitle>
+            <DialogTitle>{t('admin.riders.approveDialogTitle')}</DialogTitle>
             <DialogDescription>
-              {approveTarget?.riderName}（{approveTarget?.phone}）通过后骑手可上线接单
+              <span className="font-medium text-foreground">{approveTarget?.riderName}</span>
+              {' '}
+              ({approveTarget?.phone}) — {t('admin.riders.approveDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveTarget(null)}>
-              取消
+              {t('admin.riders.commonCancel')}
             </Button>
             <Button onClick={handleApproveSubmit} disabled={reviewMutation.isPending}>
-              {reviewMutation.isPending ? '提交中...' : '确认通过'}
+              {reviewMutation.isPending ? t('loading') : t('admin.riders.approveDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -196,31 +200,33 @@ export default function RidersListPage() {
       <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>拒绝骑手申请</DialogTitle>
+            <DialogTitle>{t('admin.riders.rejectDialogTitle')}</DialogTitle>
             <DialogDescription>
-              {rejectTarget?.riderName}（{rejectTarget?.phone}）— 请填写拒绝原因
+              <span className="font-medium text-foreground">{rejectTarget?.riderName}</span>
+              {' '}
+              ({rejectTarget?.phone}) — {t('admin.riders.rejectDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reject-reason">拒绝原因</Label>
+            <Label htmlFor="reject-reason">{t('admin.riders.rejectDialogReasonLabel')}</Label>
             <Textarea
               id="reject-reason"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="例：身份证号无效，请重新提交"
+              placeholder={t('admin.riders.rejectDialogReasonPlaceholder')}
               rows={3}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              取消
+              {t('admin.riders.commonCancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleRejectSubmit}
               disabled={!rejectReason.trim() || reviewMutation.isPending}
             >
-              确认拒绝
+              {t('admin.riders.rejectDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -230,5 +236,6 @@ export default function RidersListPage() {
 }
 
 function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
-  return <StatusBadge status={status} label={STATUS_LABEL[status]} />;
+  const t = useTranslations('common');
+  return <StatusBadge status={status} label={t(STATUS_LABEL_KEY[status])} />;
 }

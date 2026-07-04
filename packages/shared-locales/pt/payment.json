@@ -1,29 +1,29 @@
 {
   "payment": {
-    "title": "Payment",
+    "title": "Pagamento",
     "method": {
-      "title": "Payment method",
-      "cod": "Cash on delivery",
-      "bankTransfer": "Bank transfer",
+      "title": "Método de pagamento",
+      "cod": "Pagamento na entrega",
+      "bankTransfer": "Transferência bancária",
       "wechat": "WeChat Pay",
       "paypal": "PayPal",
       "stripe": "Stripe"
     },
-    "processing": "Processing payment...",
-    "success": "Payment successful",
-    "failed": "Payment failed",
+    "processing": "Processando pagamento...",
+    "success": "Pagamento bem-sucedido",
+    "failed": "Pagamento falhou",
     "refund": {
-      "title": "Refund",
-      "pending": "Refund processing",
-      "success": "Refund successful",
-      "failed": "Refund failed"
+      "title": "Reembolso",
+      "pending": "Reembolso em processamento",
+      "success": "Reembolso bem-sucedido",
+      "failed": "Reembolso falhou"
     },
     "receipt": {
-      "title": "Payment receipt",
-      "upload": "Upload receipt",
-      "preview": "Preview receipt"
+      "title": "Recibo de pagamento",
+      "upload": "Carregar recibo",
+      "preview": "Visualizar recibo"
     },
-    "waiting": "Waiting for payment",
-    "cancel": "Cancel payment"
+    "waiting": "Aguardando pagamento",
+    "cancel": "Cancelar pagamento"
   }
 }

@@ -1,33 +1,33 @@
 {
   "warehouse": {
-    "title": "Warehouse",
-    "code": "Code",
-    "name": "Name",
-    "address": "Address",
+    "title": "Armazém",
+    "code": "Código",
+    "name": "Nome",
+    "address": "Endereço",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Ativo",
+      "inactive": "Inativo"
     }
   },
   "location": {
-    "title": "Location",
-    "scan": "Scan location"
+    "title": "Localização",
+    "scan": "Escanear localização"
   },
   "stock": {
-    "title": "Stock",
-    "in": "Inbound",
-    "out": "Outbound",
-    "adjust": "Adjust",
-    "current": "Current quantity",
-    "safety": "Safety stock",
-    "lowWarning": "Low stock warning"
+    "title": "Estoque",
+    "in": "Entrada",
+    "out": "Saída",
+    "adjust": "Ajustar",
+    "current": "Quantidade atual",
+    "safety": "Estoque de segurança",
+    "lowWarning": "Aviso de estoque baixo"
   },
   "dispatch": {
-    "assign": "Assign order",
-    "pick": "Pick items"
+    "assign": "Atribuir pedido",
+    "pick": "Coletar itens"
   },
   "delivery": {
-    "fee": "Delivery fee",
-    "range": "Delivery range"
+    "fee": "Taxa de entrega",
+    "range": "Área de cobertura"
   }
 }

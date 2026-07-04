@@ -1,29 +1,29 @@
 {
   "payment": {
-    "title": "Payment",
+    "title": "Pagamentu",
     "method": {
-      "title": "Payment method",
-      "cod": "Cash on delivery",
-      "bankTransfer": "Bank transfer",
+      "title": "Metodu pagamentu",
+      "cod": "Paga iha entrega",
+      "bankTransfer": "Transferénsia bank",
       "wechat": "WeChat Pay",
       "paypal": "PayPal",
       "stripe": "Stripe"
     },
-    "processing": "Processing payment...",
-    "success": "Payment successful",
-    "failed": "Payment failed",
+    "processing": "Halo hela pagamentu...",
+    "success": "Pagamentu diak",
+    "failed": "Pagamentu sala",
     "refund": {
       "title": "Refund",
-      "pending": "Refund processing",
-      "success": "Refund successful",
-      "failed": "Refund failed"
+      "pending": "Refund halo hela",
+      "success": "Refund diak",
+      "failed": "Refund sala"
     },
     "receipt": {
-      "title": "Payment receipt",
-      "upload": "Upload receipt",
-      "preview": "Preview receipt"
+      "title": "Recibu pagamentu",
+      "upload": "Upload recibu",
+      "preview": "Hori recibu"
     },
-    "waiting": "Waiting for payment",
-    "cancel": "Cancel payment"
+    "waiting": "Hein pagamentu",
+    "cancel": "Kansa pagamentu"
   }
 }

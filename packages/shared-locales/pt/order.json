@@ -1,64 +1,64 @@
 {
   "order": {
     "list": {
-      "title": "My orders",
-      "empty": "No orders yet"
+      "title": "Meus pedidos",
+      "empty": "Sem pedidos"
     },
     "detail": {
-      "title": "Order detail"
+      "title": "Detalhe do pedido"
     },
-    "place": "Place order",
-    "cancel": "Cancel order",
-    "cancelReason": "Cancel reason",
-    "confirmReceive": "Confirm received",
-    "reorder": "Re-order",
-    "number": "Order number",
-    "createdAt": "Created at",
-    "warehouse": "Warehouse",
-    "remark": "Remark"
+    "place": "Fazer pedido",
+    "cancel": "Cancelar pedido",
+    "cancelReason": "Motivo do cancelamento",
+    "confirmReceive": "Confirmar recebimento",
+    "reorder": "Pedir novamente",
+    "number": "Número do pedido",
+    "createdAt": "Criado em",
+    "warehouse": "Armazém",
+    "remark": "Observação"
   },
   "status": {
-    "pendingPayment": "Pending payment",
-    "pendingConfirm": "Pending confirm",
-    "confirmed": "Confirmed",
-    "picked": "Picked",
-    "outForDelivery": "Out for delivery",
-    "deliveredPaid": "Delivered (paid)",
-    "delivered": "Delivered",
-    "deliveredUnpaid": "Delivered (unpaid)",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "pendingPayment": "Pagamento pendente",
+    "pendingConfirm": "Confirmação pendente",
+    "confirmed": "Confirmado",
+    "picked": "Coletado",
+    "outForDelivery": "Saiu para entrega",
+    "deliveredPaid": "Entregue (pago)",
+    "delivered": "Entregue",
+    "deliveredUnpaid": "Entregue (não pago)",
+    "completed": "Concluído",
+    "cancelled": "Cancelado"
   },
   "items": {
-    "title": "Items",
-    "quantity": "Quantity",
-    "unitPrice": "Unit price",
+    "title": "Itens",
+    "quantity": "Quantidade",
+    "unitPrice": "Preço unitário",
     "subtotal": "Subtotal"
   },
   "address": {
-    "title": "Delivery address",
-    "recipient": "Recipient",
-    "phone": "Phone",
-    "detail": "Address"
+    "title": "Endereço de entrega",
+    "recipient": "Destinatário",
+    "phone": "Telefone",
+    "detail": "Endereço"
   },
   "amount": {
     "total": "Total",
-    "delivery": "Delivery fee",
-    "discount": "Discount",
-    "payable": "Payable"
+    "delivery": "Taxa de entrega",
+    "discount": "Desconto",
+    "payable": "Pagável"
   },
   "tracking": {
-    "title": "Order tracking",
+    "title": "Rastrear pedido",
     "rider": "Rider",
-    "riderName": "Rider name",
-    "riderPhone": "Rider phone",
-    "eta": "Estimated arrival",
-    "distance": "Distance"
+    "riderName": "Nome do rider",
+    "riderPhone": "Telefone do rider",
+    "eta": "Chegada estimada",
+    "distance": "Distância"
   },
   "review": {
-    "title": "Write a review",
-    "rating": "Rating",
-    "content": "Review content",
-    "submit": "Submit review"
+    "title": "Escrever avaliação",
+    "rating": "Avaliação",
+    "content": "Conteúdo da avaliação",
+    "submit": "Enviar avaliação"
   }
 }

@@ -1,64 +1,64 @@
 {
   "order": {
     "list": {
-      "title": "My orders",
-      "empty": "No orders yet"
+      "title": "Pesanan saya",
+      "empty": "Belum ada pesanan"
     },
     "detail": {
-      "title": "Order detail"
+      "title": "Detail pesanan"
     },
-    "place": "Place order",
-    "cancel": "Cancel order",
-    "cancelReason": "Cancel reason",
-    "confirmReceive": "Confirm received",
-    "reorder": "Re-order",
-    "number": "Order number",
-    "createdAt": "Created at",
-    "warehouse": "Warehouse",
-    "remark": "Remark"
+    "place": "Buat pesanan",
+    "cancel": "Batalkan pesanan",
+    "cancelReason": "Alasan pembatalan",
+    "confirmReceive": "Konfirmasi diterima",
+    "reorder": "Pesan lagi",
+    "number": "Nomor pesanan",
+    "createdAt": "Dibuat pada",
+    "warehouse": "Gudang",
+    "remark": "Catatan"
   },
   "status": {
-    "pendingPayment": "Pending payment",
-    "pendingConfirm": "Pending confirm",
-    "confirmed": "Confirmed",
-    "picked": "Picked",
-    "outForDelivery": "Out for delivery",
-    "deliveredPaid": "Delivered (paid)",
-    "delivered": "Delivered",
-    "deliveredUnpaid": "Delivered (unpaid)",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "pendingPayment": "Menunggu pembayaran",
+    "pendingConfirm": "Menunggu konfirmasi",
+    "confirmed": "Dikonfirmasi",
+    "picked": "Diambil",
+    "outForDelivery": "Sedang diantar",
+    "deliveredPaid": "Terkirim (dibayar)",
+    "delivered": "Terkirim",
+    "deliveredUnpaid": "Terkirim (belum dibayar)",
+    "completed": "Selesai",
+    "cancelled": "Dibatalkan"
   },
   "items": {
-    "title": "Items",
-    "quantity": "Quantity",
-    "unitPrice": "Unit price",
+    "title": "Item",
+    "quantity": "Jumlah",
+    "unitPrice": "Harga satuan",
     "subtotal": "Subtotal"
   },
   "address": {
-    "title": "Delivery address",
-    "recipient": "Recipient",
-    "phone": "Phone",
-    "detail": "Address"
+    "title": "Alamat pengiriman",
+    "recipient": "Penerima",
+    "phone": "Telepon",
+    "detail": "Alamat"
   },
   "amount": {
     "total": "Total",
-    "delivery": "Delivery fee",
-    "discount": "Discount",
-    "payable": "Payable"
+    "delivery": "Ongkos kirim",
+    "discount": "Diskon",
+    "payable": "Bayar"
   },
   "tracking": {
-    "title": "Order tracking",
+    "title": "Lacak pesanan",
     "rider": "Rider",
-    "riderName": "Rider name",
-    "riderPhone": "Rider phone",
-    "eta": "Estimated arrival",
-    "distance": "Distance"
+    "riderName": "Nama rider",
+    "riderPhone": "Telepon rider",
+    "eta": "Estimasi tiba",
+    "distance": "Jarak"
   },
   "review": {
-    "title": "Write a review",
+    "title": "Tulis ulasan",
     "rating": "Rating",
-    "content": "Review content",
-    "submit": "Submit review"
+    "content": "Konten ulasan",
+    "submit": "Kirim ulasan"
   }
 }

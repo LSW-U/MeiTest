@@ -19,6 +19,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   Package,
@@ -36,7 +37,7 @@ import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   perspectives: readonly string[];
@@ -44,67 +45,67 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    label: 'Dashboard',
+    labelKey: 'menu.dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
     perspectives: ['platform', 'merchant', 'warehouse'],
   },
   {
-    label: 'Products',
+    labelKey: 'menu.products',
     href: '/products',
     icon: Package,
     perspectives: ['platform', 'merchant'],
   },
   {
-    label: 'Categories',
+    labelKey: 'menu.categories',
     href: '/categories',
     icon: FolderTree,
     perspectives: ['platform', 'merchant'],
   },
   {
-    label: 'Warehouses',
+    labelKey: 'menu.warehouses',
     href: '/warehouses',
     icon: Warehouse,
     perspectives: ['platform', 'warehouse'],
   },
   {
-    label: 'Orders',
+    labelKey: 'menu.orders',
     href: '/orders',
     icon: ShoppingCart,
     perspectives: ['platform', 'merchant', 'warehouse', 'support'],
   },
   {
-    label: 'Refunds',
+    labelKey: 'menu.refunds',
     href: '/refunds',
     icon: RotateCcw,
-    perspectives: ['platform', 'merchant', 'customer_service'],
+    perspectives: ['platform', 'merchant', 'support'],
   },
   {
-    label: 'Riders',
+    labelKey: 'menu.riders',
     href: '/riders',
     icon: Bike,
     perspectives: ['platform', 'rider-mgmt'],
   },
   {
-    label: 'Customers',
+    labelKey: 'menu.customers',
     href: '/customers',
     icon: Users,
     perspectives: ['platform'],
   },
   {
-    label: 'Promotions',
+    labelKey: 'menu.promotions',
     href: '/promotions',
     icon: Tag,
     perspectives: ['platform'],
   },
   {
-    label: 'Statistics',
+    labelKey: 'menu.statistics',
     href: '/statistics',
     icon: BarChart3,
     perspectives: ['platform'],
   },
   {
-    label: 'Settings',
+    labelKey: 'menu.settings',
     href: '/settings',
     icon: Settings,
     perspectives: ['platform'],
@@ -112,6 +113,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar() {
+  const t = useTranslations('platform');
   const pathname = usePathname();
   const perspective = usePerspectiveStore((s) => s.perspective);
 
@@ -137,16 +139,16 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-4 w-4" />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           );
         })}
       </nav>
       <div className="border-t p-3 text-xs text-muted-foreground">
         <p>
-          Perspective: <span className="font-medium text-foreground">{perspective}</span>
+          {t('menu.perspectiveLabel')}: <span className="font-medium text-foreground">{perspective}</span>
         </p>
-        <p className="mt-1">W3-W flow</p>
+        <p className="mt-1">{t('menu.footerFlow')}</p>
       </div>
     </aside>
   );

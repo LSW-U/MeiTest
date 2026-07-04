@@ -1,19 +1,19 @@
 {
   "shop": {
-    "title": "Shop",
-    "edit": "Edit shop",
-    "name": "Shop name",
-    "phone": "Phone",
-    "address": "Address",
-    "announcement": "Announcement",
-    "businessHours": "Business hours",
+    "title": "Toko",
+    "edit": "Edit toko",
+    "name": "Nama toko",
+    "phone": "Telepon",
+    "address": "Alamat",
+    "announcement": "Pengumuman",
+    "businessHours": "Jam buka",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Buka",
+      "inactive": "Tutup"
     }
   },
   "category": {
-    "title": "Categories",
-    "list": "All categories"
+    "title": "Kategori",
+    "list": "Semua kategori"
   }
 }

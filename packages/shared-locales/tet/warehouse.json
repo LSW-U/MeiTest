@@ -1,33 +1,33 @@
 {
   "warehouse": {
-    "title": "Warehouse",
-    "code": "Code",
-    "name": "Name",
-    "address": "Address",
+    "title": "Armazén",
+    "code": "Kódigu",
+    "name": "Naran",
+    "address": "Enderesu",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Ativu",
+      "inactive": "Inativu"
     }
   },
   "location": {
-    "title": "Location",
-    "scan": "Scan location"
+    "title": "Localizasaun",
+    "scan": "Eskaneia lokalizasaun"
   },
   "stock": {
-    "title": "Stock",
-    "in": "Inbound",
-    "out": "Outbound",
-    "adjust": "Adjust",
-    "current": "Current quantity",
-    "safety": "Safety stock",
-    "lowWarning": "Low stock warning"
+    "title": "Stok",
+    "in": "Tama",
+    "out": "Sai",
+    "adjust": "Ajusta",
+    "current": "Kuantidade atual",
+    "safety": "Stok seguru",
+    "lowWarning": "Avizu stok karuk"
   },
   "dispatch": {
-    "assign": "Assign order",
-    "pick": "Pick items"
+    "assign": "Atribui order",
+    "pick": "Sima item"
   },
   "delivery": {
-    "fee": "Delivery fee",
-    "range": "Delivery range"
+    "fee": "Taxa entrega",
+    "range": "Area entrega"
   }
 }
