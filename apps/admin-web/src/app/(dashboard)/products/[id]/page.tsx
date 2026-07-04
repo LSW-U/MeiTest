@@ -258,9 +258,13 @@ export default function ProductDetailPage() {
                 <Button
                   type="button"
                   onClick={handleSaveBasic}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || uploading}
                 >
-                  {updateMutation.isPending ? t('w.form.saving') : t('w.form.save')}
+                  {uploading
+                    ? t('w.form.uploading')
+                    : updateMutation.isPending
+                      ? t('w.form.saving')
+                      : t('w.form.save')}
                 </Button>
               </div>
               {updateMutation.error && (

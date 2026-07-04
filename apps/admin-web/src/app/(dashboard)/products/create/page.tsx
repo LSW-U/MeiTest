@@ -139,8 +139,12 @@ export default function CreateProductPage() {
             <Button type="button" variant="outline" onClick={() => router.back()}>
               {t('w.form.cancel')}
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? t('w.form.saving') : t('w.form.save')}
+            <Button type="submit" disabled={createMutation.isPending || uploading}>
+              {uploading
+                ? t('w.form.uploading')
+                : createMutation.isPending
+                  ? t('w.form.saving')
+                  : t('w.form.save')}
             </Button>
           </div>
         }
