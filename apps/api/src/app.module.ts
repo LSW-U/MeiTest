@@ -27,6 +27,7 @@ import { RefundModule } from './modules/refund/refund.module';
 import { RiderModule } from './modules/rider/rider.module';
 import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
+import { UploadModule } from './modules/upload/upload.module';
 import { UserModule } from './modules/user/user.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { IdempotencyModule } from './shared/idempotency/idempotency.module';
@@ -57,6 +58,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     RiderModule,
     SettleModule,
     ShopModule,
+    UploadModule,
     UserModule,
     WarehouseModule,
     IdempotencyModule,

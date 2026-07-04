@@ -8,7 +8,7 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
@@ -43,9 +43,16 @@ import {
   type I18nText,
   type Sku,
 } from '@/hooks/api/use-products';
+import { apiUploadFile, type ApiSuccess } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
+
+interface UploadResponse {
+  url: string;
+  key: string;
+  size: number;
+}
 
 export default function ProductDetailPage() {
   const t = useTranslations('common');
@@ -62,6 +69,9 @@ export default function ProductDetailPage() {
   const [name, setName] = useState<I18nText>({});
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (productQ.data?.data) {
@@ -70,6 +80,25 @@ export default function ProductDetailPage() {
       setDescription(productQ.data.data.description ?? {});
     }
   }, [productQ.data]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError('');
+    setUploading(true);
+    try {
+      const res = await apiUploadFile<ApiSuccess<UploadResponse>>(
+        '/admin/uploads/product-image',
+        file,
+      );
+      setMainImage(res.data.url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   if (productQ.isLoading) return <LoadingSkeleton lines={8} />;
   if (productQ.error)
@@ -182,13 +211,38 @@ export default function ProductDetailPage() {
             <CardContent className="space-y-4">
               {i18nInputs(t('w.form.name'), name, setName)}
               <div className="space-y-2">
-                <Label>{t('w.form.mainImageUrl')}</Label>
-                <Input value={mainImage} onChange={(e) => setMainImage(e.target.value)} />
+                <Label>{t('w.form.mainImageUpload')}</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                    className="text-sm"
+                  />
+                  {mainImage && (
+                    <img
+                      src={mainImage}
+                      alt=""
+                      className="h-20 w-20 rounded border object-cover"
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('w.form.mainImageHint')}</p>
+                {uploading && (
+                  <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+                )}
+                {uploadError && (
+                  <p className="text-xs text-destructive">
+                    {t('w.form.uploadFailed')}: {uploadError}
+                  </p>
+                )}
                 {mainImage && (
-                  <img
-                    src={mainImage}
-                    alt=""
-                    className="h-20 w-20 rounded border object-cover"
+                  <Input
+                    value={mainImage}
+                    onChange={(e) => setMainImage(e.target.value)}
+                    className="font-mono text-xs"
                   />
                 )}
               </div>

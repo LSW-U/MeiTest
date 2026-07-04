@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
@@ -35,9 +35,16 @@ import {
 } from '@/components/ui/select';
 import { useCreateProduct } from '@/hooks/api/use-products';
 import { useCategories } from '@/hooks/api/use-categories';
+import { apiUploadFile, type ApiSuccess } from '@/lib/api';
 import type { I18nText } from '@/hooks/api/use-products';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
+
+interface UploadResponse {
+  url: string;
+  key: string;
+  size: number;
+}
 
 export default function CreateProductPage() {
   const t = useTranslations('common');
@@ -52,6 +59,29 @@ export default function CreateProductPage() {
   const [unit, setUnit] = useState<I18nText>({});
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError('');
+    setUploading(true);
+    try {
+      const res = await apiUploadFile<ApiSuccess<UploadResponse>>(
+        '/admin/uploads/product-image',
+        file,
+      );
+      setMainImage(res.data.url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploading(false);
+      // 清空 input value 让同一文件能再次触发 change
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,22 +160,43 @@ export default function CreateProductPage() {
           {i18nField(t('w.form.name'), name, setName, 'Product name', 'en')}
           <div className="space-y-2">
             <Label>
-              {t('w.form.mainImageUrl')} <span className="text-destructive">*</span>
+              {t('w.form.mainImageUpload')} <span className="text-destructive">*</span>
             </Label>
-            <Input
-              value={mainImage}
-              onChange={(e) => setMainImage(e.target.value)}
-              placeholder="https://..."
-              required
-            />
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                disabled={uploading}
+                className="text-sm"
+              />
+              {mainImage && (
+                <img
+                  src={mainImage}
+                  alt=""
+                  className="h-20 w-20 rounded border object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.visibility = 'hidden';
+                  }}
+                />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{t('w.form.mainImageHint')}</p>
+            {uploading && (
+              <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+            )}
+            {uploadError && (
+              <p className="text-xs text-destructive">
+                {t('w.form.uploadFailed')}: {uploadError}
+              </p>
+            )}
             {mainImage && (
-              <img
-                src={mainImage}
-                alt=""
-                className="h-20 w-20 rounded border object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.visibility = 'hidden';
-                }}
+              <Input
+                value={mainImage}
+                onChange={(e) => setMainImage(e.target.value)}
+                placeholder="https://..."
+                className="font-mono text-xs"
               />
             )}
           </div>

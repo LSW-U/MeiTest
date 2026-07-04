@@ -108,5 +108,49 @@ export async function apiFetch<T = unknown>(
   return JSON.parse(text) as T;
 }
 
+/** 上传文件（multipart/form-data，不带默认 Content-Type，让浏览器自动设 boundary） */
+export async function apiUploadFile<T = unknown>(
+  path: string,
+  file: File,
+  fieldName = 'file',
+): Promise<T> {
+  const token = getAccessToken();
+  const perspective = getPerspective();
+  const lang = getLocale();
+
+  const headers = new Headers();
+  headers.set('Accept-Language', lang);
+  if (perspective) headers.set('X-Perspective', perspective);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  // 注意：不设 Content-Type，让 fetch + FormData 自动设 multipart boundary
+
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    setAccessToken(null);
+    window.location.href = '/login';
+    throw new ApiError('E-AUTH-001', 'Unauthorized', 401);
+  }
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new ApiError(
+      errorBody?.error?.code ?? `E-HTTP-${res.status}`,
+      errorBody?.error?.message ?? res.statusText,
+      res.status,
+    );
+  }
+
+  const text = await res.text();
+  return text ? (JSON.parse(text) as T) : (null as T);
+}
+
 /** 标准响应包装：{ success: true, data } */
 export type ApiSuccess<T> = { success: true; data: T };
