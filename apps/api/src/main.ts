@@ -85,7 +85,7 @@ async function bootstrap() {
     origin: corsOriginEnv ? corsOriginEnv.split(',').map((s) => s.trim()) : true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id', 'Idempotency-Key'],
   });
 
   // 全局 ValidationPipe（class-validator，zod 在 controller 显式注入）
