@@ -20,6 +20,7 @@ export * from './schemas/refund';
 export * from './schemas/rider';
 export * from './schemas/settle';
 export * from './schemas/shop';
+export * from './schemas/upload';
 export * from './schemas/user';
 export * from './schemas/warehouse';
 

@@ -212,6 +212,48 @@ export class RefundService {
     }
 
     if (action === 'APPROVE') {
+      // P2 修复（W5 审查 #3）：金额断言 — 防 DB 篡改导致 0 元退款或超额退款
+      // createRefund 内部已设 amount = order.payableAmount，正常流程下必相等
+      // 此处复核防 DB 直改/数据损坏
+      const order = await db.order.findUnique({
+        where: { id: refund.orderId },
+        select: { payableAmount: true, status: true },
+      });
+      if (!order) {
+        // 订单被删（极少见，外键约束应防住）— 阻断审核
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found for refund: ${refund.orderId}`,
+        });
+      }
+      if (refund.amount <= 0) {
+        logger.error({
+          msg: 'REFUND_AMOUNT_INVALID_ZERO_OR_NEGATIVE',
+          refundId,
+          orderId: refund.orderId,
+          amount: refund.amount,
+          reviewerId,
+        });
+        throw new ConflictException({
+          code: 'E-ORDER-007',
+          message: `Refund amount invalid (amount=${refund.amount}), expected > 0`,
+        });
+      }
+      if (refund.amount !== order.payableAmount) {
+        logger.error({
+          msg: 'REFUND_AMOUNT_MISMATCH_ORDER_PAYABLE',
+          refundId,
+          orderId: refund.orderId,
+          refundAmount: refund.amount,
+          orderPayableAmount: order.payableAmount,
+          reviewerId,
+        });
+        throw new ConflictException({
+          code: 'E-ORDER-007',
+          message: `Refund amount ${refund.amount} does not match order payable ${order.payableAmount}`,
+        });
+      }
+
       // 通过 → mock 原路回款 → COMPLETED
       const updated = await db.refund.update({
         where: { id: refundId },

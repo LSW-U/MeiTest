@@ -33,7 +33,7 @@ export interface AdminUserListItem {
   emailVerified: boolean;
   lastLoginAt: string | null;
   createdAt: string;
-  /** 订单数（不含 CANCELLED） */
+  /** 已成交订单数（DELIVERED_PAID + COMPLETED，不含未支付/未派单/CANCELLED） */
   orderCount: number;
   /** 已成交订单 payableAmount 总和（DELIVERED_PAID + COMPLETED，单位：分） */
   totalSpent: number;
@@ -376,6 +376,7 @@ export class UserService {
     ]);
 
     // 聚合 orderCount + totalSpent（一次查所有用户 ID，避免 N+1）
+    // orderCount 语义 = 已成交订单数（DELIVERED_PAID + COMPLETED），不含未支付/未派单/CANCELLED
     const userIds = items.map((u) => u.id);
     const orderAgg = userIds.length
       ? await db.order.groupBy({

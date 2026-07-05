@@ -36,6 +36,7 @@
   "E-ORDER-004": "Pesanan tidak ditemukan",
   "E-ORDER-005": "Beberapa SKU tidak valid atau tidak aktif",
   "E-ORDER-006": "Tidak bisa membatalkan pesanan yang sudah dibayar, gunakan alur pengembalian dana",
+  "E-ORDER-007": "Nominal pengembalian dana tidak sesuai dengan jumlah tagihan pesanan",
   "E-PAYMENT-001": "Metode pembayaran tidak didukung",
   "E-PAYMENT-002": "Pembayaran kedaluwarsa, silakan coba lagi",
   "E-PAYMENT-003": "Pembayaran gagal, silakan coba lagi atau ganti metode",

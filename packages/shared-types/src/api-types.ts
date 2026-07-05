@@ -2042,6 +2042,8 @@ export interface paths {
                                 };
                                 mainImage: string;
                                 priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
@@ -2106,6 +2108,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             salesCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -2174,6 +2178,8 @@ export interface paths {
                             };
                             mainImage: string;
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
@@ -2221,6 +2227,8 @@ export interface paths {
                             };
                             mainImage: string;
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
@@ -2401,6 +2409,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             salesCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -2504,6 +2514,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             salesCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -2573,6 +2585,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
                             salesCount: number;
                             /** Format: date-time */
                             createdAt: string;
@@ -4283,6 +4297,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/payments/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 列出可用支付方式（W7 P1-1）。返回 5 种方式的多语言 name/subtitle + icon + isDefault + enabled + mockFlag。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 支付方式列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** @enum {string} */
+                                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                name: {
+                                    [key: string]: string;
+                                };
+                                subtitle: {
+                                    [key: string]: string;
+                                };
+                                icon: string;
+                                isDefault: boolean;
+                                enabled: boolean;
+                                mockFlag: boolean;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/payments/{orderId}": {
         parameters: {
             query?: never;
@@ -4603,6 +4668,74 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                             };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台用户列表（W7 P1-2）。支持 keyword/role/status 筛选 + 分页，含 orderCount + totalSpent 聚合。 */
+        get: {
+            parameters: {
+                query?: {
+                    keyword?: string;
+                    role?: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
+                    status?: "ACTIVE" | "SUSPENDED" | "DELETED";
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 用户列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                phone: string;
+                                /** Format: email */
+                                email: string | null;
+                                name: string | null;
+                                avatarUrl: string | null;
+                                /** @enum {string} */
+                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                /** @enum {string} */
+                                status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                                phoneVerified: boolean;
+                                emailVerified: boolean;
+                                /** Format: date-time */
+                                lastLoginAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                orderCount: number;
+                                totalSpent: number;
+                            }[];
+                            page: number;
+                            pageSize: number;
+                            total: number;
+                            hasMore: boolean;
                         };
                     };
                 };
@@ -6758,6 +6891,186 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/geo/geocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 地址 → 经纬度 geocoding（W7 P0-3）。后端调 Nominatim OpenStreetMap，失败/无结果 fallback Dili 中心坐标。前端保存地址时调一次，避免依赖 Google Maps SDK。 */
+        get: {
+            parameters: {
+                query: {
+                    address: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Geocoding 结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            lat: number;
+                            lng: number;
+                            /** @enum {string} */
+                            source: "nominatim" | "fallback";
+                            formattedAddress: string | null;
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败（address 长度 2-500），details 含 zod 具体 message */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/uploads/product-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 商品图片上传（W7-feature）。multipart/form-data，field name="file"。支持 jpg/png/webp，size ≤ 5MB，服务端校验 magic bytes（防 mime 伪造）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 不支持的 mime / 空文件 / magic bytes 不匹配 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-002 存储失败（MinIO 故障） */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6964,6 +7277,63 @@ export interface components {
         MarkNotificationReadResponse: {
             success: boolean;
         };
+        AdminUserListItem: {
+            /** Format: uuid */
+            id: string;
+            phone: string;
+            /** Format: email */
+            email: string | null;
+            name: string | null;
+            avatarUrl: string | null;
+            /** @enum {string} */
+            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+            phoneVerified: boolean;
+            emailVerified: boolean;
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            orderCount: number;
+            totalSpent: number;
+        };
+        AdminUserListResponseData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                phone: string;
+                /** Format: email */
+                email: string | null;
+                name: string | null;
+                avatarUrl: string | null;
+                /** @enum {string} */
+                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                /** @enum {string} */
+                status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                phoneVerified: boolean;
+                emailVerified: boolean;
+                /** Format: date-time */
+                lastLoginAt: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                orderCount: number;
+                totalSpent: number;
+            }[];
+            page: number;
+            pageSize: number;
+            total: number;
+            hasMore: boolean;
+        };
+        ListUsersQuery: {
+            keyword?: string;
+            /** @enum {string} */
+            role?: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
+            /** @enum {string} */
+            status?: "ACTIVE" | "SUSPENDED" | "DELETED";
+            page?: number;
+            pageSize?: number;
+        };
         Shop: {
             /** Format: uuid */
             id: string;
@@ -7130,6 +7500,8 @@ export interface components {
                 [key: string]: string;
             };
             priceMin: number;
+            /** Format: uuid */
+            defaultSkuId: string | null;
             salesCount: number;
             /** Format: date-time */
             createdAt: string;
@@ -7144,6 +7516,8 @@ export interface components {
             };
             mainImage: string;
             priceMin: number;
+            /** Format: uuid */
+            defaultSkuId: string | null;
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
             salesCount: number;
@@ -7517,6 +7891,36 @@ export interface components {
             /** Format: uri */
             receiptUrl: string;
         };
+        PaymentMethodItem: {
+            /** @enum {string} */
+            code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            name: {
+                [key: string]: string;
+            };
+            subtitle: {
+                [key: string]: string;
+            };
+            icon: string;
+            isDefault: boolean;
+            enabled: boolean;
+            mockFlag: boolean;
+        };
+        PaymentMethodListResponseData: {
+            items: {
+                /** @enum {string} */
+                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                name: {
+                    [key: string]: string;
+                };
+                subtitle: {
+                    [key: string]: string;
+                };
+                icon: string;
+                isDefault: boolean;
+                enabled: boolean;
+                mockFlag: boolean;
+            }[];
+        };
         DashboardSummary: {
             /** @enum {string} */
             range: "today" | "week" | "month";
@@ -7659,6 +8063,22 @@ export interface components {
         };
         /** @enum {string} */
         ConversationType: "customer_merchant" | "customer_rider" | "customer_service";
+        GeocodeRequest: {
+            address: string;
+        };
+        GeocodeResponseData: {
+            lat: number;
+            lng: number;
+            /** @enum {string} */
+            source: "nominatim" | "fallback";
+            formattedAddress: string | null;
+        };
+        UploadResponseData: {
+            /** Format: uri */
+            url: string;
+            key: string;
+            size: number;
+        };
     };
     responses: never;
     parameters: never;

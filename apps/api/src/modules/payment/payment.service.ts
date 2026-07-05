@@ -319,9 +319,11 @@ export class PaymentService {
    * 其他字段在 payment-methods.config.ts 静态配置。
    *
    * 前端下单页用此接口渲染选项，避免硬编码方式列表。
+   *
+   * W7-fix P2-2：filter enabled=false（注释说"false 时不在列表展示"，代码防御）
    */
   async listMethods(): Promise<PaymentMethodView[]> {
-    return PAYMENT_METHODS_CONFIG.map((cfg) => {
+    return PAYMENT_METHODS_CONFIG.filter((cfg) => cfg.enabled).map((cfg) => {
       const strategy = getPaymentStrategy(cfg.code);
       return {
         code: cfg.code,

@@ -11,7 +11,10 @@
  *
  * 不做：
  *   - 不缓存（Nominatim Usage Policy 允许但不强制；地址输入多样化，缓存命中率低）
- *   - 不限频（前端调用频次低，单用户日均 < 5 次）
+ *
+ * 日志策略（W7-fix P2-1）：
+ *   - 不记用户地址明文（PII），只记 addressLen + 来源
+ *   - 结构化日志 { msg, ... } 而非字符串拼接
  */
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -53,8 +56,10 @@ export class GeoService {
   async geocode(address: string): Promise<GeocodeResult> {
     const trimmed = address.trim();
     if (trimmed.length < 2 || trimmed.length > 500) {
-      // 入参校验已在 controller 用 zod 做过，这里再兜底
-      this.logger.warn(`geocode address length invalid: ${trimmed.length}`);
+      this.logger.warn({
+        msg: 'GEOCODE_ADDRESS_LENGTH_INVALID',
+        addressLen: trimmed.length,
+      });
       return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
     }
 
@@ -74,13 +79,21 @@ export class GeoService {
       clearTimeout(timer);
 
       if (!res.ok) {
-        this.logger.warn(`nominatim HTTP ${res.status}: ${await res.text().catch(() => '')}`);
+        const body = await res.text().catch(() => '');
+        this.logger.warn({
+          msg: 'NOMINATIM_HTTP_ERROR',
+          status: res.status,
+          bodyLen: body.length,
+        });
         return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
       }
 
       const data = (await res.json()) as NominatimResult[];
       if (!Array.isArray(data) || data.length === 0) {
-        this.logger.warn(`nominatim no result for: ${trimmed.slice(0, 50)}`);
+        this.logger.warn({
+          msg: 'NOMINATIM_NO_RESULT',
+          addressLen: trimmed.length,
+        });
         return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
       }
 
@@ -88,7 +101,11 @@ export class GeoService {
       const lat = parseFloat(hit.lat);
       const lng = parseFloat(hit.lon);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        this.logger.warn(`nominatim invalid lat/lng: lat=${hit.lat} lon=${hit.lon}`);
+        this.logger.warn({
+          msg: 'NOMINATIM_INVALID_COORDS',
+          rawLat: hit.lat,
+          rawLon: hit.lon,
+        });
         return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
       }
 
@@ -99,8 +116,11 @@ export class GeoService {
         formattedAddress: hit.display_name,
       };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`geocode error for "${trimmed.slice(0, 50)}": ${msg}`);
+      this.logger.warn({
+        msg: 'GEOCODE_ERROR',
+        addressLen: trimmed.length,
+        error: e instanceof Error ? e.message : String(e),
+      });
       return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
     }
   }

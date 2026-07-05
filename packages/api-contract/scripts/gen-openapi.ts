@@ -123,6 +123,8 @@ import {
   // geo（W7 P0-3 地址 geocoding）
   GeocodeRequest,
   GeocodeResponseData,
+  // upload（W7-feature 商品图片上传）
+  UploadResponseData,
   // common
   ErrorResponse,
   Id,
@@ -1809,7 +1811,38 @@ registry.registerPath({
       description: 'Geocoding 结果',
       content: { 'application/json': { schema: GeocodeResponseData } },
     },
-    400: { description: 'ADDRESS_TOO_SHORT / ADDRESS_TOO_LONG', content: { 'application/json': { schema: ErrorResponse } } },
+    400: {
+      description: 'E-COMMON-001 校验失败（address 长度 2-500），details 含 zod 具体 message',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+// ===== Upload（W7-feature 商品图片上传） =====
+registry.register('UploadResponseData', UploadResponseData);
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/uploads/product-image',
+  tags: ['upload'],
+  description:
+    '商品图片上传（W7-feature）。multipart/form-data，field name="file"。支持 jpg/png/webp，size ≤ 5MB，服务端校验 magic bytes（防 mime 伪造）。',
+  // multipart/form-data 不在 zod 注册，request body 用 OpenAPI 原生描述
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: 'E-UPLOAD-001 不支持的 mime / 空文件 / magic bytes 不匹配',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-002 存储失败（MinIO 故障）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
   },
 });
 
@@ -1846,6 +1879,8 @@ const openapi = generator.generateDocument({
     { name: 'platform', description: '平台 dashboard / 审计 / 系统配置' },
     { name: 'settle', description: '结算单 + 提现审核（M W3）' },
     { name: 'im', description: 'IM 自建 WebSocket 用户签名（M W3）' },
+    { name: 'upload', description: '商品图片上传（W7-feature）' },
+    { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
   ],
 });
 
