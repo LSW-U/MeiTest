@@ -213,6 +213,27 @@
   - [ ] 错误码：新模块预留了 001-099 段（§3.4）
 - 自审通过后再 commit，自审发现问题先修再 commit
 
+### 10. 商品导入约束（W7-fix 2026-07-09 新增，AI 必读）
+
+> **背景**：AI 批量上传 40 商品时把英文描述塞到 name 的 4 语言字段，导致客户端 i18n 切换失效；图片未做尺寸校验导致卡片变形。完整说明书见 `docs/product-import-guide.md`。
+
+**AI 上传商品前必守 5 条：**
+
+1. **`name` 字段必须是简短商品名**（< 50 字符），不是描述。例：`{"en":"Apple","zh":"苹果","id":"Apel","pt":"Maçã"}`，禁止塞 `"Fresh and crisp apples..."`
+2. **4 语言字段必须独立填值**，禁止 4 个语言填同一个值（会导致切语言无效果）。zh/id/pt 没翻译就空字符串 `""`，由前端 fallback en，**不要复制 en 顶替**
+3. **`mainImage` 必须是 1:1 正方形图**（推荐 600x600，范围 200-2000px）。upload controller 已加服务端校验，非 1:1 直接拒
+4. **`priceMin` 单位是分**，不是美元/元。$1.99 = `199`，$10.00 = `1000`。导入时设 0，建 SKU 后自动聚合
+5. **`unit` 字段也是 4 语言**。例：`{"en":"pack","zh":"包","id":"pak","pt":"pacote"}`
+
+**禁止**：
+- ❌ `name` 字段塞描述（已踩坑，见 `scripts/fix-product-names.sql` 修复）
+- ❌ 4 语言填同值（已踩坑，导致切语言无效果）
+- ❌ 相对路径图片 URL / picsum 占位图（客户端无法解析）
+- ❌ 改 `seed-data.json` 后不跑 `apply-translations.mjs`（会丢翻译）
+
+**模板**：见 `docs/product-import-guide.md` §四 CSV 模板 + §五 校验脚本
+**校验**：upload controller 已加 magic bytes + 尺寸 + 比例校验，违规直接 400
+
 ---
 
 ## 📚 上下文文件清单(改方案前先读)

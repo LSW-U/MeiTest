@@ -206,7 +206,7 @@ async function main() {
       data: {
         shopId: shop.id,
         categoryId: categoryMap.get(p.category) ?? null,
-        name: p.description, // Record<string,string> 多语言描述当名称用
+        name: p.name, // 4 语言简短商品名（apply-translations.mjs 填充）
         description: p.description,
         mainImage: p.mainImage,
         images: p.images,

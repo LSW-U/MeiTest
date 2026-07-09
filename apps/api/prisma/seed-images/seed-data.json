@@ -12,9 +12,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
-      "zh": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
-      "id": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
-      "pt": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes."
+      "zh": "新鲜脆甜的苹果，适合零食或各种烹饪。",
+      "id": "Apel segar dan renyah, cocok untuk camilan atau memasak.",
+      "pt": "Maçãs frescas e crocantes, perfeitas para lanches ou culinária."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/apple-thumb.webp",
     "images": [
@@ -24,10 +24,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 8
+    "stock": 8,
+    "name": {
+      "en": "Apple",
+      "zh": "苹果",
+      "id": "Apel",
+      "pt": "Maçã"
+    }
   },
   {
     "title": "Beef Steak",
@@ -42,9 +48,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
-      "zh": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
-      "id": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
-      "pt": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness."
+      "zh": "优质牛排，适合煎烤至您喜欢的熟度。",
+      "id": "Bistik berkualitas, cocok untuk dipanggang atau dimasak sesuai selera.",
+      "pt": "Bife de qualidade, ótimo para grelhar ou cozinhar no ponto desejado."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/beef-steak-thumb.webp",
     "images": [
@@ -54,10 +60,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 86
+    "stock": 86,
+    "name": {
+      "en": "Beef Steak",
+      "zh": "牛排",
+      "id": "Bistik",
+      "pt": "Bife"
+    }
   },
   {
     "title": "Cat Food",
@@ -72,9 +84,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
-      "zh": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
-      "id": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
-      "pt": "Nutritious cat food formulated to meet the dietary needs of your feline friend."
+      "zh": "营养猫粮，满足猫咪日常饮食需求。",
+      "id": "Makanan kucing bergizi untuk memenuhi kebutuhan gizi harian kucing.",
+      "pt": "Comida para gato nutritiva, formulada para necessidades dietéticas diárias."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cat-food-thumb.webp",
     "images": [
@@ -84,10 +96,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 46
+    "stock": 46,
+    "name": {
+      "en": "Cat Food",
+      "zh": "猫粮",
+      "id": "Makanan Kucing",
+      "pt": "Comida para Gato"
+    }
   },
   {
     "title": "Chicken Meat",
@@ -102,9 +120,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and tender chicken meat, suitable for various culinary preparations.",
-      "zh": "Fresh and tender chicken meat, suitable for various culinary preparations.",
-      "id": "Fresh and tender chicken meat, suitable for various culinary preparations.",
-      "pt": "Fresh and tender chicken meat, suitable for various culinary preparations."
+      "zh": "新鲜嫩鸡肉，适合各种烹饪方式。",
+      "id": "Daging ayam segar dan empuk, cocok untuk berbagai masakan.",
+      "pt": "Frango fresco e macio, adequado para várias receitas culinárias."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/chicken-meat-thumb.webp",
     "images": [
@@ -115,10 +133,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 97
+    "stock": 97,
+    "name": {
+      "en": "Chicken Meat",
+      "zh": "鸡肉",
+      "id": "Daging Ayam",
+      "pt": "Frango"
+    }
   },
   {
     "title": "Cooking Oil",
@@ -133,9 +157,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
-      "zh": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
-      "id": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
-      "pt": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications."
+      "zh": "通用食用油，适合煎炒各种料理。",
+      "id": "Minyak goreng serbaguna untuk menggoreng, menumis, dan memasak.",
+      "pt": "Óleo de cozinha versátil, adequado para fritar, refogar e cozinhar."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cooking-oil-thumb.webp",
     "images": [
@@ -144,11 +168,17 @@
     "priceMin": 499,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 10
+    "stock": 10,
+    "name": {
+      "en": "Cooking Oil",
+      "zh": "食用油",
+      "id": "Minyak Goreng",
+      "pt": "Óleo de Cozinha"
+    }
   },
   {
     "title": "Cucumber",
@@ -163,9 +193,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
-      "zh": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
-      "id": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
-      "pt": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side."
+      "zh": "清脆多汁的黄瓜，适合沙拉、零食或料理。",
+      "id": "Mentimun segar dan renyah, ideal untuk salad atau camilan.",
+      "pt": "Pepinos crocantes e hidratantes, ideais para saladas ou lanches."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cucumber-thumb.webp",
     "images": [
@@ -175,10 +205,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 84
+    "stock": 84,
+    "name": {
+      "en": "Cucumber",
+      "zh": "黄瓜",
+      "id": "Mentimun",
+      "pt": "Pepino"
+    }
   },
   {
     "title": "Dog Food",
@@ -193,9 +229,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
-      "zh": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
-      "id": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
-      "pt": "Specially formulated dog food designed to provide essential nutrients for your canine companion."
+      "zh": "专为狗狗设计的营养狗粮，提供必需营养。",
+      "id": "Makanan anjing khusus untuk memberikan nutrisi penting.",
+      "pt": "Comida para cão formulada para fornecer nutrição essencial."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/dog-food-thumb.webp",
     "images": [
@@ -205,10 +241,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 71
+    "stock": 71,
+    "name": {
+      "en": "Dog Food",
+      "zh": "狗粮",
+      "id": "Makanan Anjing",
+      "pt": "Comida para Cão"
+    }
   },
   {
     "title": "Eggs",
@@ -223,9 +265,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
-      "zh": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
-      "id": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
-      "pt": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast."
+      "zh": "新鲜鸡蛋，烘焙、烹饪或早餐的百搭食材。",
+      "id": "Telur segar, bahan serbaguna untuk memanggang dan memasak.",
+      "pt": "Ovos frescos, ingrediente versátil para culinária e padaria."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/eggs-thumb.webp",
     "images": [
@@ -234,11 +276,17 @@
     "priceMin": 299,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 9
+    "stock": 9,
+    "name": {
+      "en": "Eggs",
+      "zh": "鸡蛋",
+      "id": "Telur",
+      "pt": "Ovos"
+    }
   },
   {
     "title": "Fish Steak",
@@ -253,9 +301,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
-      "zh": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
-      "id": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
-      "pt": "Quality fish steak, suitable for grilling, baking, or pan-searing."
+      "zh": "优质鱼排，适合煎、烤或烘烤。",
+      "id": "Ikan fillet berkualitas, cocok untuk dipanggang atau digoreng.",
+      "pt": "Bife de peixe de qualidade, ideal para grelhar ou assar."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/fish-steak-thumb.webp",
     "images": [
@@ -265,10 +313,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 74
+    "stock": 74,
+    "name": {
+      "en": "Fish Steak",
+      "zh": "鱼排",
+      "id": "Ikan Fillet",
+      "pt": "Bife de Peixe"
+    }
   },
   {
     "title": "Green Bell Pepper",
@@ -283,9 +337,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
-      "zh": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
-      "id": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
-      "pt": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes."
+      "zh": "新鲜青椒，为菜肴增色增味。",
+      "id": "Paprika hijau segar, sempurna untuk menambah warna dan rasa.",
+      "pt": "Pimentão verde fresco, perfeito para adicionar cor e sabor."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/green-bell-pepper-thumb.webp",
     "images": [
@@ -295,10 +349,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 33
+    "stock": 33,
+    "name": {
+      "en": "Green Bell Pepper",
+      "zh": "青椒",
+      "id": "Paprika Hijau",
+      "pt": "Pimentão Verde"
+    }
   },
   {
     "title": "Green Chili Pepper",
@@ -313,9 +373,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
-      "zh": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
-      "id": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
-      "pt": "Spicy green chili pepper, ideal for adding heat to your favorite recipes."
+      "zh": "辛辣青辣椒，为菜肴加热度。",
+      "id": "Cabai hijau pedas, ideal untuk menambah rasa pedas.",
+      "pt": "Pimenta verde picante, ideal para dar calor aos pratos."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/green-chili-pepper-thumb.webp",
     "images": [
@@ -325,10 +385,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 3
+    "stock": 3,
+    "name": {
+      "en": "Green Chili Pepper",
+      "zh": "青辣椒",
+      "id": "Cabai Hijau",
+      "pt": "Pimenta Verde"
+    }
   },
   {
     "title": "Honey Jar",
@@ -343,9 +409,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
-      "zh": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
-      "id": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
-      "pt": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food."
+      "zh": "纯天然蜂蜜，方便罐装，适合甜味或烹饪。",
+      "id": "Madu murni alami dalam toples, cocok untuk pemanis.",
+      "pt": "Mel puro e natural em pote prático, perfeito para adoçar."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/honey-jar-thumb.webp",
     "images": [
@@ -354,11 +420,17 @@
     "priceMin": 699,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "罐",
+      "id": "toples",
+      "pt": "pote"
     },
-    "stock": 34
+    "stock": 34,
+    "name": {
+      "en": "Honey Jar",
+      "zh": "蜂蜜罐",
+      "id": "Toples Madu",
+      "pt": "Pote de Mel"
+    }
   },
   {
     "title": "Ice Cream",
@@ -373,9 +445,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
-      "zh": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
-      "id": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
-      "pt": "Creamy and delicious ice cream, available in various flavors for a delightful treat."
+      "zh": "香滑可口的冰淇淋，多种口味可选。",
+      "id": "Es krim lembut dan lezat dengan berbagai rasa.",
+      "pt": "Gelado cremoso e delicioso, disponível em vários sabores."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/ice-cream-thumb.webp",
     "images": [
@@ -387,11 +459,17 @@
     "priceMin": 549,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 27
+    "stock": 27,
+    "name": {
+      "en": "Ice Cream",
+      "zh": "冰淇淋",
+      "id": "Es Krim",
+      "pt": "Gelado"
+    }
   },
   {
     "title": "Juice",
@@ -406,9 +484,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
-      "zh": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
-      "id": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
-      "pt": "Refreshing fruit juice, packed with vitamins and great for staying hydrated."
+      "zh": "清爽果汁，富含维生素，适合随时饮用。",
+      "id": "Jus buah segar, kaya vitamin, cocok untuk segarkan dahaga.",
+      "pt": "Sumo de fruta refrescante, rico em vitaminas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/juice-thumb.webp",
     "images": [
@@ -417,11 +495,17 @@
     "priceMin": 399,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 50
+    "stock": 50,
+    "name": {
+      "en": "Juice",
+      "zh": "果汁",
+      "id": "Jus",
+      "pt": "Sumo"
+    }
   },
   {
     "title": "Kiwi",
@@ -436,9 +520,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
-      "zh": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
-      "id": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
-      "pt": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes."
+      "zh": "营养丰富的猕猴桃，适合零食或热带风味。",
+      "id": "Kiwi kaya nutrisi, cocok untuk camilan atau tambahan rasa tropis.",
+      "pt": "Kiwi rico em nutrientes, perfeito para lanches."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/kiwi-thumb.webp",
     "images": [
@@ -448,10 +532,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 99
+    "stock": 99,
+    "name": {
+      "en": "Kiwi",
+      "zh": "猕猴桃",
+      "id": "Kiwi",
+      "pt": "Kiwi"
+    }
   },
   {
     "title": "Lemon",
@@ -466,9 +556,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
-      "zh": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
-      "id": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
-      "pt": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages."
+      "zh": "酸爽柠檬，适合烹饪、烘焙或制作饮品。",
+      "id": "Lemon segar dan asam, serbaguna untuk memasak atau minuman.",
+      "pt": "Limões zestosos, versáteis para culinária ou bebidas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/lemon-thumb.webp",
     "images": [
@@ -478,10 +568,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 31
+    "stock": 31,
+    "name": {
+      "en": "Lemon",
+      "zh": "柠檬",
+      "id": "Lemon",
+      "pt": "Limão"
+    }
   },
   {
     "title": "Milk",
@@ -496,9 +592,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
-      "zh": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
-      "id": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
-      "pt": "Fresh and nutritious milk, a staple for various recipes and daily consumption."
+      "zh": "新鲜营养牛奶，多种食谱的常备食材。",
+      "id": "Susu segar dan bergizi, bahan utama untuk berbagai resep.",
+      "pt": "Leite fresco e nutritivo, essencial para várias receitas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/milk-thumb.webp",
     "images": [
@@ -507,11 +603,17 @@
     "priceMin": 349,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 27
+    "stock": 27,
+    "name": {
+      "en": "Milk",
+      "zh": "牛奶",
+      "id": "Susu",
+      "pt": "Leite"
+    }
   },
   {
     "title": "Mulberry",
@@ -526,9 +628,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
-      "zh": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
-      "id": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
-      "pt": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals."
+      "zh": "甜美多汁的桑葚，适合零食或烘焙。",
+      "id": "Murbai manis dan segar, cocok untuk camilan atau tambahan hidangan.",
+      "pt": "Amoras doces e suculentas, ótimas para lanches."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/mulberry-thumb.webp",
     "images": [
@@ -538,10 +640,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 99
+    "stock": 99,
+    "name": {
+      "en": "Mulberry",
+      "zh": "桑葚",
+      "id": "Murbai",
+      "pt": "Amora"
+    }
   },
   {
     "title": "Nescafe Coffee",
@@ -556,9 +664,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
-      "zh": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
-      "id": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
-      "pt": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup."
+      "zh": "雀巢优质咖啡，多种烘焙度可选。",
+      "id": "Kopi Nescafe berkualitas dengan berbagai varian roasting.",
+      "pt": "Café Nescafe de qualidade, disponível em várias misturas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/nescafe-coffee-thumb.webp",
     "images": [
@@ -567,11 +675,17 @@
     "priceMin": 799,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 57
+    "stock": 57,
+    "name": {
+      "en": "Nescafe Coffee",
+      "zh": "雀巢咖啡",
+      "id": "Kopi Nescafe",
+      "pt": "Café Nescafe"
+    }
   },
   {
     "title": "Potatoes",
@@ -586,9 +700,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
-      "zh": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
-      "id": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
-      "pt": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish."
+      "zh": "多用途土豆，适合烤、煮、捣泥等多种烹饪。",
+      "id": "Kentang serbaguna, cocok untuk dipanggang, direbus, atau dihaluskan.",
+      "pt": "Batatas versáteis, ótimas para assar, cozer ou puré."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/potatoes-thumb.webp",
     "images": [
@@ -598,10 +712,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 13
+    "stock": 13,
+    "name": {
+      "en": "Potatoes",
+      "zh": "土豆",
+      "id": "Kentang",
+      "pt": "Batatas"
+    }
   },
   {
     "title": "Protein Powder",
@@ -616,9 +736,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
-      "zh": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
-      "id": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
-      "pt": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins."
+      "zh": "富含营养的蛋白粉，适合补充日常蛋白质需求。",
+      "id": "Bubuk protein bergizi, ideal untuk melengkapi kebutuhan protein harian.",
+      "pt": "Pó de proteína nutritivo, ideal para suplementação."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/protein-powder-thumb.webp",
     "images": [
@@ -627,11 +747,17 @@
     "priceMin": 1999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "罐",
+      "id": "toples",
+      "pt": "pote"
     },
-    "stock": 80
+    "stock": 80,
+    "name": {
+      "en": "Protein Powder",
+      "zh": "蛋白粉",
+      "id": "Bubuk Protein",
+      "pt": "Pó de Proteína"
+    }
   },
   {
     "title": "Red Onions",
@@ -646,9 +772,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
-      "zh": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
-      "id": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
-      "pt": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes."
+      "zh": "风味红葱头，为料理增添层次与香气。",
+      "id": "Bawang merah beraroma, menambah kedalaman rasa pada masakan.",
+      "pt": "Cebolas vermelhas aromáticas, perfeitas para dar sabor."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/red-onions-thumb.webp",
     "images": [
@@ -658,10 +784,16 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "id": "pak",
+      "pt": "pacote"
     },
-    "stock": 82
+    "stock": 82,
+    "name": {
+      "en": "Red Onions",
+      "zh": "红葱头",
+      "id": "Bawang Merah",
+      "pt": "Cebolas Vermelhas"
+    }
   },
   {
     "title": "Rice",
@@ -676,9 +808,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
-      "zh": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
-      "id": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
-      "pt": "High-quality rice, a staple for various cuisines and a versatile base for many dishes."
+      "zh": "优质大米，多种料理的主食之选。",
+      "id": "Beras berkualitas, makanan pokok untuk berbagai masakan.",
+      "pt": "Arroz de qualidade, alimento básico para várias cozinhas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/rice-thumb.webp",
     "images": [
@@ -687,11 +819,17 @@
     "priceMin": 599,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "袋",
+      "id": "karung",
+      "pt": "saco"
     },
-    "stock": 59
+    "stock": 59,
+    "name": {
+      "en": "Rice",
+      "zh": "大米",
+      "id": "Beras",
+      "pt": "Arroz"
+    }
   },
   {
     "title": "Soft Drinks",
@@ -706,9 +844,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
-      "zh": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
-      "id": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
-      "pt": "Assorted soft drinks in various flavors, perfect for refreshing beverages."
+      "zh": "各种口味软饮料，适合清凉解渴。",
+      "id": "Minuman ringan dengan berbagai rasa, cocok untuk menyegarkan.",
+      "pt": "Refrigerantes em vários sabores, perfeitos para refrescar."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/soft-drinks-thumb.webp",
     "images": [
@@ -717,11 +855,17 @@
     "priceMin": 199,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 53
+    "stock": 53,
+    "name": {
+      "en": "Soft Drinks",
+      "zh": "软饮料",
+      "id": "Minuman Ringan",
+      "pt": "Refrigerantes"
+    }
   },
   {
     "title": "Strawberry",
@@ -736,9 +880,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
-      "zh": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
-      "id": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
-      "pt": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies."
+      "zh": "甜美多汁的草莓，适合零食、甜点或烘焙。",
+      "id": "Stroberi manis dan segar, cocok untuk camilan atau hidangan penutup.",
+      "pt": "Morangos doces e suculentos, ótimos para sobremesas."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/strawberry-thumb.webp",
     "images": [
@@ -747,11 +891,17 @@
     "priceMin": 399,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 46
+    "stock": 46,
+    "name": {
+      "en": "Strawberry",
+      "zh": "草莓",
+      "id": "Stroberi",
+      "pt": "Morango"
+    }
   },
   {
     "title": "Tissue Paper Box",
@@ -766,9 +916,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
-      "zh": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
-      "id": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
-      "pt": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues."
+      "zh": "方便纸巾盒，柔软纸巾，日常使用。",
+      "id": "Kotak tisu praktis dengan tisu lembut untuk penggunaan harian.",
+      "pt": "Caixa de lenços prática, com lenços suaves para uso diário."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/tissue-paper-box-thumb.webp",
     "images": [
@@ -778,11 +928,17 @@
     "priceMin": 249,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 86
+    "stock": 86,
+    "name": {
+      "en": "Tissue Paper Box",
+      "zh": "纸巾盒",
+      "id": "Kotak Tisu",
+      "pt": "Caixa de Lenços"
+    }
   },
   {
     "title": "Water",
@@ -797,9 +953,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
-      "zh": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
-      "id": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
-      "pt": "Pure and refreshing bottled water, essential for staying hydrated throughout the day."
+      "zh": "纯净矿泉水，保持水分补充的必需品。",
+      "id": "Air mineral murni, penting untuk menjaga hidrasi tubuh.",
+      "pt": "Água mineral pura, essencial para manter-se hidratado."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/water-thumb.webp",
     "images": [
@@ -808,11 +964,17 @@
     "priceMin": 99,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 53
+    "stock": 53,
+    "name": {
+      "en": "Water",
+      "zh": "矿泉水",
+      "id": "Air Mineral",
+      "pt": "Água Mineral"
+    }
   },
   {
     "title": "Essence Mascara Lash Princess",
@@ -827,9 +989,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
-      "zh": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
-      "id": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
-      "pt": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula."
+      "zh": "Essence 睫毛膏，能打造浓密纤长的睫毛效果。",
+      "id": "Maskara Essence yang populer untuk bulu mata tebal dan panjang.",
+      "pt": "Máscara Essence popular para cílios volumosos e alongados."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/essence-mascara-lash-princess-thumb.webp",
     "images": [
@@ -838,11 +1000,17 @@
     "priceMin": 999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "支",
+      "id": "batang",
+      "pt": "tubo"
     },
-    "stock": 99
+    "stock": 99,
+    "name": {
+      "en": "Essence Mascara Lash Princess",
+      "zh": "睫毛膏",
+      "id": "Maskara",
+      "pt": "Máscara para Cílios"
+    }
   },
   {
     "title": "Eyeshadow Palette with Mirror",
@@ -857,9 +1025,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
-      "zh": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
-      "id": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
-      "pt": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application."
+      "zh": "带镜眼影盘，多种颜色可选，适合日常或精致妆容。",
+      "id": "Palette bayangan dengan cermin, beragam warna untuk makeup harian.",
+      "pt": "Paleta de sombras com espelho, variadas cores para looks diários."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/eyeshadow-palette-with-mirror-thumb.webp",
     "images": [
@@ -868,11 +1036,17 @@
     "priceMin": 1999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 34
+    "stock": 34,
+    "name": {
+      "en": "Eyeshadow Palette with Mirror",
+      "zh": "眼影盘（带镜）",
+      "id": "Palette Bayangan dengan Cermin",
+      "pt": "Paleta de Sombras com Espelho"
+    }
   },
   {
     "title": "Powder Canister",
@@ -887,9 +1061,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
-      "zh": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
-      "id": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
-      "pt": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish."
+      "zh": "细腻定妆粉饼，控油持久，便携装。",
+      "id": "Pact halus untuk menahan minyak dan tahan lama, ukuran travel.",
+      "pt": "Pó compacto fino, controla oleosidade e dura muito tempo."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/powder-canister-thumb.webp",
     "images": [
@@ -898,11 +1072,17 @@
     "priceMin": 1499,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "盒",
+      "id": "kotak",
+      "pt": "caixa"
     },
-    "stock": 89
+    "stock": 89,
+    "name": {
+      "en": "Powder Canister",
+      "zh": "粉饼盒",
+      "id": "Pact",
+      "pt": "Pó Compacto"
+    }
   },
   {
     "title": "Red Lipstick",
@@ -917,9 +1097,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
-      "zh": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
-      "id": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
-      "pt": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish."
+      "zh": "经典红色口红，为唇部增添亮丽色彩。",
+      "id": "Lipstik merah klasik untuk tampilan bibir yang menonjol.",
+      "pt": "Batom vermelho clássico e ousado para lábios vibrantes."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/red-lipstick-thumb.webp",
     "images": [
@@ -928,11 +1108,17 @@
     "priceMin": 1299,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "支",
+      "id": "batang",
+      "pt": "tubo"
     },
-    "stock": 91
+    "stock": 91,
+    "name": {
+      "en": "Red Lipstick",
+      "zh": "红色口红",
+      "id": "Lipstik Merah",
+      "pt": "Batom Vermelho"
+    }
   },
   {
     "title": "Red Nail Polish",
@@ -947,9 +1133,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
-      "zh": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
-      "id": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
-      "pt": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home."
+      "zh": "浓郁光泽的红色指甲油，色彩持久鲜艳。",
+      "id": "Cat kuku merah dengan kilau kaya dan warna tahan lama.",
+      "pt": "Esmalte vermelho com brilho rico e cor duradoura."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/red-nail-polish-thumb.webp",
     "images": [
@@ -958,11 +1144,17 @@
     "priceMin": 899,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 79
+    "stock": 79,
+    "name": {
+      "en": "Red Nail Polish",
+      "zh": "红色指甲油",
+      "id": "Cat Kuku Merah",
+      "pt": "Esmalte Vermelho"
+    }
   },
   {
     "title": "Attitude Super Leaves Hand Soap",
@@ -977,9 +1169,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
-      "zh": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
-      "id": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
-      "pt": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft."
+      "zh": "Attitude 天然温和洗手液，滋养不干燥。",
+      "id": "Sabun tangan Attitude yang alami dan melembutkan tangan.",
+      "pt": "Sabão de mãos Attitude natural e nutritivo."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-thumb.webp",
     "images": [
@@ -990,11 +1182,17 @@
     "priceMin": 899,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 94
+    "stock": 94,
+    "name": {
+      "en": "Attitude Super Leaves Hand Soap",
+      "zh": "Attitude 护手洗手液",
+      "id": "Sabun Tangan Attitude Super Leaves",
+      "pt": "Sabão de Mãos Attitude Super Leaves"
+    }
   },
   {
     "title": "Olay Ultra Moisture Shea Butter Body Wash",
@@ -1009,9 +1207,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
-      "zh": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
-      "id": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
-      "pt": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin."
+      "zh": "Olay 含乳木果油的奢华滋润沐浴露，深层保湿。",
+      "id": "Sabun mandi Olay dengan shea butter untuk melembapkan kulit.",
+      "pt": "Gel de banho Olay com manteiga de karité para hidratação profunda."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-thumb.webp",
     "images": [
@@ -1022,11 +1220,17 @@
     "priceMin": 1299,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 34
+    "stock": 34,
+    "name": {
+      "en": "Olay Ultra Moisture Shea Butter Body Wash",
+      "zh": "Olay 滋养身体沐浴露",
+      "id": "Sabun Mandi Olay Ultra Moisture",
+      "pt": "Gel de Banho Olay Ultra Moisture"
+    }
   },
   {
     "title": "Vaseline Men Body and Face Lotion",
@@ -1041,9 +1245,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
-      "zh": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
-      "id": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
-      "pt": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy."
+      "zh": "凡士林男士专用面身乳，专为男性肌肤调配。",
+      "id": "Losion Vaseline Men khusus untuk wajah dan tubuh pria.",
+      "pt": "Loção Vaseline Men formulada para pelefa do rosto e corpo masculino."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-thumb.webp",
     "images": [
@@ -1054,11 +1258,17 @@
     "priceMin": 999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "garrafa"
     },
-    "stock": 95
+    "stock": 95,
+    "name": {
+      "en": "Vaseline Men Body and Face Lotion",
+      "zh": "凡士林男士面身乳",
+      "id": "Losion Vaseline Men",
+      "pt": "Loção Vaseline Men"
+    }
   },
   {
     "title": "Calvin Klein CK One",
@@ -1073,9 +1283,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
-      "zh": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
-      "id": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
-      "pt": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear."
+      "zh": "Calvin Klein CK One 经典中性香水，清新柑橘调。",
+      "id": "Parfum unisex klasik CK One dengan aroma segar citrus.",
+      "pt": "Perfume unisex clássico CK One, aroma cítrico fresco."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-thumb.webp",
     "images": [
@@ -1086,11 +1296,17 @@
     "priceMin": 4999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 29
+    "stock": 29,
+    "name": {
+      "en": "Calvin Klein CK One",
+      "zh": "CK One 香水",
+      "id": "Parfum CK One",
+      "pt": "Perfume CK One"
+    }
   },
   {
     "title": "Chanel Coco Noir Eau De",
@@ -1105,9 +1321,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
-      "zh": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
-      "id": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
-      "pt": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions."
+      "zh": "Chanel Coco Noir 优雅神秘香水，深邃东方调。",
+      "id": "Parfum Coco Noir Chanel yang elegan dan misterius.",
+      "pt": "Perfume Coco Noir Chanel, elegante e misterioso."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-thumb.webp",
     "images": [
@@ -1118,11 +1334,17 @@
     "priceMin": 12999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 58
+    "stock": 58,
+    "name": {
+      "en": "Chanel Coco Noir Eau De",
+      "zh": "香奈儿 Coco Noir",
+      "id": "Coco Noir Chanel",
+      "pt": "Coco Noir Chanel"
+    }
   },
   {
     "title": "Dior J'adore",
@@ -1137,9 +1359,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
-      "zh": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
-      "id": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
-      "pt": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication."
+      "zh": "Dior J'adore 奢华花香调香水，优雅女性气质。",
+      "id": "Parfum J'adore Dior dengan aroma floral mewah.",
+      "pt": "Perfume J'adore Dior, floral luxuoso e elegante."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/dior-jadore-thumb.webp",
     "images": [
@@ -1150,11 +1372,17 @@
     "priceMin": 8999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 98
+    "stock": 98,
+    "name": {
+      "en": "Dior J'adore",
+      "zh": "迪奥真我香水",
+      "id": "Parfum J'adore Dior",
+      "pt": "Perfume J'adore Dior"
+    }
   },
   {
     "title": "Dolce Shine Eau de",
@@ -1169,9 +1397,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
-      "zh": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
-      "id": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
-      "pt": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent."
+      "zh": "D&G Dolce Shine 鲜活果香调香水，明亮活泼。",
+      "id": "Parfum Dolce Shine D&G dengan aroma buah segar dan cerah.",
+      "pt": "Perfume Dolce Shine D&G, aroma frutado vibrante."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-thumb.webp",
     "images": [
@@ -1182,11 +1410,17 @@
     "priceMin": 6999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 4
+    "stock": 4,
+    "name": {
+      "en": "Dolce Shine Eau de",
+      "zh": "杜嘉班纳 Shine",
+      "id": "Dolce Shine D&G",
+      "pt": "Dolce Shine D&G"
+    }
   },
   {
     "title": "Gucci Bloom Eau de",
@@ -1201,9 +1435,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
-      "zh": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
-      "id": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
-      "pt": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent."
+      "zh": "Gucci Bloom 花香调香水，捕捉绽放之美。",
+      "id": "Parfum Gucci Bloom dengan aroma floral yang memikat.",
+      "pt": "Perfume Gucci Bloom, floral e cativante."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-thumb.webp",
     "images": [
@@ -1214,10 +1448,16 @@
     "priceMin": 7999,
     "unit": {
       "en": "pack",
-      "zh": "包",
-      "id": "pack",
-      "pt": "pack"
+      "zh": "瓶",
+      "id": "botol",
+      "pt": "frasco"
     },
-    "stock": 91
+    "stock": 91,
+    "name": {
+      "en": "Gucci Bloom Eau de",
+      "zh": "古驰绽放",
+      "id": "Gucci Bloom",
+      "pt": "Gucci Bloom"
+    }
   }
 ]
