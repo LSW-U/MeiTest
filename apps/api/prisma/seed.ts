@@ -56,25 +56,31 @@ const WAREHOUSES = [
   },
 ] as const;
 
-/** 10 个商品（4 语言） */
-const PRODUCTS = [
-  { name: i18n('Milk', '牛奶', 'Susu', 'Leite'), unit: i18n('bag', '袋', 'kantong', 'saco') },
-  { name: i18n('Bread', '面包', 'Roti', 'Pão'), unit: i18n('loaf', '条', 'roti', 'pão') },
-  { name: i18n('Rice', '米', 'Beras', 'Arroz'), unit: i18n('kg', '公斤', 'kg', 'kg') },
-  { name: i18n('Water', '矿泉水', 'Air mineral', 'Água mineral'), unit: i18n('bottle', '瓶', 'botol', 'garrafa') },
-  { name: i18n('Orange Juice', '橙汁', 'Jus jeruk', 'Sumo de laranja'), unit: i18n('box', '盒', 'kotak', 'caixa') },
-  { name: i18n('Coca Cola', '可口可乐', 'Coca Cola', 'Coca Cola'), unit: i18n('can', '罐', 'kaleng', 'lata') },
-  { name: i18n('Biscuits', '饼干', 'Biskuit', 'Bolachas'), unit: i18n('pack', '包', 'pak', 'pacote') },
-  { name: i18n('Eggs', '鸡蛋', 'Telur', 'Ovos'), unit: i18n('dozen', '打', 'lusin', 'dúzia') },
-  { name: i18n('Sugar', '糖', 'Gula', 'Açúcar'), unit: i18n('kg', '公斤', 'kg', 'kg') },
-  { name: i18n('Salt', '盐', 'Garam', 'Sal'), unit: i18n('kg', '公斤', 'kg', 'kg') },
-] as const;
+/**
+ * 商品数据来源：prisma/seed-images/seed-data.json
+ * 由 prisma/seed-images/upload-to-minio.mjs 生成（图片已上传 MinIO）
+ *
+ * 数据范围：40 个商品 × 2 SKUs × 3 warehouses = 240 stock records
+ * 4 个分类：Food & Grocery / Beauty / Skin Care / Fragrances
+ */
+import seedDataRaw from './seed-images/seed-data.json';
+const seedData = seedDataRaw as any[];
+
+/** DummyJSON 品类 -> 分类 icon 映射 */
+const CATEGORY_ICONS: Record<string, string> = {
+  groceries: '🛒',
+  beauty: '💄',
+  'skin-care': '🧴',
+  fragrances: '🌸',
+};
 
 async function main() {
   console.log('🌱 Seeding MeiMart dev database...');
 
   // 清空可能重复的数据（dev 脚本可重跑，幂等）
-  // FK 约束顺序：stock → sku → product, cart_item → cart → user
+  // FK 约束顺序：order_items -> cart_items -> stock_log -> stock -> sku -> product
+  await prisma.orderItem.deleteMany();
+  await prisma.cartItem.deleteMany();
   await prisma.stockLog.deleteMany();
   await prisma.stock.deleteMany();
   await prisma.sku.deleteMany();
@@ -174,16 +180,36 @@ async function main() {
     console.log(`  ✅ warehouse ${w.code}: ${w.name.en} (geometry set)`);
   }
 
-  // ===== 4. products + skus =====
+  // ===== 4. products + skus + stock（基于 seed-data.json，含真实图片 URL） =====
   const warehouses = await prisma.warehouse.findMany();
-  for (const [idx, p] of PRODUCTS.entries()) {
+
+  // 4a. 创建分类（按 seed-data.json 中的品类去重）
+  await prisma.category.deleteMany();
+  const categoryMap = new Map<string, string>(); // category slug -> categoryId
+  const uniqueCategories = [...new Set(seedData.map((p: any) => p.category))];
+  for (const catSlug of uniqueCategories) {
+    const sample = seedData.find((p: any) => p.category === catSlug) as any;
+    const cat = await prisma.category.create({
+      data: {
+        name: sample.categoryName,
+        iconUrl: CATEGORY_ICONS[catSlug] ?? '📦',
+        sortOrder: sample.categorySortOrder,
+      },
+    });
+    categoryMap.set(catSlug, cat.id);
+  }
+  console.log(`  ✅ ${uniqueCategories.length} categories: ${uniqueCategories.join(', ')}`);
+
+  // 4b. 创建商品 + SKU + stock
+  for (const [idx, p] of seedData.entries()) {
     const product = await prisma.product.create({
       data: {
         shopId: shop.id,
-        name: p.name,
-        description: i18n(`Description for ${p.name.en}`, `${p.name.zh}描述`, `Deskripsi ${p.name.id}`, `Descrição ${p.name.pt}`),
-        mainImage: `https://picsum.photos/seed/meimart-${idx}/400/400`,
-        images: [`https://picsum.photos/seed/meimart-${idx}/400/400`],
+        categoryId: categoryMap.get(p.category) ?? null,
+        name: p.description, // Record<string,string> 多语言描述当名称用
+        description: p.description,
+        mainImage: p.mainImage,
+        images: p.images,
         status: 'ACTIVE',
         unit: p.unit,
         priceMin: 0, // 占位，下面 Sku 创建后更新
@@ -192,26 +218,28 @@ async function main() {
     });
 
     // 2 个 SKU per product（小包装 + 大包装）
+    const productTitle: string = p.title?.en ?? (typeof p.title === 'string' ? p.title : 'Product');
+    const productTitleZh: string = p.title?.zh ?? productTitle;
     const skuSmall = await prisma.sku.create({
       data: {
         productId: product.id,
-        name: i18n(`${p.name.en} (Small)`, `${p.name.zh}（小）`, `${p.name.id} (Kecil)`, `${p.name.pt} (Pequeno)`),
+        name: i18n(`${productTitle} (Small)`, `${productTitleZh}（小）`, `${productTitle} (Small)`, `${productTitle} (Pequeno)`),
         attributes: [{ name: 'size', value: 'small', valueId: 'size-small' }],
-        price: 200 + idx * 50,
+        price: p.priceMin,
         status: 'ACTIVE',
       },
     });
     const skuLarge = await prisma.sku.create({
       data: {
         productId: product.id,
-        name: i18n(`${p.name.en} (Large)`, `${p.name.zh}（大）`, `${p.name.id} (Besar)`, `${p.name.pt} (Grande)`),
+        name: i18n(`${productTitle} (Large)`, `${productTitleZh}（大）`, `${productTitle} (Large)`, `${productTitle} (Grande)`),
         attributes: [{ name: 'size', value: 'large', valueId: 'size-large' }],
-        price: 500 + idx * 100,
+        price: Math.round(p.priceMin * 1.8),
         status: 'ACTIVE',
       },
     });
 
-    // 更新 product.priceMin（取最小 SKU 价）
+    // 更新 product.priceMin
     await prisma.product.update({
       where: { id: product.id },
       data: { priceMin: Math.min(skuSmall.price, skuLarge.price) },
@@ -237,7 +265,7 @@ async function main() {
       });
     }
   }
-  console.log(`  ✅ ${PRODUCTS.length} products × 2 SKUs × ${warehouses.length} warehouses = ${PRODUCTS.length * 2 * warehouses.length} stock records`);
+  console.log(`  ✅ ${seedData.length} products × 2 SKUs × ${warehouses.length} warehouses = ${seedData.length * 2 * warehouses.length} stock records`);
 
   // === FLOW M === 平台系统配置（流程 M 独占段，其他流程不动此段）
   // W2-COLLABORATION.md §3.5 — seed.ts 用 FLOW 注释分段
@@ -299,7 +327,8 @@ async function main() {
   console.log(`  ✅ system_configs: ${SYSTEM_CONFIGS.length} keys (commission / delivery / rider / order timeouts)`);
   // === END FLOW M ===
 
-  // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / 分类 / Banner
+  // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / Banner
+  // 注：分类已在 4a 步骤创建，此处不再重复
   console.log('\n📦 W 流程扩展数据...');
 
   const adminUser = await prisma.user.findUnique({ where: { phone: SEED_ADMIN_PHONE } });
@@ -370,45 +399,13 @@ async function main() {
     console.log('  ✅ 2 addresses + 3 favorites + 2 notifications');
   }
 
-  // 7.4 分类（一级 3 个）
-  await prisma.category.deleteMany();
-  const categories = await Promise.all([
-    prisma.category.create({
-      data: {
-        name: i18n('Drinks', '饮品', 'Minuman', 'Bebidas'),
-        iconUrl: 'https://example.com/cat-drinks.png',
-        sortOrder: 1,
-      },
-    }),
-    prisma.category.create({
-      data: {
-        name: i18n('Food', '食品', 'Makanan', 'Comida'),
-        iconUrl: 'https://example.com/cat-food.png',
-        sortOrder: 2,
-      },
-    }),
-    prisma.category.create({
-      data: {
-        name: i18n('Household', '家居', 'Rumah Tangga', 'Casa'),
-        iconUrl: 'https://example.com/cat-household.png',
-        sortOrder: 3,
-      },
-    }),
-  ]);
-  // 把现有 products 关联到 Drinks（前 5 个）
-  if (allProducts.length > 0) {
-    await prisma.product.updateMany({
-      where: { id: { in: allProducts.map((p) => p.id) } },
-      data: { categoryId: categories[0].id },
-    });
-    console.log(`  ✅ 3 categories + linked ${allProducts.length} products`);
-  }
+  // 7.4 分类已在 4a 步骤创建，跳过旧的手动分类逻辑
 
-  // 7.5 Banner（2 个 ACTIVE）
+  // 7.5 Banner（2 个 ACTIVE，使用真实商品图）
   await prisma.banner.deleteMany();
   await prisma.banner.create({
     data: {
-      imageUrl: 'https://example.com/banner-promo-1.png',
+      imageUrl: allProducts[0]?.mainImage ?? 'https://example.com/banner-promo-1.png',
       alt: { en: 'Summer Sale', zh: '夏季大促' },
       linkType: 'PRODUCT',
       linkValue: allProducts[0]?.id ?? null,
@@ -418,7 +415,7 @@ async function main() {
   });
   await prisma.banner.create({
     data: {
-      imageUrl: 'https://example.com/banner-free-delivery.png',
+      imageUrl: allProducts[1]?.mainImage ?? 'https://example.com/banner-free-delivery.png',
       alt: { en: 'Free Delivery', zh: '免配送费' },
       linkType: 'NONE',
       sortOrder: 2,

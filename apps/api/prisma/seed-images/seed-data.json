@@ -1,0 +1,1223 @@
+[
+  {
+    "title": "Apple",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+      "zh": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+      "id": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+      "pt": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/apple-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/apple-1.webp"
+    ],
+    "priceMin": 199,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 8
+  },
+  {
+    "title": "Beef Steak",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+      "zh": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+      "id": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+      "pt": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/beef-steak-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/beef-steak-1.webp"
+    ],
+    "priceMin": 1299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 86
+  },
+  {
+    "title": "Cat Food",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+      "zh": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+      "id": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+      "pt": "Nutritious cat food formulated to meet the dietary needs of your feline friend."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/cat-food-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/cat-food-1.webp"
+    ],
+    "priceMin": 899,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 46
+  },
+  {
+    "title": "Chicken Meat",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+      "zh": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+      "id": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+      "pt": "Fresh and tender chicken meat, suitable for various culinary preparations."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/chicken-meat-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/chicken-meat-1.webp",
+      "http://localhost:9000/meimart/products/groceries/chicken-meat-2.webp"
+    ],
+    "priceMin": 999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 97
+  },
+  {
+    "title": "Cooking Oil",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+      "zh": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+      "id": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+      "pt": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/cooking-oil-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/cooking-oil-1.webp"
+    ],
+    "priceMin": 499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 10
+  },
+  {
+    "title": "Cucumber",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+      "zh": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+      "id": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+      "pt": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/cucumber-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/cucumber-1.webp"
+    ],
+    "priceMin": 149,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 84
+  },
+  {
+    "title": "Dog Food",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+      "zh": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+      "id": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+      "pt": "Specially formulated dog food designed to provide essential nutrients for your canine companion."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/dog-food-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/dog-food-1.webp"
+    ],
+    "priceMin": 1099,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 71
+  },
+  {
+    "title": "Eggs",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+      "zh": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+      "id": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+      "pt": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/eggs-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/eggs-1.webp"
+    ],
+    "priceMin": 299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 9
+  },
+  {
+    "title": "Fish Steak",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+      "zh": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+      "id": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+      "pt": "Quality fish steak, suitable for grilling, baking, or pan-searing."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/fish-steak-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/fish-steak-1.webp"
+    ],
+    "priceMin": 1499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 74
+  },
+  {
+    "title": "Green Bell Pepper",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+      "zh": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+      "id": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+      "pt": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/green-bell-pepper-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/green-bell-pepper-1.webp"
+    ],
+    "priceMin": 129,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 33
+  },
+  {
+    "title": "Green Chili Pepper",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+      "zh": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+      "id": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+      "pt": "Spicy green chili pepper, ideal for adding heat to your favorite recipes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/green-chili-pepper-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/green-chili-pepper-1.webp"
+    ],
+    "priceMin": 99,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 3
+  },
+  {
+    "title": "Honey Jar",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+      "zh": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+      "id": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+      "pt": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/honey-jar-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/honey-jar-1.webp"
+    ],
+    "priceMin": 699,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 34
+  },
+  {
+    "title": "Ice Cream",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+      "zh": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+      "id": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+      "pt": "Creamy and delicious ice cream, available in various flavors for a delightful treat."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/ice-cream-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/ice-cream-1.webp",
+      "http://localhost:9000/meimart/products/groceries/ice-cream-2.webp",
+      "http://localhost:9000/meimart/products/groceries/ice-cream-3.webp",
+      "http://localhost:9000/meimart/products/groceries/ice-cream-4.webp"
+    ],
+    "priceMin": 549,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 27
+  },
+  {
+    "title": "Juice",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+      "zh": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+      "id": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+      "pt": "Refreshing fruit juice, packed with vitamins and great for staying hydrated."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/juice-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/juice-1.webp"
+    ],
+    "priceMin": 399,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 50
+  },
+  {
+    "title": "Kiwi",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+      "zh": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+      "id": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+      "pt": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/kiwi-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/kiwi-1.webp"
+    ],
+    "priceMin": 249,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 99
+  },
+  {
+    "title": "Lemon",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+      "zh": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+      "id": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+      "pt": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/lemon-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/lemon-1.webp"
+    ],
+    "priceMin": 79,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 31
+  },
+  {
+    "title": "Milk",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+      "zh": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+      "id": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+      "pt": "Fresh and nutritious milk, a staple for various recipes and daily consumption."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/milk-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/milk-1.webp"
+    ],
+    "priceMin": 349,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 27
+  },
+  {
+    "title": "Mulberry",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+      "zh": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+      "id": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+      "pt": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/mulberry-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/mulberry-1.webp"
+    ],
+    "priceMin": 499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 99
+  },
+  {
+    "title": "Nescafe Coffee",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+      "zh": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+      "id": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+      "pt": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/nescafe-coffee-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/nescafe-coffee-1.webp"
+    ],
+    "priceMin": 799,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 57
+  },
+  {
+    "title": "Potatoes",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+      "zh": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+      "id": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+      "pt": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/potatoes-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/potatoes-1.webp"
+    ],
+    "priceMin": 229,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 13
+  },
+  {
+    "title": "Protein Powder",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+      "zh": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+      "id": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+      "pt": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/protein-powder-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/protein-powder-1.webp"
+    ],
+    "priceMin": 1999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 80
+  },
+  {
+    "title": "Red Onions",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+      "zh": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+      "id": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+      "pt": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/red-onions-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/red-onions-1.webp"
+    ],
+    "priceMin": 199,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 82
+  },
+  {
+    "title": "Rice",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+      "zh": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+      "id": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+      "pt": "High-quality rice, a staple for various cuisines and a versatile base for many dishes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/rice-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/rice-1.webp"
+    ],
+    "priceMin": 599,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 59
+  },
+  {
+    "title": "Soft Drinks",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+      "zh": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+      "id": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+      "pt": "Assorted soft drinks in various flavors, perfect for refreshing beverages."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/soft-drinks-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/soft-drinks-1.webp"
+    ],
+    "priceMin": 199,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 53
+  },
+  {
+    "title": "Strawberry",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+      "zh": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+      "id": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+      "pt": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/strawberry-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/strawberry-1.webp"
+    ],
+    "priceMin": 399,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 46
+  },
+  {
+    "title": "Tissue Paper Box",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+      "zh": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+      "id": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+      "pt": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/tissue-paper-box-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/tissue-paper-box-1.webp",
+      "http://localhost:9000/meimart/products/groceries/tissue-paper-box-2.webp"
+    ],
+    "priceMin": 249,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 86
+  },
+  {
+    "title": "Water",
+    "category": "groceries",
+    "categoryName": {
+      "en": "Food & Grocery",
+      "zh": "食品杂货",
+      "id": "Food & Grocery",
+      "pt": "Food & Grocery"
+    },
+    "categoryIcon": "🛒",
+    "categorySortOrder": 1,
+    "description": {
+      "en": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+      "zh": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+      "id": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+      "pt": "Pure and refreshing bottled water, essential for staying hydrated throughout the day."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/groceries/water-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/groceries/water-1.webp"
+    ],
+    "priceMin": 99,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 53
+  },
+  {
+    "title": "Essence Mascara Lash Princess",
+    "category": "beauty",
+    "categoryName": {
+      "en": "Beauty",
+      "zh": "美妆",
+      "id": "Beauty",
+      "pt": "Beauty"
+    },
+    "categoryIcon": "💄",
+    "categorySortOrder": 2,
+    "description": {
+      "en": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+      "zh": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+      "id": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+      "pt": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/beauty/essence-mascara-lash-princess-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/beauty/essence-mascara-lash-princess-1.webp"
+    ],
+    "priceMin": 999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 99
+  },
+  {
+    "title": "Eyeshadow Palette with Mirror",
+    "category": "beauty",
+    "categoryName": {
+      "en": "Beauty",
+      "zh": "美妆",
+      "id": "Beauty",
+      "pt": "Beauty"
+    },
+    "categoryIcon": "💄",
+    "categorySortOrder": 2,
+    "description": {
+      "en": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+      "zh": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+      "id": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+      "pt": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/beauty/eyeshadow-palette-with-mirror-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/beauty/eyeshadow-palette-with-mirror-1.webp"
+    ],
+    "priceMin": 1999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 34
+  },
+  {
+    "title": "Powder Canister",
+    "category": "beauty",
+    "categoryName": {
+      "en": "Beauty",
+      "zh": "美妆",
+      "id": "Beauty",
+      "pt": "Beauty"
+    },
+    "categoryIcon": "💄",
+    "categorySortOrder": 2,
+    "description": {
+      "en": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+      "zh": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+      "id": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+      "pt": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/beauty/powder-canister-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/beauty/powder-canister-1.webp"
+    ],
+    "priceMin": 1499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 89
+  },
+  {
+    "title": "Red Lipstick",
+    "category": "beauty",
+    "categoryName": {
+      "en": "Beauty",
+      "zh": "美妆",
+      "id": "Beauty",
+      "pt": "Beauty"
+    },
+    "categoryIcon": "💄",
+    "categorySortOrder": 2,
+    "description": {
+      "en": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+      "zh": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+      "id": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+      "pt": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/beauty/red-lipstick-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/beauty/red-lipstick-1.webp"
+    ],
+    "priceMin": 1299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 91
+  },
+  {
+    "title": "Red Nail Polish",
+    "category": "beauty",
+    "categoryName": {
+      "en": "Beauty",
+      "zh": "美妆",
+      "id": "Beauty",
+      "pt": "Beauty"
+    },
+    "categoryIcon": "💄",
+    "categorySortOrder": 2,
+    "description": {
+      "en": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+      "zh": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+      "id": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+      "pt": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/beauty/red-nail-polish-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/beauty/red-nail-polish-1.webp"
+    ],
+    "priceMin": 899,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 79
+  },
+  {
+    "title": "Attitude Super Leaves Hand Soap",
+    "category": "skin-care",
+    "categoryName": {
+      "en": "Skin Care",
+      "zh": "护肤",
+      "id": "Skin Care",
+      "pt": "Skin Care"
+    },
+    "categoryIcon": "🧴",
+    "categorySortOrder": 3,
+    "description": {
+      "en": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+      "zh": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+      "id": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+      "pt": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-1.webp",
+      "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-2.webp",
+      "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-3.webp"
+    ],
+    "priceMin": 899,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 94
+  },
+  {
+    "title": "Olay Ultra Moisture Shea Butter Body Wash",
+    "category": "skin-care",
+    "categoryName": {
+      "en": "Skin Care",
+      "zh": "护肤",
+      "id": "Skin Care",
+      "pt": "Skin Care"
+    },
+    "categoryIcon": "🧴",
+    "categorySortOrder": 3,
+    "description": {
+      "en": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+      "zh": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+      "id": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+      "pt": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-1.webp",
+      "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-2.webp",
+      "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-3.webp"
+    ],
+    "priceMin": 1299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 34
+  },
+  {
+    "title": "Vaseline Men Body and Face Lotion",
+    "category": "skin-care",
+    "categoryName": {
+      "en": "Skin Care",
+      "zh": "护肤",
+      "id": "Skin Care",
+      "pt": "Skin Care"
+    },
+    "categoryIcon": "🧴",
+    "categorySortOrder": 3,
+    "description": {
+      "en": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+      "zh": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+      "id": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+      "pt": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-1.webp",
+      "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-2.webp",
+      "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-3.webp"
+    ],
+    "priceMin": 999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 95
+  },
+  {
+    "title": "Calvin Klein CK One",
+    "category": "fragrances",
+    "categoryName": {
+      "en": "Fragrances",
+      "zh": "香水",
+      "id": "Fragrances",
+      "pt": "Fragrances"
+    },
+    "categoryIcon": "🌸",
+    "categorySortOrder": 4,
+    "description": {
+      "en": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+      "zh": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+      "id": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+      "pt": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-1.webp",
+      "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-2.webp",
+      "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-3.webp"
+    ],
+    "priceMin": 4999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 29
+  },
+  {
+    "title": "Chanel Coco Noir Eau De",
+    "category": "fragrances",
+    "categoryName": {
+      "en": "Fragrances",
+      "zh": "香水",
+      "id": "Fragrances",
+      "pt": "Fragrances"
+    },
+    "categoryIcon": "🌸",
+    "categorySortOrder": 4,
+    "description": {
+      "en": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+      "zh": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+      "id": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+      "pt": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-1.webp",
+      "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-2.webp",
+      "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-3.webp"
+    ],
+    "priceMin": 12999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 58
+  },
+  {
+    "title": "Dior J'adore",
+    "category": "fragrances",
+    "categoryName": {
+      "en": "Fragrances",
+      "zh": "香水",
+      "id": "Fragrances",
+      "pt": "Fragrances"
+    },
+    "categoryIcon": "🌸",
+    "categorySortOrder": 4,
+    "description": {
+      "en": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+      "zh": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+      "id": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+      "pt": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/fragrances/dior-jadore-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/fragrances/dior-jadore-1.webp",
+      "http://localhost:9000/meimart/products/fragrances/dior-jadore-2.webp",
+      "http://localhost:9000/meimart/products/fragrances/dior-jadore-3.webp"
+    ],
+    "priceMin": 8999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 98
+  },
+  {
+    "title": "Dolce Shine Eau de",
+    "category": "fragrances",
+    "categoryName": {
+      "en": "Fragrances",
+      "zh": "香水",
+      "id": "Fragrances",
+      "pt": "Fragrances"
+    },
+    "categoryIcon": "🌸",
+    "categorySortOrder": 4,
+    "description": {
+      "en": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+      "zh": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+      "id": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+      "pt": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-1.webp",
+      "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-2.webp",
+      "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-3.webp"
+    ],
+    "priceMin": 6999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 4
+  },
+  {
+    "title": "Gucci Bloom Eau de",
+    "category": "fragrances",
+    "categoryName": {
+      "en": "Fragrances",
+      "zh": "香水",
+      "id": "Fragrances",
+      "pt": "Fragrances"
+    },
+    "categoryIcon": "🌸",
+    "categorySortOrder": 4,
+    "description": {
+      "en": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+      "zh": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+      "id": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+      "pt": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-1.webp",
+      "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-2.webp",
+      "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-3.webp"
+    ],
+    "priceMin": 7999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 91
+  }
+]

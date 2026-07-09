@@ -32,12 +32,19 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { randomBytes } from 'crypto';
+import { imageSize } from 'image-size';
 import { StorageService, StorageError } from '../../shared/storage/storage.service';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MIN_FILE_SIZE = 1; // 1 byte，防空文件
+
+/** 图片尺寸约束（防客户端卡片变形 + 防超大图拖慢渲染） */
+const MIN_DIMENSION = 200; // 最小 200x200，低于此说明图被强行压缩过，质量差
+const MAX_DIMENSION = 2000; // 最大 2000x2000，超过此值客户端渲染慢 + 浪费带宽
+const RECOMMENDED_DIMENSION = 600; // 推荐 600x600（1:1 正方形）
+const ASPECT_RATIO_TOLERANCE = 0.05; // 1:1 容差 5%（防 599x600 等微差）
 
 /** MIME → 扩展名映射（仅用于决定 key 后缀） */
 const ALLOWED_MIME: Record<string, string> = {
@@ -136,6 +143,36 @@ export class UploadController {
     if (detected !== ALLOWED_MIME[file.mimetype]) {
       throw new BadRequestException(
         `文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`,
+      );
+    }
+    // #图片尺寸校验（W7-fix：防客户端卡片变形）
+    // 1:1 正方形（容差 5%），200-2000 像素，推荐 600x600
+    let dims: { width: number; height: number };
+    try {
+      const r = imageSize(file.buffer);
+      if (!r.width || !r.height) {
+        throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
+      }
+      dims = { width: r.width, height: r.height };
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
+    }
+    if (dims.width < MIN_DIMENSION || dims.height < MIN_DIMENSION) {
+      throw new BadRequestException(
+        `图片尺寸 ${dims.width}x${dims.height} 过小，最小 ${MIN_DIMENSION}x${MIN_DIMENSION}（推荐 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION}）`,
+      );
+    }
+    if (dims.width > MAX_DIMENSION || dims.height > MAX_DIMENSION) {
+      throw new BadRequestException(
+        `图片尺寸 ${dims.width}x${dims.height} 过大，最大 ${MAX_DIMENSION}x${MAX_DIMENSION}（推荐 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION}）`,
+      );
+    }
+    // 1:1 比例校验（容差 5%，防 599x600 微差）
+    const ratio = dims.width / dims.height;
+    if (Math.abs(ratio - 1) > ASPECT_RATIO_TOLERANCE) {
+      throw new BadRequestException(
+        `图片比例 ${dims.width}:${dims.height} 不是 1:1 正方形，会导致客户端商品卡片变形（请用 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION} 正方形图）`,
       );
     }
     const ext = detected;

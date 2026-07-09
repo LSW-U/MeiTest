@@ -1,0 +1,583 @@
+[
+  {
+    "id": 16,
+    "title": "Apple",
+    "category": "groceries",
+    "price": 1.99,
+    "description": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+    "brand": "",
+    "stock": 8,
+    "thumbnail": "groceries/apple-thumb.webp",
+    "images": [
+      "groceries/apple-1.webp"
+    ],
+    "slug": "apple"
+  },
+  {
+    "id": 17,
+    "title": "Beef Steak",
+    "category": "groceries",
+    "price": 12.99,
+    "description": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+    "brand": "",
+    "stock": 86,
+    "thumbnail": "groceries/beef-steak-thumb.webp",
+    "images": [
+      "groceries/beef-steak-1.webp"
+    ],
+    "slug": "beef-steak"
+  },
+  {
+    "id": 18,
+    "title": "Cat Food",
+    "category": "groceries",
+    "price": 8.99,
+    "description": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+    "brand": "",
+    "stock": 46,
+    "thumbnail": "groceries/cat-food-thumb.webp",
+    "images": [
+      "groceries/cat-food-1.webp"
+    ],
+    "slug": "cat-food"
+  },
+  {
+    "id": 19,
+    "title": "Chicken Meat",
+    "category": "groceries",
+    "price": 9.99,
+    "description": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+    "brand": "",
+    "stock": 97,
+    "thumbnail": "groceries/chicken-meat-thumb.webp",
+    "images": [
+      "groceries/chicken-meat-1.webp",
+      "groceries/chicken-meat-2.webp"
+    ],
+    "slug": "chicken-meat"
+  },
+  {
+    "id": 20,
+    "title": "Cooking Oil",
+    "category": "groceries",
+    "price": 4.99,
+    "description": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+    "brand": "",
+    "stock": 10,
+    "thumbnail": "groceries/cooking-oil-thumb.webp",
+    "images": [
+      "groceries/cooking-oil-1.webp"
+    ],
+    "slug": "cooking-oil"
+  },
+  {
+    "id": 21,
+    "title": "Cucumber",
+    "category": "groceries",
+    "price": 1.49,
+    "description": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+    "brand": "",
+    "stock": 84,
+    "thumbnail": "groceries/cucumber-thumb.webp",
+    "images": [
+      "groceries/cucumber-1.webp"
+    ],
+    "slug": "cucumber"
+  },
+  {
+    "id": 22,
+    "title": "Dog Food",
+    "category": "groceries",
+    "price": 10.99,
+    "description": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+    "brand": "",
+    "stock": 71,
+    "thumbnail": "groceries/dog-food-thumb.webp",
+    "images": [
+      "groceries/dog-food-1.webp"
+    ],
+    "slug": "dog-food"
+  },
+  {
+    "id": 23,
+    "title": "Eggs",
+    "category": "groceries",
+    "price": 2.99,
+    "description": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+    "brand": "",
+    "stock": 9,
+    "thumbnail": "groceries/eggs-thumb.webp",
+    "images": [
+      "groceries/eggs-1.webp"
+    ],
+    "slug": "eggs"
+  },
+  {
+    "id": 24,
+    "title": "Fish Steak",
+    "category": "groceries",
+    "price": 14.99,
+    "description": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+    "brand": "",
+    "stock": 74,
+    "thumbnail": "groceries/fish-steak-thumb.webp",
+    "images": [
+      "groceries/fish-steak-1.webp"
+    ],
+    "slug": "fish-steak"
+  },
+  {
+    "id": 25,
+    "title": "Green Bell Pepper",
+    "category": "groceries",
+    "price": 1.29,
+    "description": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+    "brand": "",
+    "stock": 33,
+    "thumbnail": "groceries/green-bell-pepper-thumb.webp",
+    "images": [
+      "groceries/green-bell-pepper-1.webp"
+    ],
+    "slug": "green-bell-pepper"
+  },
+  {
+    "id": 26,
+    "title": "Green Chili Pepper",
+    "category": "groceries",
+    "price": 0.99,
+    "description": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+    "brand": "",
+    "stock": 3,
+    "thumbnail": "groceries/green-chili-pepper-thumb.webp",
+    "images": [
+      "groceries/green-chili-pepper-1.webp"
+    ],
+    "slug": "green-chili-pepper"
+  },
+  {
+    "id": 27,
+    "title": "Honey Jar",
+    "category": "groceries",
+    "price": 6.99,
+    "description": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+    "brand": "",
+    "stock": 34,
+    "thumbnail": "groceries/honey-jar-thumb.webp",
+    "images": [
+      "groceries/honey-jar-1.webp"
+    ],
+    "slug": "honey-jar"
+  },
+  {
+    "id": 28,
+    "title": "Ice Cream",
+    "category": "groceries",
+    "price": 5.49,
+    "description": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+    "brand": "",
+    "stock": 27,
+    "thumbnail": "groceries/ice-cream-thumb.webp",
+    "images": [
+      "groceries/ice-cream-1.webp",
+      "groceries/ice-cream-2.webp",
+      "groceries/ice-cream-3.webp",
+      "groceries/ice-cream-4.webp"
+    ],
+    "slug": "ice-cream"
+  },
+  {
+    "id": 29,
+    "title": "Juice",
+    "category": "groceries",
+    "price": 3.99,
+    "description": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+    "brand": "",
+    "stock": 50,
+    "thumbnail": "groceries/juice-thumb.webp",
+    "images": [
+      "groceries/juice-1.webp"
+    ],
+    "slug": "juice"
+  },
+  {
+    "id": 30,
+    "title": "Kiwi",
+    "category": "groceries",
+    "price": 2.49,
+    "description": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+    "brand": "",
+    "stock": 99,
+    "thumbnail": "groceries/kiwi-thumb.webp",
+    "images": [
+      "groceries/kiwi-1.webp"
+    ],
+    "slug": "kiwi"
+  },
+  {
+    "id": 31,
+    "title": "Lemon",
+    "category": "groceries",
+    "price": 0.79,
+    "description": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+    "brand": "",
+    "stock": 31,
+    "thumbnail": "groceries/lemon-thumb.webp",
+    "images": [
+      "groceries/lemon-1.webp"
+    ],
+    "slug": "lemon"
+  },
+  {
+    "id": 32,
+    "title": "Milk",
+    "category": "groceries",
+    "price": 3.49,
+    "description": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+    "brand": "",
+    "stock": 27,
+    "thumbnail": "groceries/milk-thumb.webp",
+    "images": [
+      "groceries/milk-1.webp"
+    ],
+    "slug": "milk"
+  },
+  {
+    "id": 33,
+    "title": "Mulberry",
+    "category": "groceries",
+    "price": 4.99,
+    "description": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+    "brand": "",
+    "stock": 99,
+    "thumbnail": "groceries/mulberry-thumb.webp",
+    "images": [
+      "groceries/mulberry-1.webp"
+    ],
+    "slug": "mulberry"
+  },
+  {
+    "id": 34,
+    "title": "Nescafe Coffee",
+    "category": "groceries",
+    "price": 7.99,
+    "description": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+    "brand": "",
+    "stock": 57,
+    "thumbnail": "groceries/nescafe-coffee-thumb.webp",
+    "images": [
+      "groceries/nescafe-coffee-1.webp"
+    ],
+    "slug": "nescafe-coffee"
+  },
+  {
+    "id": 35,
+    "title": "Potatoes",
+    "category": "groceries",
+    "price": 2.29,
+    "description": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+    "brand": "",
+    "stock": 13,
+    "thumbnail": "groceries/potatoes-thumb.webp",
+    "images": [
+      "groceries/potatoes-1.webp"
+    ],
+    "slug": "potatoes"
+  },
+  {
+    "id": 36,
+    "title": "Protein Powder",
+    "category": "groceries",
+    "price": 19.99,
+    "description": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+    "brand": "",
+    "stock": 80,
+    "thumbnail": "groceries/protein-powder-thumb.webp",
+    "images": [
+      "groceries/protein-powder-1.webp"
+    ],
+    "slug": "protein-powder"
+  },
+  {
+    "id": 37,
+    "title": "Red Onions",
+    "category": "groceries",
+    "price": 1.99,
+    "description": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+    "brand": "",
+    "stock": 82,
+    "thumbnail": "groceries/red-onions-thumb.webp",
+    "images": [
+      "groceries/red-onions-1.webp"
+    ],
+    "slug": "red-onions"
+  },
+  {
+    "id": 38,
+    "title": "Rice",
+    "category": "groceries",
+    "price": 5.99,
+    "description": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+    "brand": "",
+    "stock": 59,
+    "thumbnail": "groceries/rice-thumb.webp",
+    "images": [
+      "groceries/rice-1.webp"
+    ],
+    "slug": "rice"
+  },
+  {
+    "id": 39,
+    "title": "Soft Drinks",
+    "category": "groceries",
+    "price": 1.99,
+    "description": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+    "brand": "",
+    "stock": 53,
+    "thumbnail": "groceries/soft-drinks-thumb.webp",
+    "images": [
+      "groceries/soft-drinks-1.webp"
+    ],
+    "slug": "soft-drinks"
+  },
+  {
+    "id": 40,
+    "title": "Strawberry",
+    "category": "groceries",
+    "price": 3.99,
+    "description": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+    "brand": "",
+    "stock": 46,
+    "thumbnail": "groceries/strawberry-thumb.webp",
+    "images": [
+      "groceries/strawberry-1.webp"
+    ],
+    "slug": "strawberry"
+  },
+  {
+    "id": 41,
+    "title": "Tissue Paper Box",
+    "category": "groceries",
+    "price": 2.49,
+    "description": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+    "brand": "",
+    "stock": 86,
+    "thumbnail": "groceries/tissue-paper-box-thumb.webp",
+    "images": [
+      "groceries/tissue-paper-box-1.webp",
+      "groceries/tissue-paper-box-2.webp"
+    ],
+    "slug": "tissue-paper-box"
+  },
+  {
+    "id": 42,
+    "title": "Water",
+    "category": "groceries",
+    "price": 0.99,
+    "description": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+    "brand": "",
+    "stock": 53,
+    "thumbnail": "groceries/water-thumb.webp",
+    "images": [
+      "groceries/water-1.webp"
+    ],
+    "slug": "water"
+  },
+  {
+    "id": 1,
+    "title": "Essence Mascara Lash Princess",
+    "category": "beauty",
+    "price": 9.99,
+    "description": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+    "brand": "Essence",
+    "stock": 99,
+    "thumbnail": "beauty/essence-mascara-lash-princess-thumb.webp",
+    "images": [
+      "beauty/essence-mascara-lash-princess-1.webp"
+    ],
+    "slug": "essence-mascara-lash-princess"
+  },
+  {
+    "id": 2,
+    "title": "Eyeshadow Palette with Mirror",
+    "category": "beauty",
+    "price": 19.99,
+    "description": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+    "brand": "Glamour Beauty",
+    "stock": 34,
+    "thumbnail": "beauty/eyeshadow-palette-with-mirror-thumb.webp",
+    "images": [
+      "beauty/eyeshadow-palette-with-mirror-1.webp"
+    ],
+    "slug": "eyeshadow-palette-with-mirror"
+  },
+  {
+    "id": 3,
+    "title": "Powder Canister",
+    "category": "beauty",
+    "price": 14.99,
+    "description": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+    "brand": "Velvet Touch",
+    "stock": 89,
+    "thumbnail": "beauty/powder-canister-thumb.webp",
+    "images": [
+      "beauty/powder-canister-1.webp"
+    ],
+    "slug": "powder-canister"
+  },
+  {
+    "id": 4,
+    "title": "Red Lipstick",
+    "category": "beauty",
+    "price": 12.99,
+    "description": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+    "brand": "Chic Cosmetics",
+    "stock": 91,
+    "thumbnail": "beauty/red-lipstick-thumb.webp",
+    "images": [
+      "beauty/red-lipstick-1.webp"
+    ],
+    "slug": "red-lipstick"
+  },
+  {
+    "id": 5,
+    "title": "Red Nail Polish",
+    "category": "beauty",
+    "price": 8.99,
+    "description": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+    "brand": "Nail Couture",
+    "stock": 79,
+    "thumbnail": "beauty/red-nail-polish-thumb.webp",
+    "images": [
+      "beauty/red-nail-polish-1.webp"
+    ],
+    "slug": "red-nail-polish"
+  },
+  {
+    "id": 118,
+    "title": "Attitude Super Leaves Hand Soap",
+    "category": "skin-care",
+    "price": 8.99,
+    "description": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+    "brand": "Attitude",
+    "stock": 94,
+    "thumbnail": "skin-care/attitude-super-leaves-hand-soap-thumb.webp",
+    "images": [
+      "skin-care/attitude-super-leaves-hand-soap-1.webp",
+      "skin-care/attitude-super-leaves-hand-soap-2.webp",
+      "skin-care/attitude-super-leaves-hand-soap-3.webp"
+    ],
+    "slug": "attitude-super-leaves-hand-soap"
+  },
+  {
+    "id": 119,
+    "title": "Olay Ultra Moisture Shea Butter Body Wash",
+    "category": "skin-care",
+    "price": 12.99,
+    "description": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+    "brand": "Olay",
+    "stock": 34,
+    "thumbnail": "skin-care/olay-ultra-moisture-shea-butter-body-wash-thumb.webp",
+    "images": [
+      "skin-care/olay-ultra-moisture-shea-butter-body-wash-1.webp",
+      "skin-care/olay-ultra-moisture-shea-butter-body-wash-2.webp",
+      "skin-care/olay-ultra-moisture-shea-butter-body-wash-3.webp"
+    ],
+    "slug": "olay-ultra-moisture-shea-butter-body-wash"
+  },
+  {
+    "id": 120,
+    "title": "Vaseline Men Body and Face Lotion",
+    "category": "skin-care",
+    "price": 9.99,
+    "description": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+    "brand": "Vaseline",
+    "stock": 95,
+    "thumbnail": "skin-care/vaseline-men-body-and-face-lotion-thumb.webp",
+    "images": [
+      "skin-care/vaseline-men-body-and-face-lotion-1.webp",
+      "skin-care/vaseline-men-body-and-face-lotion-2.webp",
+      "skin-care/vaseline-men-body-and-face-lotion-3.webp"
+    ],
+    "slug": "vaseline-men-body-and-face-lotion"
+  },
+  {
+    "id": 6,
+    "title": "Calvin Klein CK One",
+    "category": "fragrances",
+    "price": 49.99,
+    "description": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+    "brand": "Calvin Klein",
+    "stock": 29,
+    "thumbnail": "fragrances/calvin-klein-ck-one-thumb.webp",
+    "images": [
+      "fragrances/calvin-klein-ck-one-1.webp",
+      "fragrances/calvin-klein-ck-one-2.webp",
+      "fragrances/calvin-klein-ck-one-3.webp"
+    ],
+    "slug": "calvin-klein-ck-one"
+  },
+  {
+    "id": 7,
+    "title": "Chanel Coco Noir Eau De",
+    "category": "fragrances",
+    "price": 129.99,
+    "description": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+    "brand": "Chanel",
+    "stock": 58,
+    "thumbnail": "fragrances/chanel-coco-noir-eau-de-thumb.webp",
+    "images": [
+      "fragrances/chanel-coco-noir-eau-de-1.webp",
+      "fragrances/chanel-coco-noir-eau-de-2.webp",
+      "fragrances/chanel-coco-noir-eau-de-3.webp"
+    ],
+    "slug": "chanel-coco-noir-eau-de"
+  },
+  {
+    "id": 8,
+    "title": "Dior J'adore",
+    "category": "fragrances",
+    "price": 89.99,
+    "description": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+    "brand": "Dior",
+    "stock": 98,
+    "thumbnail": "fragrances/dior-jadore-thumb.webp",
+    "images": [
+      "fragrances/dior-jadore-1.webp",
+      "fragrances/dior-jadore-2.webp",
+      "fragrances/dior-jadore-3.webp"
+    ],
+    "slug": "dior-jadore"
+  },
+  {
+    "id": 9,
+    "title": "Dolce Shine Eau de",
+    "category": "fragrances",
+    "price": 69.99,
+    "description": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+    "brand": "Dolce & Gabbana",
+    "stock": 4,
+    "thumbnail": "fragrances/dolce-shine-eau-de-thumb.webp",
+    "images": [
+      "fragrances/dolce-shine-eau-de-1.webp",
+      "fragrances/dolce-shine-eau-de-2.webp",
+      "fragrances/dolce-shine-eau-de-3.webp"
+    ],
+    "slug": "dolce-shine-eau-de"
+  },
+  {
+    "id": 10,
+    "title": "Gucci Bloom Eau de",
+    "category": "fragrances",
+    "price": 79.99,
+    "description": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+    "brand": "Gucci",
+    "stock": 91,
+    "thumbnail": "fragrances/gucci-bloom-eau-de-thumb.webp",
+    "images": [
+      "fragrances/gucci-bloom-eau-de-1.webp",
+      "fragrances/gucci-bloom-eau-de-2.webp",
+      "fragrances/gucci-bloom-eau-de-3.webp"
+    ],
+    "slug": "gucci-bloom-eau-de"
+  }
+]

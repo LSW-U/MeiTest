@@ -41,6 +41,7 @@
     "bullmq": "^5.79.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "image-size": "^2.0.2",
     "ioredis": "^5.11.1",
     "minio": "^8.0.7",
     "multer": "^2.2.0",
