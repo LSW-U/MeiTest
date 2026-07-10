@@ -733,6 +733,241 @@ components:
           type: integer
           minimum: 1
           maximum: 100
+    AdminUserDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+        email:
+          type: string
+          nullable: true
+          format: email
+        name:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: *a1
+        status:
+          type: string
+          enum: *a2
+        phoneVerified:
+          type: boolean
+        emailVerified:
+          type: boolean
+        lastLoginAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        orderCount:
+          type: integer
+          minimum: 0
+        totalSpent:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+        recentOrders:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              orderNo:
+                type: string
+                pattern: ^MM\d{14}$
+              status:
+                type: string
+                enum: &a3
+                  - PENDING_PAYMENT
+                  - PENDING_CONFIRM
+                  - CONFIRMED
+                  - PICKED
+                  - OUT_FOR_DELIVERY
+                  - DELIVERED_PAID
+                  - DELIVERED
+                  - DELIVERED_UNPAID
+                  - COMPLETED
+                  - CANCELLED
+              payableAmount:
+                type: integer
+                minimum: 0
+                maximum: 999999
+              createdAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - orderNo
+              - status
+              - payableAmount
+              - createdAt
+          maxItems: 5
+        addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              userId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              phone:
+                type: string
+              region:
+                type: object
+                properties:
+                  province:
+                    type: string
+                  city:
+                    type: string
+                  district:
+                    type: string
+                required:
+                  - province
+                  - city
+              detail:
+                type: string
+              lat:
+                type: number
+                nullable: true
+              lng:
+                type: number
+                nullable: true
+              isDefault:
+                type: boolean
+              tag:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - userId
+              - name
+              - phone
+              - region
+              - detail
+              - lat
+              - lng
+              - isDefault
+              - tag
+              - createdAt
+              - updatedAt
+      required:
+        - id
+        - phone
+        - email
+        - name
+        - avatarUrl
+        - role
+        - status
+        - phoneVerified
+        - emailVerified
+        - lastLoginAt
+        - createdAt
+        - orderCount
+        - totalSpent
+        - updatedAt
+        - recentOrders
+        - addresses
+    UpdateAdminUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 20
+        email:
+          type: string
+          nullable: true
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: *a1
+        phoneVerified:
+          type: boolean
+        emailVerified:
+          type: boolean
+    SuspendUserRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+    ActivateUserRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+    ResetPasswordResponseData:
+      type: object
+      properties:
+        temporaryPassword:
+          type: string
+          minLength: 12
+          maxLength: 12
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - temporaryPassword
+        - generatedAt
+    OrderSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNo:
+          type: string
+          pattern: ^MM\d{14}$
+        status:
+          type: string
+          enum: *a3
+        payableAmount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderNo
+        - status
+        - payableAmount
+        - createdAt
     Shop:
       type: object
       properties:
@@ -753,7 +988,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a3
+          enum: &a4
             - ACTIVE
             - INACTIVE
         businessHours:
@@ -796,7 +1031,7 @@ components:
           type: string
         status:
           type: string
-          enum: *a3
+          enum: *a4
         businessHours:
           type: string
           nullable: true
@@ -865,7 +1100,7 @@ components:
           type: object
           nullable: true
           properties:
-            mon: &a4
+            mon: &a5
               type: object
               properties:
                 open:
@@ -877,12 +1112,12 @@ components:
               required:
                 - open
                 - close
-            tue: *a4
-            wed: *a4
-            thu: *a4
-            fri: *a4
-            sat: *a4
-            sun: *a4
+            tue: *a5
+            wed: *a5
+            thu: *a5
+            fri: *a5
+            sat: *a5
+            sun: *a5
         deliveryFee:
           type: integer
           minimum: 0
@@ -948,7 +1183,7 @@ components:
           type: object
           nullable: true
           properties:
-            mon: &a5
+            mon: &a6
               type: object
               properties:
                 open:
@@ -960,12 +1195,12 @@ components:
               required:
                 - open
                 - close
-            tue: *a5
-            wed: *a5
-            thu: *a5
-            fri: *a5
-            sat: *a5
-            sun: *a5
+            tue: *a6
+            wed: *a6
+            thu: *a6
+            fri: *a6
+            sat: *a6
+            sun: *a6
         deliveryFee:
           type: integer
           minimum: 0
@@ -1021,7 +1256,7 @@ components:
             type: string
         status:
           type: string
-          enum: &a6
+          enum: &a7
             - ACTIVE
             - INACTIVE
             - OUT_OF_STOCK
@@ -1082,7 +1317,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: *a6
+          enum: *a7
         salesCount:
           type: integer
       required:
@@ -1115,14 +1350,14 @@ components:
           type: array
           items:
             type: string
-          default: &a7 []
+          default: &a8 []
         unit:
           type: object
           additionalProperties:
             type: string
         status:
           type: string
-          enum: *a6
+          enum: *a7
       required:
         - name
         - mainImage
@@ -1149,20 +1384,20 @@ components:
           type: array
           items:
             type: string
-          default: *a7
+          default: *a8
         unit:
           type: object
           additionalProperties:
             type: string
         status:
           type: string
-          enum: *a6
+          enum: *a7
     UpdateProductStatusRequest:
       type: object
       properties:
         status:
           type: string
-          enum: *a6
+          enum: *a7
       required:
         - status
     Sku:
@@ -1191,7 +1426,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: &a8
+          enum: &a9
             - ACTIVE
             - INACTIVE
         createdAt:
@@ -1230,7 +1465,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: *a8
+          enum: *a9
       required:
         - name
         - attributes
@@ -1255,7 +1490,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: *a8
+          enum: *a9
     Category:
       type: object
       properties:
@@ -1371,7 +1606,7 @@ components:
             type: string
         linkType:
           type: string
-          enum: &a9
+          enum: &a10
             - PRODUCT
             - CATEGORY
             - URL
@@ -1383,7 +1618,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a10
+          enum: &a11
             - ACTIVE
             - INACTIVE
       required:
@@ -1401,7 +1636,7 @@ components:
             type: string
         linkType:
           type: string
-          enum: *a9
+          enum: *a10
         linkValue:
           type: string
           nullable: true
@@ -1409,7 +1644,7 @@ components:
           type: integer
         status:
           type: string
-          enum: *a10
+          enum: *a11
     Order:
       type: object
       properties:
@@ -1427,17 +1662,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: &a12
-            - PENDING_PAYMENT
-            - PENDING_CONFIRM
-            - CONFIRMED
-            - PICKED
-            - OUT_FOR_DELIVERY
-            - DELIVERED_PAID
-            - DELIVERED
-            - DELIVERED_UNPAID
-            - COMPLETED
-            - CANCELLED
+          enum: *a3
         items:
           type: array
           items:
@@ -1527,7 +1752,7 @@ components:
           format: uuid
         paymentMethod:
           type: string
-          enum: &a11
+          enum: &a12
             - COD
             - BANK_TRANSFER
             - WECHAT
@@ -1659,7 +1884,7 @@ components:
           maxLength: 200
         paymentMethod:
           type: string
-          enum: *a11
+          enum: *a12
       required:
         - addressId
         - items
@@ -1678,10 +1903,10 @@ components:
       pattern: ^MM\d{14}$
     PaymentMethod:
       type: string
-      enum: *a11
+      enum: *a12
     OrderStatus:
       type: string
-      enum: *a12
+      enum: *a3
     Cart:
       type: object
       properties:
@@ -1936,7 +2161,7 @@ components:
           format: uuid
         method:
           type: string
-          enum: *a11
+          enum: *a12
         status:
           type: string
           enum: *a13
@@ -1992,7 +2217,7 @@ components:
       properties:
         code:
           type: string
-          enum: *a11
+          enum: *a12
         name:
           type: object
           additionalProperties:
@@ -2027,7 +2252,7 @@ components:
             properties:
               code:
                 type: string
-                enum: *a11
+                enum: *a12
               name:
                 type: object
                 additionalProperties:
@@ -3660,7 +3885,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a3
+                    enum: *a4
                   businessHours:
                     type: string
                     nullable: true
@@ -3713,7 +3938,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a3
+                    enum: *a4
                   businessHours:
                     type: string
                     nullable: true
@@ -3761,7 +3986,7 @@ paths:
                   type: string
                 status:
                   type: string
-                  enum: *a3
+                  enum: *a4
                 businessHours:
                   type: string
                   nullable: true
@@ -3794,7 +4019,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a3
+                    enum: *a4
                   businessHours:
                     type: string
                     nullable: true
@@ -4863,7 +5088,7 @@ paths:
                           format: uuid
                         status:
                           type: string
-                          enum: *a6
+                          enum: *a7
                         salesCount:
                           type: integer
                       required:
@@ -4927,7 +5152,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a6
+                    enum: *a7
                   unit:
                     type: object
                     additionalProperties:
@@ -5026,7 +5251,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a6
+                      enum: *a7
                     salesCount:
                       type: integer
                   required:
@@ -5071,7 +5296,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a6
+                      enum: *a7
                     salesCount:
                       type: integer
                   required:
@@ -5198,14 +5423,14 @@ paths:
                   type: array
                   items:
                     type: string
-                  default: *a7
+                  default: *a8
                 unit:
                   type: object
                   additionalProperties:
                     type: string
                 status:
                   type: string
-                  enum: *a6
+                  enum: *a7
               required:
                 - name
                 - mainImage
@@ -5245,7 +5470,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a6
+                    enum: *a7
                   unit:
                     type: object
                     additionalProperties:
@@ -5310,14 +5535,14 @@ paths:
                   type: array
                   items:
                     type: string
-                  default: *a7
+                  default: *a8
                 unit:
                   type: object
                   additionalProperties:
                     type: string
                 status:
                   type: string
-                  enum: *a6
+                  enum: *a7
       responses:
         "200":
           description: 更新成功
@@ -5353,7 +5578,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a6
+                    enum: *a7
                   unit:
                     type: object
                     additionalProperties:
@@ -5408,7 +5633,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: *a6
+                  enum: *a7
               required:
                 - status
       responses:
@@ -5446,7 +5671,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a6
+                    enum: *a7
                   unit:
                     type: object
                     additionalProperties:
@@ -5510,7 +5735,7 @@ paths:
                   nullable: true
                 status:
                   type: string
-                  enum: *a8
+                  enum: *a9
               required:
                 - name
                 - attributes
@@ -5546,7 +5771,7 @@ paths:
                     nullable: true
                   status:
                     type: string
-                    enum: *a8
+                    enum: *a9
                   createdAt:
                     type: string
                     format: date-time
@@ -5636,7 +5861,7 @@ paths:
                     type: string
                 linkType:
                   type: string
-                  enum: *a9
+                  enum: *a10
                 linkValue:
                   type: string
                   nullable: true
@@ -5644,7 +5869,7 @@ paths:
                   type: integer
                 status:
                   type: string
-                  enum: *a10
+                  enum: *a11
               required:
                 - imageUrl
                 - linkType
@@ -5966,7 +6191,7 @@ paths:
                   maxLength: 200
                 paymentMethod:
                   type: string
-                  enum: *a11
+                  enum: *a12
               required:
                 - addressId
                 - items
@@ -5993,7 +6218,7 @@ paths:
                     format: uuid
                   status:
                     type: string
-                    enum: *a12
+                    enum: *a3
                   items:
                     type: array
                     items:
@@ -6083,7 +6308,7 @@ paths:
                     format: uuid
                   paymentMethod:
                     type: string
-                    enum: *a11
+                    enum: *a12
                   paymentStatus:
                     type: string
                     enum: *a13
@@ -6197,7 +6422,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a12
+                      enum: *a3
                     items:
                       type: array
                       items:
@@ -6287,7 +6512,7 @@ paths:
                       format: uuid
                     paymentMethod:
                       type: string
-                      enum: *a11
+                      enum: *a12
                     paymentStatus:
                       type: string
                       enum: *a13
@@ -6948,7 +7173,7 @@ paths:
                     format: uuid
                   status:
                     type: string
-                    enum: *a12
+                    enum: *a3
                   items:
                     type: array
                     items:
@@ -7038,7 +7263,7 @@ paths:
                     format: uuid
                   paymentMethod:
                     type: string
-                    enum: *a11
+                    enum: *a12
                   paymentStatus:
                     type: string
                     enum: *a13
@@ -7735,7 +7960,7 @@ paths:
                       properties:
                         code:
                           type: string
-                          enum: *a11
+                          enum: *a12
                         name:
                           type: object
                           additionalProperties:
@@ -7783,7 +8008,7 @@ paths:
                     format: uuid
                   method:
                     type: string
-                    enum: *a11
+                    enum: *a12
                   status:
                     type: string
                     enum: *a13
@@ -7924,7 +8149,7 @@ paths:
                     format: uuid
                   method:
                     type: string
-                    enum: *a11
+                    enum: *a12
                   status:
                     type: string
                     enum: *a13
@@ -8264,6 +8489,1070 @@ paths:
                   - pageSize
                   - total
                   - hasMore
+  /api/v1/admin/users/{id}:
+    get:
+      tags:
+        - user
+      description: 后台用户详情（W7-feature 2026-07-10）。返回 AdminUserDetail，含最近 5 笔已成交订单 + 全部收货地址。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 用户详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a2
+                  phoneVerified:
+                    type: boolean
+                  emailVerified:
+                    type: boolean
+                  lastLoginAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  totalSpent:
+                    type: integer
+                    minimum: 0
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderNo:
+                          type: string
+                          pattern: ^MM\d{14}$
+                        status:
+                          type: string
+                          enum: *a3
+                        payableAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        createdAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderNo
+                        - status
+                        - payableAmount
+                        - createdAt
+                    maxItems: 5
+                  addresses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        region:
+                          type: object
+                          properties:
+                            province:
+                              type: string
+                            city:
+                              type: string
+                            district:
+                              type: string
+                          required:
+                            - province
+                            - city
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                        isDefault:
+                          type: boolean
+                        tag:
+                          type: string
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - name
+                        - phone
+                        - region
+                        - detail
+                        - lat
+                        - lng
+                        - isDefault
+                        - tag
+                        - createdAt
+                        - updatedAt
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - phoneVerified
+                  - emailVerified
+                  - lastLoginAt
+                  - createdAt
+                  - orderCount
+                  - totalSpent
+                  - updatedAt
+                  - recentOrders
+                  - addresses
+        "404":
+          description: E-ADMIN-USER-001 用户不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    patch:
+      tags:
+        - user
+      description: 编辑客户资料（W7-feature 2026-07-10）。支持
+        name/phone/email/avatarUrl/role/phoneVerified/emailVerified 字段。安全：不能降级自己
+        role（E-ADMIN-USER-005）；phone/email unique 冲突抛 E-ADMIN-USER-002。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                phone:
+                  type: string
+                  minLength: 5
+                  maxLength: 20
+                email:
+                  type: string
+                  nullable: true
+                  format: email
+                avatarUrl:
+                  type: string
+                  format: uri
+                role:
+                  type: string
+                  enum: *a1
+                phoneVerified:
+                  type: boolean
+                emailVerified:
+                  type: boolean
+      responses:
+        "200":
+          description: 更新后的用户详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a2
+                  phoneVerified:
+                    type: boolean
+                  emailVerified:
+                    type: boolean
+                  lastLoginAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  totalSpent:
+                    type: integer
+                    minimum: 0
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderNo:
+                          type: string
+                          pattern: ^MM\d{14}$
+                        status:
+                          type: string
+                          enum: *a3
+                        payableAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        createdAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderNo
+                        - status
+                        - payableAmount
+                        - createdAt
+                    maxItems: 5
+                  addresses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        region:
+                          type: object
+                          properties:
+                            province:
+                              type: string
+                            city:
+                              type: string
+                            district:
+                              type: string
+                          required:
+                            - province
+                            - city
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                        isDefault:
+                          type: boolean
+                        tag:
+                          type: string
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - name
+                        - phone
+                        - region
+                        - detail
+                        - lat
+                        - lng
+                        - isDefault
+                        - tag
+                        - createdAt
+                        - updatedAt
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - phoneVerified
+                  - emailVerified
+                  - lastLoginAt
+                  - createdAt
+                  - orderCount
+                  - totalSpent
+                  - updatedAt
+                  - recentOrders
+                  - addresses
+        "403":
+          description: E-ADMIN-USER-005
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: E-ADMIN-USER-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-ADMIN-USER-002 / E-ADMIN-USER-003
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/users/{id}/suspend:
+    post:
+      tags:
+        - user
+      description: 暂停用户（W7-feature 2026-07-10）。status ->
+        SUSPENDED。安全：不能暂停自己（E-ADMIN-USER-005）；不能暂停其他
+        super_admin（E-ADMIN-USER-004）。副作用：用户当前 JWT 仍有效至过期，下次 refresh 时被拒（kill
+        session 需 Redis 黑名单，W8 收尾）。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+      responses:
+        "200":
+          description: 暂停后的用户详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a2
+                  phoneVerified:
+                    type: boolean
+                  emailVerified:
+                    type: boolean
+                  lastLoginAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  totalSpent:
+                    type: integer
+                    minimum: 0
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderNo:
+                          type: string
+                          pattern: ^MM\d{14}$
+                        status:
+                          type: string
+                          enum: *a3
+                        payableAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        createdAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderNo
+                        - status
+                        - payableAmount
+                        - createdAt
+                    maxItems: 5
+                  addresses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        region:
+                          type: object
+                          properties:
+                            province:
+                              type: string
+                            city:
+                              type: string
+                            district:
+                              type: string
+                          required:
+                            - province
+                            - city
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                        isDefault:
+                          type: boolean
+                        tag:
+                          type: string
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - name
+                        - phone
+                        - region
+                        - detail
+                        - lat
+                        - lng
+                        - isDefault
+                        - tag
+                        - createdAt
+                        - updatedAt
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - phoneVerified
+                  - emailVerified
+                  - lastLoginAt
+                  - createdAt
+                  - orderCount
+                  - totalSpent
+                  - updatedAt
+                  - recentOrders
+                  - addresses
+        "403":
+          description: E-ADMIN-USER-004 / E-ADMIN-USER-005
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: E-ADMIN-USER-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-ADMIN-USER-003
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/users/{id}/activate:
+    post:
+      tags:
+        - user
+      description: 激活用户（W7-feature 2026-07-10）。status -> ACTIVE，仅允许从 SUSPENDED
+        转。DELETED 是终态，不可激活。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+      responses:
+        "200":
+          description: 激活后的用户详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a2
+                  phoneVerified:
+                    type: boolean
+                  emailVerified:
+                    type: boolean
+                  lastLoginAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  totalSpent:
+                    type: integer
+                    minimum: 0
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderNo:
+                          type: string
+                          pattern: ^MM\d{14}$
+                        status:
+                          type: string
+                          enum: *a3
+                        payableAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        createdAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderNo
+                        - status
+                        - payableAmount
+                        - createdAt
+                    maxItems: 5
+                  addresses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        region:
+                          type: object
+                          properties:
+                            province:
+                              type: string
+                            city:
+                              type: string
+                            district:
+                              type: string
+                          required:
+                            - province
+                            - city
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                        isDefault:
+                          type: boolean
+                        tag:
+                          type: string
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - name
+                        - phone
+                        - region
+                        - detail
+                        - lat
+                        - lng
+                        - isDefault
+                        - tag
+                        - createdAt
+                        - updatedAt
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - phoneVerified
+                  - emailVerified
+                  - lastLoginAt
+                  - createdAt
+                  - orderCount
+                  - totalSpent
+                  - updatedAt
+                  - recentOrders
+                  - addresses
+        "404":
+          description: E-ADMIN-USER-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-ADMIN-USER-003
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      tags:
+        - user
+      description: 重置密码（W7-feature 2026-07-10）。生成 12 字符 base64url 临时密码，bcrypt
+        哈希存库，明文一次性返回。安全：明文不落库；audit maskFields 不记
+        temporaryPassword；不强制首登改密（MVP）。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 临时密码（明文，仅本次返回）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  temporaryPassword:
+                    type: string
+                    minLength: 12
+                    maxLength: 12
+                  generatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - temporaryPassword
+                  - generatedAt
+        "404":
+          description: E-ADMIN-USER-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-ADMIN-USER-003 status=DELETED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/admin/orders:
     get:
       tags:
@@ -8273,7 +9562,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a12
+            enum: *a3
           required: false
           name: status
           in: query
@@ -8341,7 +9630,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: *a12
+                              enum: *a3
                             items:
                               type: array
                               items:
@@ -8431,7 +9720,7 @@ paths:
                               format: uuid
                             paymentMethod:
                               type: string
-                              enum: *a11
+                              enum: *a12
                             paymentStatus:
                               type: string
                               enum: *a13
@@ -8600,7 +9889,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a12
+                        enum: *a3
                       items:
                         type: array
                         items:
@@ -8690,7 +9979,7 @@ paths:
                         format: uuid
                       paymentMethod:
                         type: string
-                        enum: *a11
+                        enum: *a12
                       paymentStatus:
                         type: string
                         enum: *a13
@@ -8824,7 +10113,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a12
+                        enum: *a3
                     required:
                       - id
                       - status
@@ -10327,7 +11616,7 @@ paths:
                         pattern: ^MM\d{14}$
                       orderStatus:
                         type: string
-                        enum: *a12
+                        enum: *a3
                       paymentStatus:
                         type: string
                         enum: *a13
@@ -11250,7 +12539,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a12
+                        enum: *a3
                     required:
                       - id
                       - status
@@ -11318,7 +12607,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a12
+                        enum: *a3
                     required:
                       - id
                       - status

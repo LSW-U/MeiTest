@@ -1,4 +1,9 @@
 {
+  "E-ADMIN-USER-001": "Utilizador la exists",
+  "E-ADMIN-USER-002": "Telefone ka dezemplu",
+  "E-ADMIN-USER-003": "Transisaun estadu la validu",
+  "E-ADMIN-USER-004": "La bele suspende super_admin seluk",
+  "E-ADMIN-USER-005": "La bele desce ka suspende rasik",
   "E-AUDIT-001": "Audit log not found",
   "E-AUTH-001": "Device type does not match this endpoint",
   "E-AUTH-002": "Authentication required",

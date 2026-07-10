@@ -4749,6 +4749,636 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台用户详情（W7-feature 2026-07-10）。返回 AdminUserDetail，含最近 5 笔已成交订单 + 全部收货地址。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 用户详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            phoneVerified: boolean;
+                            emailVerified: boolean;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            orderCount: number;
+                            totalSpent: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            recentOrders: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string;
+                                phone: string;
+                                region: {
+                                    province: string;
+                                    city: string;
+                                    district?: string;
+                                };
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                                isDefault: boolean;
+                                tag: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 用户不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 编辑客户资料（W7-feature 2026-07-10）。支持 name/phone/email/avatarUrl/role/phoneVerified/emailVerified 字段。安全：不能降级自己 role（E-ADMIN-USER-005）；phone/email unique 冲突抛 E-ADMIN-USER-002。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        phone?: string;
+                        /** Format: email */
+                        email?: string | null;
+                        /** Format: uri */
+                        avatarUrl?: string;
+                        /** @enum {string} */
+                        role?: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                        phoneVerified?: boolean;
+                        emailVerified?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新后的用户详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            phoneVerified: boolean;
+                            emailVerified: boolean;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            orderCount: number;
+                            totalSpent: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            recentOrders: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string;
+                                phone: string;
+                                region: {
+                                    province: string;
+                                    city: string;
+                                    district?: string;
+                                };
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                                isDefault: boolean;
+                                tag: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-005 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-002 / E-ADMIN-USER-003 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 暂停用户（W7-feature 2026-07-10）。status -> SUSPENDED。安全：不能暂停自己（E-ADMIN-USER-005）；不能暂停其他 super_admin（E-ADMIN-USER-004）。副作用：用户当前 JWT 仍有效至过期，下次 refresh 时被拒（kill session 需 Redis 黑名单，W8 收尾）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 暂停后的用户详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            phoneVerified: boolean;
+                            emailVerified: boolean;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            orderCount: number;
+                            totalSpent: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            recentOrders: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string;
+                                phone: string;
+                                region: {
+                                    province: string;
+                                    city: string;
+                                    district?: string;
+                                };
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                                isDefault: boolean;
+                                tag: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-004 / E-ADMIN-USER-005 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-003 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 激活用户（W7-feature 2026-07-10）。status -> ACTIVE，仅允许从 SUSPENDED 转。DELETED 是终态，不可激活。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 激活后的用户详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            phoneVerified: boolean;
+                            emailVerified: boolean;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            orderCount: number;
+                            totalSpent: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            recentOrders: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string;
+                                phone: string;
+                                region: {
+                                    province: string;
+                                    city: string;
+                                    district?: string;
+                                };
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                                isDefault: boolean;
+                                tag: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-003 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 重置密码（W7-feature 2026-07-10）。生成 12 字符 base64url 临时密码，bcrypt 哈希存库，明文一次性返回。安全：明文不落库；audit maskFields 不记 temporaryPassword；不强制首登改密（MVP）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 临时密码（明文，仅本次返回） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            temporaryPassword: string;
+                            /** Format: date-time */
+                            generatedAt: string;
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-003 status=DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/orders": {
         parameters: {
             query?: never;
@@ -7333,6 +7963,94 @@ export interface components {
             status?: "ACTIVE" | "SUSPENDED" | "DELETED";
             page?: number;
             pageSize?: number;
+        };
+        AdminUserDetail: {
+            /** Format: uuid */
+            id: string;
+            phone: string;
+            /** Format: email */
+            email: string | null;
+            name: string | null;
+            avatarUrl: string | null;
+            /** @enum {string} */
+            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            /** @enum {string} */
+            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+            phoneVerified: boolean;
+            emailVerified: boolean;
+            /** Format: date-time */
+            lastLoginAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            orderCount: number;
+            totalSpent: number;
+            /** Format: date-time */
+            updatedAt: string;
+            recentOrders: {
+                /** Format: uuid */
+                id: string;
+                orderNo: string;
+                /** @enum {string} */
+                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                payableAmount: number;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            addresses: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                userId: string;
+                name: string;
+                phone: string;
+                region: {
+                    province: string;
+                    city: string;
+                    district?: string;
+                };
+                detail: string;
+                lat: number | null;
+                lng: number | null;
+                isDefault: boolean;
+                tag: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            }[];
+        };
+        UpdateAdminUserRequest: {
+            name?: string;
+            phone?: string;
+            /** Format: email */
+            email?: string | null;
+            /** Format: uri */
+            avatarUrl?: string;
+            /** @enum {string} */
+            role?: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            phoneVerified?: boolean;
+            emailVerified?: boolean;
+        };
+        SuspendUserRequest: {
+            reason?: string;
+        };
+        ActivateUserRequest: {
+            reason?: string;
+        };
+        ResetPasswordResponseData: {
+            temporaryPassword: string;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        OrderSummary: {
+            /** Format: uuid */
+            id: string;
+            orderNo: string;
+            /** @enum {string} */
+            status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+            payableAmount: number;
+            /** Format: date-time */
+            createdAt: string;
         };
         Shop: {
             /** Format: uuid */

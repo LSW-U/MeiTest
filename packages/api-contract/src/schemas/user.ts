@@ -7,8 +7,9 @@
  * - CLAUDE.md §多语言：name 等用 i18n，但 User.name 是昵称（单值），不进多语言
  */
 import { z } from 'zod';
-import { Id, IsoTimestamp, I18nText } from './common';
+import { Id, IsoTimestamp, I18nText, Money } from './common';
 import { Role } from './auth';
+import { OrderNo, OrderStatus } from './order';
 
 export const UserStatus = z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']);
 
@@ -150,4 +151,51 @@ export const ListUsersQuery = z.object({
   status: UserStatus.optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+// ===== W7-feature 客户管理详情/动作端点（2026-07-10 新增） =====
+
+/** 订单摘要（客户详情 recentOrders 用，不含 items 数组减负） */
+export const OrderSummary = z.object({
+  id: Id,
+  orderNo: OrderNo,
+  status: OrderStatus,
+  payableAmount: Money,
+  createdAt: IsoTimestamp,
+});
+
+/** 后台用户详情（GET /:id 响应 data） */
+export const AdminUserDetail = AdminUserListItem.extend({
+  updatedAt: IsoTimestamp,
+  /** 最近 5 笔已成交订单（按 createdAt desc） */
+  recentOrders: z.array(OrderSummary).max(5),
+  /** 全部收货地址（按 isDefault desc + createdAt desc） */
+  addresses: z.array(Address),
+});
+
+/** 编辑客户资料请求（PATCH /:id body） */
+export const UpdateAdminUserRequest = z.object({
+  name: z.string().min(1).max(50).optional(),
+  phone: z.string().min(5).max(20).optional(),
+  email: z.string().email().nullable().optional(),
+  avatarUrl: z.string().url().optional(),
+  role: Role.optional(),
+  phoneVerified: z.boolean().optional(),
+  emailVerified: z.boolean().optional(),
+});
+
+/** 暂停/激活请求 body（reason 可选，审计用） */
+export const SuspendUserRequest = z.object({
+  reason: z.string().min(1).max(200).optional(),
+});
+
+export const ActivateUserRequest = z.object({
+  reason: z.string().min(1).max(200).optional(),
+});
+
+/** 重置密码响应 data（明文一次性返回） */
+export const ResetPasswordResponseData = z.object({
+  /** 12 字符 base64url 临时密码，明文不落库，仅本次响应返回 */
+  temporaryPassword: z.string().length(12),
+  generatedAt: IsoTimestamp,
 });

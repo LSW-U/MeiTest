@@ -1,4 +1,9 @@
 {
+  "E-ADMIN-USER-001": "Utilizador não encontrado",
+  "E-ADMIN-USER-002": "Telefone ou email já em uso",
+  "E-ADMIN-USER-003": "Transição de estado inválida",
+  "E-ADMIN-USER-004": "Não pode suspender outro super_admin",
+  "E-ADMIN-USER-005": "Não pode rebaixar ou suspender-se",
   "E-AUDIT-001": "Registo de auditoria não encontrado",
   "E-AUTH-001": "O tipo de dispositivo não corresponde a este endpoint",
   "E-AUTH-002": "Autenticação necessária",

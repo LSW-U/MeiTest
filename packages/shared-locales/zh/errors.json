@@ -1,4 +1,9 @@
 {
+  "E-ADMIN-USER-001": "用户不存在",
+  "E-ADMIN-USER-002": "手机号或邮箱已被占用",
+  "E-ADMIN-USER-003": "非法状态转换",
+  "E-ADMIN-USER-004": "不能暂停其他 super_admin",
+  "E-ADMIN-USER-005": "不能降级或暂停自己",
   "E-AUDIT-001": "审计日志未找到",
   "E-AUTH-001": "设备类型与该接口不匹配",
   "E-AUTH-002": "请先登录",

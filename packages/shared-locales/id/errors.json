@@ -1,4 +1,9 @@
 {
+  "E-ADMIN-USER-001": "Pengguna tidak ditemukan",
+  "E-ADMIN-USER-002": "Nomor telepon atau email sudah digunakan",
+  "E-ADMIN-USER-003": "Transisi status tidak valid",
+  "E-ADMIN-USER-004": "Tidak dapat menangguhkan super_admin lain",
+  "E-ADMIN-USER-005": "Tidak dapat menurunkan atau menangguhkan diri sendiri",
   "E-AUDIT-001": "Log audit tidak ditemukan",
   "E-AUTH-001": "Jenis perangkat tidak cocok dengan endpoint ini",
   "E-AUTH-002": "Autentikasi diperlukan",

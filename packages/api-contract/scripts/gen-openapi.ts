@@ -44,10 +44,16 @@ import {
   FavoriteToggleResponse,
   NotificationItem,
   MarkNotificationReadResponse,
-  // admin users（W7 P1-2）
+  // admin users（W7 P1-2 + W7-feature 2026-07-10）
   AdminUserListItem,
   AdminUserListResponseData,
   ListUsersQuery,
+  AdminUserDetail,
+  UpdateAdminUserRequest,
+  SuspendUserRequest,
+  ActivateUserRequest,
+  ResetPasswordResponseData,
+  OrderSummary,
   // shop
   Shop,
   UpdateShopRequest,
@@ -164,6 +170,12 @@ registry.register('MarkNotificationReadResponse', MarkNotificationReadResponse);
 registry.register('AdminUserListItem', AdminUserListItem);
 registry.register('AdminUserListResponseData', AdminUserListResponseData);
 registry.register('ListUsersQuery', ListUsersQuery);
+registry.register('AdminUserDetail', AdminUserDetail);
+registry.register('UpdateAdminUserRequest', UpdateAdminUserRequest);
+registry.register('SuspendUserRequest', SuspendUserRequest);
+registry.register('ActivateUserRequest', ActivateUserRequest);
+registry.register('ResetPasswordResponseData', ResetPasswordResponseData);
+registry.register('OrderSummary', OrderSummary);
 
 registry.register('Shop', Shop);
 registry.register('UpdateShopRequest', UpdateShopRequest);
@@ -1224,7 +1236,7 @@ registry.registerPath({
 // 后端已实现，OpenAPI 之前漏注册导致跨 repo 契约 drift
 // ============================================================================
 
-// ---- Admin Users（W7 P1-2）----
+// ---- Admin Users（W7 P1-2 列表 + W7-feature 2026-07-10 详情/动作）----
 registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/users',
@@ -1239,6 +1251,109 @@ registry.registerPath({
       description: '用户列表',
       content: { 'application/json': { schema: AdminUserListResponseData } },
     },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/users/{id}',
+  tags: ['user'],
+  description:
+    '后台用户详情（W7-feature 2026-07-10）。返回 AdminUserDetail，含最近 5 笔已成交订单 + 全部收货地址。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '用户详情',
+      content: { 'application/json': { schema: AdminUserDetail } },
+    },
+    404: { description: 'E-ADMIN-USER-001 用户不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/users/{id}',
+  tags: ['user'],
+  description:
+    '编辑客户资料（W7-feature 2026-07-10）。支持 name/phone/email/avatarUrl/role/phoneVerified/emailVerified 字段。' +
+    '安全：不能降级自己 role（E-ADMIN-USER-005）；phone/email unique 冲突抛 E-ADMIN-USER-002。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateAdminUserRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的用户详情',
+      content: { 'application/json': { schema: AdminUserDetail } },
+    },
+    404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ADMIN-USER-002 / E-ADMIN-USER-003', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-ADMIN-USER-005', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/users/{id}/suspend',
+  tags: ['user'],
+  description:
+    '暂停用户（W7-feature 2026-07-10）。status -> SUSPENDED。' +
+    '安全：不能暂停自己（E-ADMIN-USER-005）；不能暂停其他 super_admin（E-ADMIN-USER-004）。' +
+    '副作用：用户当前 JWT 仍有效至过期，下次 refresh 时被拒（kill session 需 Redis 黑名单，W8 收尾）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: SuspendUserRequest } } },
+  },
+  responses: {
+    200: {
+      description: '暂停后的用户详情',
+      content: { 'application/json': { schema: AdminUserDetail } },
+    },
+    404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-ADMIN-USER-004 / E-ADMIN-USER-005', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ADMIN-USER-003', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/users/{id}/activate',
+  tags: ['user'],
+  description:
+    '激活用户（W7-feature 2026-07-10）。status -> ACTIVE，仅允许从 SUSPENDED 转。DELETED 是终态，不可激活。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: ActivateUserRequest } } },
+  },
+  responses: {
+    200: {
+      description: '激活后的用户详情',
+      content: { 'application/json': { schema: AdminUserDetail } },
+    },
+    404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ADMIN-USER-003', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/users/{id}/reset-password',
+  tags: ['user'],
+  description:
+    '重置密码（W7-feature 2026-07-10）。生成 12 字符 base64url 临时密码，bcrypt 哈希存库，明文一次性返回。' +
+    '安全：明文不落库；audit maskFields 不记 temporaryPassword；不强制首登改密（MVP）。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '临时密码（明文，仅本次返回）',
+      content: { 'application/json': { schema: ResetPasswordResponseData } },
+    },
+    404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ADMIN-USER-003 status=DELETED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

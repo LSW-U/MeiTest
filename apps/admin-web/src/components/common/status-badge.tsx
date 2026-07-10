@@ -14,6 +14,9 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   ACTIVE: 'success',
   INACTIVE: 'secondary',
   OUT_OF_STOCK: 'destructive',
+  // 用户状态（W7-feature 客户管理）
+  SUSPENDED: 'warning',
+  DELETED: 'destructive',
   // 订单
   PENDING_CONFIRM: 'warning',
   PENDING_PAYMENT: 'warning',

@@ -9,11 +9,13 @@
  * - 收藏 toggle 用 upsert（避免重复抛错）
  * - 通知 type 必须是 NotificationType enum（DB 校验）
  */
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { db } from '../../shared/db';
 import { Prisma } from '../../prisma/client';
 import { AuthService } from '../auth/auth.service';
+import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import { Address, NotificationItem } from '@meimart/api-contract';
 
 type AddressDTO = z.infer<typeof Address>;
@@ -422,4 +424,250 @@ export class UserService {
       hasMore: skip + items.length < total,
     };
   }
+
+  // ===== W7-feature 客户管理详情/动作端点（2026-07-10） =====
+
+  /** GET /:id - 用户详情（含最近 5 订单 + 全部地址） */
+  async getUserDetail(id: string) {
+    const [user, recentOrders, addresses] = await Promise.all([
+      db.user.findUnique({ where: { id } }),
+      db.order.findMany({
+        where: { userId: id, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          orderNo: true,
+          status: true,
+          payableAmount: true,
+          createdAt: true,
+        },
+      }),
+      db.address.findMany({
+        where: { userId: id, deletedAt: null },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+      }),
+    ]);
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    return this.toAdminUserDetail(user, recentOrders, addresses);
+  }
+
+  /** PATCH /:id - 编辑客户资料 */
+  async updateUser(id: string, input: UpdateUserInput, actorId: string) {
+    const user = await db.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    // 防 super_admin 降级自己（防止自封）
+    if (id === actorId && input.role !== undefined && input.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException({
+        code: 'E-ADMIN-USER-005',
+        message: '不能降级自己的 role（防自封）',
+      });
+    }
+    try {
+      await db.user.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.phone !== undefined && { phone: input.phone }),
+          ...(input.email !== undefined && { email: input.email }),
+          ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl }),
+          ...(input.role !== undefined && { role: input.role }),
+          ...(input.phoneVerified !== undefined && { phoneVerified: input.phoneVerified }),
+          ...(input.emailVerified !== undefined && { emailVerified: input.emailVerified }),
+        },
+      });
+      return this.getUserDetail(id);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException({
+          code: 'E-ADMIN-USER-002',
+          message: '手机号或邮箱已被其他用户占用',
+        });
+      }
+      throw err;
+    }
+  }
+
+  /** POST /:id/suspend - 暂停用户（status -> SUSPENDED） */
+  async suspendUser(id: string, actorId: string) {
+    const user = await db.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    if (id === actorId) {
+      throw new ForbiddenException({
+        code: 'E-ADMIN-USER-005',
+        message: '不能暂停自己',
+      });
+    }
+    if (user.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException({
+        code: 'E-ADMIN-USER-004',
+        message: '不能暂停其他 super_admin',
+      });
+    }
+    if (user.status === 'SUSPENDED' || user.status === 'DELETED') {
+      throw new ConflictException({
+        code: 'E-ADMIN-USER-003',
+        message: `当前 status=${user.status}，无需暂停`,
+      });
+    }
+    await db.user.update({
+      where: { id },
+      data: { status: 'SUSPENDED' },
+    });
+    return this.getUserDetail(id);
+  }
+
+  /** POST /:id/activate - 激活用户（仅从 SUSPENDED 转 ACTIVE） */
+  async activateUser(id: string) {
+    const user = await db.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    if (user.status !== 'SUSPENDED') {
+      throw new ConflictException({
+        code: 'E-ADMIN-USER-003',
+        message: `仅允许从 SUSPENDED 激活，当前 status=${user.status}`,
+      });
+    }
+    await db.user.update({
+      where: { id },
+      data: { status: 'ACTIVE' },
+    });
+    return this.getUserDetail(id);
+  }
+
+  /** POST /:id/reset-password - 重置密码（生成 12 字符临时密码） */
+  async resetUserPassword(id: string): Promise<{
+    temporaryPassword: string;
+    generatedAt: string;
+  }> {
+    const user = await db.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    if (user.status === 'DELETED') {
+      throw new ConflictException({
+        code: 'E-ADMIN-USER-003',
+        message: '不能给已删除用户重置密码',
+      });
+    }
+    // 12 字符 base64url 临时密码（含字母+数字，URL 安全，无 +/=）
+    // randomBytes(9) -> 9 字节 = 72 位 -> 12 个 base64url 字符（无 padding）
+    const plain = randomBytes(9).toString('base64url').slice(0, 12);
+    const hashed = await passwordStrategy.hashPassword(plain);
+    await db.user.update({
+      where: { id },
+      data: { password: hashed },
+    });
+    return {
+      temporaryPassword: plain,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /** Prisma User + orders + addresses -> AdminUserDetail DTO */
+  private async toAdminUserDetail(
+    user: {
+      id: string;
+      phone: string;
+      email: string | null;
+      name: string | null;
+      avatarUrl: string | null;
+      role: string;
+      status: string;
+      phoneVerified: boolean;
+      emailVerified: boolean;
+      lastLoginAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    recentOrders: Array<{
+      id: string;
+      orderNo: string;
+      status: string;
+      payableAmount: number;
+      createdAt: Date;
+    }>,
+    addresses: Array<{
+      id: string;
+      userId: string;
+      name: string;
+      phone: string;
+      region: Prisma.JsonValue;
+      detail: string;
+      lat: Prisma.Decimal | null;
+      lng: Prisma.Decimal | null;
+      isDefault: boolean;
+      tag: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      deletedAt: Date | null;
+    }>,
+  ) {
+    // 聚合 orderCount + totalSpent
+    const agg = await db.order.aggregate({
+      where: {
+        userId: user.id,
+        status: { in: ['DELIVERED_PAID', 'COMPLETED'] },
+      },
+      _count: { _all: true },
+      _sum: { payableAmount: true },
+    });
+    return {
+      id: user.id,
+      phone: user.phone,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      role: this.auth.toContractRole(user.role as never),
+      status: user.status,
+      phoneVerified: user.phoneVerified,
+      emailVerified: user.emailVerified,
+      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      orderCount: agg._count._all,
+      totalSpent: agg._sum.payableAmount ?? 0,
+      recentOrders: recentOrders.map((o) => ({
+        id: o.id,
+        orderNo: o.orderNo,
+        status: o.status,
+        payableAmount: o.payableAmount,
+        createdAt: o.createdAt.toISOString(),
+      })),
+      addresses: addresses.map((a) => ({
+        id: a.id,
+        userId: a.userId,
+        name: a.name,
+        phone: a.phone,
+        region: a.region as { province: string; city: string; district?: string | null },
+        detail: a.detail,
+        lat: a.lat !== null ? Number(a.lat) : null,
+        lng: a.lng !== null ? Number(a.lng) : null,
+        isDefault: a.isDefault,
+        tag: a.tag,
+        createdAt: a.createdAt.toISOString(),
+        updatedAt: a.updatedAt.toISOString(),
+      })),
+    };
+  }
 }
+
+type UpdateUserInput = {
+  name?: string;
+  phone?: string;
+  email?: string | null;
+  avatarUrl?: string;
+  role?: 'SUPER_ADMIN' | 'CUSTOMER' | 'RIDER' | 'WAREHOUSE_STAFF' | 'CUSTOMER_SERVICE';
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+};

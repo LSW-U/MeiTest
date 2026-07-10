@@ -1,4 +1,9 @@
 {
+  "E-ADMIN-USER-001": "User not found",
+  "E-ADMIN-USER-002": "Phone or email already in use",
+  "E-ADMIN-USER-003": "Invalid state transition",
+  "E-ADMIN-USER-004": "Cannot suspend another super_admin",
+  "E-ADMIN-USER-005": "Cannot demote or suspend yourself",
   "E-AUDIT-001": "Audit log not found",
   "E-AUTH-001": "Device type does not match this endpoint",
   "E-AUTH-002": "Authentication required",
