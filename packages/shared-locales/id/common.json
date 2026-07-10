@@ -433,9 +433,21 @@
     },
     "statistics": {
       "title": "Statistik",
-      "description": "Laporan Lanjutan (W6 TBD)",
-      "placeholderTitle": "Placeholder",
-      "placeholderDescription": "Modul platform M flow punya dashboard summary; laporan lanjutan (tren/funnel/konversi) TBD untuk W6."
+      "description": "Metrik real-time: GMV, pesanan, rider, anomali",
+      "rangeToday": "Hari ini",
+      "rangeWeek": "Minggu",
+      "rangeMonth": "Bulan",
+      "gmv": "GMV",
+      "orderCount": "Pesanan",
+      "onlineRiders": "Rider Online",
+      "abnormalOrders": "Anomali",
+      "trend": "Tren",
+      "warehouseBreakdown": "Distribusi Gudang",
+      "noGrowth": "—",
+      "noTrendData": "Tidak ada data tren di rentang ini",
+      "noWarehouseData": "Tidak ada data gudang di rentang ini",
+      "empty": "Tidak ada data",
+      "emptyDescription": "Dashboard summary tidak tersedia"
     },
     "settings": {
       "title": "Pengaturan",

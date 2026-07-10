@@ -433,9 +433,21 @@
     },
     "statistics": {
       "title": "统计报表",
-      "description": "深度统计报表（W6 待实现）",
-      "placeholderTitle": "占位",
-      "placeholderDescription": "M 流程 platform 模块有 dashboard summary；高级报表（趋势/漏斗/转化）W6 待实现。"
+      "description": "实时指标：GMV、订单、骑手、异常",
+      "rangeToday": "今日",
+      "rangeWeek": "本周",
+      "rangeMonth": "本月",
+      "gmv": "GMV",
+      "orderCount": "订单数",
+      "onlineRiders": "在线骑手",
+      "abnormalOrders": "异常订单",
+      "trend": "趋势",
+      "warehouseBreakdown": "仓库分布",
+      "noGrowth": "—",
+      "noTrendData": "该时段暂无趋势数据",
+      "noWarehouseData": "该时段暂无仓库数据",
+      "empty": "暂无数据",
+      "emptyDescription": "仪表盘数据不可用"
     },
     "settings": {
       "title": "系统设置",

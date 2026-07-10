@@ -433,9 +433,21 @@
     },
     "statistics": {
       "title": "Estatísticas",
-      "description": "Relatórios Avançados (W6 TBD)",
-      "placeholderTitle": "Placeholder",
-      "placeholderDescription": "Módulo platform M flow tem dashboard summary; relatórios avançados (trend/funnel/conversion) TBD para W6."
+      "description": "Métricas em tempo real: GMV, pedidos, riders, anomalias",
+      "rangeToday": "Hoje",
+      "rangeWeek": "Semana",
+      "rangeMonth": "Mês",
+      "gmv": "GMV",
+      "orderCount": "Pedidos",
+      "onlineRiders": "Riders Online",
+      "abnormalOrders": "Anomalias",
+      "trend": "Tendência",
+      "warehouseBreakdown": "Distribuição por Armazém",
+      "noGrowth": "—",
+      "noTrendData": "Sem dados de tendência neste período",
+      "noWarehouseData": "Sem dados de armazém neste período",
+      "empty": "Sem dados",
+      "emptyDescription": "Dashboard summary indisponível"
     },
     "settings": {
       "title": "Configurações",

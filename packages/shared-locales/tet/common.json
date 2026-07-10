@@ -433,9 +433,21 @@
     },
     "statistics": {
       "title": "Statistika",
-      "description": "Relatoriu Avansadu (W6 TBD)",
-      "placeholderTitle": "Placeholder",
-      "placeholderDescription": "Modulu platform M flow iha dashboard summary; relatoriu avansadu (trend/funnel/conversion) TBD ba W6."
+      "description": "Metrik tempu-reál: GMV, pedidu, rider, anomalia",
+      "rangeToday": "Ohin",
+      "rangeWeek": "Semana",
+      "rangeMonth": "Fulan",
+      "gmv": "GMV",
+      "orderCount": "Pedidu",
+      "onlineRiders": "Rider Online",
+      "abnormalOrders": "Anomalia",
+      "trend": "Trend",
+      "warehouseBreakdown": "Distribuisaun Armazem",
+      "noGrowth": "—",
+      "noTrendData": "La iha data trend iha tempu ne'e",
+      "noWarehouseData": "La iha data armazem iha tempu ne'e",
+      "empty": "La iha data",
+      "emptyDescription": "Dashboard summary la bele asesu"
     },
     "settings": {
       "title": "Konfigurasaun",

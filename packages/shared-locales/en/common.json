@@ -433,9 +433,21 @@
     },
     "statistics": {
       "title": "Statistics",
-      "description": "Advanced Reports (W6 TBD)",
-      "placeholderTitle": "Placeholder",
-      "placeholderDescription": "M flow platform module has dashboard summary; advanced reports (trend/funnel/conversion) TBD for W6."
+      "description": "Real-time metrics: GMV, orders, riders, anomalies",
+      "rangeToday": "Today",
+      "rangeWeek": "Week",
+      "rangeMonth": "Month",
+      "gmv": "GMV",
+      "orderCount": "Orders",
+      "onlineRiders": "Online Riders",
+      "abnormalOrders": "Abnormal",
+      "trend": "Trend",
+      "warehouseBreakdown": "Warehouse Breakdown",
+      "noGrowth": "—",
+      "noTrendData": "No trend data in this range",
+      "noWarehouseData": "No warehouse data in this range",
+      "empty": "No data",
+      "emptyDescription": "Dashboard summary not available"
     },
     "settings": {
       "title": "Settings",
