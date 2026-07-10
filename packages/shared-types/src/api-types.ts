@@ -6227,6 +6227,518 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/riders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 已审核骑手列表（W7-ext-D）。Role: super_admin。返回 applicationStatus=APPROVED 的骑手。 */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "OFFLINE" | "ONLINE" | "BUSY";
+                    userStatus?: "ACTIVE" | "SUSPENDED" | "DELETED";
+                    keyword?: string;
+                    warehouseId?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 骑手列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/riders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 骑手详情（W7-ext-D）。含 User 状态 + 最近 10 订单 + 评分统计。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Admin 编辑骑手（W7-ext-D）。仅允许改 vehicleType/vehiclePlate/preferredWarehouseIds。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        vehicleType?: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                        vehiclePlate?: string | null;
+                        preferredWarehouseIds?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 编辑成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/riders/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Admin 停用骑手（W7-ext-D）。User.status=SUSPENDED + RiderProfile.status=OFFLINE + 清 Redis 在线状态。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 停用成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                userStatus: string;
+                                riderStatus: string;
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_ALREADY_SUSPENDED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/riders/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Admin 恢复骑手（W7-ext-D）。User.status=ACTIVE。骑手自行 PATCH /duty 上班。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 恢复成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                userStatus: string;
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description ALREADY_ACTIVE / CANNOT_ACTIVATE_DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/riders/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Admin 软删骑手（W7-ext-D）。User.status=DELETED + RiderProfile.status=OFFLINE。不能删自己。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                userStatus: string;
+                            };
+                        };
+                    };
+                };
+                /** @description RIDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description CANNOT_DELETE_SELF / ALREADY_DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/rider/apply": {
         parameters: {
             query?: never;
@@ -9070,6 +9582,15 @@ export interface components {
         };
         /** @enum {string} */
         ConversationType: "customer_merchant" | "customer_rider" | "customer_service";
+        UpdateAdminRiderRequest: {
+            /** @enum {string} */
+            vehicleType?: "MOTORCYCLE" | "BICYCLE" | "CAR";
+            vehiclePlate?: string | null;
+            preferredWarehouseIds?: string[];
+        };
+        DeleteAdminRiderRequest: {
+            reason?: string;
+        };
         GeocodeRequest: {
             address: string;
         };

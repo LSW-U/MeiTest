@@ -1568,6 +1568,171 @@ registry.registerPath({
 });
 
 // ============================================================================
+// W7-ext-D：Admin 骑手 CRUD（6 endpoints）
+// ============================================================================
+
+const UpdateAdminRiderRequest = z.object({
+  vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']).optional(),
+  vehiclePlate: z.string().max(20).nullable().optional(),
+  preferredWarehouseIds: z.array(Id).optional(),
+});
+
+const DeleteAdminRiderRequest = z.object({
+  reason: z.string().min(1).max(200).optional(),
+});
+
+registry.register('UpdateAdminRiderRequest', UpdateAdminRiderRequest);
+registry.register('DeleteAdminRiderRequest', DeleteAdminRiderRequest);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/riders',
+  tags: ['rider'],
+  description: 'Admin 已审核骑手列表（W7-ext-D）。Role: super_admin。返回 applicationStatus=APPROVED 的骑手。',
+  request: {
+    query: z.object({
+      status: z.enum(['OFFLINE', 'ONLINE', 'BUSY']).optional(),
+      userStatus: z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']).optional(),
+      keyword: z.string().max(50).optional(),
+      warehouseId: Id.optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '骑手列表',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(RiderProfile),
+          }),
+        },
+      },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/riders/{id}',
+  tags: ['rider'],
+  description: 'Admin 骑手详情（W7-ext-D）。含 User 状态 + 最近 10 订单 + 评分统计。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '详情',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: RiderProfile }),
+        },
+      },
+    },
+    404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/riders/{id}',
+  tags: ['rider'],
+  description: 'Admin 编辑骑手（W7-ext-D）。仅允许改 vehicleType/vehiclePlate/preferredWarehouseIds。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateAdminRiderRequest } } },
+  },
+  responses: {
+    200: {
+      description: '编辑成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: RiderProfile }),
+        },
+      },
+    },
+    404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/riders/{id}/suspend',
+  tags: ['rider'],
+  description: 'Admin 停用骑手（W7-ext-D）。User.status=SUSPENDED + RiderProfile.status=OFFLINE + 清 Redis 在线状态。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '停用成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              id: Id,
+              userStatus: z.string(),
+              riderStatus: z.string(),
+            }),
+          }),
+        },
+      },
+    },
+    404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'RIDER_ALREADY_SUSPENDED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/riders/{id}/activate',
+  tags: ['rider'],
+  description: 'Admin 恢复骑手（W7-ext-D）。User.status=ACTIVE。骑手自行 PATCH /duty 上班。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '恢复成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ id: Id, userStatus: z.string() }),
+          }),
+        },
+      },
+    },
+    404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'ALREADY_ACTIVE / CANNOT_ACTIVATE_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/riders/{id}/delete',
+  tags: ['rider'],
+  description: 'Admin 软删骑手（W7-ext-D）。User.status=DELETED + RiderProfile.status=OFFLINE。不能删自己。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: DeleteAdminRiderRequest } } },
+  },
+  responses: {
+    200: {
+      description: '删除成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ id: Id, userStatus: z.string() }),
+          }),
+        },
+      },
+    },
+    404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'CANNOT_DELETE_SELF / ALREADY_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
 // W5 联调准备：骑手 App 端点 path 注册（9 endpoints）
 // 后端 controller 已实现，此处补 OpenAPI 注册让前端 sync-api.sh 能拉到类型
 // ============================================================================

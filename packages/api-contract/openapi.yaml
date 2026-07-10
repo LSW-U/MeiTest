@@ -2713,6 +2713,31 @@ components:
     ConversationType:
       type: string
       enum: *a16
+    UpdateAdminRiderRequest:
+      type: object
+      properties:
+        vehicleType:
+          type: string
+          enum: &a36
+            - MOTORCYCLE
+            - BICYCLE
+            - CAR
+        vehiclePlate:
+          type: string
+          nullable: true
+          maxLength: 20
+        preferredWarehouseIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    DeleteAdminRiderRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
     GeocodeRequest:
       type: object
       properties:
@@ -2735,7 +2760,7 @@ components:
           maximum: 180
         source:
           type: string
-          enum: &a39
+          enum: &a40
             - nominatim
             - fallback
         formattedAddress:
@@ -11048,6 +11073,698 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/riders:
+    get:
+      tags:
+        - rider
+      description: "Admin 已审核骑手列表（W7-ext-D）。Role: super_admin。返回
+        applicationStatus=APPROVED 的骑手。"
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - OFFLINE
+              - ONLINE
+              - BUSY
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum:
+              - ACTIVE
+              - SUSPENDED
+              - DELETED
+          required: false
+          name: userStatus
+          in: query
+        - schema:
+            type: string
+            maxLength: 50
+          required: false
+          name: keyword
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: warehouseId
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: 骑手列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        riderName:
+                          type: string
+                        phone:
+                          type: string
+                        vehicleType:
+                          type: string
+                          enum: *a34
+                        vehiclePlate:
+                          type: string
+                          nullable: true
+                        status:
+                          type: string
+                          enum: *a35
+                        totalDeliveries:
+                          type: integer
+                          minimum: 0
+                        rating:
+                          type: number
+                          minimum: 0
+                          maximum: 5
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - riderName
+                        - phone
+                        - vehicleType
+                        - vehiclePlate
+                        - status
+                        - totalDeliveries
+                        - rating
+                        - createdAt
+                        - updatedAt
+                required:
+                  - success
+                  - data
+        "401":
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/riders/{id}:
+    get:
+      tags:
+        - rider
+      description: Admin 骑手详情（W7-ext-D）。含 User 状态 + 最近 10 订单 + 评分统计。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      riderName:
+                        type: string
+                      phone:
+                        type: string
+                      vehicleType:
+                        type: string
+                        enum: *a34
+                      vehiclePlate:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum: *a35
+                      totalDeliveries:
+                        type: integer
+                        minimum: 0
+                      rating:
+                        type: number
+                        minimum: 0
+                        maximum: 5
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - userId
+                      - riderName
+                      - phone
+                      - vehicleType
+                      - vehiclePlate
+                      - status
+                      - totalDeliveries
+                      - rating
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: RIDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    patch:
+      tags:
+        - rider
+      description: Admin 编辑骑手（W7-ext-D）。仅允许改 vehicleType/vehiclePlate/preferredWarehouseIds。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicleType:
+                  type: string
+                  enum: *a36
+                vehiclePlate:
+                  type: string
+                  nullable: true
+                  maxLength: 20
+                preferredWarehouseIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: 编辑成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      riderName:
+                        type: string
+                      phone:
+                        type: string
+                      vehicleType:
+                        type: string
+                        enum: *a34
+                      vehiclePlate:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        enum: *a35
+                      totalDeliveries:
+                        type: integer
+                        minimum: 0
+                      rating:
+                        type: number
+                        minimum: 0
+                        maximum: 5
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - userId
+                      - riderName
+                      - phone
+                      - vehicleType
+                      - vehiclePlate
+                      - status
+                      - totalDeliveries
+                      - rating
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: RIDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/riders/{id}/suspend:
+    post:
+      tags:
+        - rider
+      description: Admin 停用骑手（W7-ext-D）。User.status=SUSPENDED +
+        RiderProfile.status=OFFLINE + 清 Redis 在线状态。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 停用成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userStatus:
+                        type: string
+                      riderStatus:
+                        type: string
+                    required:
+                      - id
+                      - userStatus
+                      - riderStatus
+                required:
+                  - success
+                  - data
+        "404":
+          description: RIDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: RIDER_ALREADY_SUSPENDED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/riders/{id}/activate:
+    post:
+      tags:
+        - rider
+      description: Admin 恢复骑手（W7-ext-D）。User.status=ACTIVE。骑手自行 PATCH /duty 上班。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 恢复成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userStatus:
+                        type: string
+                    required:
+                      - id
+                      - userStatus
+                required:
+                  - success
+                  - data
+        "404":
+          description: RIDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: ALREADY_ACTIVE / CANNOT_ACTIVATE_DELETED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/riders/{id}/delete:
+    post:
+      tags:
+        - rider
+      description: Admin 软删骑手（W7-ext-D）。User.status=DELETED +
+        RiderProfile.status=OFFLINE。不能删自己。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      userStatus:
+                        type: string
+                    required:
+                      - id
+                      - userStatus
+                required:
+                  - success
+                  - data
+        "404":
+          description: RIDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: CANNOT_DELETE_SELF / ALREADY_DELETED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/common/rider/apply:
     post:
       tags:
@@ -11444,7 +12161,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: &a36
+                              enum: &a37
                                 - PENDING_ASSIGN
                                 - ASSIGNED
                                 - PICKED_UP
@@ -11560,7 +12277,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a36
+                        enum: *a37
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -11700,7 +12417,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a36
+                        enum: *a37
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -11844,7 +12561,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a36
+                        enum: *a37
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -11993,7 +12710,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a36
+                        enum: *a37
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -12271,7 +12988,7 @@ paths:
                   format: uuid
                 reason:
                   type: string
-                  enum: &a37
+                  enum: &a38
                     - OUT_OF_STOCK
                     - QUALITY_ISSUE
                     - WRONG_ITEM
@@ -12314,14 +13031,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a37
+                        enum: *a38
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: &a38
+                        enum: &a39
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -12438,14 +13155,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a37
+                          enum: *a38
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a38
+                          enum: *a39
                         transactionId:
                           type: string
                           nullable: true
@@ -12533,14 +13250,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a37
+                        enum: *a38
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a38
+                        enum: *a39
                       transactionId:
                         type: string
                         nullable: true
@@ -12657,14 +13374,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a37
+                        enum: *a38
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a38
+                        enum: *a39
                       transactionId:
                         type: string
                         nullable: true
@@ -12753,14 +13470,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a37
+                          enum: *a38
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a38
+                          enum: *a39
                         transactionId:
                           type: string
                           nullable: true
@@ -12848,14 +13565,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a37
+                        enum: *a38
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a38
+                        enum: *a39
                       transactionId:
                         type: string
                         nullable: true
@@ -12992,14 +13709,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a37
+                        enum: *a38
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a38
+                        enum: *a39
                       transactionId:
                         type: string
                         nullable: true
@@ -13242,7 +13959,7 @@ paths:
                     maximum: 180
                   source:
                     type: string
-                    enum: *a39
+                    enum: *a40
                   formattedAddress:
                     type: string
                     nullable: true

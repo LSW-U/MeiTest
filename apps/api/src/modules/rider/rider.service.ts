@@ -352,6 +352,217 @@ export class RiderService {
     }
   }
 
+  // ========================================================================
+  // W7-ext-D：admin 骑手 CRUD（6 端点）
+  // ========================================================================
+
+  /** Admin 列出已审核骑手（applicationStatus=APPROVED） */
+  async adminListRiders(options: {
+    status?: 'OFFLINE' | 'ONLINE' | 'BUSY';
+    keyword?: string;
+    warehouseId?: string;
+    userStatus?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+    limit?: number;
+  }): Promise<{ items: RiderProfileView[] }> {
+    const limit = Math.min(options.limit ?? 50, 100);
+    const where: {
+      applicationStatus: string;
+      status?: 'OFFLINE' | 'ONLINE' | 'BUSY';
+      OR?: Array<{ riderName?: { contains: string }; phone?: { contains: string } }>;
+      preferredWarehouseIds?: { has: string };
+      user?: { status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED' };
+    } = { applicationStatus: 'APPROVED' };
+
+    if (options.status) where.status = options.status;
+    if (options.warehouseId) where.preferredWarehouseIds = { has: options.warehouseId };
+    if (options.userStatus) where.user = { status: options.userStatus };
+    if (options.keyword) {
+      where.OR = [
+        { riderName: { contains: options.keyword } },
+        { phone: { contains: options.keyword } },
+      ];
+    }
+
+    const profiles = await db.riderProfile.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return {
+      items: profiles.map((p) => this.toView(p, false)),
+    };
+  }
+
+  /** Admin 查询骑手详情（含 User 状态 + 最近 10 订单 + 统计） */
+  async adminGetRiderDetail(id: string): Promise<RiderProfileView & {
+    userStatus: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+    idCardNumber: string | null;
+    reviewedById: string | null;
+    reviewedAt: string | null;
+    rejectReason: string | null;
+    recentOrders: Array<{
+      id: string;
+      orderNo: string;
+      status: string;
+      payableAmount: number;
+      createdAt: string;
+    }>;
+  }> {
+    const profile = await db.riderProfile.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, status: true, phone: true } },
+        orders: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            orderNo: true,
+            status: true,
+            payableAmount: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (!profile) {
+      throw new NotFoundException({ code: 'E-RIDER-001', message: 'Rider profile not found' });
+    }
+
+    const isOnline = await this.isOnline(profile.userId);
+    const base = this.toView(profile, isOnline);
+    return {
+      ...base,
+      userStatus: profile.user.status,
+      idCardNumber: profile.idCardNumber,
+      reviewedById: profile.reviewedById,
+      reviewedAt: profile.reviewedAt ? profile.reviewedAt.toISOString() : null,
+      rejectReason: profile.rejectReason,
+      recentOrders: profile.orders.map((o) => ({
+        id: o.id,
+        orderNo: o.orderNo,
+        status: o.status,
+        payableAmount: o.payableAmount,
+        createdAt: o.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  /** Admin 编辑骑手（仅 vehicle 信息 + 偏好仓库，不改 status） */
+  async adminUpdateRider(
+    id: string,
+    input: {
+      vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
+      vehiclePlate?: string | null;
+      preferredWarehouseIds?: string[];
+    },
+  ): Promise<RiderProfileView> {
+    const profile = await db.riderProfile.findUnique({ where: { id } });
+    if (!profile) {
+      throw new NotFoundException({ code: 'E-RIDER-001', message: 'Rider profile not found' });
+    }
+    const data: {
+      vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
+      vehiclePlate?: string | null;
+      preferredWarehouseIds?: string[];
+    } = {};
+    if (input.vehicleType) data.vehicleType = input.vehicleType;
+    if (input.vehiclePlate !== undefined) {
+      data.vehiclePlate = input.vehiclePlate === null || input.vehiclePlate.trim() === '' ? null : input.vehiclePlate.trim();
+    }
+    if (input.preferredWarehouseIds !== undefined) {
+      data.preferredWarehouseIds = input.preferredWarehouseIds;
+    }
+    if (Object.keys(data).length === 0) {
+      const isOnline = await this.isOnline(profile.userId);
+      return this.toView(profile, isOnline);
+    }
+    const updated = await db.riderProfile.update({ where: { id }, data });
+    const isOnline = await this.isOnline(updated.userId);
+    return this.toView(updated, isOnline);
+  }
+
+  /** Admin 停用骑手（User.status=SUSPENDED + RiderProfile.status=OFFLINE） */
+  async adminSuspendRider(id: string): Promise<{ id: string; userStatus: string; riderStatus: string }> {
+    const profile = await db.riderProfile.findUnique({ where: { id } });
+    if (!profile) {
+      throw new NotFoundException({ code: 'E-RIDER-001', message: 'Rider profile not found' });
+    }
+    const user = await db.user.findUnique({ where: { id: profile.userId } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-AUTH-001', message: 'User not found' });
+    }
+    if (user.status === 'SUSPENDED') {
+      throw new ConflictException({ code: 'E-RIDER-002', message: 'Rider already suspended' });
+    }
+
+    await db.user.update({ where: { id: profile.userId }, data: { status: 'SUSPENDED' } });
+    await db.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+
+    // 清除 Redis 在线状态，dispatch 拒接单
+    try {
+      await redis.del(this.onlineKey(profile.userId));
+    } catch {
+      // 忽略 Redis 错误
+    }
+
+    logger.info({ msg: 'RIDER_ADMIN_SUSPENDED', riderId: id, userId: profile.userId });
+    return { id, userStatus: 'SUSPENDED', riderStatus: 'OFFLINE' };
+  }
+
+  /** Admin 恢复骑手（User.status=ACTIVE，骑手自行 PATCH /duty 上班） */
+  async adminActivateRider(id: string): Promise<{ id: string; userStatus: string }> {
+    const profile = await db.riderProfile.findUnique({ where: { id } });
+    if (!profile) {
+      throw new NotFoundException({ code: 'E-RIDER-001', message: 'Rider profile not found' });
+    }
+    const user = await db.user.findUnique({ where: { id: profile.userId } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-AUTH-001', message: 'User not found' });
+    }
+    if (user.status === 'ACTIVE') {
+      throw new ConflictException({ code: 'E-RIDER-003', message: 'Rider already active' });
+    }
+    if (user.status === 'DELETED') {
+      throw new ConflictException({ code: 'E-RIDER-004', message: 'Cannot activate deleted rider' });
+    }
+
+    await db.user.update({ where: { id: profile.userId }, data: { status: 'ACTIVE' } });
+    logger.info({ msg: 'RIDER_ADMIN_ACTIVATED', riderId: id, userId: profile.userId });
+    return { id, userStatus: 'ACTIVE' };
+  }
+
+  /** Admin 软删骑手（User.status=DELETED + RiderProfile.status=OFFLINE） */
+  async adminDeleteRider(id: string, actorId: string): Promise<{ id: string; userStatus: string }> {
+    const profile = await db.riderProfile.findUnique({ where: { id } });
+    if (!profile) {
+      throw new NotFoundException({ code: 'E-RIDER-001', message: 'Rider profile not found' });
+    }
+    if (id === actorId || profile.userId === actorId) {
+      throw new ConflictException({ code: 'E-RIDER-005', message: 'Cannot delete yourself' });
+    }
+    const user = await db.user.findUnique({ where: { id: profile.userId } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-AUTH-001', message: 'User not found' });
+    }
+    if (user.status === 'DELETED') {
+      throw new ConflictException({ code: 'E-RIDER-006', message: 'Rider already deleted' });
+    }
+
+    await db.user.update({ where: { id: profile.userId }, data: { status: 'DELETED' } });
+    await db.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+
+    try {
+      await redis.del(this.onlineKey(profile.userId));
+    } catch {
+      // 忽略
+    }
+
+    logger.info({ msg: 'RIDER_ADMIN_DELETED', riderId: id, userId: profile.userId, actorId });
+    return { id, userStatus: 'DELETED' };
+  }
+
   /** 转换为 API 视图 */
   private toView(
     p: {
