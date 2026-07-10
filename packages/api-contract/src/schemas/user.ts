@@ -193,6 +193,11 @@ export const ActivateUserRequest = z.object({
   reason: z.string().min(1).max(200).optional(),
 });
 
+/** 删除请求 body（reason 可选，审计用） */
+export const DeleteUserRequest = z.object({
+  reason: z.string().min(1).max(200).optional(),
+});
+
 /** 重置密码响应 data（明文一次性返回） */
 export const ResetPasswordResponseData = z.object({
   /** 12 字符 base64url 临时密码，明文不落库，仅本次响应返回 */

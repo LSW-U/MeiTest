@@ -19,6 +19,7 @@ const { mockUserService } = vi.hoisted(() => ({
     updateUser: vi.fn(),
     suspendUser: vi.fn(),
     activateUser: vi.fn(),
+    deleteUser: vi.fn(),
     resetUserPassword: vi.fn(),
   },
 }));
@@ -30,6 +31,7 @@ vi.mock('../src/modules/user/user.service', () => ({
     updateUser = mockUserService.updateUser;
     suspendUser = mockUserService.suspendUser;
     activateUser = mockUserService.activateUser;
+    deleteUser = mockUserService.deleteUser;
     resetUserPassword = mockUserService.resetUserPassword;
   },
 }));
@@ -113,6 +115,20 @@ describe('AdminUserController - 5 端点装配（W7-fix 审查 #14）', () => {
     expect(result).toEqual({ success: true, data: mockData });
   });
 
+  it('POST /:id/delete - delete 把 req.user.sub 作 actorId 传给 service', async () => {
+    const mockData = { id: 'u-1', status: 'DELETED' };
+    mockUserService.deleteUser.mockResolvedValue(mockData);
+
+    const result = await controller.delete(
+      { user: { sub: 'u-actor' } } as never,
+      'u-1',
+      { reason: 'account closure' },
+    );
+
+    expect(mockUserService.deleteUser).toHaveBeenCalledWith('u-1', 'u-actor');
+    expect(result).toEqual({ success: true, data: mockData });
+  });
+
   it('POST /:id/reset-password - resetPassword 返回临时密码', async () => {
     const mockData = { temporaryPassword: 'Abc123xyz789', generatedAt: '2026-07-10T00:00:00.000Z' };
     mockUserService.resetUserPassword.mockResolvedValue(mockData);
@@ -129,6 +145,7 @@ describe('AdminUserController - 5 端点装配（W7-fix 审查 #14）', () => {
     mockUserService.updateUser.mockResolvedValue({});
     mockUserService.suspendUser.mockResolvedValue({});
     mockUserService.activateUser.mockResolvedValue({});
+    mockUserService.deleteUser.mockResolvedValue({});
     mockUserService.resetUserPassword.mockResolvedValue({});
 
     const results = await Promise.all([
@@ -137,6 +154,7 @@ describe('AdminUserController - 5 端点装配（W7-fix 审查 #14）', () => {
       controller.update({ user: { sub: 'a' } } as never, 'u-1', {}),
       controller.suspend({ user: { sub: 'a' } } as never, 'u-1', {}),
       controller.activate('u-1', {}),
+      controller.delete({ user: { sub: 'a' } } as never, 'u-1', {}),
       controller.resetPassword('u-1'),
     ]);
 

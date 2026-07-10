@@ -573,6 +573,108 @@ describe('UserService.activateUser', () => {
   });
 });
 
+describe('UserService.deleteUser（W7-ext-B）', () => {
+  let service: UserService;
+
+  beforeEach(() => {
+    mockDb.user.findUnique.mockReset();
+    mockDb.user.update.mockReset();
+    mockDb.order.findMany.mockReset();
+    mockDb.address.findMany.mockReset();
+    mockDb.order.aggregate.mockReset();
+    mockAuth.toContractRole.mockReset();
+    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    service = new UserService(mockAuth as never);
+  });
+
+  it('用户不存在 -> E-ADMIN-USER-001', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce(null);
+    await expect(service.deleteUser('nonexistent', 'u-actor')).rejects.toMatchObject({
+      response: { code: 'E-ADMIN-USER-001' },
+    });
+  });
+
+  it('删除自己 -> E-ADMIN-USER-005', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({
+      id: 'u-self',
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+    });
+    await expect(service.deleteUser('u-self', 'u-self')).rejects.toMatchObject({
+      response: { code: 'E-ADMIN-USER-005' },
+    });
+  });
+
+  it('删除 super_admin -> E-ADMIN-USER-004', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({
+      id: 'u-other',
+      role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
+    });
+    await expect(service.deleteUser('u-other', 'u-actor')).rejects.toMatchObject({
+      response: { code: 'E-ADMIN-USER-004' },
+    });
+  });
+
+  it('已删除 -> E-ADMIN-USER-003', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({
+      id: 'u-1',
+      role: 'CUSTOMER',
+      status: 'DELETED',
+    });
+    await expect(service.deleteUser('u-1', 'u-actor')).rejects.toMatchObject({
+      response: { code: 'E-ADMIN-USER-003' },
+    });
+  });
+
+  it('正常删除：update status=DELETED', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({
+      id: 'u-1',
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      phone: '+67088888888',
+      email: null,
+      name: 'Bob',
+      avatarUrl: null,
+      phoneVerified: false,
+      emailVerified: false,
+      lastLoginAt: null,
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-01T00:00:00.000Z'),
+    });
+    mockDb.user.update.mockResolvedValueOnce({
+      id: 'u-1',
+      role: 'CUSTOMER',
+      status: 'DELETED',
+      phone: '+67088888888',
+      email: null,
+      name: 'Bob',
+      avatarUrl: null,
+      phoneVerified: false,
+      emailVerified: false,
+      lastLoginAt: null,
+      createdAt: new Date('2026-06-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-07-10T00:00:00.000Z'),
+    });
+    mockDb.order.findMany.mockResolvedValueOnce([]);
+    mockDb.address.findMany.mockResolvedValueOnce([]);
+    mockDb.order.aggregate.mockResolvedValueOnce({
+      _count: { _all: 0 },
+      _sum: { payableAmount: 0 },
+    });
+
+    const result = await service.deleteUser('u-1', 'u-actor');
+
+    expect(mockDb.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u-1' },
+        data: { status: 'DELETED' },
+      }),
+    );
+    expect(result.status).toBe('DELETED');
+  });
+});
+
 describe('UserService.resetUserPassword', () => {
   let service: UserService;
 

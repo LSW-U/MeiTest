@@ -130,6 +130,22 @@ export function useActivateCustomer() {
   });
 }
 
+/** 软删除（status -> DELETED，终态） */
+export function useDeleteCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      apiFetch<ApiSuccess<CustomerDetail>>(`/admin/users/${id}/delete`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }).then((res) => res.data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['customers', vars.id] });
+    },
+  });
+}
+
 /** 重置密码（返回 12 字符临时密码，明文一次性） */
 export function useResetPassword() {
   const qc = useQueryClient();

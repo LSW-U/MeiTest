@@ -67,6 +67,10 @@ const ActivateUserRequest = z.object({
   reason: z.string().min(1).max(200).optional(),
 });
 
+const DeleteUserRequest = z.object({
+  reason: z.string().min(1).max(200).optional(),
+});
+
 @Controller('api/v1/admin/users')
 @Roles('super_admin')
 export class AdminUserController {
@@ -124,6 +128,18 @@ export class AdminUserController {
     @Body(new ZodValidationPipe(ActivateUserRequest)) _body: z.infer<typeof ActivateUserRequest>,
   ) {
     const data = await this.users.activateUser(id);
+    return { success: true as const, data };
+  }
+
+  /** POST /:id/delete - 软删除用户（status -> DELETED，终态） */
+  @Post(':id/delete')
+  @Audit({ resource: 'User', resourceIdParam: 'id' })
+  async delete(
+    @Req() req: { user: RequestUser },
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(DeleteUserRequest)) _body: z.infer<typeof DeleteUserRequest>,
+  ) {
+    const data = await this.users.deleteUser(id, req.user.sub);
     return { success: true as const, data };
   }
 

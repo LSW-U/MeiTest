@@ -930,6 +930,13 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+    DeleteUserRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
     ResetPasswordResponseData:
       type: object
       properties:
@@ -9466,6 +9473,270 @@ paths:
                   - error
         "409":
           description: E-ADMIN-USER-003
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/users/{id}/delete:
+    post:
+      tags:
+        - user
+      description: 软删除用户（W7-ext-B 2026-07-10）。status ->
+        DELETED（终态）。约束：不能删除自己（E-ADMIN-USER-005）；不能删除其他
+        super_admin（E-ADMIN-USER-004）；DELETED 是终态，不可恢复（再删抛 E-ADMIN-USER-003）。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+      responses:
+        "200":
+          description: 删除后的用户详情（status=DELETED）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phone:
+                    type: string
+                  email:
+                    type: string
+                    nullable: true
+                    format: email
+                  name:
+                    type: string
+                    nullable: true
+                  avatarUrl:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum: *a1
+                  status:
+                    type: string
+                    enum: *a2
+                  phoneVerified:
+                    type: boolean
+                  emailVerified:
+                    type: boolean
+                  lastLoginAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  totalSpent:
+                    type: integer
+                    minimum: 0
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  recentOrders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        orderNo:
+                          type: string
+                          pattern: ^MM\d{14}$
+                        status:
+                          type: string
+                          enum: *a3
+                        payableAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        createdAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - orderNo
+                        - status
+                        - payableAmount
+                        - createdAt
+                    maxItems: 5
+                  addresses:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        userId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        phone:
+                          type: string
+                        region:
+                          type: object
+                          properties:
+                            province:
+                              type: string
+                            city:
+                              type: string
+                            district:
+                              type: string
+                          required:
+                            - province
+                            - city
+                        detail:
+                          type: string
+                        lat:
+                          type: number
+                          nullable: true
+                        lng:
+                          type: number
+                          nullable: true
+                        isDefault:
+                          type: boolean
+                        tag:
+                          type: string
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - userId
+                        - name
+                        - phone
+                        - region
+                        - detail
+                        - lat
+                        - lng
+                        - isDefault
+                        - tag
+                        - createdAt
+                        - updatedAt
+                required:
+                  - id
+                  - phone
+                  - email
+                  - name
+                  - avatarUrl
+                  - role
+                  - status
+                  - phoneVerified
+                  - emailVerified
+                  - lastLoginAt
+                  - createdAt
+                  - orderCount
+                  - totalSpent
+                  - updatedAt
+                  - recentOrders
+                  - addresses
+        "403":
+          description: E-ADMIN-USER-004/005
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: E-ADMIN-USER-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-ADMIN-USER-003 已删除
           content:
             application/json:
               schema:

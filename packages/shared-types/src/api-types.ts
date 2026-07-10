@@ -5299,6 +5299,161 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 软删除用户（W7-ext-B 2026-07-10）。status -> DELETED（终态）。约束：不能删除自己（E-ADMIN-USER-005）；不能删除其他 super_admin（E-ADMIN-USER-004）；DELETED 是终态，不可恢复（再删抛 E-ADMIN-USER-003）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 删除后的用户详情（status=DELETED） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            phone: string;
+                            /** Format: email */
+                            email: string | null;
+                            name: string | null;
+                            avatarUrl: string | null;
+                            /** @enum {string} */
+                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            /** @enum {string} */
+                            status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            phoneVerified: boolean;
+                            emailVerified: boolean;
+                            /** Format: date-time */
+                            lastLoginAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            orderCount: number;
+                            totalSpent: number;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            recentOrders: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string;
+                                phone: string;
+                                region: {
+                                    province: string;
+                                    city: string;
+                                    district?: string;
+                                };
+                                detail: string;
+                                lat: number | null;
+                                lng: number | null;
+                                isDefault: boolean;
+                                tag: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-004/005 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-USER-003 已删除 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users/{id}/reset-password": {
         parameters: {
             query?: never;
@@ -8035,6 +8190,9 @@ export interface components {
             reason?: string;
         };
         ActivateUserRequest: {
+            reason?: string;
+        };
+        DeleteUserRequest: {
             reason?: string;
         };
         ResetPasswordResponseData: {

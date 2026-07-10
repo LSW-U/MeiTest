@@ -52,6 +52,7 @@ import {
   UpdateAdminUserRequest,
   SuspendUserRequest,
   ActivateUserRequest,
+  DeleteUserRequest,
   ResetPasswordResponseData,
   OrderSummary,
   // shop
@@ -174,6 +175,7 @@ registry.register('AdminUserDetail', AdminUserDetail);
 registry.register('UpdateAdminUserRequest', UpdateAdminUserRequest);
 registry.register('SuspendUserRequest', SuspendUserRequest);
 registry.register('ActivateUserRequest', ActivateUserRequest);
+registry.register('DeleteUserRequest', DeleteUserRequest);
 registry.register('ResetPasswordResponseData', ResetPasswordResponseData);
 registry.register('OrderSummary', OrderSummary);
 
@@ -1334,6 +1336,29 @@ registry.registerPath({
     },
     404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'E-ADMIN-USER-003', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/users/{id}/delete',
+  tags: ['user'],
+  description:
+    '软删除用户（W7-ext-B 2026-07-10）。status -> DELETED（终态）。' +
+    '约束：不能删除自己（E-ADMIN-USER-005）；不能删除其他 super_admin（E-ADMIN-USER-004）；' +
+    'DELETED 是终态，不可恢复（再删抛 E-ADMIN-USER-003）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: DeleteUserRequest } } },
+  },
+  responses: {
+    200: {
+      description: '删除后的用户详情（status=DELETED）',
+      content: { 'application/json': { schema: AdminUserDetail } },
+    },
+    403: { description: 'E-ADMIN-USER-004/005', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ADMIN-USER-003 已删除', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

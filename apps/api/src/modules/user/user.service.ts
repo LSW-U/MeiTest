@@ -533,6 +533,37 @@ export class UserService {
     return this.buildAdminUserDetail(updated);
   }
 
+  /** POST /:id/delete - 软删除用户（status -> DELETED，终态） */
+  async deleteUser(id: string, actorId: string) {
+    const user = await db.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
+    }
+    if (id === actorId) {
+      throw new ForbiddenException({
+        code: 'E-ADMIN-USER-005',
+        message: '不能删除自己',
+      });
+    }
+    if (user.role === 'SUPER_ADMIN') {
+      throw new ForbiddenException({
+        code: 'E-ADMIN-USER-004',
+        message: '不能删除其他 super_admin',
+      });
+    }
+    if (user.status === 'DELETED') {
+      throw new ConflictException({
+        code: 'E-ADMIN-USER-003',
+        message: '用户已删除',
+      });
+    }
+    const updated = await db.user.update({
+      where: { id },
+      data: { status: 'DELETED' },
+    });
+    return this.buildAdminUserDetail(updated);
+  }
+
   /** POST /:id/reset-password - 重置密码（生成 12 字符临时密码） */
   async resetUserPassword(id: string): Promise<{
     temporaryPassword: string;

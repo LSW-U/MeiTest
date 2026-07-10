@@ -48,6 +48,7 @@ import {
   useActivateCustomer,
   useResetPassword,
   useUpdateCustomer,
+  useDeleteCustomer,
 } from '@/hooks/api/use-customers';
 import { formatCurrency } from '@/lib/utils';
 import { ROLE_LABEL_KEY, type UserRole } from '../_constants';
@@ -86,6 +87,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const activateMutation = useActivateCustomer();
   const resetMutation = useResetPassword();
   const updateMutation = useUpdateCustomer();
+  const deleteMutation = useDeleteCustomer();
 
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendReason, setSuspendReason] = useState('');
@@ -94,6 +96,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [resetOpen, setResetOpen] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<{
     name: string;
@@ -132,6 +136,27 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           setSuspendOpen(false);
           setSuspendReason('');
           toast({ title: t('admin.customers.toastSuspended') });
+        },
+        onError: (err: Error) => {
+          toast({
+            title: t('admin.customers.toastFailed'),
+            description: err.message,
+            variant: 'destructive',
+          });
+        },
+      },
+    );
+  }
+
+  function handleDelete() {
+    deleteMutation.mutate(
+      { id, reason: deleteReason || undefined },
+      {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          setDeleteReason('');
+          toast({ title: t('admin.customers.toastDeleted') });
+          router.push('/customers');
         },
         onError: (err: Error) => {
           toast({
@@ -265,6 +290,9 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </Button>
               <Button variant="outline" onClick={openEditDialog}>
                 {t('admin.customers.editButton')}
+              </Button>
+              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                {t('admin.customers.deleteButton')}
               </Button>
             </div>
           )
@@ -463,6 +491,40 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               disabled={suspendMutation.isPending}
             >
               {suspendMutation.isPending ? t('admin.customers.submitting') : t('admin.customers.suspendDialogConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog（W7-ext-B） */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.customers.deleteDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('admin.customers.deleteDialogDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="delete-reason">{t('admin.customers.deleteDialogReasonLabel')}</Label>
+            <Textarea
+              id="delete-reason"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder={t('admin.customers.deleteDialogReasonPlaceholder')}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              {t('admin.customers.commonCancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? t('admin.customers.submitting') : t('admin.customers.deleteDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
