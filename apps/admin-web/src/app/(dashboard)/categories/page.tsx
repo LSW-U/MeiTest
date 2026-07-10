@@ -58,6 +58,15 @@ import {
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
+/**
+ * 判断 iconUrl 是否是合法图片 URL（http/https/相对路径）。
+ * 非图片 URL（如 emoji 字符串）走 emoji 渲染分支。
+ * W7-ext-A：修复种子数据 emoji 当 iconUrl 导致 <img src> 404 问题
+ */
+function isIconUrl(s: string): boolean {
+  return /^https?:\/\//.test(s) || s.startsWith('/');
+}
+
 export default function CategoriesPage() {
   const t = useTranslations('common');
   const categoriesQ = useCategories();
@@ -71,7 +80,13 @@ export default function CategoriesPage() {
       header: t('w.categories.columnIcon'),
       render: (row) =>
         row.iconUrl ? (
-          <img src={row.iconUrl} alt="" className="h-8 w-8 rounded object-cover" />
+          isIconUrl(row.iconUrl) ? (
+            <img src={row.iconUrl} alt="" className="h-8 w-8 rounded object-cover" />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded bg-muted text-lg">
+              {row.iconUrl}
+            </span>
+          )
         ) : (
           <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-xs">
             🗂
@@ -246,7 +261,10 @@ function EditCategoryDialog({
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [name, setName] = useState<I18nText>(category.name ?? {});
-  const [iconUrl, setIconUrl] = useState(category.iconUrl ?? '');
+  // W7-ext-A：存量 emoji iconUrl 初始化时清空，避免保存时被后端 z.url() 校验拒绝
+  const [iconUrl, setIconUrl] = useState(
+    category.iconUrl && isIconUrl(category.iconUrl) ? category.iconUrl : '',
+  );
   const [sortOrder, setSortOrder] = useState(String(category.sortOrder ?? 0));
 
   const submit = (e: React.FormEvent) => {

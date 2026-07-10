@@ -1502,7 +1502,12 @@ components:
           additionalProperties:
             type: string
         iconUrl:
-          type: string
+          anyOf:
+            - type: string
+              format: uri
+            - type: string
+              enum:
+                - ""
         parentId:
           type: string
           nullable: true
@@ -1523,7 +1528,12 @@ components:
           additionalProperties:
             type: string
         iconUrl:
-          type: string
+          anyOf:
+            - type: string
+              format: uri
+            - type: string
+              enum:
+                - ""
         parentId:
           type: string
           nullable: true
@@ -1541,7 +1551,12 @@ components:
           additionalProperties:
             type: string
         iconUrl:
-          type: string
+          anyOf:
+            - type: string
+              format: uri
+            - type: string
+              enum:
+                - ""
         parentId:
           type: string
           nullable: true
@@ -5329,7 +5344,12 @@ paths:
                       additionalProperties:
                         type: string
                     iconUrl:
-                      type: string
+                      anyOf:
+                        - type: string
+                          format: uri
+                        - type: string
+                          enum:
+                            - ""
                     parentId:
                       type: string
                       nullable: true
@@ -5803,7 +5823,12 @@ paths:
                   additionalProperties:
                     type: string
                 iconUrl:
-                  type: string
+                  anyOf:
+                    - type: string
+                      format: uri
+                    - type: string
+                      enum:
+                        - ""
                 parentId:
                   type: string
                   nullable: true
@@ -5829,7 +5854,12 @@ paths:
                     additionalProperties:
                       type: string
                   iconUrl:
-                    type: string
+                    anyOf:
+                      - type: string
+                        format: uri
+                      - type: string
+                        enum:
+                          - ""
                   parentId:
                     type: string
                     nullable: true

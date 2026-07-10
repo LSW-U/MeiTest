@@ -95,7 +95,8 @@ export const UpdateSkuRequest = CreateSkuRequest.partial();
 export const Category = z.object({
   id: Id,
   name: I18nText,
-  iconUrl: z.string(),
+  /** W7-ext-A：必须是合法 URL 或空字符串，禁止 emoji 当 iconUrl 写库 */
+  iconUrl: z.string().url().or(z.literal('')),
   parentId: Id.nullable(),
   sortOrder: z.number().int(),
 });
@@ -103,7 +104,8 @@ export const Category = z.object({
 /** 创建分类请求 */
 export const CreateCategoryRequest = z.object({
   name: I18nText,
-  iconUrl: z.string(),
+  /** W7-ext-A：必须是合法 URL 或空字符串，禁止 emoji 当 iconUrl 写库 */
+  iconUrl: z.string().url().or(z.literal('')),
   parentId: Id.nullable().optional(),
   sortOrder: z.number().int().optional(),
 });

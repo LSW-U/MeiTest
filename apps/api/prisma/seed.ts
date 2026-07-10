@@ -66,12 +66,18 @@ const WAREHOUSES = [
 import seedDataRaw from './seed-images/seed-data.json';
 const seedData = seedDataRaw as any[];
 
-/** DummyJSON 品类 -> 分类 icon 映射 */
+/**
+ * DummyJSON 品类 -> 分类 icon 映射
+ *
+ * W7-ext-A 修复：原值是 emoji（🛒/💄），前端 <img src={emoji}> 会 404。
+ * 改为空字符串，前端检测到非 URL 时 fallback 到 🗂 占位。
+ * 后端 schema 也加了 z.string().url() 校验，禁止 emoji 当 iconUrl 写库。
+ */
 const CATEGORY_ICONS: Record<string, string> = {
-  groceries: '🛒',
-  beauty: '💄',
-  'skin-care': '🧴',
-  fragrances: '🌸',
+  groceries: '',
+  beauty: '',
+  'skin-care': '',
+  fragrances: '',
 };
 
 async function main() {
@@ -192,7 +198,7 @@ async function main() {
     const cat = await prisma.category.create({
       data: {
         name: sample.categoryName,
-        iconUrl: CATEGORY_ICONS[catSlug] ?? '📦',
+        iconUrl: CATEGORY_ICONS[catSlug] ?? '',
         sortOrder: sample.categorySortOrder,
       },
     });

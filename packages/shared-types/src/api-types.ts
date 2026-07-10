@@ -2273,7 +2273,7 @@ export interface paths {
                             name: {
                                 [key: string]: string;
                             };
-                            iconUrl: string;
+                            iconUrl: string | "";
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
@@ -2691,7 +2691,7 @@ export interface paths {
                         name: {
                             [key: string]: string;
                         };
-                        iconUrl: string;
+                        iconUrl: string | "";
                         /** Format: uuid */
                         parentId?: string | null;
                         sortOrder?: number;
@@ -2711,7 +2711,7 @@ export interface paths {
                             name: {
                                 [key: string]: string;
                             };
-                            iconUrl: string;
+                            iconUrl: string | "";
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
@@ -8330,7 +8330,7 @@ export interface components {
             name: {
                 [key: string]: string;
             };
-            iconUrl: string;
+            iconUrl: string | "";
             /** Format: uuid */
             parentId: string | null;
             sortOrder: number;
@@ -8339,7 +8339,7 @@ export interface components {
             name: {
                 [key: string]: string;
             };
-            iconUrl: string;
+            iconUrl: string | "";
             /** Format: uuid */
             parentId?: string | null;
             sortOrder?: number;
@@ -8348,7 +8348,7 @@ export interface components {
             name?: {
                 [key: string]: string;
             };
-            iconUrl?: string;
+            iconUrl?: string | "";
             /** Format: uuid */
             parentId?: string | null;
             sortOrder?: number;
