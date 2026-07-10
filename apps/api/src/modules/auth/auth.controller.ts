@@ -143,6 +143,26 @@ export class AuthController {
         message: 'User not found',
       });
     }
+    // W7-fix（审查 P0 #1）：SUSPENDED/DELETED 用户不能续签 token
+    // accessToken 由 JwtStrategy 自然过期（设计上不能服务端 revoke），
+    // 但 refresh 端点必须拒绝，否则 SUSPENDED 用户可无限刷新新 accessToken
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException({
+        code: 'E-USER-005',
+        message: `User status is ${user.status}, refresh disabled`,
+      });
+    }
+    // W7-fix（审查 P0 #2）：密码重置后旧 refreshToken 失效
+    // 检查 token.iat < passwordChangedAt -> 拒绝（要求重新登录）
+    if (user.passwordChangedAt && payload.iat) {
+      const passwordChangedAtSec = Math.floor(user.passwordChangedAt.getTime() / 1000);
+      if (payload.iat < passwordChangedAtSec) {
+        throw new UnauthorizedException({
+          code: 'E-AUTH-006',
+          message: 'Password has been changed, please login again',
+        });
+      }
+    }
     const role = this.auth.toContractRole(user.role);
     const deviceType = this.auth.inferDeviceTypeFromRole(role);
     const tokenPair = await this.auth.signTokenPair(user.id, role, deviceType);

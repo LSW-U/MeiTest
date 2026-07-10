@@ -406,7 +406,11 @@ export class AuthService {
       });
     }
     const newHash = await passwordStrategy.hashPassword(input.newPassword);
-    await db.user.update({ where: { id: user.id }, data: { password: newHash } });
+    // W7-fix（审查 P0 #2）：同步更新 passwordChangedAt，refresh 端点检查 token.iat < passwordChangedAt 拒绝旧 token
+    await db.user.update({
+      where: { id: user.id },
+      data: { password: newHash, passwordChangedAt: new Date() },
+    });
     logger.info({ msg: 'PASSWORD_RESET_SUCCESS', userId: user.id });
   }
 

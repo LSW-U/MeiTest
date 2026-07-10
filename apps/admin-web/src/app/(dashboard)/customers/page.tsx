@@ -11,22 +11,23 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useCustomers,
   type CustomerListItem,
-  type UserStatus,
-  type UserRole,
 } from '@/hooks/api/use-customers';
 import { formatCurrency } from '@/lib/utils';
+import { ROLE_LABEL_KEY, type UserStatus } from './_constants';
 
 const STATUS_FILTERS: { value: UserStatus | 'ALL'; labelKey: string }[] = [
   { value: 'ALL', labelKey: 'admin.customers.statusAll' },
@@ -35,34 +36,44 @@ const STATUS_FILTERS: { value: UserStatus | 'ALL'; labelKey: string }[] = [
   { value: 'DELETED', labelKey: 'admin.customers.statusDeleted' },
 ];
 
-const ROLE_LABEL_KEY: Record<UserRole, string> = {
-  super_admin: 'admin.customers.roleSuperAdmin',
-  customer: 'admin.customers.roleCustomer',
-  rider: 'admin.customers.roleRider',
-  warehouse_staff: 'admin.customers.roleWarehouseStaff',
-  customer_service: 'admin.customers.roleCustomerService',
-};
+const PAGE_SIZE = 20;
 
 export default function CustomersListPage() {
   const t = useTranslations('common');
+  const format = useFormatter();
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL');
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 300);
     return () => clearTimeout(timer);
   }, [keyword]);
 
-  const { data, isLoading, error, refetch } = useCustomers({
+  // 切 status 或 keyword 清空时回到第 1 页
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, debouncedKeyword]);
+
+  const { data, isPending, isFetching, error, refetch } = useCustomers({
     keyword: debouncedKeyword || undefined,
     status: statusFilter === 'ALL' ? undefined : statusFilter,
-    page: 1,
-    pageSize: 20,
+    page,
+    pageSize: PAGE_SIZE,
   });
 
   const items: CustomerListItem[] = data?.items ?? [];
+  const isLoading = isPending || isFetching;
+
+  function formatDate(date: string): string {
+    return format.dateTime(new Date(date), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  }
 
   const columns: Column<CustomerListItem>[] = [
     {
@@ -80,9 +91,7 @@ export default function CustomersListPage() {
     {
       key: 'name',
       header: t('admin.customers.columnName'),
-      render: (row) => (
-        <span className="text-sm">{row.name ?? '-'}</span>
-      ),
+      render: (row) => <span className="text-sm">{row.name ?? '-'}</span>,
     },
     {
       key: 'role',
@@ -112,9 +121,7 @@ export default function CustomersListPage() {
       key: 'createdAt',
       header: t('admin.customers.columnCreatedAt'),
       render: (row) => (
-        <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleDateString()}
-        </span>
+        <span className="text-xs text-muted-foreground">{formatDate(row.createdAt)}</span>
       ),
     },
     {
@@ -122,7 +129,7 @@ export default function CustomersListPage() {
       header: t('admin.customers.columnLastLoginAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.lastLoginAt ? new Date(row.lastLoginAt).toLocaleDateString() : '-'}
+          {row.lastLoginAt ? formatDate(row.lastLoginAt) : '-'}
         </span>
       ),
     },
@@ -145,12 +152,23 @@ export default function CustomersListPage() {
             ))}
           </TabsList>
         </Tabs>
-        <Input
-          placeholder={t('admin.customers.searchPlaceholder')}
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          className="w-64"
-        />
+        <div className="relative w-64">
+          <Input
+            placeholder={t('admin.customers.searchPlaceholder')}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="pr-8"
+          />
+          {keyword && (
+            <button
+              onClick={() => setKeyword('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground"
+              aria-label={t('admin.customers.clearSearch')}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -166,9 +184,36 @@ export default function CustomersListPage() {
         <DataTable data={items} columns={columns} />
       )}
 
-      {data && data.total > data.items.length && (
-        <div className="text-center text-xs text-muted-foreground">
-          {t('admin.customers.loadMoreHint', { count: data.items.length, total: data.total })}
+      {data && data.total > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            {t('admin.customers.pageInfo', {
+              page: data.page,
+              total: Math.ceil(data.total / PAGE_SIZE),
+              count: data.items.length,
+              totalItems: data.total,
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {t('admin.customers.prevPage')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!data.hasMore}
+            >
+              {t('admin.customers.nextPage')}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -361,7 +361,7 @@ export class UserService {
     if (opts.keyword && opts.keyword.trim().length > 0) {
       const kw = opts.keyword.trim();
       where.OR = [
-        { phone: { contains: kw } },
+        { phone: { contains: kw, mode: 'insensitive' } },
         { email: { contains: kw, mode: 'insensitive' } },
         { name: { contains: kw, mode: 'insensitive' } },
       ];
@@ -429,29 +429,11 @@ export class UserService {
 
   /** GET /:id - 用户详情（含最近 5 订单 + 全部地址） */
   async getUserDetail(id: string) {
-    const [user, recentOrders, addresses] = await Promise.all([
-      db.user.findUnique({ where: { id } }),
-      db.order.findMany({
-        where: { userId: id, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        select: {
-          id: true,
-          orderNo: true,
-          status: true,
-          payableAmount: true,
-          createdAt: true,
-        },
-      }),
-      db.address.findMany({
-        where: { userId: id, deletedAt: null },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
-      }),
-    ]);
+    const user = await db.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException({ code: 'E-ADMIN-USER-001', message: '用户不存在' });
     }
-    return this.toAdminUserDetail(user, recentOrders, addresses);
+    return this.buildAdminUserDetail(user);
   }
 
   /** PATCH /:id - 编辑客户资料 */
@@ -468,19 +450,25 @@ export class UserService {
       });
     }
     try {
-      await db.user.update({
+      const updated = await db.user.update({
         where: { id },
         data: {
           ...(input.name !== undefined && { name: input.name }),
           ...(input.phone !== undefined && { phone: input.phone }),
-          ...(input.email !== undefined && { email: input.email }),
+          ...(input.email !== undefined && {
+            email: input.email,
+            // W7-fix（审查 #10）：改 email 后重置 emailVerified=false，与 updateProfile 一致
+            // 除非管理员显式指定 emailVerified（input.emailVerified === undefined 时才重置）
+            ...(input.emailVerified === undefined && { emailVerified: false }),
+          }),
           ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl }),
           ...(input.role !== undefined && { role: input.role }),
           ...(input.phoneVerified !== undefined && { phoneVerified: input.phoneVerified }),
           ...(input.emailVerified !== undefined && { emailVerified: input.emailVerified }),
         },
       });
-      return this.getUserDetail(id);
+      // W7-fix（审查 #3/#4/#18）：直接用 update 返回的 updated 构建 DTO，避免 getUserDetail 重复 findUnique
+      return this.buildAdminUserDetail(updated);
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -519,11 +507,11 @@ export class UserService {
         message: `当前 status=${user.status}，无需暂停`,
       });
     }
-    await db.user.update({
+    const updated = await db.user.update({
       where: { id },
       data: { status: 'SUSPENDED' },
     });
-    return this.getUserDetail(id);
+    return this.buildAdminUserDetail(updated);
   }
 
   /** POST /:id/activate - 激活用户（仅从 SUSPENDED 转 ACTIVE） */
@@ -538,11 +526,11 @@ export class UserService {
         message: `仅允许从 SUSPENDED 激活，当前 status=${user.status}`,
       });
     }
-    await db.user.update({
+    const updated = await db.user.update({
       where: { id },
       data: { status: 'ACTIVE' },
     });
-    return this.getUserDetail(id);
+    return this.buildAdminUserDetail(updated);
   }
 
   /** POST /:id/reset-password - 重置密码（生成 12 字符临时密码） */
@@ -562,11 +550,16 @@ export class UserService {
     }
     // 12 字符 base64url 临时密码（含字母+数字，URL 安全，无 +/=）
     // randomBytes(9) -> 9 字节 = 72 位 -> 12 个 base64url 字符（无 padding）
+    // slice(0, 12) 是防御性编程（randomBytes(9) 正好 12 字符，未来改回 randomBytes(6) 也不会出错）
     const plain = randomBytes(9).toString('base64url').slice(0, 12);
     const hashed = await passwordStrategy.hashPassword(plain);
     await db.user.update({
       where: { id },
-      data: { password: hashed },
+      data: {
+        password: hashed,
+        // W7-fix（审查 P0 #2）：更新 passwordChangedAt，refresh 端点检查 token.iat < passwordChangedAt 拒绝旧 token
+        passwordChangedAt: new Date(),
+      },
     });
     return {
       temporaryPassword: plain,
@@ -574,54 +567,52 @@ export class UserService {
     };
   }
 
-  /** Prisma User + orders + addresses -> AdminUserDetail DTO */
-  private async toAdminUserDetail(
-    user: {
-      id: string;
-      phone: string;
-      email: string | null;
-      name: string | null;
-      avatarUrl: string | null;
-      role: string;
-      status: string;
-      phoneVerified: boolean;
-      emailVerified: boolean;
-      lastLoginAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-    },
-    recentOrders: Array<{
-      id: string;
-      orderNo: string;
-      status: string;
-      payableAmount: number;
-      createdAt: Date;
-    }>,
-    addresses: Array<{
-      id: string;
-      userId: string;
-      name: string;
-      phone: string;
-      region: Prisma.JsonValue;
-      detail: string;
-      lat: Prisma.Decimal | null;
-      lng: Prisma.Decimal | null;
-      isDefault: boolean;
-      tag: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      deletedAt: Date | null;
-    }>,
-  ) {
-    // 聚合 orderCount + totalSpent
-    const agg = await db.order.aggregate({
-      where: {
-        userId: user.id,
-        status: { in: ['DELIVERED_PAID', 'COMPLETED'] },
-      },
-      _count: { _all: true },
-      _sum: { payableAmount: true },
-    });
+  /**
+   * 根据 user 记录构建 AdminUserDetail DTO（并行查 orders/addresses/agg）
+   *
+   * W7-fix（审查 #3/#4/#18）：update/suspend/activate 已从 update 拿到最新 user，
+   * 直接传进来避免重复 findUnique
+   */
+  private async buildAdminUserDetail(user: {
+    id: string;
+    phone: string;
+    email: string | null;
+    name: string | null;
+    avatarUrl: string | null;
+    role: string;
+    status: string;
+    phoneVerified: boolean;
+    emailVerified: boolean;
+    lastLoginAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    const [recentOrders, addresses, agg] = await Promise.all([
+      db.order.findMany({
+        where: { userId: user.id, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          orderNo: true,
+          status: true,
+          payableAmount: true,
+          createdAt: true,
+        },
+      }),
+      db.address.findMany({
+        where: { userId: user.id, deletedAt: null },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+      }),
+      db.order.aggregate({
+        where: {
+          userId: user.id,
+          status: { in: ['DELIVERED_PAID', 'COMPLETED'] },
+        },
+        _count: { _all: true },
+        _sum: { payableAmount: true },
+      }),
+    ]);
     return {
       id: user.id,
       phone: user.phone,

@@ -17,60 +17,24 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, type ApiSuccess } from '@/lib/api';
+import type { components } from '@meimart/shared-types';
+import type { UserRole, UserStatus } from '@/app/(dashboard)/customers/_constants';
 
-export type UserRole =
-  | 'super_admin'
-  | 'customer'
-  | 'rider'
-  | 'warehouse_staff'
-  | 'customer_service';
+export type { UserRole, UserStatus };
 
-export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+type Schemas = components['schemas'];
 
-export interface Address {
-  id: string;
-  userId: string;
-  name: string;
-  phone: string;
-  region: { province: string; city: string; district?: string | null };
-  detail: string;
-  lat: number | null;
-  lng: number | null;
-  isDefault: boolean;
-  tag: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+/** 地址（派生自契约，与 AdminUserDetail.addresses 一致） */
+export type Address = Schemas['AdminUserDetail']['addresses'][number];
 
-export interface OrderSummary {
-  id: string;
-  orderNo: string;
-  status: string;
-  payableAmount: number;
-  createdAt: string;
-}
+/** 订单摘要（派生自契约，与 AdminUserDetail.recentOrders 一致） */
+export type OrderSummary = Schemas['AdminUserDetail']['recentOrders'][number];
 
-export interface CustomerListItem {
-  id: string;
-  phone: string;
-  email: string | null;
-  name: string | null;
-  avatarUrl: string | null;
-  role: UserRole;
-  status: UserStatus;
-  phoneVerified: boolean;
-  emailVerified: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-  orderCount: number;
-  totalSpent: number;
-}
-
-export interface CustomerDetail extends CustomerListItem {
-  updatedAt: string;
-  recentOrders: OrderSummary[];
-  addresses: Address[];
-}
+export type CustomerListItem = Schemas['AdminUserListItem'];
+export type CustomerDetail = Schemas['AdminUserDetail'];
+export type ListCustomersResult = Schemas['AdminUserListResponseData'];
+export type UpdateCustomerInput = Schemas['UpdateAdminUserRequest'];
+export type ResetPasswordResult = Schemas['ResetPasswordResponseData'];
 
 export interface ListCustomersParams {
   keyword?: string;
@@ -78,24 +42,6 @@ export interface ListCustomersParams {
   status?: UserStatus;
   page?: number;
   pageSize?: number;
-}
-
-export interface ListCustomersResult {
-  items: CustomerListItem[];
-  page: number;
-  pageSize: number;
-  total: number;
-  hasMore: boolean;
-}
-
-export interface UpdateCustomerInput {
-  name?: string;
-  phone?: string;
-  email?: string | null;
-  avatarUrl?: string;
-  role?: UserRole;
-  phoneVerified?: boolean;
-  emailVerified?: boolean;
 }
 
 export interface SuspendCustomerInput {
@@ -106,11 +52,6 @@ export interface SuspendCustomerInput {
 export interface ActivateCustomerInput {
   id: string;
   reason?: string;
-}
-
-export interface ResetPasswordResult {
-  temporaryPassword: string;
-  generatedAt: string;
 }
 
 /** 列表 */

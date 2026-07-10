@@ -13,11 +13,12 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useFormatter } from 'next-intl';
 import { Copy, Check, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ErrorState } from '@/components/common/error-state';
+import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,23 +48,38 @@ import {
   useActivateCustomer,
   useResetPassword,
   useUpdateCustomer,
-  type UserRole,
 } from '@/hooks/api/use-customers';
 import { formatCurrency } from '@/lib/utils';
+import { ROLE_LABEL_KEY, type UserRole } from '../_constants';
 
-const ROLE_OPTIONS: { value: UserRole; labelKey: string }[] = [
-  { value: 'super_admin', labelKey: 'admin.customers.roleSuperAdmin' },
-  { value: 'customer', labelKey: 'admin.customers.roleCustomer' },
-  { value: 'rider', labelKey: 'admin.customers.roleRider' },
-  { value: 'warehouse_staff', labelKey: 'admin.customers.roleWarehouseStaff' },
-  { value: 'customer_service', labelKey: 'admin.customers.roleCustomerService' },
-];
+const ROLE_OPTIONS: { value: UserRole; labelKey: string }[] = (
+  Object.keys(ROLE_LABEL_KEY) as UserRole[]
+).map((role) => ({ value: role, labelKey: ROLE_LABEL_KEY[role] }));
 
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations('common');
+  const format = useFormatter();
   const router = useRouter();
   const { toast } = useToast();
+
+  function formatDateTime(date: string): string {
+    return format.dateTime(new Date(date), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function formatDate(date: string): string {
+    return format.dateTime(new Date(date), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  }
 
   const { data: customer, isLoading, error, refetch } = useCustomerDetail(id);
   const suspendMutation = useSuspendCustomer();
@@ -213,9 +229,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   }
 
   if (error || !customer) {
+    const isNotFound = error instanceof ApiError && error.status === 404;
     return (
       <div className="space-y-6 p-6">
-        <PageHeader title={`#${id.slice(0, 8)}`} />
+        <PageHeader
+          title={isNotFound ? t('admin.customers.notFoundTitle') : `#${id.slice(0, 8)}`}
+        />
         <ErrorState onRetry={() => refetch()} />
       </div>
     );
@@ -228,7 +247,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     <div className="space-y-6 p-6">
       <PageHeader
         title={customer.name || customer.phone}
-        description={`${t('admin.customers.columnCreatedAt')}: ${new Date(customer.createdAt).toLocaleString()}`}
+        description={`${t('admin.customers.columnCreatedAt')}: ${formatDateTime(customer.createdAt)}`}
         action={
           !isDeleted && (
             <div className="flex items-center gap-2">
@@ -277,7 +296,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </CardHeader>
           <CardContent>
             <span className="text-xs text-muted-foreground">
-              {customer.lastLoginAt ? new Date(customer.lastLoginAt).toLocaleString() : '-'}
+              {customer.lastLoginAt ? formatDateTime(customer.lastLoginAt) : '-'}
             </span>
           </CardContent>
         </Card>
@@ -287,7 +306,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           </CardHeader>
           <CardContent>
             <span className="text-xs text-muted-foreground">
-              {new Date(customer.createdAt).toLocaleString()}
+              {formatDateTime(customer.createdAt)}
             </span>
           </CardContent>
         </Card>
@@ -316,7 +335,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 <dt className="text-xs text-muted-foreground">{t('admin.customers.columnRole')}</dt>
                 <dd>
                   <Badge variant="outline">
-                    {t(`admin.customers.role${customer.role.charAt(0).toUpperCase()}${customer.role.slice(1).replace(/_./g, (m) => m[1].toUpperCase())}`)}
+                    {t(ROLE_LABEL_KEY[customer.role])}
                   </Badge>
                 </dd>
               </div>
@@ -360,7 +379,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     <div className="space-y-1">
                       <p className="font-mono text-xs">{order.orderNo}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {formatDate(order.createdAt)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

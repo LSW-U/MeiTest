@@ -57,6 +57,8 @@ const UpdateUserRequest = z.object({
   emailVerified: z.boolean().optional(),
 });
 
+// W7-fix（审查 #9）：reason 仅作为审计上下文记录到 AuditLog.body，
+// service 不消费（动作本身已由 audit decorator 记录），故 body 用 _ 前缀忽略
 const SuspendUserRequest = z.object({
   reason: z.string().min(1).max(200).optional(),
 });

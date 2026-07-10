@@ -133,7 +133,7 @@ describe('UserService.listUsers', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           OR: expect.arrayContaining([
-            { phone: { contains: 'alice' } },
+            { phone: { contains: 'alice', mode: 'insensitive' } },
             { email: { contains: 'alice', mode: 'insensitive' } },
             { name: { contains: 'alice', mode: 'insensitive' } },
           ]),
@@ -444,7 +444,7 @@ describe('UserService.suspendUser', () => {
   });
 
   it('正常暂停：update status=SUSPENDED', async () => {
-    // 第 1 次：suspendUser 内部 findUnique
+    // W7-fix（审查 #3/#4/#18）：service 重构后只 findUnique 1 次，update 返回完整 user 直接构建 DTO
     mockDb.user.findUnique.mockResolvedValueOnce({
       id: 'u-other',
       role: 'CUSTOMER',
@@ -459,8 +459,8 @@ describe('UserService.suspendUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
     });
-    // 第 2 次：getUserDetail 内部 findUnique
-    mockDb.user.findUnique.mockResolvedValueOnce({
+    // update 返回 status=SUSPENDED 的完整 user（refactor 后直接用于构建 DTO，不再二次 findUnique）
+    mockDb.user.update.mockResolvedValueOnce({
       id: 'u-other',
       role: 'CUSTOMER',
       status: 'SUSPENDED',
@@ -474,7 +474,6 @@ describe('UserService.suspendUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-07-10T00:00:00.000Z'),
     });
-    mockDb.user.update.mockResolvedValueOnce({});
     mockDb.order.findMany.mockResolvedValueOnce([]);
     mockDb.address.findMany.mockResolvedValueOnce([]);
     mockDb.order.aggregate.mockResolvedValueOnce({
@@ -525,7 +524,7 @@ describe('UserService.activateUser', () => {
   });
 
   it('从 SUSPENDED -> ACTIVE 成功', async () => {
-    // 第 1 次：activateUser 内部 findUnique
+    // W7-fix（审查 #3/#4/#18）：service 重构后只 findUnique 1 次，update 返回完整 user 直接构建 DTO
     mockDb.user.findUnique.mockResolvedValueOnce({
       id: 'u-1',
       role: 'CUSTOMER',
@@ -540,8 +539,8 @@ describe('UserService.activateUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
     });
-    // 第 2 次：getUserDetail 内部 findUnique
-    mockDb.user.findUnique.mockResolvedValueOnce({
+    // update 返回 status=ACTIVE 的完整 user（refactor 后直接用于构建 DTO，不再二次 findUnique）
+    mockDb.user.update.mockResolvedValueOnce({
       id: 'u-1',
       role: 'CUSTOMER',
       status: 'ACTIVE',
@@ -555,7 +554,6 @@ describe('UserService.activateUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-07-10T00:00:00.000Z'),
     });
-    mockDb.user.update.mockResolvedValueOnce({});
     mockDb.order.findMany.mockResolvedValueOnce([]);
     mockDb.address.findMany.mockResolvedValueOnce([]);
     mockDb.order.aggregate.mockResolvedValueOnce({
@@ -607,7 +605,7 @@ describe('UserService.resetUserPassword', () => {
     });
   });
 
-  it('返回 12 字符临时密码 + DB hash 与原 password 不同', async () => {
+  it('返回 12 字符临时密码 + DB hash 与原 password 不同 + 更新 passwordChangedAt', async () => {
     mockDb.user.findUnique.mockResolvedValueOnce({
       id: 'u-1',
       status: 'ACTIVE',
@@ -622,10 +620,14 @@ describe('UserService.resetUserPassword', () => {
     // base64url 字符集：字母 + 数字 + - 和 _
     expect(result.temporaryPassword).toMatch(/^[A-Za-z0-9_-]{12}$/);
     expect(mockPasswordStrategy.hashPassword).toHaveBeenCalledWith(result.temporaryPassword);
+    // W7-fix P0：update 应同时设 password + passwordChangedAt
     expect(mockDb.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'u-1' },
-        data: { password: `hashed:${result.temporaryPassword}` },
+        data: expect.objectContaining({
+          password: `hashed:${result.temporaryPassword}`,
+          passwordChangedAt: expect.any(Date),
+        }),
       }),
     );
     // hash 不等于明文
@@ -698,9 +700,8 @@ describe('UserService.updateUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
     });
-    mockDb.user.update.mockResolvedValueOnce({});
-    // getUserDetail 内部再查一次
-    mockDb.user.findUnique.mockResolvedValueOnce({
+    // W7-fix（审查 #3/#4/#18）：update 返回完整 user（NewName），refactor 后直接用于构建 DTO，不再二次 findUnique
+    mockDb.user.update.mockResolvedValueOnce({
       id: 'u-1',
       role: 'CUSTOMER',
       status: 'ACTIVE',
@@ -747,8 +748,8 @@ describe('UserService.updateUser', () => {
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
     });
-    mockDb.user.update.mockResolvedValueOnce({});
-    mockDb.user.findUnique.mockResolvedValueOnce({
+    // W7-fix（审查 #3/#4/#18）：update 返回完整 user，refactor 后不再二次 findUnique
+    mockDb.user.update.mockResolvedValueOnce({
       id: 'u-self',
       role: 'SUPER_ADMIN',
       status: 'ACTIVE',
