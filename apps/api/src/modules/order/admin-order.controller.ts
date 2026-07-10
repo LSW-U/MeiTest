@@ -12,6 +12,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -61,6 +62,10 @@ const ListOrdersQuery = z.object({
 
 const AdminCancelOrderRequest = z.object({
   reason: z.string().min(1).max(200),
+});
+
+const AdminUpdateOrderRequest = z.object({
+  remark: z.string().max(200).nullable().optional(),
 });
 
 @Controller('api/v1/admin/orders')
@@ -226,5 +231,37 @@ export class AdminOrderController {
     }
     const cancelled = await this.orderService.adminGetOrderDetail(id);
     return { success: true as const, data: { id: cancelled.id, status: cancelled.status } };
+  }
+
+  /**
+   * Admin 编辑订单（W7-ext-C）
+   *
+   * MVP 仅允许改 remark（备注）。warehouseId 改动会破坏 orderNo，deliveryAddress 是快照。
+   * 已 CANCELLED / COMPLETED 的订单不可编辑。
+   */
+  @Patch(':id')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(AdminUpdateOrderRequest)) body: z.infer<typeof AdminUpdateOrderRequest>,
+    @Req() req: RequestWithUser,
+    @Headers('x-perspective') perspective: string | undefined,
+  ) {
+    if (!req.user) {
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'Authentication required' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const order = await this.orderService.adminUpdateOrder(
+      id,
+      { remark: body.remark },
+      {
+        operatorId: req.user.sub,
+        deviceType: req.user.deviceType as DeviceType,
+        perspective,
+      },
+    );
+    return { success: true as const, data: order };
   }
 }

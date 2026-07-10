@@ -1920,6 +1920,13 @@ components:
           maxLength: 200
       required:
         - reason
+    UpdateOrderRequest:
+      type: object
+      properties:
+        remark:
+          type: string
+          nullable: true
+          maxLength: 200
     OrderNo:
       type: string
       pattern: ^MM\d{14}$
@@ -10342,6 +10349,265 @@ paths:
                   - data
         "404":
           description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    patch:
+      tags:
+        - order
+      description: Admin 编辑订单（W7-ext-C）。MVP 仅允许改 remark（备注）。warehouseId 改动会破坏
+        orderNo，deliveryAddress 是快照，均不可改。已 CANCELLED / COMPLETED 的订单不可编辑（409）。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                remark:
+                  type: string
+                  nullable: true
+                  maxLength: 200
+      responses:
+        "200":
+          description: 编辑成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderNo:
+                        type: string
+                        pattern: ^MM\d{14}$
+                      userId:
+                        type: string
+                        format: uuid
+                      warehouseId:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: *a3
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            productId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: string
+                            productImage:
+                              type: string
+                            skuName:
+                              type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            quantity:
+                              type: integer
+                              minimum: 0
+                              exclusiveMinimum: true
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - productId
+                            - skuId
+                            - productName
+                            - productImage
+                            - skuName
+                            - unitPrice
+                            - quantity
+                            - subtotal
+                      totalAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      discountAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                        default: 0
+                      payableAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      deliveryAddress:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          phone:
+                            type: string
+                          detail:
+                            type: string
+                          lat:
+                            type: number
+                            nullable: true
+                          lng:
+                            type: number
+                            nullable: true
+                        required:
+                          - name
+                          - phone
+                          - detail
+                          - lat
+                          - lng
+                      remark:
+                        type: string
+                        nullable: true
+                      riderId:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      paymentMethod:
+                        type: string
+                        enum: *a12
+                      paymentStatus:
+                        type: string
+                        enum: *a13
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      confirmedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      deliveringAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      deliveredAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      cancelledAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      cancelReason:
+                        type: string
+                        nullable: true
+                    required:
+                      - id
+                      - orderNo
+                      - userId
+                      - warehouseId
+                      - status
+                      - items
+                      - totalAmount
+                      - deliveryFee
+                      - payableAmount
+                      - deliveryAddress
+                      - remark
+                      - riderId
+                      - paymentMethod
+                      - paymentStatus
+                      - paidAt
+                      - createdAt
+                      - confirmedAt
+                      - pickedAt
+                      - deliveringAt
+                      - deliveredAt
+                      - cancelledAt
+                      - cancelReason
+                required:
+                  - success
+                  - data
+        "404":
+          description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: ORDER_NOT_EDITABLE
           content:
             application/json:
               schema:

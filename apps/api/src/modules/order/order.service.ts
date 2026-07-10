@@ -912,6 +912,57 @@ export class OrderService {
   }
 
   /**
+   * Admin 编辑订单（W7-ext-C）
+   *
+   * MVP 仅允许修改 remark（订单备注）：
+   * - warehouseId 改动会破坏 orderNo 编码（含 warehouseCode），不可改
+   * - deliveryAddress 是下单时快照，改地址应重新下单
+   * - 已 CANCELLED/COMPLETED 的订单不可编辑
+   */
+  async adminUpdateOrder(
+    orderId: string,
+    input: { remark?: string | null },
+    eventCtx: OrderEventContext,
+  ): Promise<OrderWithRelations> {
+    await withTransaction(async (tx: Tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        throw new NotFoundException({
+          code: 'E-ORDER-004',
+          message: `Order not found: ${orderId}`,
+        });
+      }
+      if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
+        throw new ConflictException({
+          code: 'E-ORDER-003',
+          message: `Order status ${order.status} cannot be edited`,
+        });
+      }
+
+      const data: { remark?: string | null } = {};
+      if (input.remark !== undefined) {
+        data.remark = input.remark === null || input.remark.trim() === '' ? null : input.remark.trim().slice(0, 200);
+      }
+
+      if (Object.keys(data).length === 0) {
+        return;
+      }
+
+      await tx.order.update({ where: { id: orderId }, data });
+      // 备注编辑不写 OrderEvent（eventType 枚举无 UPDATED，且不影响状态机）
+    });
+
+    logger.info({
+      msg: 'ORDER_ADMIN_UPDATED',
+      orderId,
+      operatorId: eventCtx.operatorId,
+      fields: Object.keys(input),
+    });
+
+    return this.adminGetOrderDetail(orderId);
+  }
+
+  /**
    * 查询订单详情（含 items + events）
    */
   async getOrderDetail(orderId: string, userId: string): Promise<OrderWithRelations> {

@@ -82,6 +82,7 @@ import {
   OrderItem,
   CreateOrderRequest,
   CancelOrderRequest,
+  UpdateOrderRequest,
   OrderNo,
   PaymentMethod,
   OrderStatus,
@@ -205,6 +206,7 @@ registry.register('Order', Order);
 registry.register('OrderItem', OrderItem);
 registry.register('CreateOrderRequest', CreateOrderRequest);
 registry.register('CancelOrderRequest', CancelOrderRequest);
+registry.register('UpdateOrderRequest', UpdateOrderRequest);
 registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
 registry.register('OrderStatus', OrderStatus);
@@ -1468,6 +1470,36 @@ registry.registerPath({
     },
     404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'PAID_ORDER_CANNOT_CANCEL', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- Admin Order edit（W7-ext-C）----
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/orders/{id}',
+  tags: ['order'],
+  description:
+    'Admin 编辑订单（W7-ext-C）。MVP 仅允许改 remark（备注）。' +
+    'warehouseId 改动会破坏 orderNo，deliveryAddress 是快照，均不可改。' +
+    '已 CANCELLED / COMPLETED 的订单不可编辑（409）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateOrderRequest } } },
+  },
+  responses: {
+    200: {
+      description: '编辑成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: Order,
+          }),
+        },
+      },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'ORDER_NOT_EDITABLE', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

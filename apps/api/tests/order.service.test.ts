@@ -421,3 +421,142 @@ describe('OrderService.createOrder', () => {
     expect(mockCart.clearOrderedItems).toHaveBeenCalled();
   });
 });
+
+describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    Object.values(mockDb).forEach((table) => {
+      Object.values(table).forEach((fn) => fn.mockReset());
+    });
+    Object.values(mockHelpers).forEach((fn) => fn.mockReset());
+    mockOrderNo.nextOrderNo.mockReset();
+    mockPayment.createIntentForOrder.mockReset();
+    mockCart.clearOrderedItems.mockReset();
+    service = new OrderService(
+      {} as never,
+      mockOrderNo as never,
+      {} as never,
+      mockPayment as never,
+      mockQueue as never,
+      {} as never,
+      mockCart as never,
+    );
+  });
+
+  function setupTxMock(order: { id: string; status: string; remark: string | null }) {
+    const txFindUnique = vi.fn().mockResolvedValue(order);
+    const txUpdate = vi.fn().mockResolvedValue({ ...order, remark: 'updated' });
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { findUnique: txFindUnique, update: txUpdate },
+        orderItem: {},
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    return { txFindUnique, txUpdate };
+  }
+
+  function setupAdminGetOrderDetailMock(order: Record<string, unknown>) {
+    mockDb.order.findUnique.mockResolvedValue({
+      ...order,
+      items: [],
+      events: [],
+      deliveryAddress: {},
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+  }
+
+  it('订单不存在 -> 抛 E-ORDER-004', async () => {
+    setupTxMock({ id: 'order-x', status: 'PENDING_CONFIRM', remark: null });
+    mockDb.order.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.adminUpdateOrder('order-x', { remark: 'new note' }, { operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({
+      response: { code: 'E-ORDER-004' },
+      status: 404,
+    });
+  });
+
+  it('CANCELLED 订单不可编辑 -> 抛 E-ORDER-003', async () => {
+    setupTxMock({ id: 'order-1', status: 'CANCELLED', remark: null });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'CANCELLED', remark: null });
+
+    await expect(
+      service.adminUpdateOrder('order-1', { remark: 'x' }, { operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({
+      response: { code: 'E-ORDER-003' },
+      status: 409,
+    });
+  });
+
+  it('COMPLETED 订单不可编辑 -> 抛 E-ORDER-003', async () => {
+    setupTxMock({ id: 'order-1', status: 'COMPLETED', remark: null });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'COMPLETED', remark: null });
+
+    await expect(
+      service.adminUpdateOrder('order-1', { remark: 'x' }, { operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({
+      response: { code: 'E-ORDER-003' },
+      status: 409,
+    });
+  });
+
+  it('空 input（无 remark 字段）-> 不调用 update，仍走 detail 查询', async () => {
+    const { txUpdate } = setupTxMock({ id: 'order-1', status: 'CONFIRMED', remark: 'old' });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'CONFIRMED', remark: 'old' });
+
+    const result = await service.adminUpdateOrder('order-1', {}, { operatorId: 'admin-1' });
+    expect(txUpdate).not.toHaveBeenCalled();
+    expect(result.id).toBe('order-1');
+  });
+
+  it('Happy path：remark 修改 -> 调 update + 返回详情', async () => {
+    const { txUpdate } = setupTxMock({ id: 'order-1', status: 'CONFIRMED', remark: 'old' });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'CONFIRMED', remark: 'updated note' });
+
+    const result = await service.adminUpdateOrder(
+      'order-1',
+      { remark: 'updated note' },
+      { operatorId: 'admin-1' },
+    );
+
+    expect(txUpdate).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { remark: 'updated note' },
+    });
+    expect(result.id).toBe('order-1');
+  });
+
+  it('remark=null 清空备注', async () => {
+    const { txUpdate } = setupTxMock({ id: 'order-1', status: 'CONFIRMED', remark: 'old' });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'CONFIRMED', remark: null });
+
+    await service.adminUpdateOrder('order-1', { remark: null }, { operatorId: 'admin-1' });
+
+    expect(txUpdate).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { remark: null },
+    });
+  });
+
+  it('remark 超长截断到 200 字符', async () => {
+    const { txUpdate } = setupTxMock({ id: 'order-1', status: 'CONFIRMED', remark: 'old' });
+    setupAdminGetOrderDetailMock({ id: 'order-1', status: 'CONFIRMED', remark: 'x'.repeat(200) });
+
+    const longRemark = 'x'.repeat(250);
+    await service.adminUpdateOrder(
+      'order-1',
+      { remark: longRemark },
+      { operatorId: 'admin-1' },
+    );
+
+    expect(txUpdate).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { remark: 'x'.repeat(200) },
+    });
+  });
+});

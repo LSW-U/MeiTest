@@ -128,3 +128,48 @@ export function useCancelOrder() {
     },
   });
 }
+
+/** admin 确认订单（COD：PENDING_CONFIRM -> CONFIRMED） */
+export function useConfirmOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      apiFetch<ApiSuccess<{ id: string; status: OrderStatus }>>(
+        `/admin/orders/${id}/confirm`,
+        { method: 'POST', body: JSON.stringify({}) },
+      ).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+/** admin 拣货完成（CONFIRMED -> PICKED） */
+export function usePickOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      apiFetch<ApiSuccess<{ id: string; status: OrderStatus }>>(
+        `/admin/orders/${id}/pick`,
+        { method: 'POST', body: JSON.stringify({}) },
+      ).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+/** admin 编辑订单（仅 remark） */
+export function useUpdateOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, remark }: { id: string; remark: string | null }) =>
+      apiFetch<ApiSuccess<OrderDetail>>(`/admin/orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ remark }),
+      }).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}

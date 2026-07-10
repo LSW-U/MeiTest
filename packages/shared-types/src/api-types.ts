@@ -5798,7 +5798,135 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Admin 编辑订单（W7-ext-C）。MVP 仅允许改 remark（备注）。warehouseId 改动会破坏 orderNo，deliveryAddress 是快照，均不可改。已 CANCELLED / COMPLETED 的订单不可编辑（409）。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        remark?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 编辑成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** Format: uuid */
+                                userId: string;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    productId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: string;
+                                    productImage: string;
+                                    skuName: string;
+                                    unitPrice: number;
+                                    quantity: number;
+                                    subtotal: number;
+                                }[];
+                                totalAmount: number;
+                                deliveryFee: number;
+                                /** @default 0 */
+                                discountAmount: number;
+                                payableAmount: number;
+                                deliveryAddress: {
+                                    name: string;
+                                    phone: string;
+                                    detail: string;
+                                    lat: number | null;
+                                    lng: number | null;
+                                };
+                                remark: string | null;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** @enum {string} */
+                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                /** @enum {string} */
+                                paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                confirmedAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
+                                /** Format: date-time */
+                                deliveringAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                /** Format: date-time */
+                                cancelledAt: string | null;
+                                cancelReason: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_EDITABLE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/admin/orders/{id}/cancel": {
@@ -8640,6 +8768,9 @@ export interface components {
         };
         CancelOrderRequest: {
             reason: string;
+        };
+        UpdateOrderRequest: {
+            remark?: string | null;
         };
         OrderNo: string;
         /** @enum {string} */

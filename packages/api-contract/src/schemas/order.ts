@@ -108,6 +108,11 @@ export const Order = z.object({
   cancelReason: z.string().nullable(),
 });
 
+/** Admin 编辑订单请求（W7-ext-C）：MVP 仅允许改 remark */
+export const UpdateOrderRequest = z.object({
+  remark: z.string().max(200).nullable().optional(),
+});
+
 /** 创建订单请求（同步事务 MVP） */
 export const CreateOrderRequest = z.object({
   addressId: Id,
