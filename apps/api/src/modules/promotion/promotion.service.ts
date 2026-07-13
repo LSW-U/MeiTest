@@ -299,6 +299,44 @@ export class PromotionService {
     };
   }
 
+  /**
+   * 客户端校验促销码（W7-ext-G P1-3）：购物车实时预览折扣
+   *
+   * 与 applyPromotion 的区别：只读校验，不 increment usedCount。
+   * 返回 { valid, discount, reason?, type? }，reason 仅 valid=false 时有值。
+   */
+  async validatePromotion(
+    code: string,
+    orderAmount: number,
+    deliveryFee: number,
+  ): Promise<{
+    valid: boolean;
+    discount: number;
+    reason?: string;
+    type?: PromotionTypeValue;
+  }> {
+    const normalizedCode = code.trim().toUpperCase();
+    const promo = await db.promotion.findUnique({ where: { code: normalizedCode } });
+    if (!promo) {
+      return { valid: false, discount: 0, reason: 'INVALID_CODE' };
+    }
+    if (promo.status !== 'ACTIVE') {
+      return { valid: false, discount: 0, reason: 'NOT_ACTIVE' };
+    }
+    const now = new Date();
+    if (now < promo.startAt || now > promo.endAt) {
+      return { valid: false, discount: 0, reason: 'NOT_IN_PERIOD' };
+    }
+    if (orderAmount < promo.minOrderAmount) {
+      return { valid: false, discount: 0, reason: 'BELOW_MIN_ORDER' };
+    }
+    if (promo.totalQuota !== null && promo.usedCount >= promo.totalQuota) {
+      return { valid: false, discount: 0, reason: 'QUOTA_EXHAUSTED' };
+    }
+    const discount = this.computeDiscount(promo, orderAmount, deliveryFee);
+    return { valid: true, discount, type: promo.type };
+  }
+
   /** 计算折扣金额（分） */
   private computeDiscount(
     promo: { type: PromotionTypeValue; value: number; maxDiscountAmount: number | null },

@@ -121,3 +121,31 @@ export class PromotionController {
     return { success: true as const, data };
   }
 }
+
+const ValidatePromotionRequest = z.object({
+  code: z.string().min(1).max(20),
+  orderAmount: z.number().int().nonnegative(),
+  deliveryFee: z.number().int().nonnegative().optional(),
+});
+
+/**
+ * Client Promotion Controller - 客户端促销校验（W7-ext-G P1-3）
+ *
+ * 路由前缀 /api/v1/promotions（role: customer，登录用户）
+ * 购物车实时预览折扣，不 increment usedCount。
+ */
+@Controller('api/v1/promotions')
+@Roles('customer')
+export class ClientPromotionController {
+  constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
+
+  @Post('validate')
+  async validate(@Body(new ZodValidationPipe(ValidatePromotionRequest)) body: z.infer<typeof ValidatePromotionRequest>) {
+    const data = await this.promoService.validatePromotion(
+      body.code,
+      body.orderAmount,
+      body.deliveryFee ?? 0,
+    );
+    return { success: true as const, data };
+  }
+}

@@ -128,6 +128,8 @@ import {
   Promotion as PromotionSchema,
   CreatePromotionRequest as CreatePromotionRequestSchema,
   UpdatePromotionRequest as UpdatePromotionRequestSchema,
+  ValidatePromotionRequest as ValidatePromotionRequestSchema,
+  ValidatePromotionResponse as ValidatePromotionResponseSchema,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1895,6 +1897,34 @@ registry.registerPath({
     },
     404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'ALREADY_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 客户端促销校验（W7-ext-G P1-3）----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/promotions/validate',
+  tags: ['promotion'],
+  description:
+    '客户端校验促销码（W7-ext-G P1-3）。购物车实时预览折扣，不 increment usedCount。' +
+    'Role: customer。返回 { valid, discount, reason?, type? }，reason 仅 valid=false 时有值。',
+  request: {
+    body: { content: { 'application/json': { schema: ValidatePromotionRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '校验结果',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: ValidatePromotionResponseSchema,
+          }),
+        },
+      },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

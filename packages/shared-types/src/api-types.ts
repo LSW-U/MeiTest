@@ -7468,6 +7468,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/promotions/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户端校验促销码（W7-ext-G P1-3）。购物车实时预览折扣，不 increment usedCount。Role: customer。返回 { valid, discount, reason?, type? }，reason 仅 valid=false 时有值。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        orderAmount: number;
+                        deliveryFee?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 校验结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                valid: boolean;
+                                discount: number;
+                                reason?: string;
+                                /** @enum {string} */
+                                type?: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                            };
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/rider/apply": {
         parameters: {
             query?: never;

@@ -60,3 +60,18 @@ export const UpdatePromotionRequest = z.object({
   startAt: IsoTimestamp.optional(),
   endAt: IsoTimestamp.optional(),
 });
+
+/** 客户端校验促销码请求（W7-ext-G P1-3，购物车实时预览） */
+export const ValidatePromotionRequest = z.object({
+  code: z.string().min(1).max(20),
+  orderAmount: z.number().int().nonnegative(),
+  deliveryFee: z.number().int().nonnegative().optional(),
+});
+
+/** 校验结果 */
+export const ValidatePromotionResponse = z.object({
+  valid: z.boolean(),
+  discount: z.number().int().nonnegative(),
+  reason: z.string().optional(),
+  type: PromotionType.optional(),
+});

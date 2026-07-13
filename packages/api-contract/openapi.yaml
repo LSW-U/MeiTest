@@ -13144,6 +13144,121 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/promotions/validate:
+    post:
+      tags:
+        - promotion
+      description: "客户端校验促销码（W7-ext-G P1-3）。购物车实时预览折扣，不 increment usedCount。Role:
+        customer。返回 { valid, discount, reason?, type? }，reason 仅 valid=false
+        时有值。"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  minLength: 1
+                  maxLength: 20
+                orderAmount:
+                  type: integer
+                  minimum: 0
+                deliveryFee:
+                  type: integer
+                  minimum: 0
+              required:
+                - code
+                - orderAmount
+      responses:
+        "200":
+          description: 校验结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      valid:
+                        type: boolean
+                      discount:
+                        type: integer
+                        minimum: 0
+                      reason:
+                        type: string
+                      type:
+                        type: string
+                        enum: *a17
+                    required:
+                      - valid
+                      - discount
+                required:
+                  - success
+                  - data
+        "401":
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/common/rider/apply:
     post:
       tags:

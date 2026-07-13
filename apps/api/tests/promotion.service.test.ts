@@ -308,4 +308,70 @@ describe('PromotionService (W7-ext-G)', () => {
       expect(r.discountAmount).toBe(500);
     });
   });
+
+  describe('validatePromotion (P1-3)', () => {
+    it('码不存在 -> valid=false / INVALID_CODE', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue(null);
+      const r = await service.validatePromotion('NOPE', 2000, 500);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toBe('INVALID_CODE');
+      expect(r.discount).toBe(0);
+    });
+
+    it('非 ACTIVE -> NOT_ACTIVE', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue({ ...basePromo, status: 'PAUSED' });
+      const r = await service.validatePromotion('SAVE10', 2000, 500);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toBe('NOT_ACTIVE');
+    });
+
+    it('未到时间 -> NOT_IN_PERIOD', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue({
+        ...basePromo,
+        startAt: new Date('2099-01-01T00:00:00.000Z'),
+        endAt: new Date('2099-12-31T00:00:00.000Z'),
+      });
+      const r = await service.validatePromotion('SAVE10', 2000, 500);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toBe('NOT_IN_PERIOD');
+    });
+
+    it('未达 minOrder -> BELOW_MIN_ORDER', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue(basePromo);
+      const r = await service.validatePromotion('SAVE10', 500, 500);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toBe('BELOW_MIN_ORDER');
+    });
+
+    it('配额用完 -> QUOTA_EXHAUSTED', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue({ ...basePromo, totalQuota: 100, usedCount: 100 });
+      const r = await service.validatePromotion('SAVE10', 2000, 500);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toBe('QUOTA_EXHAUSTED');
+    });
+
+    it('PERCENTAGE Happy path -> valid=true + discount 正确 + 不 increment', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue(basePromo);
+      // totalAmount=2000, value=10% -> 200，未超 maxDiscount=500
+      const r = await service.validatePromotion('SAVE10', 2000, 500);
+      expect(r.valid).toBe(true);
+      expect(r.discount).toBe(200);
+      expect(r.type).toBe('PERCENTAGE');
+      // validate 是只读预览，不 increment usedCount
+      expect(mockDb.$executeRaw).not.toHaveBeenCalled();
+    });
+
+    it('FREE_DELIVERY -> discount = deliveryFee', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue({
+        ...basePromo,
+        type: 'FREE_DELIVERY' as const,
+        value: 0,
+        maxDiscountAmount: null,
+      });
+      const r = await service.validatePromotion('SAVE10', 2000, 500);
+      expect(r.valid).toBe(true);
+      expect(r.discount).toBe(500);
+    });
+  });
+
 });
