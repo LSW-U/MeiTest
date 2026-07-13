@@ -264,22 +264,24 @@ export class PromotionService {
         message: `Order amount does not meet minimum ${promo.minOrderAmount}`,
       });
     }
-    if (promo.totalQuota !== null && promo.usedCount >= promo.totalQuota) {
-      throw new BadRequestException({ code: 'E-PROMO-013', message: 'Promotion quota exhausted' });
-    }
 
-    // 单用户限用：查该用户历史订单中用此 code 的次数
-    // MVP 简化：用 OrderEvent.metadata.promoCode 计数（W7-ext-G 不引入 OrderPromotion 关联表）
-    // 此处 perUserLimit 校验留口子，MVP 不强制（避免引入新表/字段）
+    // 单用户限用：MVP 留口子不强制（W8 再接 OrderPromotion 计数）
     void userId;
 
     const discountAmount = this.computeDiscount(promo, totalAmount, deliveryFee);
 
-    // 原子 increment（事务内 tx 传入时走 tx，否则走 db）
-    await client.promotion.update({
-      where: { id: promo.id },
-      data: { usedCount: { increment: 1 } },
-    });
+    // 原子 increment + 配额守卫（仿 deductStock：UPDATE ... WHERE used_count < total_quota）
+    // 消除 read-check-then-write race，防并发超发。
+    // $executeRaw 返回影响行数：0 = 配额已满（或并发抢光），抛 E-PROMO-013
+    const affected = await client.$executeRaw`
+      UPDATE "promotions"
+      SET used_count = used_count + 1
+      WHERE id = ${promo.id}
+        AND (total_quota IS NULL OR used_count < total_quota)
+    `;
+    if (affected === 0) {
+      throw new ConflictException({ code: 'E-PROMO-013', message: 'Promotion quota exhausted' });
+    }
 
     logger.info({
       msg: 'PROMOTION_APPLIED',

@@ -11,6 +11,7 @@ const { mockDb } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    $executeRaw: vi.fn(),
   },
 }));
 
@@ -25,7 +26,8 @@ describe('PromotionService (W7-ext-G)', () => {
   let service: PromotionService;
 
   beforeEach(() => {
-    Object.values(mockDb).forEach((table) => Object.values(table).forEach((fn) => fn.mockReset()));
+    Object.values(mockDb.promotion).forEach((fn) => fn.mockReset());
+    mockDb.$executeRaw.mockReset();
     // @ts-expect-error - no constructor args needed
     service = new PromotionService();
   });
@@ -236,32 +238,30 @@ describe('PromotionService (W7-ext-G)', () => {
       ).rejects.toMatchObject({ response: { code: 'E-PROMO-012' }, status: 400 });
     });
 
-    it('配额用完 -> E-PROMO-013', async () => {
-      mockDb.promotion.findUnique.mockResolvedValue({ ...basePromo, totalQuota: 100, usedCount: 100 });
+    it('配额用完（$executeRaw 影响 0 行）-> E-PROMO-013 / 409', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue(basePromo);
+      mockDb.$executeRaw.mockResolvedValue(0);
       await expect(
         service.applyPromotion('SAVE10', 'user-1', 2000, 500),
-      ).rejects.toMatchObject({ response: { code: 'E-PROMO-013' }, status: 400 });
+      ).rejects.toMatchObject({ response: { code: 'E-PROMO-013' }, status: 409 });
     });
 
     it('PERCENTAGE Happy path -> discount = totalAmount * value / 100，受 maxDiscountAmount 上限', async () => {
       // totalAmount=2000, value=10% -> 200，未超 maxDiscount=500 -> discount=200
       mockDb.promotion.findUnique.mockResolvedValue(basePromo);
-      mockDb.promotion.update.mockResolvedValue({ ...basePromo, usedCount: 6 });
+      mockDb.$executeRaw.mockResolvedValue(1);
 
       const result = await service.applyPromotion('SAVE10', 'user-1', 2000, 500);
 
       expect(result.discountAmount).toBe(200);
       expect(result.type).toBe('PERCENTAGE');
-      expect(mockDb.promotion.update).toHaveBeenCalledWith({
-        where: { id: 'promo-1' },
-        data: { usedCount: { increment: 1 } },
-      });
+      expect(mockDb.$executeRaw).toHaveBeenCalled();
     });
 
     it('PERCENTAGE 超 maxDiscount -> 截断到 maxDiscount', async () => {
       // totalAmount=10000, value=10% -> 1000，超 maxDiscount=500 -> discount=500
       mockDb.promotion.findUnique.mockResolvedValue(basePromo);
-      mockDb.promotion.update.mockResolvedValue({ ...basePromo, usedCount: 6 });
+      mockDb.$executeRaw.mockResolvedValue(1);
 
       const result = await service.applyPromotion('SAVE10', 'user-1', 10000, 500);
       expect(result.discountAmount).toBe(500);
@@ -274,7 +274,7 @@ describe('PromotionService (W7-ext-G)', () => {
         value: 300,
         maxDiscountAmount: null,
       });
-      mockDb.promotion.update.mockResolvedValue({ ...basePromo, usedCount: 6 });
+      mockDb.$executeRaw.mockResolvedValue(1);
 
       // totalAmount=2000 -> discount=300
       const r1 = await service.applyPromotion('SAVE10', 'user-1', 2000, 500);
@@ -288,7 +288,7 @@ describe('PromotionService (W7-ext-G)', () => {
         value: 5000,
         maxDiscountAmount: null,
       });
-      mockDb.promotion.update.mockResolvedValue({ ...basePromo, usedCount: 6 });
+      mockDb.$executeRaw.mockResolvedValue(1);
 
       // totalAmount=2000 -> discount=2000
       const r = await service.applyPromotion('SAVE10', 'user-1', 2000, 500);
@@ -302,7 +302,7 @@ describe('PromotionService (W7-ext-G)', () => {
         value: 0,
         maxDiscountAmount: null,
       });
-      mockDb.promotion.update.mockResolvedValue({ ...basePromo, usedCount: 6 });
+      mockDb.$executeRaw.mockResolvedValue(1);
 
       const r = await service.applyPromotion('SAVE10', 'user-1', 2000, 500);
       expect(r.discountAmount).toBe(500);
