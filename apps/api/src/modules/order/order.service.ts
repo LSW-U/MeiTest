@@ -46,6 +46,7 @@ import type {
 } from './order.types';
 import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
+import { PromotionService } from '../promotion/promotion.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
@@ -122,6 +123,7 @@ export class OrderService {
     private readonly dispatchService: DispatchServiceLike | null,
     @Inject('CART_SERVICE_TOKEN')
     private readonly cartService: CartServiceLike | null,
+    @Inject(PromotionService) private readonly promotionService: PromotionService,
     @Inject('RealtimeGatewayToken')
     private readonly realtime: {
       broadcastOrderStatusChange: (
@@ -229,9 +231,8 @@ export class OrderService {
     });
 
     const deliveryFee = warehouse.deliveryFee;
-    const discountAmount = 0; // MVP 暂无营销，W4+ 接 marketing
     const totalAmount = itemsSubtotal + deliveryFee;
-    const payableAmount = totalAmount - discountAmount;
+    // discountAmount + payableAmount 在事务内计算（W7-ext-G：promo 原子 increment）
 
     // ===== Step 5: 生成 orderNo（事务前调 Redis，避免事务内 IO） =====
     const warehouseCode = warehouse.code.replace(/^W/, ''); // "W01" → "01"
@@ -242,6 +243,20 @@ export class OrderService {
     // ===== Step 6: 事务创建 Order + Items + 扣库存 + Event =====
     try {
       const created = await withTransaction(async (tx: Tx) => {
+        // 6.0 应用促销码（W7-ext-G）：校验 + 计算 discount + 原子 increment usedCount
+        let discountAmount = 0;
+        if (input.promoCode) {
+          const applied = await this.promotionService.applyPromotion(
+            input.promoCode,
+            input.userId,
+            itemsSubtotal,
+            deliveryFee,
+            tx,
+          );
+          discountAmount = applied.discountAmount;
+        }
+        const payableAmount = totalAmount - discountAmount;
+
         // 6.1 创建 Order
         const order = await tx.order.create({
           data: {

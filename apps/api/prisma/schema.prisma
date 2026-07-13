@@ -974,6 +974,53 @@ model Refund {
 }
 
 // ============================================================================
+// 21. Promotion (W7-ext-G 2026-07-10)
+//     促销/优惠券：3 类型 + 配额 + 用户限制 + 时间窗
+//     下单时 createOrder 校验 code + 计算 discountAmount + 原子 increment usedCount
+// ----------------------------------------------------------------------------
+model Promotion {
+  id                String          @id @default(uuid())
+  /// 优惠码（用户输入，唯一）
+  code              String          @unique @db.VarChar(20)
+  name              String          @db.VarChar(100)
+  description       String?
+  /// PERCENTAGE: value=0-100 (%) | FIXED_AMOUNT: value=分 | FREE_DELIVERY: value=0
+  type              PromotionType
+  value             Int
+  /// 起始订单金额（分），0 = 无门槛
+  minOrderAmount    Int             @default(0) @map("min_order_amount")
+  /// PERCENTAGE 上限（分），null = 不限
+  maxDiscountAmount Int?             @map("max_discount_amount")
+  /// 总配额，null = 不限
+  totalQuota        Int?             @map("total_quota")
+  /// 已使用次数（原子 increment）
+  usedCount         Int             @default(0) @map("used_count")
+  /// 单用户限用次数
+  perUserLimit      Int             @default(1) @map("per_user_limit")
+  startAt           DateTime        @map("start_at")
+  endAt             DateTime        @map("end_at")
+  status            PromotionStatus @default(ACTIVE)
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt        @map("updated_at")
+
+  @@index([status, startAt, endAt])
+  @@index([code])
+  @@map("promotions")
+}
+
+enum PromotionType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_DELIVERY
+}
+
+enum PromotionStatus {
+  ACTIVE
+  PAUSED
+  DELETED
+}
+
+// ============================================================================
 // 文档说明 — W1-D2-T3 任务执行时的注意事项
 // ----------------------------------------------------------------------------
 // 1. PostGIS extension:

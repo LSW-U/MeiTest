@@ -6739,6 +6739,699 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 促销列表（W7-ext-G）。Role: super_admin。按 status/type/keyword 筛选。 */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "ACTIVE" | "PAUSED" | "DELETED";
+                    type?: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                    keyword?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 创建促销（W7-ext-G）。code 唯一（3-20 字母数字），type 决定 value 含义。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        name: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                        value: number;
+                        minOrderAmount?: number;
+                        maxDiscountAmount?: number | null;
+                        totalQuota?: number | null;
+                        perUserLimit?: number;
+                        /** Format: date-time */
+                        startAt: string;
+                        /** Format: date-time */
+                        endAt: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description INVALID_INPUT */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description CODE_ALREADY_EXISTS */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/promotions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 促销详情（W7-ext-G）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROMO_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 编辑促销（W7-ext-G）。status 用专门端点切换。DELETED 不可编辑。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        description?: string | null;
+                        value?: number;
+                        minOrderAmount?: number;
+                        maxDiscountAmount?: number | null;
+                        totalQuota?: number | null;
+                        perUserLimit?: number;
+                        /** Format: date-time */
+                        startAt?: string;
+                        /** Format: date-time */
+                        endAt?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 编辑成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROMO_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description CANNOT_EDIT_DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/promotions/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 激活促销（W7-ext-G）。PAUSED -> ACTIVE。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 激活成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROMO_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description ALREADY_ACTIVE / CANNOT_ACTIVATE_DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/promotions/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 暂停促销（W7-ext-G）。ACTIVE -> PAUSED。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 暂停成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                name: string;
+                                description: string | null;
+                                /** @enum {string} */
+                                type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                                value: number;
+                                minOrderAmount: number;
+                                maxDiscountAmount: number | null;
+                                totalQuota: number | null;
+                                usedCount: number;
+                                perUserLimit: number;
+                                /** Format: date-time */
+                                startAt: string;
+                                /** Format: date-time */
+                                endAt: string;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "PAUSED" | "DELETED";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROMO_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description ONLY_ACTIVE_CAN_PAUSE */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/promotions/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 软删促销（W7-ext-G）。status=DELETED，保留数据。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                status: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PROMO_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description ALREADY_DELETED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/rider/apply": {
         parameters: {
             query?: never;
@@ -9590,6 +10283,60 @@ export interface components {
         };
         DeleteAdminRiderRequest: {
             reason?: string;
+        };
+        Promotion: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            description: string | null;
+            /** @enum {string} */
+            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+            value: number;
+            minOrderAmount: number;
+            maxDiscountAmount: number | null;
+            totalQuota: number | null;
+            usedCount: number;
+            perUserLimit: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "PAUSED" | "DELETED";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreatePromotionRequest: {
+            code: string;
+            name: string;
+            description?: string;
+            /** @enum {string} */
+            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+            value: number;
+            minOrderAmount?: number;
+            maxDiscountAmount?: number | null;
+            totalQuota?: number | null;
+            perUserLimit?: number;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+        };
+        UpdatePromotionRequest: {
+            name?: string;
+            description?: string | null;
+            value?: number;
+            minOrderAmount?: number;
+            maxDiscountAmount?: number | null;
+            totalQuota?: number | null;
+            perUserLimit?: number;
+            /** Format: date-time */
+            startAt?: string;
+            /** Format: date-time */
+            endAt?: string;
         };
         GeocodeRequest: {
             address: string;

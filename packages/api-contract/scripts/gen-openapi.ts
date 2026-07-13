@@ -124,6 +124,10 @@ import {
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
   ReviewRefundRequest as ReviewRefundRequestSchema,
+  // promotion（W7-ext-G）
+  Promotion as PromotionSchema,
+  CreatePromotionRequest as CreatePromotionRequestSchema,
+  UpdatePromotionRequest as UpdatePromotionRequestSchema,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1729,6 +1733,168 @@ registry.registerPath({
     },
     404: { description: 'RIDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'CANNOT_DELETE_SELF / ALREADY_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// W7-ext-G：促销管理（7 endpoints）
+// ============================================================================
+
+registry.register('Promotion', PromotionSchema);
+registry.register('CreatePromotionRequest', CreatePromotionRequestSchema);
+registry.register('UpdatePromotionRequest', UpdatePromotionRequestSchema);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/promotions',
+  tags: ['promotion'],
+  description: 'Admin 促销列表（W7-ext-G）。Role: super_admin。按 status/type/keyword 筛选。',
+  request: {
+    query: z.object({
+      status: z.enum(['ACTIVE', 'PAUSED', 'DELETED']).optional(),
+      type: z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_DELIVERY']).optional(),
+      keyword: z.string().max(50).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '列表',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: z.array(PromotionSchema) }),
+        },
+      },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/promotions/{id}',
+  tags: ['promotion'],
+  description: 'Admin 促销详情（W7-ext-G）。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '详情',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: PromotionSchema }),
+        },
+      },
+    },
+    404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/promotions',
+  tags: ['promotion'],
+  description: '创建促销（W7-ext-G）。code 唯一（3-20 字母数字），type 决定 value 含义。',
+  request: {
+    body: { content: { 'application/json': { schema: CreatePromotionRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '创建成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: PromotionSchema }),
+        },
+      },
+    },
+    400: { description: 'INVALID_INPUT', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'CODE_ALREADY_EXISTS', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/promotions/{id}',
+  tags: ['promotion'],
+  description: '编辑促销（W7-ext-G）。status 用专门端点切换。DELETED 不可编辑。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdatePromotionRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '编辑成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: PromotionSchema }),
+        },
+      },
+    },
+    404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'CANNOT_EDIT_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/promotions/{id}/activate',
+  tags: ['promotion'],
+  description: '激活促销（W7-ext-G）。PAUSED -> ACTIVE。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '激活成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: PromotionSchema }),
+        },
+      },
+    },
+    404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'ALREADY_ACTIVE / CANNOT_ACTIVATE_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/promotions/{id}/pause',
+  tags: ['promotion'],
+  description: '暂停促销（W7-ext-G）。ACTIVE -> PAUSED。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '暂停成功',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: PromotionSchema }),
+        },
+      },
+    },
+    404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'ONLY_ACTIVE_CAN_PAUSE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/promotions/{id}/delete',
+  tags: ['promotion'],
+  description: '软删促销（W7-ext-G）。status=DELETED，保留数据。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '删除成功',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ id: Id, status: z.string() }),
+          }),
+        },
+      },
+    },
+    404: { description: 'PROMO_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'ALREADY_DELETED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

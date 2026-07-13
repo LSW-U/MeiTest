@@ -25,6 +25,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { RefundModule } from './modules/refund/refund.module';
 import { RiderModule } from './modules/rider/rider.module';
+import { PromotionModule } from './modules/promotion/promotion.module';
 import { SettleModule } from './modules/settle/settle.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { UploadModule } from './modules/upload/upload.module';
@@ -56,6 +57,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     RealtimeModule,
     RefundModule,
     RiderModule,
+    PromotionModule,
     SettleModule,
     ShopModule,
     UploadModule,

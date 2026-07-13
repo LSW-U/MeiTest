@@ -41,6 +41,8 @@ export interface CreateOrderInput {
   deviceType: ContractDeviceType;
   /** 操作视角（审计用） */
   perspective?: string;
+  /** 促销码（W7-ext-G，可选） */
+  promoCode?: string;
 }
 
 /** 下单后返回（service → controller → client） */
