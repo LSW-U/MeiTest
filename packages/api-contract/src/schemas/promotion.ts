@@ -29,6 +29,8 @@ export const Promotion = z.object({
   startAt: IsoTimestamp,
   endAt: IsoTimestamp,
   status: PromotionStatus,
+  /** 创建人 userId（W7-ext-G P1-4 审计） */
+  createdBy: z.string(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });

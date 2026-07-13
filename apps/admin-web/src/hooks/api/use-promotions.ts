@@ -31,6 +31,7 @@ export interface Promotion {
   startAt: string;
   endAt: string;
   status: PromotionStatus;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
 }

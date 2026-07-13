@@ -528,6 +528,7 @@
       "columnQuota": "Quota (Usada/Total)",
       "columnPeriod": "Período",
       "columnStatus": "Estado",
+      "columnCreatedBy": "Criado Por",
       "columnActions": "Ações",
       "createDialogTitle": "Criar Promoção",
       "editDialogTitle": "Editar Promoção",

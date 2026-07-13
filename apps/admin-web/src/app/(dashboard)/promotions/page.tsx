@@ -194,6 +194,15 @@ export default function PromotionsPage() {
       ),
     },
     {
+      key: 'createdBy',
+      header: t('admin.promotions.columnCreatedBy'),
+      render: (row) => (
+        <span className="font-mono text-xs text-muted-foreground" title={row.createdBy}>
+          {row.createdBy.slice(0, 8)}
+        </span>
+      ),
+    },
+    {
       key: 'actions',
       header: t('admin.promotions.columnActions'),
       render: (row) => (

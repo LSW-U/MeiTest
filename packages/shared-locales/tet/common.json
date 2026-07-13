@@ -528,6 +528,7 @@
       "columnQuota": "Kuota (Uza/Total)",
       "columnPeriod": "Períodu",
       "columnStatus": "Status",
+      "columnCreatedBy": "Kria Husi",
       "columnActions": "Aksaun",
       "createDialogTitle": "Kria Promosaun",
       "editDialogTitle": "Hadia Promosaun",

@@ -528,6 +528,7 @@
       "columnQuota": "配额（已用/总量）",
       "columnPeriod": "有效期",
       "columnStatus": "状态",
+      "columnCreatedBy": "创建人",
       "columnActions": "操作",
       "createDialogTitle": "新建促销",
       "editDialogTitle": "编辑促销",

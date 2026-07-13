@@ -32,6 +32,7 @@ export interface PromotionView {
   startAt: string;
   endAt: string;
   status: PromotionStatusValue;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +49,8 @@ export interface CreatePromotionInput {
   perUserLimit?: number;
   startAt: string;
   endAt: string;
+  /** 创建人 userId（W7-ext-G P1-4 审计） */
+  createdBy: string;
 }
 
 export interface UpdatePromotionInput {
@@ -135,6 +138,7 @@ export class PromotionService {
         startAt: new Date(input.startAt),
         endAt: new Date(input.endAt),
         status: 'ACTIVE',
+        createdBy: input.createdBy,
       },
     });
     logger.info({ msg: 'PROMOTION_CREATED', promotionId: row.id, code });
@@ -421,6 +425,7 @@ export class PromotionService {
     startAt: Date;
     endAt: Date;
     status: PromotionStatusValue;
+    createdBy: string;
     createdAt: Date;
     updatedAt: Date;
   }): PromotionView {
@@ -439,6 +444,7 @@ export class PromotionService {
       startAt: r.startAt.toISOString(),
       endAt: r.endAt.toISOString(),
       status: r.status,
+      createdBy: r.createdBy,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
     };

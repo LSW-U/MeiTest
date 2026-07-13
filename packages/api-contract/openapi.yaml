@@ -2807,6 +2807,8 @@ components:
             - ACTIVE
             - PAUSED
             - DELETED
+        createdBy:
+          type: string
         createdAt:
           type: string
           format: date-time
@@ -2828,6 +2830,7 @@ components:
         - startAt
         - endAt
         - status
+        - createdBy
         - createdAt
         - updatedAt
     CreatePromotionRequest:
@@ -12136,6 +12139,8 @@ paths:
                         status:
                           type: string
                           enum: *a38
+                        createdBy:
+                          type: string
                         createdAt:
                           type: string
                           format: date-time
@@ -12157,6 +12162,7 @@ paths:
                         - startAt
                         - endAt
                         - status
+                        - createdBy
                         - createdAt
                         - updatedAt
                 required:
@@ -12335,6 +12341,8 @@ paths:
                       status:
                         type: string
                         enum: *a38
+                      createdBy:
+                        type: string
                       createdAt:
                         type: string
                         format: date-time
@@ -12356,6 +12364,7 @@ paths:
                       - startAt
                       - endAt
                       - status
+                      - createdBy
                       - createdAt
                       - updatedAt
                 required:
@@ -12490,6 +12499,8 @@ paths:
                       status:
                         type: string
                         enum: *a38
+                      createdBy:
+                        type: string
                       createdAt:
                         type: string
                         format: date-time
@@ -12511,6 +12522,7 @@ paths:
                       - startAt
                       - endAt
                       - status
+                      - createdBy
                       - createdAt
                       - updatedAt
                 required:
@@ -12654,6 +12666,8 @@ paths:
                       status:
                         type: string
                         enum: *a38
+                      createdBy:
+                        type: string
                       createdAt:
                         type: string
                         format: date-time
@@ -12675,6 +12689,7 @@ paths:
                       - startAt
                       - endAt
                       - status
+                      - createdBy
                       - createdAt
                       - updatedAt
                 required:
@@ -12809,6 +12824,8 @@ paths:
                       status:
                         type: string
                         enum: *a38
+                      createdBy:
+                        type: string
                       createdAt:
                         type: string
                         format: date-time
@@ -12830,6 +12847,7 @@ paths:
                       - startAt
                       - endAt
                       - status
+                      - createdBy
                       - createdAt
                       - updatedAt
                 required:
@@ -12964,6 +12982,8 @@ paths:
                       status:
                         type: string
                         enum: *a38
+                      createdBy:
+                        type: string
                       createdAt:
                         type: string
                         format: date-time
@@ -12985,6 +13005,7 @@ paths:
                       - startAt
                       - endAt
                       - status
+                      - createdBy
                       - createdAt
                       - updatedAt
                 required:

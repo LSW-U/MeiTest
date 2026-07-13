@@ -47,6 +47,7 @@ describe('PromotionService (W7-ext-G)', () => {
     startAt: new Date('2026-07-01T00:00:00.000Z'),
     endAt: new Date('2026-07-31T23:59:59.000Z'),
     status: 'ACTIVE' as const,
+    createdBy: 'admin-1',
     createdAt: new Date('2026-06-25T00:00:00.000Z'),
     updatedAt: new Date('2026-06-25T00:00:00.000Z'),
   };
@@ -140,7 +141,7 @@ describe('PromotionService (W7-ext-G)', () => {
       ).rejects.toMatchObject({ response: { code: 'E-PROMO-004' }, status: 400 });
     });
 
-    it('Happy path -> code 转大写 + create', async () => {
+    it('Happy path -> code 转大写 + create + 写 createdBy', async () => {
       mockDb.promotion.findUnique.mockResolvedValue(null);
       mockDb.promotion.create.mockResolvedValue(basePromo);
 
@@ -151,12 +152,14 @@ describe('PromotionService (W7-ext-G)', () => {
         value: 10,
         startAt: '2026-07-01T00:00:00.000Z',
         endAt: '2026-07-31T23:59:59.000Z',
+        createdBy: 'admin-42',
       });
 
       expect(mockDb.promotion.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ code: 'SAVE10' }),
+        data: expect.objectContaining({ code: 'SAVE10', createdBy: 'admin-42' }),
       }));
       expect(result.code).toBe('SAVE10');
+      expect(result.createdBy).toBe('admin-1');
     });
   });
 

@@ -1001,6 +1001,8 @@ model Promotion {
   startAt           DateTime        @map("start_at")
   endAt             DateTime        @map("end_at")
   status            PromotionStatus @default(ACTIVE)
+  /// 创建人 user.id（W7-ext-G P1-4 审计字段，纯字符串不加 FK）
+  createdBy         String          @map("created_by")
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt        @map("updated_at")
 

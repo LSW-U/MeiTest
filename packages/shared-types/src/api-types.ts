@@ -6826,6 +6826,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -6933,6 +6934,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -7035,6 +7037,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -7126,6 +7129,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -7226,6 +7230,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -7330,6 +7335,7 @@ export interface paths {
                                 endAt: string;
                                 /** @enum {string} */
                                 status: "ACTIVE" | "PAUSED" | "DELETED";
+                                createdBy: string;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10438,6 +10444,7 @@ export interface components {
             endAt: string;
             /** @enum {string} */
             status: "ACTIVE" | "PAUSED" | "DELETED";
+            createdBy: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */

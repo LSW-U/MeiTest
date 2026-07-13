@@ -528,6 +528,7 @@
       "columnQuota": "Kuota (Terpakai/Total)",
       "columnPeriod": "Periode",
       "columnStatus": "Status",
+      "columnCreatedBy": "Dibuat Oleh",
       "columnActions": "Aksi",
       "createDialogTitle": "Buat Promosi",
       "editDialogTitle": "Ubah Promosi",

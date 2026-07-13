@@ -20,6 +20,9 @@ import {
   Body,
   Param,
   Query,
+  Req,
+  HttpException,
+  HttpStatus,
   Inject,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -27,6 +30,11 @@ import { PromotionService } from './promotion.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
+import type { RequestUser } from '../auth/strategies/jwt.strategy';
+
+interface RequestWithUser {
+  user?: RequestUser;
+}
 
 const ListPromotionsQuery = z.object({
   status: z.enum(['ACTIVE', 'PAUSED', 'DELETED']).optional(),
@@ -85,8 +93,14 @@ export class PromotionController {
 
   @Post()
   @Audit({ resource: 'Promotion' })
-  async create(@Body(new ZodValidationPipe(CreatePromotionRequest)) body: z.infer<typeof CreatePromotionRequest>) {
-    const data = await this.promoService.create(body);
+  async create(
+    @Body(new ZodValidationPipe(CreatePromotionRequest)) body: z.infer<typeof CreatePromotionRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.promoService.create({ ...body, createdBy: req.user.sub });
     return { success: true as const, data };
   }
 
