@@ -369,6 +369,100 @@ describe('OrderService.createOrder', () => {
     expect(mockCart.clearOrderedItems).toHaveBeenCalledWith('user-1', ['sku-1']);
   });
 
+  it('W7-ext-G-fix2: 传 promoCode -> applyPromotion + 写 OrderPromotion 关联', async () => {
+    // 注入 promotionService mock
+    const mockApplyPromotion = vi.fn().mockResolvedValue({
+      promotionId: 'promo-1',
+      code: 'SAVE10',
+      type: 'PERCENTAGE',
+      discountAmount: 20,
+    });
+    (service as { promotionService: unknown }).promotionService = {
+      applyPromotion: mockApplyPromotion,
+    };
+
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260625010000001');
+    const txOrderPromotionCreate = vi.fn().mockResolvedValue({});
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        orderPromotion: { create: txOrderPromotionCreate },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+    mockDb.orderItem.findMany.mockResolvedValue([
+      {
+        id: 'oi-1',
+        productId: 'p-1',
+        skuId: 'sku-1',
+        productName: { en: 'Milk' },
+        productImage: 'img',
+        skuName: { en: '1L' },
+        unitPrice: 100,
+        quantity: 2,
+        subtotal: 200,
+      },
+    ]);
+
+    const result = await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 2 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+      promoCode: 'save10',
+    });
+
+    // applyPromotion 被调，传 code + userId + itemsSubtotal(200) + deliveryFee(0) + tx
+    expect(mockApplyPromotion).toHaveBeenCalledWith(
+      'save10',
+      'user-1',
+      200,
+      0,
+      expect.objectContaining({ order: expect.any(Object) }),
+    );
+    // OrderPromotion 关联写入（冗余 code + discountAmount）
+    expect(txOrderPromotionCreate).toHaveBeenCalledWith({
+      data: {
+        orderId: 'order-1',
+        promotionId: 'promo-1',
+        code: 'SAVE10',
+        discountAmount: 20,
+      },
+    });
+    expect(result.id).toBe('order-1');
+  });
+
+
   it('B1 修复：cartService 抛错时 → 仅 warn，不阻塞下单', async () => {
     mockDb.address.findUnique.mockResolvedValue({
       id: 'a1',

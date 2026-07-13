@@ -68,6 +68,12 @@ export interface OrderDetail extends OrderListItem {
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** 应用的促销（W7-ext-G-fix2）：null = 未用码 */
+  promotion: {
+    promotionId: string;
+    code: string;
+    discountAmount: number;
+  } | null;
 }
 
 export interface ListOrdersParams {

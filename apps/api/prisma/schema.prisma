@@ -508,6 +508,7 @@ model Order {
   @@index([riderId])
   @@index([orderNo])
   refunds Refund[]
+  orderPromotions OrderPromotion[]
   @@map("orders")
 }
 
@@ -1003,9 +1004,32 @@ model Promotion {
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt        @map("updated_at")
 
+  orderPromotions   OrderPromotion[]
+
   @@index([status, startAt, endAt])
   @@index([code])
   @@map("promotions")
+}
+
+// 22. OrderPromotion (W7-ext-G-fix2 2026-07-13)
+//     订单-促销关联：下单时写入，冗余存 code + discountAmount
+//     promotion 改名/删除后仍可追溯历史订单用了哪个码、抵扣多少
+model OrderPromotion {
+  id             String   @id @default(uuid())
+  orderId        String   @map("order_id")
+  promotionId    String   @map("promotion_id")
+  /// 冗余存 code，防 promotion 改名/删除后无法追溯
+  code           String   @db.VarChar(20)
+  /// 实际抵扣金额（分），= 下单时算出的 discountAmount
+  discountAmount Int      @map("discount_amount")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  order      Order      @relation(fields: [orderId], references: [id])
+  promotion  Promotion  @relation(fields: [promotionId], references: [id])
+
+  @@index([orderId])
+  @@index([promotionId])
+  @@map("order_promotions")
 }
 
 enum PromotionType {

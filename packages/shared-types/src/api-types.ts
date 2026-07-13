@@ -3238,6 +3238,12 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            promotion: {
+                                /** Format: uuid */
+                                promotionId: string;
+                                code: string;
+                                discountAmount: number;
+                            } | null;
                         }[];
                     };
                 };
@@ -3333,6 +3339,12 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            promotion: {
+                                /** Format: uuid */
+                                promotionId: string;
+                                code: string;
+                                discountAmount: number;
+                            } | null;
                         };
                     };
                 };
@@ -3835,6 +3847,12 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            promotion: {
+                                /** Format: uuid */
+                                promotionId: string;
+                                code: string;
+                                discountAmount: number;
+                            } | null;
                         };
                     };
                 };
@@ -5626,6 +5644,12 @@ export interface paths {
                                     /** Format: date-time */
                                     cancelledAt: string | null;
                                     cancelReason: string | null;
+                                    promotion: {
+                                        /** Format: uuid */
+                                        promotionId: string;
+                                        code: string;
+                                        discountAmount: number;
+                                    } | null;
                                 }[];
                                 /** Format: uuid */
                                 nextCursor: string | null;
@@ -5768,6 +5792,12 @@ export interface paths {
                                 /** Format: date-time */
                                 cancelledAt: string | null;
                                 cancelReason: string | null;
+                                promotion: {
+                                    /** Format: uuid */
+                                    promotionId: string;
+                                    code: string;
+                                    discountAmount: number;
+                                } | null;
                             };
                         };
                     };
@@ -5883,6 +5913,12 @@ export interface paths {
                                 /** Format: date-time */
                                 cancelledAt: string | null;
                                 cancelReason: string | null;
+                                promotion: {
+                                    /** Format: uuid */
+                                    promotionId: string;
+                                    code: string;
+                                    discountAmount: number;
+                                } | null;
                             };
                         };
                     };
@@ -9944,6 +9980,12 @@ export interface components {
             /** Format: date-time */
             cancelledAt: string | null;
             cancelReason: string | null;
+            promotion: {
+                /** Format: uuid */
+                promotionId: string;
+                code: string;
+                discountAmount: number;
+            } | null;
         };
         OrderItem: {
             /** Format: uuid */

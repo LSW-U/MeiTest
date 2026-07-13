@@ -296,7 +296,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>{t('admin.orders.discount')}</span>
+                  <span>
+                    {t('admin.orders.discount')}
+                    {order.promotion && (
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">
+                        ({order.promotion.code})
+                      </span>
+                    )}
+                  </span>
                   <span className="font-mono">-{formatCurrency(order.discountAmount)}</span>
                 </div>
               )}

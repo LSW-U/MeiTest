@@ -106,6 +106,14 @@ export const Order = z.object({
   deliveredAt: IsoTimestamp.nullable(),
   cancelledAt: IsoTimestamp.nullable(),
   cancelReason: z.string().nullable(),
+  /** 应用的促销（W7-ext-G-fix2）：null = 未用码 */
+  promotion: z
+    .object({
+      promotionId: Id,
+      code: z.string(),
+      discountAmount: z.number().int(),
+    })
+    .nullable(),
 });
 
 /** Admin 编辑订单请求（W7-ext-C）：MVP 仅允许改 remark */

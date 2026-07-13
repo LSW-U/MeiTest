@@ -111,6 +111,12 @@ export interface OrderWithRelations {
     metadata: unknown;
     createdAt: string;
   }>;
+  /** 应用的促销（W7-ext-G-fix2）：null = 未用码 */
+  promotion: {
+    promotionId: string;
+    code: string;
+    discountAmount: number;
+  } | null;
 }
 
 @Injectable()
@@ -245,15 +251,18 @@ export class OrderService {
       const created = await withTransaction(async (tx: Tx) => {
         // 6.0 应用促销码（W7-ext-G）：校验 + 计算 discount + 原子 increment usedCount
         let discountAmount = 0;
+        let appliedPromo:
+          | { promotionId: string; code: string; type: string; discountAmount: number }
+          | null = null;
         if (input.promoCode) {
-          const applied = await this.promotionService.applyPromotion(
+          appliedPromo = await this.promotionService.applyPromotion(
             input.promoCode,
             input.userId,
             itemsSubtotal,
             deliveryFee,
             tx,
           );
-          discountAmount = applied.discountAmount;
+          discountAmount = appliedPromo.discountAmount;
         }
         const payableAmount = totalAmount - discountAmount;
 
@@ -280,6 +289,19 @@ export class OrderService {
             paymentStatus: 'PENDING',
           },
         });
+
+        // 6.1.1 写 OrderPromotion 关联（W7-ext-G-fix2）：冗余存 code + discountAmount
+        //       promotion 改名/删除后仍可追溯历史订单用了哪个码
+        if (appliedPromo) {
+          await tx.orderPromotion.create({
+            data: {
+              orderId: order.id,
+              promotionId: appliedPromo.promotionId,
+              code: appliedPromo.code,
+              discountAmount: appliedPromo.discountAmount,
+            },
+          });
+        }
 
         // 6.2 批量创建 OrderItem（多语言 JSON 字段强转 InputJsonValue）
         await tx.orderItem.createMany({
@@ -986,6 +1008,7 @@ export class OrderService {
       include: {
         items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
+        orderPromotions: true,
       },
     });
     if (!order || order.userId !== userId) {
@@ -1083,6 +1106,7 @@ export class OrderService {
       include: {
         items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
+        orderPromotions: true,
       },
     });
     if (!order) {
@@ -1122,6 +1146,7 @@ export class OrderService {
       cancelReason: string | null;
       items: Array<Record<string, unknown>>;
       events: Array<Record<string, unknown>>;
+      orderPromotions?: Array<Record<string, unknown>>;
     };
     const toIso = (d: Date | null) => (d ? d.toISOString() : null);
     return {
@@ -1168,6 +1193,14 @@ export class OrderService {
         metadata: e.metadata,
         createdAt: (e.createdAt as Date).toISOString(),
       })),
+      promotion:
+        o.orderPromotions && o.orderPromotions.length > 0
+          ? {
+              promotionId: o.orderPromotions[0].promotionId as string,
+              code: o.orderPromotions[0].code as string,
+              discountAmount: o.orderPromotions[0].discountAmount as number,
+            }
+          : null,
     };
   }
 }

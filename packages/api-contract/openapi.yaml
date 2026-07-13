@@ -1816,6 +1816,21 @@ components:
         cancelReason:
           type: string
           nullable: true
+        promotion:
+          type: object
+          nullable: true
+          properties:
+            promotionId:
+              type: string
+              format: uuid
+            code:
+              type: string
+            discountAmount:
+              type: integer
+          required:
+            - promotionId
+            - code
+            - discountAmount
       required:
         - id
         - orderNo
@@ -1839,6 +1854,7 @@ components:
         - deliveredAt
         - cancelledAt
         - cancelReason
+        - promotion
     OrderItem:
       type: object
       properties:
@@ -6572,6 +6588,21 @@ paths:
                   cancelReason:
                     type: string
                     nullable: true
+                  promotion:
+                    type: object
+                    nullable: true
+                    properties:
+                      promotionId:
+                        type: string
+                        format: uuid
+                      code:
+                        type: string
+                      discountAmount:
+                        type: integer
+                    required:
+                      - promotionId
+                      - code
+                      - discountAmount
                 required:
                   - id
                   - orderNo
@@ -6595,6 +6626,7 @@ paths:
                   - deliveredAt
                   - cancelledAt
                   - cancelReason
+                  - promotion
         "400":
           description: STOCK_NOT_ENOUGH
           content:
@@ -6776,6 +6808,21 @@ paths:
                     cancelReason:
                       type: string
                       nullable: true
+                    promotion:
+                      type: object
+                      nullable: true
+                      properties:
+                        promotionId:
+                          type: string
+                          format: uuid
+                        code:
+                          type: string
+                        discountAmount:
+                          type: integer
+                      required:
+                        - promotionId
+                        - code
+                        - discountAmount
                   required:
                     - id
                     - orderNo
@@ -6799,6 +6846,7 @@ paths:
                     - deliveredAt
                     - cancelledAt
                     - cancelReason
+                    - promotion
   /api/v1/admin/platform/dashboard/summary:
     get:
       tags:
@@ -7527,6 +7575,21 @@ paths:
                   cancelReason:
                     type: string
                     nullable: true
+                  promotion:
+                    type: object
+                    nullable: true
+                    properties:
+                      promotionId:
+                        type: string
+                        format: uuid
+                      code:
+                        type: string
+                      discountAmount:
+                        type: integer
+                    required:
+                      - promotionId
+                      - code
+                      - discountAmount
                 required:
                   - id
                   - orderNo
@@ -7550,6 +7613,7 @@ paths:
                   - deliveredAt
                   - cancelledAt
                   - cancelReason
+                  - promotion
         "404":
           description: ORDER_NOT_FOUND
           content:
@@ -10248,6 +10312,21 @@ paths:
                             cancelReason:
                               type: string
                               nullable: true
+                            promotion:
+                              type: object
+                              nullable: true
+                              properties:
+                                promotionId:
+                                  type: string
+                                  format: uuid
+                                code:
+                                  type: string
+                                discountAmount:
+                                  type: integer
+                              required:
+                                - promotionId
+                                - code
+                                - discountAmount
                           required:
                             - id
                             - orderNo
@@ -10271,6 +10350,7 @@ paths:
                             - deliveredAt
                             - cancelledAt
                             - cancelReason
+                            - promotion
                       nextCursor:
                         type: string
                         nullable: true
@@ -10507,6 +10587,21 @@ paths:
                       cancelReason:
                         type: string
                         nullable: true
+                      promotion:
+                        type: object
+                        nullable: true
+                        properties:
+                          promotionId:
+                            type: string
+                            format: uuid
+                          code:
+                            type: string
+                          discountAmount:
+                            type: integer
+                        required:
+                          - promotionId
+                          - code
+                          - discountAmount
                     required:
                       - id
                       - orderNo
@@ -10530,6 +10625,7 @@ paths:
                       - deliveredAt
                       - cancelledAt
                       - cancelReason
+                      - promotion
                 required:
                   - success
                   - data
@@ -10737,6 +10833,21 @@ paths:
                       cancelReason:
                         type: string
                         nullable: true
+                      promotion:
+                        type: object
+                        nullable: true
+                        properties:
+                          promotionId:
+                            type: string
+                            format: uuid
+                          code:
+                            type: string
+                          discountAmount:
+                            type: integer
+                        required:
+                          - promotionId
+                          - code
+                          - discountAmount
                     required:
                       - id
                       - orderNo
@@ -10760,6 +10871,7 @@ paths:
                       - deliveredAt
                       - cancelledAt
                       - cancelReason
+                      - promotion
                 required:
                   - success
                   - data
