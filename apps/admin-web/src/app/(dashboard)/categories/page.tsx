@@ -44,6 +44,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { apiUploadFile, type ApiSuccess, ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/common/empty-state';
 import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
@@ -65,6 +66,76 @@ type Locale = 'en' | 'zh' | 'id' | 'pt';
  */
 function isIconUrl(s: string): boolean {
   return /^https?:\/\//.test(s) || s.startsWith('/');
+}
+
+/**
+ * 分类图标上传组件（W7-ext-H2）
+ *
+ * 复用 POST /admin/uploads/product-image（1:1 尺寸校验已具备）。
+ * 上传成功 -> iconUrl 填入 MinIO URL。保留手填 URL 输入框作兜底。
+ */
+function CategoryIconUploader({
+  iconUrl,
+  setIconUrl,
+}: {
+  iconUrl: string;
+  setIconUrl: (v: string) => void;
+}) {
+  const t = useTranslations('common');
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(file: File) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await apiUploadFile<ApiSuccess<{ url: string; key: string; size: number }>>(
+        '/admin/uploads/product-image',
+        file,
+      );
+      setIconUrl(res.data.url);
+      toast({ title: t('w.categories.iconUploadSuccess') });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t('w.categories.iconUploadFailed');
+      toast({
+        title: t('w.categories.iconUploadFailed'),
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {iconUrl && isIconUrl(iconUrl) && (
+        <img
+          src={iconUrl}
+          alt=""
+          className="h-12 w-12 rounded border border-border object-cover"
+        />
+      )}
+      <Input
+        type="file"
+        accept="image/png,image/webp,image/jpeg"
+        disabled={uploading}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleUpload(f);
+        }}
+      />
+      <Input
+        value={iconUrl}
+        onChange={(e) => setIconUrl(e.target.value)}
+        placeholder={t('w.categories.iconUrlPlaceholder')}
+      />
+      {uploading && (
+        <p className="text-xs text-muted-foreground">{t('w.categories.uploading')}</p>
+      )}
+      <p className="text-xs text-muted-foreground">{t('w.categories.iconUploadHint')}</p>
+    </div>
+  );
 }
 
 export default function CategoriesPage() {
@@ -224,12 +295,7 @@ function CreateCategoryForm({
           <Label>
             {t('w.categories.formIconUrl')} <span className="text-destructive">*</span>
           </Label>
-          <Input
-            value={iconUrl}
-            onChange={(e) => setIconUrl(e.target.value)}
-            placeholder="https://..."
-            required
-          />
+          <CategoryIconUploader iconUrl={iconUrl} setIconUrl={setIconUrl} />
         </div>
         <div className="space-y-1">
           <Label>{t('w.categories.formSortOrder')}</Label>
@@ -305,7 +371,7 @@ function EditCategoryDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>{t('w.categories.formIconUrl')}</Label>
-              <Input value={iconUrl} onChange={(e) => setIconUrl(e.target.value)} />
+              <CategoryIconUploader iconUrl={iconUrl} setIconUrl={setIconUrl} />
             </div>
             <div className="space-y-1">
               <Label>{t('w.categories.formSortOrder')}</Label>
