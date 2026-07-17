@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useFormatter } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
@@ -52,8 +52,8 @@ import { formatCurrency } from '@/lib/utils';
 
 const VEHICLE_TYPES = ['MOTORCYCLE', 'BICYCLE', 'CAR'] as const;
 
-export default function RiderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function RiderDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const t = useTranslations('common');
   const format = useFormatter();
   const router = useRouter();
@@ -246,7 +246,7 @@ export default function RiderDetailPage({ params }: { params: Promise<{ id: stri
           <CardContent>
             <StatusBadge
               status={rider.userStatus}
-              label={t(`admin.riders.userStatus${rider.userStatus.charAt(0) + rider.userStatus.slice(1).toLowerCase()}` as 'admin.riders.userStatusACTIVE')}
+              label={t(`admin.riders.userStatus${rider.userStatus}` as 'admin.riders.userStatusACTIVE')}
             />
           </CardContent>
         </Card>
@@ -385,10 +385,10 @@ export default function RiderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? t('admin.settings.saving') : t('common.save')}
+              {updateMutation.isPending ? t('admin.settings.saving') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -403,7 +403,7 @@ export default function RiderDetailPage({ params }: { params: Promise<{ id: stri
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSuspendOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSuspend} disabled={suspendMutation.isPending}>
               {suspendMutation.isPending ? t('loading') : t('admin.riders.actionSuspend')}
@@ -421,7 +421,7 @@ export default function RiderDetailPage({ params }: { params: Promise<{ id: stri
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActivateOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleActivate} disabled={activateMutation.isPending}>
               {activateMutation.isPending ? t('loading') : t('admin.riders.actionActivate')}
@@ -449,7 +449,7 @@ export default function RiderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"

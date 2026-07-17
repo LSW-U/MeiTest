@@ -348,7 +348,7 @@ export default function PromotionsPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? t('loading') : t('admin.promotions.deleteDialogConfirm')}
@@ -595,10 +595,10 @@ function PromotionFormDialog({ open, onOpenChange, mode, promotion, onSubmit, pe
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={pending}>
-            {pending ? t('admin.settings.saving') : t('common.save')}
+            {pending ? t('admin.settings.saving') : t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -310,8 +310,8 @@ function PricingTab() {
               <TableHead className="text-right">{t('admin.settings.baseFee')}</TableHead>
               <TableHead className="text-right">{t('admin.settings.perKmFee')}</TableHead>
               <TableHead className="text-right">{t('admin.settings.minOrderAmount')}</TableHead>
-              <TableHead>{t('common.status')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead>{t('status')}</TableHead>
+              <TableHead className="text-right">{t('actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -360,7 +360,7 @@ function PricingTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSaveBaseFee} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? t('admin.settings.saving') : t('admin.settings.save')}
@@ -459,7 +459,7 @@ function PlatformTab() {
                     <TableHead className="min-w-[200px]">{t('admin.settings.configValue')}</TableHead>
                     <TableHead>{t('admin.settings.configDescription')}</TableHead>
                     <TableHead>{t('admin.settings.updatedAt')}</TableHead>
-                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                    <TableHead className="text-right">{t('actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -517,7 +517,7 @@ function PlatformTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSaveConfig} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? t('admin.settings.saving') : t('admin.settings.save')}

@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { use, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useFormatter } from 'next-intl';
 import { Copy, Check, AlertTriangle } from 'lucide-react';
@@ -57,8 +57,8 @@ const ROLE_OPTIONS: { value: UserRole; labelKey: string }[] = (
   Object.keys(ROLE_LABEL_KEY) as UserRole[]
 ).map((role) => ({ value: role, labelKey: ROLE_LABEL_KEY[role] }));
 
-export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function CustomerDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const t = useTranslations('common');
   const format = useFormatter();
   const router = useRouter();

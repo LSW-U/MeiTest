@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { use, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations, useFormatter } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -52,8 +52,8 @@ function displayName(value: I18nText | unknown): string {
   return '';
 }
 
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function OrderDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const t = useTranslations('common');
   const format = useFormatter();
   const { toast } = useToast();
@@ -353,7 +353,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCancelOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -389,10 +389,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSaveRemark} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? t('admin.settings.saving') : t('common.save')}
+              {updateMutation.isPending ? t('admin.settings.saving') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>

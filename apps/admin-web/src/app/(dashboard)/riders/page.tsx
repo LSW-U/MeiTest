@@ -206,7 +206,7 @@ function RidersListSection() {
     },
     {
       key: 'actions',
-      header: t('common.actions'),
+      header: t('admin.riders.columnActions'),
       render: (row) => (
         <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="outline" onClick={() => router.push(`/riders/${row.id}`)}>
@@ -293,7 +293,7 @@ function RidersListSection() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSuspendTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleSuspend} disabled={suspendMutation.isPending}>
               {suspendMutation.isPending ? t('loading') : t('admin.riders.actionSuspend')}
@@ -316,7 +316,7 @@ function RidersListSection() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActivateTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleActivate} disabled={activateMutation.isPending}>
               {activateMutation.isPending ? t('loading') : t('admin.riders.actionActivate')}
@@ -349,7 +349,7 @@ function RidersListSection() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -514,7 +514,7 @@ function ApplicationsSection() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button onClick={handleApproveSubmit} disabled={reviewMutation.isPending}>
               {reviewMutation.isPending ? t('loading') : t('admin.riders.approveDialogConfirm')}
@@ -545,7 +545,7 @@ function ApplicationsSection() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              {t('common.cancel')}
+              {t('cancel')}
             </Button>
             <Button
               variant="destructive"
