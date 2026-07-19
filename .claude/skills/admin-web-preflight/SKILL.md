@@ -109,26 +109,33 @@ t(`admin.riders.userStatus${rider.userStatus}`)
 
 ## 检查 4（可选）：i18n key 存在性全量校验
 
-跑这个脚本，校验页面所有 t() key 在 i18n 文件存在：
+⚠️ MeiMart i18n 分 13 个 namespace 文件（common/platform/order/...），**不能只查 common.json**。dashboard 用 platform namespace（key 在 platform.json），只查 common.json 会误报。
+
+校验动态拼接 key 时，合并所有 namespace 文件，按 `useTranslations(namespace)` + `t(key)` 查 `bundle[namespace].key`：
+
 ```bash
 node -e "
 const fs=require('fs');
-const k=require('./packages/shared-locales/zh/common.json');
-// 读取页面源码，提取所有 t('...') 和 t(\`...\`) 调用
-const files=['apps/admin-web/src/app/(dashboard)/riders/[id]/page.tsx'];
-files.forEach(f=>{
-  const src=fs.readFileSync(f,'utf8');
-  const keys=[...src.matchAll(/t\(['\"\`]([^'\"\`]+)['\"\`]/g)].map(m=>m[1]);
-  // 简化校验：只查静态 key，动态拼接的跳过
-  keys.filter(k=>!k.includes('\${')).forEach(key=>{
-    const parts=key.split('.');
-    let cur=k;
-    for(const p of parts){cur=cur?.[p];if(cur===undefined)break;}
-    if(cur===undefined) console.log(f, '❌', key);
-  });
+const dir='packages/shared-locales/zh';
+const bundle={};
+fs.readdirSync(dir).filter(f=>f.endsWith('.json')).forEach(f=>{
+  bundle[f.replace('.json','')]=require('./'+dir+'/'+f);
 });
+// check(namespace, keyPath) 查 bundle[namespace].keyPath
+const check=(ns,p)=>{const parts=p.split('.');let cur=bundle[ns];for(const x of parts){cur=cur?.[x];if(cur===undefined)break;}return cur!==undefined;};
+// 列出要校验的 [namespace, key] 对（从页面 useTranslations + t() 提取）
+const cases=[
+  ['platform','dashboard.range.today'],
+  ['common','admin.statistics.rangeToday'],
+  // ... 补全
+];
+let bad=0;
+cases.forEach(([ns,k])=>{const ok=check(ns,k);if(!ok)bad++;console.log(ok?'✅':'❌',ns+'.'+k);});
+console.log(bad===0?'\n✅ 全部存在':'\n❌ 缺 '+bad+' 个');
 "
 ```
+
+**手动核对要点**：每个页面看 `useTranslations('X')` 的 X，确认 t() 的 key 在 `packages/shared-locales/zh/X.json`（或对应 locale）存在。动态拼接的 key 要算出实际值再查。
 
 ## 修复后验证
 
