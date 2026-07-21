@@ -33,6 +33,7 @@ import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Public } from '../../shared/decorators/public.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
+import { RateLimit } from '../../shared/decorators/rate-limit.decorator';
 import { db } from '../../shared/db';
 
 @Controller('api/v1/common/auth')
@@ -42,6 +43,10 @@ export class AuthController {
   /** 密码登录 */
   @Public()
   @Audit({ resource: 'User', maskFields: ['password'] })
+  @RateLimit(
+    { key: 'login:ip:${ip}', limit: 10, window: 60 },
+    { key: 'login:phone:${body.phone}', limit: 5, window: 60 },
+  )
   @Post('login-password')
   @HttpCode(HttpStatus.OK)
   async loginPassword(@Body(new ZodValidationPipe(LoginPasswordRequest)) body: { phone: string; password: string }) {
@@ -62,6 +67,10 @@ export class AuthController {
   /** SMS 验证码登录（不存在自动注册） */
   @Public()
   @Audit({ resource: 'User' })
+  @RateLimit(
+    { key: 'login:ip:${ip}', limit: 10, window: 60 },
+    { key: 'login:phone:${body.phone}', limit: 5, window: 60 },
+  )
   @Post('login-sms')
   @HttpCode(HttpStatus.OK)
   async loginSms(@Body(new ZodValidationPipe(LoginSmsRequest)) body: { phone: string; smsCode: string }) {
@@ -82,6 +91,10 @@ export class AuthController {
   /** 注册（必传 smsCode，dev stub 固定 123456） */
   @Public()
   @Audit({ resource: 'User', maskFields: ['password'] })
+  @RateLimit(
+    { key: 'register:ip:${ip}', limit: 5, window: 60 },
+    { key: 'register:phone:${body.phone}', limit: 3, window: 60 },
+  )
   @Post('register')
   @HttpCode(HttpStatus.OK)
   async register(@Body(new ZodValidationPipe(RegisterRequest)) body: {
@@ -108,6 +121,12 @@ export class AuthController {
   /** 发 SMS 验证码（stub 固定 123456，W6 切东帝汶本地） */
   @Public()
   @Audit({ resource: 'SmsCode', skip: true })
+  @RateLimit(
+    { key: 'sms:phone:${body.phone}:60s', limit: 1, window: 60 },
+    { key: 'sms:phone:${body.phone}:1h', limit: 5, window: 3600 },
+    { key: 'sms:phone:${body.phone}:24h', limit: 10, window: 86400 },
+    { key: 'sms:ip:${ip}:1h', limit: 20, window: 3600 },
+  )
   @Post('sms-code')
   @HttpCode(HttpStatus.OK)
   async sendSmsCode(@Body(new ZodValidationPipe(SendSmsCodeRequest)) body: { phone: string; scene?: OtpScene }) {
@@ -118,6 +137,10 @@ export class AuthController {
   /** SMS 找回密码 */
   @Public()
   @Audit({ resource: 'User', maskFields: ['newPassword', 'smsCode'] })
+  @RateLimit(
+    { key: 'reset:ip:${ip}', limit: 5, window: 60 },
+    { key: 'reset:phone:${body.phone}', limit: 3, window: 60 },
+  )
   @Post('password-reset')
   @HttpCode(HttpStatus.OK)
   async passwordReset(@Body(new ZodValidationPipe(PasswordResetRequest)) body: {
@@ -132,11 +155,15 @@ export class AuthController {
   /** 刷新 token */
   @Public()
   @Audit({ resource: 'RefreshToken', skip: true })
+  @RateLimit({ key: 'refresh:ip:${ip}', limit: 30, window: 60 })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body(new ZodValidationPipe(RefreshRequest)) body: { refreshToken: string }) {
-    const { payload } = await this.auth.verifyRefreshToken(body.refreshToken);
-    const user = await db.user.findUnique({ where: { id: payload.sub } });
+    // v1.2 Token Family：原子消费旧 refresh token（Lua 标记 used）
+    // - 重放（旧 token 再次用）-> Lua 撤销整个 family + REPLAY
+    // - 并发刷新同一旧 jti -> 只一个 OK，另一个 REPLAY
+    const { payload, familyId, userId } = await this.auth.consumeRefreshToken(body.refreshToken);
+    const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException({
         code: 'E-USER-001',
@@ -144,16 +171,13 @@ export class AuthController {
       });
     }
     // W7-fix（审查 P0 #1）：SUSPENDED/DELETED 用户不能续签 token
-    // accessToken 由 JwtStrategy 自然过期（设计上不能服务端 revoke），
-    // 但 refresh 端点必须拒绝，否则 SUSPENDED 用户可无限刷新新 accessToken
     if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException({
         code: 'E-USER-005',
         message: `User status is ${user.status}, refresh disabled`,
       });
     }
-    // W7-fix（审查 P0 #2）：密码重置后旧 refreshToken 失效
-    // 检查 token.iat < passwordChangedAt -> 拒绝（要求重新登录）
+    // W7-fix（审查 P0 #2）：密码重置后旧 refreshToken 失效（passwordChangedAt 检查保留）
     if (user.passwordChangedAt && payload.iat) {
       const passwordChangedAtSec = Math.floor(user.passwordChangedAt.getTime() / 1000);
       if (payload.iat < passwordChangedAtSec) {
@@ -165,20 +189,26 @@ export class AuthController {
     }
     const role = this.auth.toContractRole(user.role);
     const deviceType = this.auth.inferDeviceTypeFromRole(role);
-    const tokenPair = await this.auth.signTokenPair(user.id, role, deviceType);
+    // 签新 pair（同 familyId，保持会话族连续性）
+    const access = await this.auth.signAccessToken(user.id, role, deviceType);
+    const refresh = await this.auth.signRefreshToken(user.id, deviceType, familyId);
+    const now = Math.floor(Date.now() / 1000);
     return {
       success: true,
       data: {
-        accessToken: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken,
-        accessExpiresAt: tokenPair.accessExpiresAt,
-        refreshExpiresAt: tokenPair.refreshExpiresAt,
+        accessToken: access.token,
+        refreshToken: refresh.token,
+        accessExpiresAt: now + access.expiresIn,
+        refreshExpiresAt: now + refresh.expiresIn,
       },
     };
   }
 
   /** Logout：refresh token jti 加 Redis 黑名单 */
+  /** Logout：撤销整个 refresh family（v1.2，用 refreshToken body，不需 accessToken）*/
+  @Public()
   @Audit({ resource: 'RefreshToken', skip: true })
+  @RateLimit({ key: 'logout:ip:${ip}', limit: 30, window: 60 })
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Body(new ZodValidationPipe(LogoutRequest)) body: { refreshToken: string }) {

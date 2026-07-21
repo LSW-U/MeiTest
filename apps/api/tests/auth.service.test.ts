@@ -1,10 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  isSessionValid,
+  getRefreshSession,
+  consumeRefreshSession,
+} from '../src/shared/cache';
 
 // Mock Redis cache module
+// Mock Redis cache module（v1.2：refresh-session 函数替代 blacklist）
 vi.mock('../src/shared/cache', () => ({
   blacklistJti: vi.fn().mockResolvedValue(undefined),
   isBlacklisted: vi.fn().mockResolvedValue(false),
+  createRefreshSession: vi.fn().mockResolvedValue(undefined),
+  consumeRefreshSession: vi.fn().mockResolvedValue({
+    status: 'OK',
+    session: {
+      familyId: 'family-1',
+      userId: 'u-1',
+      status: 'active',
+      deviceType: 'client_app',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    },
+  }),
+  revokeFamily: vi.fn().mockResolvedValue(undefined),
+  revokeUserSessions: vi.fn().mockResolvedValue(undefined),
+  isSessionValid: vi.fn().mockResolvedValue(true),
+  getRefreshSession: vi.fn().mockResolvedValue({ familyId: 'family-1' }),
 }));
 
 // Mock SMS OTP strategy（避免依赖 Redis）
@@ -47,6 +69,27 @@ describe('AuthService', () => {
   beforeEach(() => {
     // resetAllMocks 清 calls + implementation + once queue（vs clearAllMocks 只清 calls）
     vi.resetAllMocks();
+    // v1.2：resetAllMocks 后重设 refresh-session 默认 mock
+    vi.mocked(isSessionValid).mockResolvedValue(true);
+    vi.mocked(getRefreshSession).mockResolvedValue({
+      familyId: 'family-1',
+      userId: 'u-1',
+      status: 'active',
+      deviceType: 'client_app',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    } as any);
+    vi.mocked(consumeRefreshSession).mockResolvedValue({
+      status: 'OK',
+      session: {
+        familyId: 'family-1',
+        userId: 'u-1',
+        status: 'active',
+        deviceType: 'client_app',
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60000,
+      },
+    } as any);
     // 用真实 JwtService（@nestjs/jwt 的 signAsync/verifyAsync 是纯函数，不需 mock）
     const { JwtService } = require('@nestjs/jwt');
     service = new AuthService(new JwtService({}));
@@ -130,10 +173,11 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('正确 refresh token logout 返回 jti', async () => {
-      const { token, jti } = await service.signRefreshToken('user-1', 'client_app');
+    it('正确 refresh token logout 返回 familyId（v1.2 撤销整个 family）', async () => {
+      const { token } = await service.signRefreshToken('user-1', 'client_app');
       const result = await service.logout(token);
-      expect(result).toBe(jti);
+      // v1.2：logout 返回 familyId（撤销整个 family），不再是 jti
+      expect(result).toBe('family-1');
     });
   });
 

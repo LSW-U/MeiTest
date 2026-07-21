@@ -20,7 +20,14 @@ import {
   ACCESS_TTL_SECONDS,
   REFRESH_TTL_SECONDS,
 } from './auth.types';
-import { blacklistJti, isBlacklisted } from '../../shared/cache';
+import {
+  createRefreshSession,
+  consumeRefreshSession,
+  revokeFamily,
+  revokeUserSessions,
+  isSessionValid,
+  getRefreshSession,
+} from '../../shared/cache';
 import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 import { db } from '../../shared/db';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
@@ -57,11 +64,20 @@ export class AuthService {
     return { token, expiresIn };
   }
 
-  /** 签发 refresh token（统一 60d，含 jti 用于 logout 黑名单） */
+  /**
+   * 签发 refresh token（统一 60d，含 jti 用于 Token Family）
+   *
+   * Token Family（v1.2）：每次登录生成新 familyId，该会话所有 refresh token 共享。
+   * 刷新时传入旧 familyId，保持会话连续性。旧 token 重放时撤销整个 family。
+   *
+   * @param familyId 登录不传（生成新），刷新传入旧 familyId 保持会话族
+   */
   async signRefreshToken(
     userId: string,
     deviceType: DeviceType,
-  ): Promise<{ token: string; jti: string; expiresIn: number }> {
+    familyId?: string,
+  ): Promise<{ token: string; jti: string; expiresIn: number; familyId: string }> {
+    const fid = familyId ?? genId();
     const jti = genId();
     const expiresIn = REFRESH_TTL_SECONDS;
     const payload: RefreshPayload = { sub: userId, deviceType, jti };
@@ -69,7 +85,10 @@ export class AuthService {
       secret: this.refreshSecret,
       expiresIn,
     });
-    return { token, jti, expiresIn };
+    // Token Family：写 Redis session（active 状态）
+    const expiresAt = Date.now() + expiresIn * 1000;
+    await createRefreshSession({ jti, familyId: fid, userId, deviceType, expiresAt });
+    return { token, jti, expiresIn, familyId: fid };
   }
 
   /** 签发完整 token pair（登录 / refresh 流程用） */
@@ -102,14 +121,20 @@ export class AuthService {
   }
 
   /**
-   * 校验 refresh token（必须不在黑名单中）
+   * 校验 refresh token（轻量检查，不消费。logout 用）
    *
-   * 返回 jti 用于后续逻辑（如续签时新生成 jti）
+   * 验 JWT 签名 + isSessionValid（只读）。返回 session 供 logout 拿 familyId。
    */
-  async verifyRefreshToken(token: string): Promise<{ payload: RefreshPayload; jti: string }> {
+  async verifyRefreshToken(token: string): Promise<{
+    payload: RefreshPayload;
+    jti: string;
+    session: { familyId: string } | null;
+  }> {
     let payload: RefreshPayload;
     try {
-      payload = await this.jwt.verifyAsync<RefreshPayload>(token, { secret: this.refreshSecret });
+      payload = await this.jwt.verifyAsync<RefreshPayload>(token, {
+        secret: this.refreshSecret,
+      });
     } catch {
       throw new UnauthorizedException({
         code: 'E-AUTH-005',
@@ -122,29 +147,92 @@ export class AuthService {
         message: 'Refresh token missing jti',
       });
     }
-    if (await isBlacklisted(payload.jti)) {
+    // Token Family：轻量检查 session 有效（不消费）
+    if (!(await isSessionValid(payload.jti))) {
       throw new UnauthorizedException({
         code: 'E-AUTH-006',
         message: 'Refresh token has been revoked',
       });
     }
-    return { payload, jti: payload.jti };
+    const session = await getRefreshSession(payload.jti);
+    return {
+      payload,
+      jti: payload.jti,
+      session: session ? { familyId: session.familyId } : null,
+    };
   }
 
   /**
-   * Logout：把 refresh token 的 jti 加入黑名单
+   * 原子消费 refresh token（refresh 端点用，v1.2）
    *
-   * accessToken 自然过期（不能服务端 revoke，等过期或 refresh）。
+   * 调 consumeRefreshSession Lua 脚本，原子标记 used。
+   * - OK: 返回 session（含 familyId），可签发新 pair（同 familyId）
+   * - INVALID/EXPIRED: token 无效/过期 -> E-AUTH-005
+   * - REVOKED/REPLAY: family 已撤销 -> E-AUTH-006（REPLAY 时 family 已被 Lua 撤销）
+   *
+   * 并发安全：Lua 原子，并发刷新同一旧 jti 只一个 OK，另一个 REPLAY。
    */
-  async logout(refreshToken: string): Promise<string> {
-    const { payload, jti } = await this.verifyRefreshToken(refreshToken);
-    const ttlSeconds = payload.exp
-      ? payload.exp - Math.floor(Date.now() / 1000)
-      : REFRESH_TTL_SECONDS;
-    if (ttlSeconds > 0) {
-      await blacklistJti(jti, ttlSeconds);
+  async consumeRefreshToken(token: string): Promise<{
+    payload: RefreshPayload;
+    jti: string;
+    familyId: string;
+    userId: string;
+    deviceType: DeviceType;
+  }> {
+    let payload: RefreshPayload;
+    try {
+      payload = await this.jwt.verifyAsync<RefreshPayload>(token, {
+        secret: this.refreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-005',
+        message: 'Refresh token invalid or expired',
+      });
     }
-    return jti;
+    if (!payload.jti) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-005',
+        message: 'Refresh token missing jti',
+      });
+    }
+    const result = await consumeRefreshSession(payload.jti);
+    if (result.status === 'INVALID' || result.status === 'EXPIRED') {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-005',
+        message: 'Refresh token invalid or expired',
+      });
+    }
+    if (result.status === 'REVOKED' || result.status === 'REPLAY') {
+      // REPLAY: 旧 token 重放，family 已被 Lua 撤销
+      throw new UnauthorizedException({
+        code: 'E-AUTH-006',
+        message: 'Refresh token has been revoked',
+      });
+    }
+    // OK: result.session
+    const session = result.session;
+    return {
+      payload,
+      jti: payload.jti,
+      familyId: session.familyId,
+      userId: session.userId,
+      deviceType: session.deviceType as DeviceType,
+    };
+  }
+
+  /**
+   * Logout：撤销整个 refresh family（v1.2 Token Family）
+   *
+   * 该登录会话的所有 refresh token 失效（不只当前 jti）。
+   * accessToken 自然过期（不能服务端 revoke）。
+   */
+  async logout(refreshToken: string): Promise<string | null> {
+    const { session } = await this.verifyRefreshToken(refreshToken);
+    if (session) {
+      await revokeFamily(session.familyId);
+    }
+    return session?.familyId ?? null;
   }
 
   private get accessSecret(): string {
@@ -411,6 +499,8 @@ export class AuthService {
       where: { id: user.id },
       data: { password: newHash, passwordChangedAt: new Date() },
     });
+    // v1.2 Token Family：密码重置后撤销该用户所有 refresh family（强制全部重新登录）
+    await revokeUserSessions(user.id);
     logger.info({ msg: 'PASSWORD_RESET_SUCCESS', userId: user.id });
   }
 

@@ -37,6 +37,7 @@ import { JwtStrategy } from './modules/auth/strategies/jwt.strategy';
 import { JwtAuthGuard } from './shared/guards/jwt-auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { DeviceTypeGuard } from './shared/guards/device-type.guard';
+import { RateLimitGuard } from './shared/guards/rate-limit.guard';
 
 @Module({
   // 字母序合并（W + C + M 三流程）：Auth → Cart → Catalog → Dispatch → Im → Inventory →
@@ -78,6 +79,7 @@ import { DeviceTypeGuard } from './shared/guards/device-type.guard';
     //   - DeviceTypeGuard：拒跨端调用（client/rider/admin 前缀对应 deviceType）
     //   - RolesGuard：least privilege，未声明 @Roles() 默认拒（防业务 controller 忘加）
     // 避免每个 controller 手动 @UseGuards，新增 controller 一忘加就裸奔
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: DeviceTypeGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

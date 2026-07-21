@@ -12,6 +12,22 @@ import { UnauthorizedException } from '@nestjs/common';
 vi.mock('../src/shared/cache', () => ({
   blacklistJti: vi.fn().mockResolvedValue(undefined),
   isBlacklisted: vi.fn().mockResolvedValue(false),
+  createRefreshSession: vi.fn().mockResolvedValue(undefined),
+  consumeRefreshSession: vi.fn().mockResolvedValue({
+    status: 'OK',
+    session: {
+      familyId: 'family-1',
+      userId: 'u-1',
+      status: 'active',
+      deviceType: 'client_app',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 60000,
+    },
+  }),
+  revokeFamily: vi.fn().mockResolvedValue(undefined),
+  revokeUserSessions: vi.fn().mockResolvedValue(undefined),
+  isSessionValid: vi.fn().mockResolvedValue(true),
+  getRefreshSession: vi.fn().mockResolvedValue({ familyId: 'family-1' }),
 }));
 
 // Mock SMS（controller 不用，但 AuthService 构造时引用）
@@ -41,6 +57,7 @@ process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-at-least-32-characters-lon
 import { AuthService } from '../src/modules/auth/auth.service';
 import { AuthController } from '../src/modules/auth/auth.controller';
 import { JwtService } from '@nestjs/jwt';
+import { consumeRefreshSession } from '../src/shared/cache';
 
 describe('AuthController.refresh - W7-fix P0 安全检查', () => {
   let controller: AuthController;
@@ -48,6 +65,18 @@ describe('AuthController.refresh - W7-fix P0 安全检查', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    // v1.2：resetAllMocks 后重设 consumeRefreshSession 默认返回 OK
+    vi.mocked(consumeRefreshSession).mockResolvedValue({
+      status: 'OK',
+      session: {
+        familyId: 'family-1',
+        userId: 'u-1',
+        status: 'active',
+        deviceType: 'client_app',
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60000,
+      },
+    });
     // 真实 JwtService（signAsync/verifyAsync 是纯函数）
     const jwt = new JwtService({});
     authService = new AuthService(jwt);
