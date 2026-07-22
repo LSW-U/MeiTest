@@ -10,6 +10,7 @@
  * - sameSite: 'lax'（防 CSRF，允许顶层导航带 cookie）
  * - path: '/api/v1'（限制 cookie 范围）
  */
+import { randomBytes } from 'node:crypto';
 import type { Response } from 'express';
 import type { DeviceType } from '@meimart/api-contract';
 
@@ -22,6 +23,10 @@ function isProd(): boolean {
 
 const ACCESS_COOKIE = 'admin_access_token';
 const REFRESH_COOKIE = 'admin_refresh_token';
+/** CSRF 双重提交 token cookie 名（非 httpOnly：前端 JS 需读取后放 X-CSRF-Token header） */
+export const CSRF_COOKIE = 'admin_csrf';
+/** CSRF header 名（前端 apiFetch 注入 + 后端 CsrfMiddleware 校验） */
+export const CSRF_HEADER = 'x-csrf-token';
 
 /** access token + refresh token 凑对（登录/刷新端点的返回子集） */
 export interface TokenPairForCookie {
@@ -46,6 +51,17 @@ function accessCookieOptions(maxAgeMs: number) {
 function refreshCookieOptions(maxAgeMs: number) {
   return {
     httpOnly: true,
+    secure: isProd(),
+    sameSite: 'lax' as const,
+    path: COOKIE_PATH,
+    maxAge: maxAgeMs,
+  };
+}
+
+/** CSRF token cookie 选项（httpOnly: false — 前端 JS 必须能读取以放入 X-CSRF-Token header） */
+function csrfCookieOptions(maxAgeMs: number) {
+  return {
+    httpOnly: false,
     secure: isProd(),
     sameSite: 'lax' as const,
     path: COOKIE_PATH,
@@ -99,6 +115,12 @@ export function setAuthCookiesForDevice(
     tokens.accessExpiresAt,
     tokens.refreshExpiresAt,
   );
+  // 约束 6 CSRF 双重提交：登录/刷新时生成随机 token，set 非 httpOnly cookie
+  // 前端 JS 读后放 X-CSRF-Token header，后端 CsrfMiddleware 校验 header === cookie（攻击者跨域读不到 cookie，无法伪造匹配的 header）
+  const now = Math.floor(Date.now() / 1000);
+  const accessMaxAge = Math.max(0, (tokens.accessExpiresAt - now) * 1000);
+  const csrfToken = randomBytes(32).toString('base64url');
+  res.cookie(CSRF_COOKIE, csrfToken, csrfCookieOptions(accessMaxAge));
 }
 
 /**
@@ -111,6 +133,7 @@ export function setAuthCookiesForDevice(
 export function clearAuthCookies(res: Response): void {
   res.clearCookie(ACCESS_COOKIE, { path: COOKIE_PATH });
   res.clearCookie(REFRESH_COOKIE, { path: COOKIE_PATH });
+  res.clearCookie(CSRF_COOKIE, { path: COOKIE_PATH });
 }
 
 /**

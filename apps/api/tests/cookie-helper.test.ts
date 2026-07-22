@@ -30,12 +30,13 @@ const TOKENS = {
 
 describe('cookie-helper', () => {
   describe('setAuthCookiesForDevice — deviceType 门控', () => {
-    it('admin_web → set access + refresh 两个 cookie', () => {
+    it('admin_web → set access + refresh + csrf 三个 cookie', () => {
       const res = mockRes();
       setAuthCookiesForDevice(res as Response, 'admin_web', TOKENS);
-      expect(res.cookie).toHaveBeenCalledTimes(2);
+      expect(res.cookie).toHaveBeenCalledTimes(3);
       expect(res.cookie).toHaveBeenCalledWith('admin_access_token', TOKENS.accessToken, expect.any(Object));
       expect(res.cookie).toHaveBeenCalledWith('admin_refresh_token', TOKENS.refreshToken, expect.any(Object));
+      expect(res.cookie).toHaveBeenCalledWith('admin_csrf', expect.any(String), expect.any(Object));
     });
 
     it('client_app（CUSTOMER）→ 绝不 set cookie（防移动端 token 进 cookie jar）', () => {
@@ -68,6 +69,16 @@ describe('cookie-helper', () => {
       );
     });
 
+    it('admin_csrf cookie 非 httpOnly（前端 JS 需读取放 X-CSRF-Token header）', () => {
+      const res = mockRes();
+      setAuthCookiesForDevice(res as Response, 'admin_web', TOKENS);
+      expect(res.cookie).toHaveBeenCalledWith(
+        'admin_csrf',
+        expect.any(String),
+        expect.objectContaining({ httpOnly: false, sameSite: 'lax', path: '/api/v1' }),
+      );
+    });
+
     it('secure: development → false（localhost 调试用）', () => {
       const prev = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
@@ -96,12 +107,13 @@ describe('cookie-helper', () => {
   });
 
   describe('clearAuthCookies', () => {
-    it('clear access + refresh cookie（logout 用，幂等）', () => {
+    it('clear access + refresh + csrf cookie（logout 用，幂等）', () => {
       const res = mockRes();
       clearAuthCookies(res as Response);
-      expect(res.clearCookie).toHaveBeenCalledTimes(2);
+      expect(res.clearCookie).toHaveBeenCalledTimes(3);
       expect(res.clearCookie).toHaveBeenCalledWith('admin_access_token', { path: '/api/v1' });
       expect(res.clearCookie).toHaveBeenCalledWith('admin_refresh_token', { path: '/api/v1' });
+      expect(res.clearCookie).toHaveBeenCalledWith('admin_csrf', { path: '/api/v1' });
     });
   });
 

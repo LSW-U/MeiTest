@@ -1,15 +1,18 @@
 /**
  * API fetch wrapper（admin-web）
  *
- * - 自动注入 Authorization: Bearer <token>（从 localStorage 读）
+ * 约束 6（2026-07-23）：admin-web 切 httpOnly cookie 双通道鉴权
+ * - token 不再走 localStorage（XSS 可读）→ httpOnly cookie（credentials: include 自动带，JS 不可读）
+ * - mutate 请求带 X-CSRF-Token header（从非 httpOnly admin_csrf cookie 读，双重提交防 CSRF）
+ * - localStorage 仅留非敏感 admin_session 标志（前端路由判断用，不参与鉴权）
+ * - 移动端不受影响（继续 Bearer + SecureStore，不走本封装）
+ *
+ * 其他：
  * - 自动注入 X-Perspective header（与 PerspectiveContext 同源）
  * - 自动注入 Accept-Language header（next-intl）
- * - 401 自动清 token 跳 /login
+ * - 401 自动清 session 跳 /login
  * - 错误统一包装为 ApiError（带 code / message / status）
- *
- * 兼容 W2-W 的 perspective.tsx（key: admin_perspective / admin_token）
  */
-
 import type { Locale } from '@meimart/shared-locales';
 
 /** 5 视角（与 zustand perspective state 对应） */
@@ -18,25 +21,35 @@ export type Perspective = 'platform' | 'merchant' | 'warehouse' | 'support' | 'r
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1';
 
-const TOKEN_KEY = 'admin_token';
+/** 非敏感登录标志 key（仅前端路由判断，真实鉴权靠 httpOnly cookie） */
+const SESSION_KEY = 'admin_session';
 const PERSPECTIVE_KEY = 'admin_perspective';
+/** 改状态的 HTTP 方法（需带 X-CSRF-Token） */
+const MUTATE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 export interface FetchOptions extends RequestInit {
-  /** 不带 Authorization（如登录前调用） */
+  /** 不带 cookie/CSRF（如登录前调用） */
   noAuth?: boolean;
 }
 
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+/**
+ * 是否已登录（前端路由判断用）
+ *
+ * 仅检查非敏感标志；真实鉴权由后端 httpOnly cookie 校验。
+ * 标志可能滞后（cookie 失效但标志还在）→ 下个请求 401 → 自动清标志跳 /login。
+ */
+export function isAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(SESSION_KEY) === '1';
 }
 
-export function setAccessToken(token: string | null): void {
+/** 设置/清除登录标志（登录成功 set，401/logout clear） */
+export function setAuthenticated(authed: boolean): void {
   if (typeof window === 'undefined') return;
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
+  if (authed) {
+    window.localStorage.setItem(SESSION_KEY, '1');
   } else {
-    window.localStorage.removeItem(TOKEN_KEY);
+    window.localStorage.removeItem(SESSION_KEY);
   }
 }
 
@@ -48,6 +61,13 @@ export function getPerspective(): Perspective | null {
 export function getLocale(): Locale {
   if (typeof document === 'undefined') return 'en';
   return (document.documentElement.lang as Locale) || 'en';
+}
+
+/** 从非 httpOnly cookie 读 CSRF token（双重提交：读后放 X-CSRF-Token header） */
+function getCsrfTokenFromCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)admin_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export class ApiError extends Error {
@@ -65,7 +85,6 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: FetchOptions = {},
 ): Promise<T> {
-  const token = getAccessToken();
   const perspective = getPerspective();
   const lang = getLocale();
 
@@ -73,17 +92,21 @@ export async function apiFetch<T = unknown>(
   headers.set('Content-Type', 'application/json');
   headers.set('Accept-Language', lang);
   if (perspective) headers.set('X-Perspective', perspective);
-  if (token && !options.noAuth) {
-    headers.set('Authorization', `Bearer ${token}`);
+  // 约束 6 CSRF：mutate 请求带 X-CSRF-Token（从 admin_csrf cookie 读）
+  const method = (options.method ?? 'GET').toUpperCase();
+  if (!options.noAuth && MUTATE_METHODS.has(method)) {
+    const csrf = getCsrfTokenFromCookie();
+    if (csrf) headers.set('X-CSRF-Token', csrf);
   }
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
+    credentials: 'include', // 约束 6：带 httpOnly cookie（access + refresh + csrf）
   });
 
   if (res.status === 401 && typeof window !== 'undefined' && !options.noAuth) {
-    setAccessToken(null);
+    setAuthenticated(false);
     window.location.href = '/login';
     throw new ApiError('E-AUTH-001', 'Unauthorized', 401);
   }
@@ -114,15 +137,15 @@ export async function apiUploadFile<T = unknown>(
   file: File,
   fieldName = 'file',
 ): Promise<T> {
-  const token = getAccessToken();
   const perspective = getPerspective();
   const lang = getLocale();
 
   const headers = new Headers();
   headers.set('Accept-Language', lang);
   if (perspective) headers.set('X-Perspective', perspective);
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  // 注意：不设 Content-Type，让 fetch + FormData 自动设 multipart boundary
+  // 上传是 POST mutate，带 CSRF
+  const csrf = getCsrfTokenFromCookie();
+  if (csrf) headers.set('X-CSRF-Token', csrf);
 
   const formData = new FormData();
   formData.append(fieldName, file);
@@ -131,10 +154,11 @@ export async function apiUploadFile<T = unknown>(
     method: 'POST',
     headers,
     body: formData,
+    credentials: 'include', // 约束 6：带 httpOnly cookie
   });
 
   if (res.status === 401 && typeof window !== 'undefined') {
-    setAccessToken(null);
+    setAuthenticated(false);
     window.location.href = '/login';
     throw new ApiError('E-AUTH-001', 'Unauthorized', 401);
   }

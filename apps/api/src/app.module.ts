@@ -4,6 +4,7 @@ import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { TraceIdMiddleware } from './shared/middleware/trace-id.middleware';
+import { CsrfMiddleware } from './shared/middleware/csrf.middleware';
 import { HealthController } from './modules/health/health.controller';
 import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
@@ -110,6 +111,10 @@ export class AppModule implements NestModule {
    * 确保 Guard 抛错时 AllExceptionsFilter 也能拿到 traceId
    */
   configure(consumer: MiddlewareConsumer): void {
+    // TraceId 最先注入 ALS（Guard 抛错时 AllExceptionsFilter 也能拿 traceId）
     consumer.apply(TraceIdMiddleware).forRoutes('*');
+    // CSRF 双重提交校验（约束 6）：在 Guard 之前生效，仅校验带 admin cookie 的 mutate 请求；
+    // 移动端 Bearer / 登录前请求无 admin cookie → middleware 内自动放行
+    consumer.apply(CsrfMiddleware).forRoutes('*');
   }
 }

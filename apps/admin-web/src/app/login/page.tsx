@@ -26,14 +26,15 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        credentials: 'include', // 约束 6：收 httpOnly set-cookie（access + refresh + csrf）
       });
       const data = await resp.json();
       if (!resp.ok || !data.success) {
         setError(data?.error?.message ?? `Login failed (HTTP ${resp.status})`);
         return;
       }
-      window.localStorage.setItem('admin_token', data.data.accessToken);
-      window.localStorage.setItem('admin_refresh_token', data.data.refreshToken);
+      // 约束 6：token 走 httpOnly cookie（浏览器自动存），前端只记非敏感登录标志
+      window.localStorage.setItem('admin_session', '1');
       window.localStorage.setItem('admin_perspective', 'platform');
       // 同时同步 zustand store（与 PerspectiveSwitcher/Sidebar 一致）
       const { usePerspectiveStore } = await import('@/stores/perspective');
