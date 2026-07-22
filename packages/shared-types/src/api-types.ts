@@ -90,7 +90,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description SMS 验证码登录（不存在自动注册 customer） */
+        /**
+         * @deprecated
+         * @description [DEPRECATED] SMS 验证码登录 — 已由统一入口 POST /sms/verify (action=LOGIN) 替代，将于消费者 App 切换后 2 周下线
+         */
         post: {
             parameters: {
                 query?: never;
@@ -167,7 +170,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 发送 SMS 验证码（stub 固定 123456，标 [SMS_STUB]，W6 切东帝汶本地） */
+        /**
+         * @deprecated
+         * @description [DEPRECATED] 发送 SMS 验证码 — 已由统一入口 POST /sms/send (challengeId 模式) 替代，将于消费者 App 切换后 2 周下线
+         */
         post: {
             parameters: {
                 query?: never;
@@ -315,7 +321,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 注册（必传 smsCode，dev stub 固定 123456；email optional 走密码+SMS 主路径） */
+        /**
+         * @deprecated
+         * @description [DEPRECATED] 密码注册 — 已由统一入口 POST /register/complete (ticket + SMS) 替代，将于消费者 App 切换后 2 周下线
+         */
         post: {
             parameters: {
                 query?: never;

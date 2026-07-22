@@ -71,7 +71,10 @@ export class AuthController {
     };
   }
 
-  /** SMS 验证码登录（不存在自动注册） */
+  /**
+   * @deprecated 已由统一入口 POST /sms/verify (action=LOGIN) 替代，消费者 App 切换后 2 周下线
+   * SMS 验证码登录（不存在自动注册）
+   */
   @Public()
   @Audit({ resource: 'User' })
   @RateLimit(
@@ -99,7 +102,10 @@ export class AuthController {
     };
   }
 
-  /** 注册（必传 smsCode，dev stub 固定 123456） */
+  /**
+   * @deprecated 已由统一入口 POST /register/complete (ticket + SMS) 替代，消费者 App 切换后 2 周下线
+   * 注册（必传 smsCode，dev stub 固定 123456）
+   */
   @Public()
   @Audit({ resource: 'User', maskFields: ['password'] })
   @RateLimit(
@@ -133,7 +139,10 @@ export class AuthController {
     };
   }
 
-  /** 发 SMS 验证码（stub 固定 123456，W6 切东帝汶本地） */
+  /**
+   * @deprecated 已由统一入口 POST /sms/send (challengeId 模式) 替代，消费者 App 切换后 2 周下线
+   * 发 SMS 验证码（stub 固定 123456，W6 切东帝汶本地）
+   */
   @Public()
   @Audit({ resource: 'SmsCode', skip: true })
   @RateLimit(
