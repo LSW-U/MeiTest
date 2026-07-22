@@ -8,6 +8,7 @@
 import { Bell } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PerspectiveSwitcher } from '@/components/PerspectiveSwitcher';
+import { LogoutButton } from '@/components/layout/logout-button';
 
 export function Header() {
   return (
@@ -28,6 +29,7 @@ export function Header() {
         </button>
         <LanguageSwitcher />
         <PerspectiveSwitcher />
+        <LogoutButton />
       </div>
     </header>
   );

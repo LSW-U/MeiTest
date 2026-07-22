@@ -243,10 +243,15 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // 约束 6 双通道：body 优先，fallback cookie；都没有则跳过 service（仅清 cookie）
+    // 约束 6 双通道：body 优先，fallback cookie
     const refreshToken = body.refreshToken ?? getRefreshTokenFromCookie(req);
+    // revokeFamily：refreshToken 已过期/失效时不阻塞（保证登出幂等 + cookie 总能清）
     if (refreshToken) {
-      await this.auth.logout(refreshToken);
+      try {
+        await this.auth.logout(refreshToken);
+      } catch {
+        // refreshToken 失效：跳过 family 撤销，继续清 cookie
+      }
     }
     // 无条件 clear cookie（幂等：移动端调到也无副作用）
     clearAuthCookies(res);
