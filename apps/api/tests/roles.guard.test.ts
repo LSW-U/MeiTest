@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException, type ExecutionContext } from '@nestjs/common';
 import { RolesGuard } from '../src/shared/guards/roles.guard';
 import type { Reflector } from '@nestjs/core';
 
@@ -68,17 +68,17 @@ describe('RolesGuard', () => {
     }
   });
 
-  it('无 user → 拒绝（E-AUTH-007）', () => {
+  it('无 user → 401（E-AUTH-002，防御性死代码）', () => {
     const reflector = createMockReflector({ isPublic: false, roles: ['CUSTOMER'] });
     const guard = new RolesGuard(reflector);
     const ctx = createMockContext({}, undefined);
-    expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(ctx)).toThrow(UnauthorizedException);
     try {
       guard.canActivate(ctx);
     } catch (e) {
-      const exc = e as ForbiddenException;
+      const exc = e as UnauthorizedException;
       const resp = exc.getResponse() as { code: string };
-      expect(resp.code).toBe('E-AUTH-007');
+      expect(resp.code).toBe('E-AUTH-002');
     }
   });
 });

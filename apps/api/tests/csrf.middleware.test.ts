@@ -4,7 +4,7 @@
  * 核心断言：
  *   1. 无 admin cookie（移动端 Bearer / 登录前）→ 放行（移动端无 CSRF 风险）
  *   2. GET / HEAD / OPTIONS → 放行（安全方法）
- *   3. mutate + admin cookie + header 缺失/不匹配 → 403 E-AUTH-008
+ *   3. mutate + admin cookie + header 缺失/不匹配 → 403 E-AUTH-011
  *   4. mutate + header === cookie → 放行
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -72,7 +72,7 @@ describe('CsrfMiddleware', () => {
     });
   });
 
-  describe('拦截场景（403 E-AUTH-008）', () => {
+  describe('拦截场景（403 E-AUTH-011）', () => {
     it('POST + admin cookie + 无 X-CSRF-Token header → 403', () => {
       expect(() =>
         mw.use(makeReq({ method: 'POST', adminCookie: 'at', csrfCookie: 'tok' }), res, next),
@@ -96,14 +96,14 @@ describe('CsrfMiddleware', () => {
       ).toThrow(ForbiddenException);
     });
 
-    it('拦截时错误码为 E-AUTH-008', () => {
+    it('拦截时错误码为 E-AUTH-011', () => {
       try {
         mw.use(makeReq({ method: 'POST', adminCookie: 'at' }), res, next);
         expect.fail('CsrfMiddleware should throw on missing token');
       } catch (e) {
         expect(e).toBeInstanceOf(ForbiddenException);
         const resp = (e as ForbiddenException).getResponse() as { code: string };
-        expect(resp.code).toBe('E-AUTH-008');
+        expect(resp.code).toBe('E-AUTH-011');
       }
     });
   });

@@ -12,7 +12,7 @@
  *   PENDING → CANCELLED（客户撤回）
  *   APPROVED → FAILED（第三方退款失败，mock 不触发）
  */
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
@@ -71,10 +71,10 @@ export class RefundService {
       });
     }
 
-    // 校验订单归属
+    // 校验订单归属（资源不属于当前用户 → 403，非 409 状态冲突）
     if (order.userId !== input.userId) {
-      throw new ConflictException({
-        code: 'E-AUTH-007',
+      throw new ForbiddenException({
+        code: 'E-AUTH-012',
         message: 'Order does not belong to this user',
       });
     }
@@ -313,8 +313,8 @@ export class RefundService {
     }
 
     if (refund.userId !== userId) {
-      throw new ConflictException({
-        code: 'E-AUTH-007',
+      throw new ForbiddenException({
+        code: 'E-AUTH-012',
         message: 'Refund does not belong to this user',
       });
     }

@@ -10,7 +10,7 @@
  *   @UseGuards(JwtAuthGuard, DeviceTypeGuard, RolesGuard)
  *   @Roles('super_admin')
  */
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -46,8 +46,9 @@ export class RolesGuard implements CanActivate {
     const user = request.user as RequestUser | undefined;
 
     if (!user) {
-      throw new ForbiddenException({
-        code: 'E-AUTH-007',
+      // 防御性：JwtAuthGuard 已保证 user 存在，此处理论不可达；语义属"未认证"用 401（原 E-AUTH-007 误用 403）
+      throw new UnauthorizedException({
+        code: 'E-AUTH-002',
         message: 'No authenticated user',
       });
     }

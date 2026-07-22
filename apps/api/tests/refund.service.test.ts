@@ -14,7 +14,7 @@
  *   - cancelRefund 正常 / 不归属 / 非 PENDING
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 
 const { mockDb, mockLogger, mockModuleRef, mockOrderService } = vi.hoisted(() => ({
   mockDb: {
@@ -156,11 +156,11 @@ describe('RefundService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('订单不归属 → E-AUTH-007', async () => {
+    it('订单不归属 → 403 E-AUTH-012', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, userId: 'other' });
       await expect(
         service.createRefund({ orderId: 'order-1', userId: 'user-1', reason: 'X' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('订单已 CANCELLED → E-ORDER-003', async () => {
@@ -301,9 +301,9 @@ describe('RefundService', () => {
       expect(result.status).toBe('CANCELLED');
     });
 
-    it('不归属 → E-AUTH-007', async () => {
+    it('不归属 → 403 E-AUTH-012', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, userId: 'other' });
-      await expect(service.cancelRefund('refund-1', 'user-1')).rejects.toThrow(ConflictException);
+      await expect(service.cancelRefund('refund-1', 'user-1')).rejects.toThrow(ForbiddenException);
     });
 
     it('非 PENDING → E-ORDER-003', async () => {

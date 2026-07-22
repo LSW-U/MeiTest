@@ -11,7 +11,7 @@
  * - GET / HEAD / OPTIONS 跳过（不改状态）
  * - 登录端点登录前无 cookie → hasAdminCookie=false 自动跳过
  *
- * 失败：403 E-AUTH-008。
+ * 失败：403 E-AUTH-011。
  */
 import { Injectable, NestMiddleware, ForbiddenException } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
@@ -39,7 +39,7 @@ export class CsrfMiddleware implements NestMiddleware {
     const headerToken = (req.headers[CSRF_HEADER] as string | undefined) ?? null;
     if (!cookieToken || !headerToken || cookieToken !== headerToken) {
       throw new ForbiddenException({
-        code: 'E-AUTH-008',
+        code: 'E-AUTH-011',
         message: 'CSRF token missing or invalid',
       });
     }
