@@ -19,6 +19,7 @@ import { assertAllJwtSecrets } from './shared/auth/assert-jwt-secret';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -109,6 +110,9 @@ async function bootstrap() {
       hsts: process.env.NODE_ENV === 'production', // prod HSTS
     }),
   );
+
+  // Cookie 解析（约束 6：admin-web httpOnly cookie 双通道鉴权用）
+  app.use(cookieParser());
 
   // 全局 ValidationPipe（class-validator，zod 在 controller 显式注入）
   app.useGlobalPipes(
