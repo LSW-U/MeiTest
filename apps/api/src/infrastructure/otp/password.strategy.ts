@@ -16,8 +16,13 @@ export const BCRYPT_COST = 12;
 
 /** 密码策略错误码 */
 export class PasswordPolicyError extends Error {
-  constructor() {
-    super('PASSWORD_POLICY: ≥8 位 + 字母 + 数字');
+  constructor(reason: 'too_short' | 'too_long' | 'weak' = 'weak') {
+    const messages: Record<string, string> = {
+      too_short: 'PASSWORD_POLICY: ≥8 位 + 字母 + 数字',
+      too_long: 'PASSWORD_TOO_LONG: UTF-8 字节超过 72（bcrypt 限制，非字符数）',
+      weak: 'PASSWORD_POLICY: ≥8 位 + 字母 + 数字',
+    };
+    super(messages[reason]);
     this.name = 'PasswordPolicyError';
   }
 }
@@ -26,12 +31,22 @@ export class PasswordStrategy {
   /**
    * 密码哈希（注册 / 改密时用）
    *
-   * @param plain 明文密码（≥8 位 + 字母 + 数字）
+   * 约束 5（v1.2）：
+   * - UTF-8 字节校验（bcrypt 72 字节限制，非字符数）
+   *   中文 72 字符 = 216 字节 > 72 -> bcrypt 静默截断 -> 不安全
+   *   用 Buffer.byteLength(plain, 'utf8') > 72 拒绝
+   * - 密码 ≥8 位 + 字母 + 数字
+   *
+   * @param plain 明文密码（≥8 位 + 字母 + 数字 + UTF-8 ≤72 字节）
    * @returns bcrypt hash（cost=12，dev 约 200ms）
    */
   async hashPassword(plain: string): Promise<string> {
+    // 约束 5：UTF-8 字节校验（bcrypt 72 字节限制）
+    if (Buffer.byteLength(plain, 'utf8') > 72) {
+      throw new PasswordPolicyError('too_long');
+    }
     if (plain.length < 8 || !/[a-zA-Z]/.test(plain) || !/\d/.test(plain)) {
-      throw new PasswordPolicyError();
+      throw new PasswordPolicyError('too_short');
     }
     return bcrypt.hash(plain, BCRYPT_COST);
   }

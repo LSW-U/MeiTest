@@ -18,6 +18,7 @@ import { initSentry } from './shared/monitoring/sentry';
 import { assertAllJwtSecrets } from './shared/auth/assert-jwt-secret';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
+import helmet from 'helmet';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -87,6 +88,27 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id', 'Idempotency-Key'],
   });
+
+  // Helmet 安全头（约束 7：按环境 + Swagger 兼容）
+  // dev: 关 CSP（Swagger UI /docs 正常）+ 关 HSTS
+  // prod: 开 CSP 白名单 + HSTS
+  app.use(
+    helmet({
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production'
+          ? {
+              directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+              },
+            }
+          : false, // dev 关 CSP
+      crossOriginEmbedderPolicy: false, // 兼容第三方资源
+      hsts: process.env.NODE_ENV === 'production', // prod HSTS
+    }),
+  );
 
   // 全局 ValidationPipe（class-validator，zod 在 controller 显式注入）
   app.useGlobalPipes(
