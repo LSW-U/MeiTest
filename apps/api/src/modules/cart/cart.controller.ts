@@ -36,7 +36,7 @@ interface RequestWithUser {
 }
 
 @Controller('api/v1/client/cart')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class CartController {
   constructor(@Inject(CartService) private readonly cartService: CartService) {}
 

@@ -71,7 +71,7 @@ describe('RealtimeGateway', () => {
 
   describe('handleConnection', () => {
     it('合法 token + rider 角色 → user 写入 client.data + 加入 RIDERS_ROOM', async () => {
-      const token = signToken({ sub: 'rider-1', role: 'rider', deviceType: 'rider_app' });
+      const token = signToken({ sub: 'rider-1', role: 'RIDER', deviceType: 'rider_app' });
       const client = createMockClient();
       client.handshake.auth = { token };
 
@@ -79,7 +79,7 @@ describe('RealtimeGateway', () => {
 
       expect((client.data as any).user).toEqual({
         sub: 'rider-1',
-        role: 'rider',
+        role: 'RIDER',
         deviceType: 'rider_app',
       });
       expect(client.join).toHaveBeenCalledWith('riders');
@@ -87,7 +87,7 @@ describe('RealtimeGateway', () => {
     });
 
     it('合法 token + customer 角色 → 不加入 RIDERS_ROOM', async () => {
-      const token = signToken({ sub: 'c-1', role: 'customer', deviceType: 'client_app' });
+      const token = signToken({ sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' });
       const client = createMockClient();
       client.handshake.auth = { token };
 
@@ -117,7 +117,7 @@ describe('RealtimeGateway', () => {
     });
 
     it('支持 Bearer 前缀', async () => {
-      const token = signToken({ sub: 'r-1', role: 'rider', deviceType: 'rider_app' });
+      const token = signToken({ sub: 'r-1', role: 'RIDER', deviceType: 'rider_app' });
       const client = createMockClient();
       client.handshake.auth = { token: `Bearer ${token}` };
 
@@ -130,7 +130,7 @@ describe('RealtimeGateway', () => {
   describe('handleJoinOrder', () => {
     it('合法 orderId → 加入对应 room', async () => {
       const client = createMockClient({
-        user: { sub: 'c-1', role: 'customer', deviceType: 'client_app' },
+        user: { sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' },
       });
 
       const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
@@ -141,7 +141,7 @@ describe('RealtimeGateway', () => {
 
     it('缺 orderId → 返回 ok: false', async () => {
       const client = createMockClient({
-        user: { sub: 'c-1', role: 'customer', deviceType: 'client_app' },
+        user: { sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' },
       });
 
       const result = await gateway.handleJoinOrder({ orderId: '' }, client);
@@ -169,7 +169,7 @@ describe('RealtimeGateway', () => {
 
     it('rider 推位置 → 广播到 order room', async () => {
       const client = createMockClient({
-        user: { sub: 'rider-1', role: 'rider', deviceType: 'rider_app' },
+        user: { sub: 'rider-1', role: 'RIDER', deviceType: 'rider_app' },
       });
 
       const result = await gateway.handleLocationUpdate(validUpdate, client);
@@ -189,7 +189,7 @@ describe('RealtimeGateway', () => {
 
     it('customer 推位置 → 拒绝（only rider）', async () => {
       const client = createMockClient({
-        user: { sub: 'c-1', role: 'customer', deviceType: 'client_app' },
+        user: { sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' },
       });
 
       const result = await gateway.handleLocationUpdate(validUpdate, client);
@@ -201,7 +201,7 @@ describe('RealtimeGateway', () => {
 
     it('缺 lat/lng → 拒绝', async () => {
       const client = createMockClient({
-        user: { sub: 'r-1', role: 'rider', deviceType: 'rider_app' },
+        user: { sub: 'r-1', role: 'RIDER', deviceType: 'rider_app' },
       });
 
       const result = await gateway.handleLocationUpdate(

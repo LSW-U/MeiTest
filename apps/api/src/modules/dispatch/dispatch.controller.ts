@@ -50,7 +50,7 @@ interface RequestWithUser {
 }
 
 @Controller('api/v1/rider/dispatch')
-@Roles('rider')
+@Roles('RIDER')
 export class DispatchController {
   constructor(@Inject(DispatchService) private readonly dispatchService: DispatchService) {}
 

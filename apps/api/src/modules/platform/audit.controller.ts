@@ -25,7 +25,7 @@ import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { AuditLogQuery, type AuditLogQueryType } from '@meimart/api-contract';
 
 @Controller('api/v1/admin/platform/audit-logs')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class AuditController {
   constructor(@Inject(AuditService) private readonly audit: AuditService) {}
 

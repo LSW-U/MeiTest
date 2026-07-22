@@ -51,8 +51,8 @@ describe('e2e: 客户下单全链路', () => {
   let skuId: string;
 
   it('准备：登录 + 拿 SKU', async () => {
-    customerToken = await mockLogin('customer', 'client_app');
-    adminToken = await mockLogin('super_admin', 'admin_web');
+    customerToken = await mockLogin('CUSTOMER', 'client_app');
+    adminToken = await mockLogin('SUPER_ADMIN', 'admin_web');
 
     // 从 admin products 拿一个 SKU
     const products = await apiCall('/admin/products?limit=1', adminToken);
@@ -188,8 +188,8 @@ describe('e2e: 退款全链路', () => {
   let skuId: string;
 
   it('准备', async () => {
-    customerToken = await mockLogin('customer', 'client_app');
-    adminToken = await mockLogin('super_admin', 'admin_web');
+    customerToken = await mockLogin('CUSTOMER', 'client_app');
+    adminToken = await mockLogin('SUPER_ADMIN', 'admin_web');
     const products = await apiCall('/admin/products?limit=1', adminToken);
     const detail = await apiCall(`/admin/products/${products.data[0].id}`, adminToken);
     skuId = detail.data?.skus?.[0]?.id ?? '';
@@ -358,8 +358,8 @@ describe('e2e: 异常路径', () => {
   let skuId: string;
 
   it('准备', async () => {
-    customerToken = await mockLogin('customer', 'client_app');
-    adminToken = await mockLogin('super_admin', 'admin_web');
+    customerToken = await mockLogin('CUSTOMER', 'client_app');
+    adminToken = await mockLogin('SUPER_ADMIN', 'admin_web');
     const products = await apiCall('/admin/products?limit=1', adminToken);
     const detail = await apiCall(`/admin/products/${products.data[0].id}`, adminToken);
     skuId = detail.data?.skus?.[0]?.id ?? '';

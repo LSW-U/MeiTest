@@ -70,7 +70,7 @@ const UpdatePromotionRequest = z.object({
 });
 
 @Controller('api/v1/admin/promotions')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class PromotionController {
   constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
 
@@ -149,7 +149,7 @@ const ValidatePromotionRequest = z.object({
  * 购物车实时预览折扣，不 increment usedCount。
  */
 @Controller('api/v1/promotions')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class ClientPromotionController {
   constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
 

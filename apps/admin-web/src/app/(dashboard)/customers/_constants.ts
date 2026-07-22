@@ -15,9 +15,9 @@ export type UserStatus = Schemas['AdminUserListItem']['status'];
 
 /** role -> i18n key 映射（避免动态拼接字符串 key） */
 export const ROLE_LABEL_KEY: Record<UserRole, string> = {
-  super_admin: 'admin.customers.roleSuperAdmin',
-  customer: 'admin.customers.roleCustomer',
-  rider: 'admin.customers.roleRider',
-  warehouse_staff: 'admin.customers.roleWarehouseStaff',
-  customer_service: 'admin.customers.roleCustomerService',
+  SUPER_ADMIN: 'admin.customers.roleSuperAdmin',
+  CUSTOMER: 'admin.customers.roleCustomer',
+  RIDER: 'admin.customers.roleRider',
+  WAREHOUSE_STAFF: 'admin.customers.roleWarehouseStaff',
+  CUSTOMER_SERVICE: 'admin.customers.roleCustomerService',
 };

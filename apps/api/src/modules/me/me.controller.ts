@@ -21,19 +21,19 @@ import type { RequestUser } from '../auth/strategies/jwt.strategy';
 @Controller('api/v1')
 export class MeController {
   @Get('admin/me')
-  @Roles('super_admin', 'customer_service', 'warehouse_staff')
+  @Roles('SUPER_ADMIN', 'CUSTOMER_SERVICE', 'WAREHOUSE_STAFF')
   adminMe(@Request() req: { user: RequestUser }) {
     return { success: true, data: { user: req.user, scope: 'admin' } };
   }
 
   @Get('client/me')
-  @Roles('customer')
+  @Roles('CUSTOMER')
   clientMe(@Request() req: { user: RequestUser }) {
     return { success: true, data: { user: req.user, scope: 'client' } };
   }
 
   @Get('rider/me')
-  @Roles('rider')
+  @Roles('RIDER')
   riderMe(@Request() req: { user: RequestUser }) {
     return { success: true, data: { user: req.user, scope: 'rider' } };
   }

@@ -28,7 +28,7 @@ const CLIENT_EVENTS = ['im:join', 'im:leave', 'im:send', 'im:read'] as const;
 const MESSAGE_RETENTION_DAYS = 7;
 
 @Controller('api/v1/im')
-@Roles('customer', 'rider', 'super_admin', 'customer_service')
+@Roles('CUSTOMER', 'RIDER', 'SUPER_ADMIN', 'CUSTOMER_SERVICE')
 export class ImSignatureController {
   @Get('signature')
   signature(@Request() req: ExpressRequest & { user: RequestUser }): {
@@ -47,7 +47,7 @@ export class ImSignatureController {
         authScheme: 'bearer',
         userId: user.sub,
         // 路由 @Roles 已限制为 customer/rider/super_admin/customer_service，warehouse_staff 不接入 IM
-        role: user.role as 'customer' | 'rider' | 'super_admin' | 'customer_service',
+        role: user.role as 'SUPER_ADMIN' | 'CUSTOMER' | 'RIDER' | 'CUSTOMER_SERVICE',
         serverEvents: [...SERVER_EVENTS],
         clientEvents: [...CLIENT_EVENTS],
         conversationFormats: {

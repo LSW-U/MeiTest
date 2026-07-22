@@ -130,6 +130,13 @@ import {
   UpdatePromotionRequest as UpdatePromotionRequestSchema,
   ValidatePromotionRequest as ValidatePromotionRequestSchema,
   ValidatePromotionResponse as ValidatePromotionResponseSchema,
+  // unified-auth（W7-ext-H 统一手机号入口）
+  UnifiedSendSmsRequest as SendSmsRequestSchema,
+  UnifiedSendSmsResponse as SendSmsResponseSchema,
+  UnifiedVerifySmsRequest as VerifySmsRequestSchema,
+  UnifiedVerifySmsResponse as VerifySmsResponseSchema,
+  UnifiedCompleteRegisterRequest as CompleteRegisterRequestSchema,
+  UnifiedCompleteRegisterResponse as CompleteRegisterResponseSchema,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -1927,6 +1934,57 @@ registry.registerPath({
     403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
+
+// ============================================================================
+// W7-ext-H：统一手机号入口（3 endpoints，仅 BUYER）
+// ============================================================================
+
+registry.register('SendSmsRequest', SendSmsRequestSchema);
+registry.register('SendSmsResponse', SendSmsResponseSchema);
+registry.register('VerifySmsRequest', VerifySmsRequestSchema);
+registry.register('VerifySmsResponse', VerifySmsResponseSchema);
+registry.register('CompleteRegisterRequest', CompleteRegisterRequestSchema);
+registry.register('CompleteRegisterResponse', CompleteRegisterResponseSchema);
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/sms/send',
+  tags: ['auth'],
+  description: '统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。',
+  request: { body: { content: { 'application/json': { schema: SendSmsRequestSchema } } } },
+  responses: {
+    202: { description: '验证码已发送', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: SendSmsResponseSchema }) } } },
+    429: { description: 'RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/sms/verify',
+  tags: ['auth'],
+  description: '统一手机号入口：验证码校验 + 分流（LOGIN/REGISTER/BLOCKED）。不暴露手机号是否已注册。',
+  request: { body: { content: { 'application/json': { schema: VerifySmsRequestSchema } } } },
+  responses: {
+    200: { description: '校验结果', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: VerifySmsResponseSchema }) } } },
+    401: { description: 'SMS_CODE_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+    429: { description: 'RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/register/complete',
+  tags: ['auth'],
+  description: '统一手机号入口：完成注册（ticket GETDEL 原子消费 + DB 事务创建 BUYER）。强制 role=CUSTOMER。',
+  request: { body: { content: { 'application/json': { schema: CompleteRegisterRequestSchema } } } },
+  responses: {
+    200: { description: '注册成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: CompleteRegisterResponseSchema }) } } },
+    410: { description: 'TICKET_INVALID_OR_USED', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'PHONE_ALREADY_REGISTERED', content: { 'application/json': { schema: ErrorResponse } } },
+    400: { description: 'MUST_AGREE_TERMS', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 
 // ============================================================================
 // W5 联调准备：骑手 App 端点 path 注册（9 endpoints）

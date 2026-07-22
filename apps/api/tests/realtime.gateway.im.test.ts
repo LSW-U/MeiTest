@@ -93,7 +93,7 @@ describe('RealtimeGateway IM events', () => {
     it('合法 conversationId → client.join + 返回 ok', async () => {
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -109,7 +109,7 @@ describe('RealtimeGateway IM events', () => {
     it('非法 conversationId（无 conv: 前缀）→ ok: false', async () => {
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -145,7 +145,7 @@ describe('RealtimeGateway IM events', () => {
       const client = createAuthedClient(
         {
           sub: 'c-1',
-          role: 'customer',
+          role: 'CUSTOMER',
           deviceType: 'client_app',
         },
         ['conv:cm:c-1:shop-1'],
@@ -179,7 +179,7 @@ describe('RealtimeGateway IM events', () => {
     it('未先 join → ok: false + E-IM-003（必须先加入会话）', async () => {
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -203,7 +203,7 @@ describe('RealtimeGateway IM events', () => {
       const client = createAuthedClient(
         {
           sub: 'c-1',
-          role: 'customer',
+          role: 'CUSTOMER',
           deviceType: 'client_app',
         },
         ['conv:cm:c-1:shop-1'],
@@ -249,7 +249,7 @@ describe('RealtimeGateway IM events', () => {
       redisMock.get.mockResolvedValue('5');
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -266,7 +266,7 @@ describe('RealtimeGateway IM events', () => {
       redisMock.get.mockResolvedValue(null);
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -284,7 +284,7 @@ describe('RealtimeGateway IM events', () => {
       const client = createAuthedClient(
         {
           sub: 'c-1',
-          role: 'customer',
+          role: 'CUSTOMER',
           deviceType: 'client_app',
         },
         ['conv:cm:c-1:shop-1'],
@@ -307,7 +307,7 @@ describe('RealtimeGateway IM events', () => {
       const client = createAuthedClient(
         {
           sub: 'c-1',
-          role: 'customer',
+          role: 'CUSTOMER',
           deviceType: 'client_app',
         },
         ['conv:cr:c-1:rider-1:order-1'],
@@ -335,7 +335,7 @@ describe('RealtimeGateway IM events', () => {
     it('customer-A 不能 join customer-B 的 customer_merchant 会话', async () => {
       const clientA = createAuthedClient({
         sub: 'customer-A',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -351,7 +351,7 @@ describe('RealtimeGateway IM events', () => {
     it('customer-A 不能 join customer-B 的 customer_service 会话', async () => {
       const clientA = createAuthedClient({
         sub: 'customer-A',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -368,7 +368,7 @@ describe('RealtimeGateway IM events', () => {
 
       const clientA = createAuthedClient({
         sub: 'customer-A',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -386,7 +386,7 @@ describe('RealtimeGateway IM events', () => {
 
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -407,7 +407,7 @@ describe('RealtimeGateway IM events', () => {
 
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -424,7 +424,7 @@ describe('RealtimeGateway IM events', () => {
 
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 
@@ -439,7 +439,7 @@ describe('RealtimeGateway IM events', () => {
     it('rider 只能 join 自己参与的 customer_rider 会话', async () => {
       const clientRider = createAuthedClient({
         sub: 'rider-1',
-        role: 'rider',
+        role: 'RIDER',
         deviceType: 'rider_app',
       });
 
@@ -453,7 +453,7 @@ describe('RealtimeGateway IM events', () => {
       // rider-2 试图 join rider-1 的会话 → 拒
       const clientRider2 = createAuthedClient({
         sub: 'rider-2',
-        role: 'rider',
+        role: 'RIDER',
         deviceType: 'rider_app',
       });
       const reject = await gateway.handleImJoin(
@@ -466,7 +466,7 @@ describe('RealtimeGateway IM events', () => {
     it('super_admin 可 join 任意会话（平台监管）', async () => {
       const client = createAuthedClient({
         sub: 'admin-1',
-        role: 'super_admin',
+        role: 'SUPER_ADMIN',
         deviceType: 'admin_web',
       });
 
@@ -491,7 +491,7 @@ describe('RealtimeGateway IM events', () => {
     it('customer_service 可 join 任意会话（介入三方会话）', async () => {
       const client = createAuthedClient({
         sub: 'cs-1',
-        role: 'customer_service',
+        role: 'CUSTOMER_SERVICE',
         deviceType: 'admin_web',
       });
 
@@ -508,7 +508,7 @@ describe('RealtimeGateway IM events', () => {
       const clientA = createAuthedClient(
         {
           sub: 'customer-A',
-          role: 'customer',
+          role: 'CUSTOMER',
           deviceType: 'client_app',
         },
         ['conv:cm:customer-A:shop-X'],
@@ -529,7 +529,7 @@ describe('RealtimeGateway IM events', () => {
     it('customer_rider 缺 orderId → ok: false', async () => {
       const client = createAuthedClient({
         sub: 'c-1',
-        role: 'customer',
+        role: 'CUSTOMER',
         deviceType: 'client_app',
       });
 

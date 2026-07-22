@@ -35,7 +35,7 @@ const MatchWarehouseRequest = z.object({
 });
 
 @Controller('api/v1/client/inventory')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class ClientInventoryController {
   constructor(@Inject(InventoryService) private readonly inventory: InventoryService) {}
 
@@ -76,7 +76,7 @@ const AdjustStockRequest = z.object({
 });
 
 @Controller('api/v1/admin/inventory')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class AdminInventoryController {
   constructor(@Inject(InventoryService) private readonly inventory: InventoryService) {}
 

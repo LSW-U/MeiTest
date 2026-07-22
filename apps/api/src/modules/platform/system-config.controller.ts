@@ -16,7 +16,7 @@ import { UpdateSystemConfigRequest } from '@meimart/api-contract';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
 @Controller('api/v1/admin/platform/system-configs')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class SystemConfigController {
   constructor(
     @Inject(SystemConfigService) private readonly config: SystemConfigService,

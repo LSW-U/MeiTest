@@ -10,7 +10,7 @@
  *   POST   /:id/cancel      取消订单（用户自助，PENDING_* / CONFIRMED 可取消）
  *
  * 设计：
- *   - 所有端点 @Roles('customer')，全局 APP_GUARD 三道闸门 + DeviceTypeGuard 已检查
+ *   - 所有端点 @Roles('CUSTOMER')，全局 APP_GUARD 三道闸门 + DeviceTypeGuard 已检查
  *   - audit 全部走 @Audit 装饰器（AuditInterceptor 读 metadata 写 AuditLog）
  *   - 错误码：E-ORDER-001~005 + E-COMMON-001/002（filter 自动本地化）
  */
@@ -67,7 +67,7 @@ interface RequestWithUser {
 }
 
 @Controller('api/v1/client/orders')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class OrderController {
   constructor(
     @Inject(OrderService) private readonly orderService: OrderService,

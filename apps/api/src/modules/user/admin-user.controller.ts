@@ -72,7 +72,7 @@ const DeleteUserRequest = z.object({
 });
 
 @Controller('api/v1/admin/users')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class AdminUserController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 

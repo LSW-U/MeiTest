@@ -22,7 +22,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/client/* + client_app token → 通过', () => {
     const ctx = createMockContext('/api/v1/client/orders', 'GET', {
       sub: 'u1',
-      role: 'customer',
+      role: 'CUSTOMER',
       deviceType: 'client_app',
     });
     expect(guard.canActivate(ctx)).toBe(true);
@@ -31,7 +31,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/client/* + rider_app token → 拒绝 E-AUTH-001', () => {
     const ctx = createMockContext('/api/v1/client/orders', 'GET', {
       sub: 'u1',
-      role: 'rider',
+      role: 'RIDER',
       deviceType: 'rider_app',
     });
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
@@ -46,7 +46,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/admin/* + admin_web token → 通过', () => {
     const ctx = createMockContext('/api/v1/admin/me', 'GET', {
       sub: 'u1',
-      role: 'super_admin',
+      role: 'SUPER_ADMIN',
       deviceType: 'admin_web',
     });
     expect(guard.canActivate(ctx)).toBe(true);
@@ -55,7 +55,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/admin/* + client_app token → 拒绝', () => {
     const ctx = createMockContext('/api/v1/admin/me', 'GET', {
       sub: 'u1',
-      role: 'customer',
+      role: 'CUSTOMER',
       deviceType: 'client_app',
     });
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
@@ -64,7 +64,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/common/* 不限制 → 通过（任何 deviceType）', () => {
     const ctx = createMockContext('/api/v1/common/auth/login', 'POST', {
       sub: 'u1',
-      role: 'customer',
+      role: 'CUSTOMER',
       deviceType: 'client_app',
     });
     expect(guard.canActivate(ctx)).toBe(true);
@@ -73,7 +73,7 @@ describe('DeviceTypeGuard', () => {
   it('/api/v1/clientXYZ 不匹配 /api/v1/client（精确边界）', () => {
     const ctx = createMockContext('/api/v1/clientXYZ', 'GET', {
       sub: 'u1',
-      role: 'customer',
+      role: 'CUSTOMER',
       deviceType: 'client_app',
     });
     // /api/v1/clientXYZ 不匹配任何 ROUTE_DEVICE_MAP 规则，视为 common（不限制）

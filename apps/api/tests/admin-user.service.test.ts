@@ -54,7 +54,7 @@ const { mockDb, mockAuth, mockPasswordStrategy } = vi.hoisted(() => ({
     },
   },
   mockAuth: {
-    toContractRole: vi.fn((r: string) => r.toLowerCase()),
+    toContractRole: vi.fn((r: string) => r),
   },
   mockPasswordStrategy: {
     hashPassword: vi.fn(async (pw: string) => `hashed:${pw}`),
@@ -81,7 +81,7 @@ describe('UserService.listUsers', () => {
     mockDb.user.count.mockReset();
     mockDb.order.groupBy.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
 
     service = new UserService(mockAuth as never);
   });
@@ -223,7 +223,7 @@ describe('UserService.listUsers', () => {
       phone: '+67088888888',
       email: 'alice@example.com',
       name: 'Alice',
-      role: 'customer', // contract 小写
+      role: 'CUSTOMER', // contract 小写
       status: 'ACTIVE',
       phoneVerified: true,
       emailVerified: true,
@@ -278,7 +278,7 @@ describe('UserService.getUserDetail', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 
@@ -348,7 +348,7 @@ describe('UserService.getUserDetail', () => {
     expect(result).toMatchObject({
       id: 'u-1',
       phone: '+67088888888',
-      role: 'customer',
+      role: 'CUSTOMER',
       status: 'ACTIVE',
       orderCount: 3,
       totalSpent: 12000,
@@ -383,7 +383,7 @@ describe('UserService.suspendUser', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 
@@ -503,7 +503,7 @@ describe('UserService.activateUser', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 
@@ -583,7 +583,7 @@ describe('UserService.deleteUser（W7-ext-B）', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 
@@ -687,7 +687,7 @@ describe('UserService.resetUserPassword', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 
@@ -748,7 +748,7 @@ describe('UserService.updateUser', () => {
     mockDb.address.findMany.mockReset();
     mockDb.order.aggregate.mockReset();
     mockAuth.toContractRole.mockReset();
-    mockAuth.toContractRole.mockImplementation((r: string) => r.toLowerCase());
+    mockAuth.toContractRole.mockImplementation((r: string) => r);
     service = new UserService(mockAuth as never);
   });
 

@@ -8,7 +8,7 @@
  *   - NotificationController  /notifications
  *
  * Roles 策略：
- *   - 客户端接口 @Roles('customer')（骑手 super_admin 走自己视角的 endpoint）
+ *   - 客户端接口 @Roles('CUSTOMER')（骑手 super_admin 走自己视角的 endpoint）
  *   - 后台查用户接口（如 admin/user-list）后续 M 流程做，本文件不写
  *
  * 三道全局 Guard（Jwt → DeviceType → Roles）已注册，controller 不写 @UseGuards
@@ -41,7 +41,7 @@ import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
 /** 用户资料 */
 @Controller('api/v1/client/user')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class UserController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 
@@ -64,7 +64,7 @@ export class UserController {
 
 /** 收货地址 */
 @Controller('api/v1/client/addresses')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class AddressController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 
@@ -124,7 +124,7 @@ export class AddressController {
 
 /** 收藏 */
 @Controller('api/v1/client/favorites')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class FavoriteController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 
@@ -148,7 +148,7 @@ export class FavoriteController {
 
 /** 通知 */
 @Controller('api/v1/client/notifications')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class NotificationController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 

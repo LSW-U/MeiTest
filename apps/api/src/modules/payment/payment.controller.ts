@@ -32,7 +32,7 @@ import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { DeviceType } from '@meimart/api-contract';
 
 @Controller('api/v1/client/payments')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class PaymentController {
   constructor(
     @Inject(PAYMENT_SERVICE_TOKEN) private readonly paymentService: PaymentService,

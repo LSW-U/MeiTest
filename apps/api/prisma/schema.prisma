@@ -188,7 +188,7 @@ model User {
   id             String      @id @default(uuid())
   phone          String      @unique @db.VarChar(20) // +670XXXXXXXX
   email          String?     @unique @db.VarChar(255) // 邮箱 OTP 找回密码必需
-  password       String // bcrypt hash(密码主登录)
+  password       String? // bcrypt hash（密码主登录，SMS 注册可为空）
   name           String?
   avatarUrl      String?     @map("avatar_url")
   role           Role        @default(CUSTOMER)
@@ -199,6 +199,8 @@ model User {
   lastLoginAt    DateTime?   @map("last_login_at")
   // W7-fix：密码重置时间戳，refresh 端点检查 token.iat < passwordChangedAt 拒绝旧 token
   passwordChangedAt DateTime? @map("password_changed_at")
+  // W7-ext-H-unified-auth：统一入口 complete 时写（服务条款 + 隐私政策确认版本）
+  agreedTermsVersion String? @map("agreed_terms_version")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 

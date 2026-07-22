@@ -251,13 +251,13 @@ export class AuthService {
   /** 按 role 推断 deviceType（前端不传 deviceType，服务端推断更安全） */
   inferDeviceTypeFromRole(role: Role): DeviceType {
     switch (role) {
-      case 'customer':
+      case 'CUSTOMER':
         return 'client_app';
-      case 'rider':
+      case 'RIDER':
         return 'rider_app';
-      case 'super_admin':
-      case 'warehouse_staff':
-      case 'customer_service':
+      case 'SUPER_ADMIN':
+      case 'WAREHOUSE_STAFF':
+      case 'CUSTOMER_SERVICE':
         return 'admin_web';
     }
   }
@@ -283,7 +283,7 @@ export class AuthService {
    * （前端期望小写），在 service 边界做一次映射，所有 module 复用此 helper。
    */
   toContractRole(prismaRole: string): Role {
-    return prismaRole.toLowerCase() as Role;
+    return prismaRole as Role;
   }
 
   /** 密码登录：找 user + verify password + 签 token pair
@@ -308,6 +308,10 @@ export class AuthService {
         code: 'E-USER-005',
         message: `User status is ${user.status}, login disabled`,
       });
+    }
+    // SMS 注册用户无密码（password null）-> 统一错误码拒绝（不暴露"未设密码"）
+    if (!user.password) {
+      throw new UnauthorizedException(GENERIC_AUTH_FAIL);
     }
     const ok = await passwordStrategy.verifyPassword(user.password, password);
     if (!ok) {

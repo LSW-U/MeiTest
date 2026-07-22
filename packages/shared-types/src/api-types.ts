@@ -41,7 +41,7 @@ export interface paths {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                                 phone: string | null;
                                 email: string | null;
                                 name: string | null;
@@ -118,7 +118,7 @@ export interface paths {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                                 phone: string | null;
                                 email: string | null;
                                 name: string | null;
@@ -347,7 +347,7 @@ export interface paths {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                                 phone: string | null;
                                 email: string | null;
                                 name: string | null;
@@ -521,7 +521,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             /** Format: date-time */
@@ -570,7 +570,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             /** Format: date-time */
@@ -4647,7 +4647,7 @@ export interface paths {
                             authScheme: "bearer";
                             userId: string;
                             /** @enum {string} */
-                            role: "customer" | "rider" | "super_admin" | "customer_service";
+                            role: "CUSTOMER" | "RIDER" | "SUPER_ADMIN" | "CUSTOMER_SERVICE";
                             serverEvents: string[];
                             clientEvents: string[];
                             conversationFormats: {
@@ -4738,7 +4738,7 @@ export interface paths {
                                 name: string | null;
                                 avatarUrl: string | null;
                                 /** @enum {string} */
-                                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                                 /** @enum {string} */
                                 status: "ACTIVE" | "SUSPENDED" | "DELETED";
                                 phoneVerified: boolean;
@@ -4801,7 +4801,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             phoneVerified: boolean;
@@ -4895,7 +4895,7 @@ export interface paths {
                         /** Format: uri */
                         avatarUrl?: string;
                         /** @enum {string} */
-                        role?: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                        role?: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                         phoneVerified?: boolean;
                         emailVerified?: boolean;
                     };
@@ -4917,7 +4917,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             phoneVerified: boolean;
@@ -5068,7 +5068,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             phoneVerified: boolean;
@@ -5223,7 +5223,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             phoneVerified: boolean;
@@ -5359,7 +5359,7 @@ export interface paths {
                             name: string | null;
                             avatarUrl: string | null;
                             /** @enum {string} */
-                            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
                             phoneVerified: boolean;
@@ -7566,6 +7566,297 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/auth/sms/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        deviceId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 验证码已发送 */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                challengeId: string;
+                                expireIn: number;
+                            };
+                        };
+                    };
+                };
+                /** @description RATE_LIMIT */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/sms/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 统一手机号入口：验证码校验 + 分流（LOGIN/REGISTER/BLOCKED）。不暴露手机号是否已注册。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        code: string;
+                        /** Format: uuid */
+                        challengeId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 校验结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** @enum {string} */
+                                action: "LOGIN" | "REGISTER" | "BLOCKED";
+                                accessToken?: string;
+                                refreshToken?: string;
+                                accessExpiresAt?: number;
+                                refreshExpiresAt?: number;
+                                user?: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    role: string;
+                                    phone: string;
+                                };
+                                registrationTicket?: string;
+                                expireIn?: number;
+                            };
+                        };
+                    };
+                };
+                /** @description SMS_CODE_INVALID */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description RATE_LIMIT */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/register/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 统一手机号入口：完成注册（ticket GETDEL 原子消费 + DB 事务创建 BUYER）。强制 role=CUSTOMER。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        registrationTicket: string;
+                        /** @enum {boolean} */
+                        agreedToTerms: true;
+                        /** Format: uuid */
+                        challengeId: string;
+                        deviceId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 注册成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                accessToken: string;
+                                refreshToken: string;
+                                accessExpiresAt: number;
+                                refreshExpiresAt: number;
+                                user: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    role: string;
+                                    phone: string;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description MUST_AGREE_TERMS */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PHONE_ALREADY_REGISTERED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description TICKET_INVALID_OR_USED */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/rider/apply": {
         parameters: {
             query?: never;
@@ -9331,7 +9622,7 @@ export interface components {
             /** Format: uuid */
             sub: string;
             /** @enum {string} */
-            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             /** @enum {string} */
             deviceType: "client_app" | "rider_app" | "admin_web" | "system";
             iat: number;
@@ -9367,7 +9658,7 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                 phone: string | null;
                 email: string | null;
                 name: string | null;
@@ -9432,7 +9723,7 @@ export interface components {
             name: string | null;
             avatarUrl: string | null;
             /** @enum {string} */
-            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             /** @enum {string} */
             status: "ACTIVE" | "SUSPENDED" | "DELETED";
             /** Format: date-time */
@@ -9538,7 +9829,7 @@ export interface components {
             name: string | null;
             avatarUrl: string | null;
             /** @enum {string} */
-            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             /** @enum {string} */
             status: "ACTIVE" | "SUSPENDED" | "DELETED";
             phoneVerified: boolean;
@@ -9560,7 +9851,7 @@ export interface components {
                 name: string | null;
                 avatarUrl: string | null;
                 /** @enum {string} */
-                role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+                role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                 /** @enum {string} */
                 status: "ACTIVE" | "SUSPENDED" | "DELETED";
                 phoneVerified: boolean;
@@ -9595,7 +9886,7 @@ export interface components {
             name: string | null;
             avatarUrl: string | null;
             /** @enum {string} */
-            role: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             /** @enum {string} */
             status: "ACTIVE" | "SUSPENDED" | "DELETED";
             phoneVerified: boolean;
@@ -9649,7 +9940,7 @@ export interface components {
             /** Format: uri */
             avatarUrl?: string;
             /** @enum {string} */
-            role?: "super_admin" | "customer" | "rider" | "warehouse_staff" | "customer_service";
+            role?: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             phoneVerified?: boolean;
             emailVerified?: boolean;
         };
@@ -10381,7 +10672,7 @@ export interface components {
             authScheme: "bearer";
             userId: string;
             /** @enum {string} */
-            role: "customer" | "rider" | "super_admin" | "customer_service";
+            role: "CUSTOMER" | "RIDER" | "SUPER_ADMIN" | "CUSTOMER_SERVICE";
             serverEvents: string[];
             clientEvents: string[];
             conversationFormats: {
@@ -10409,7 +10700,7 @@ export interface components {
             conversationType: "customer_merchant" | "customer_rider" | "customer_service";
             senderId: string;
             /** @enum {string} */
-            senderRole: "customer" | "rider" | "super_admin" | "customer_service";
+            senderRole: "CUSTOMER" | "RIDER" | "SUPER_ADMIN" | "CUSTOMER_SERVICE";
             content: string;
             timestamp: number;
         };
@@ -10478,6 +10769,53 @@ export interface components {
             startAt?: string;
             /** Format: date-time */
             endAt?: string;
+        };
+        SendSmsResponse: {
+            /** Format: uuid */
+            challengeId: string;
+            expireIn: number;
+        };
+        VerifySmsRequest: {
+            phone: string;
+            code: string;
+            /** Format: uuid */
+            challengeId: string;
+        };
+        VerifySmsResponse: {
+            /** @enum {string} */
+            action: "LOGIN" | "REGISTER" | "BLOCKED";
+            accessToken?: string;
+            refreshToken?: string;
+            accessExpiresAt?: number;
+            refreshExpiresAt?: number;
+            user?: {
+                /** Format: uuid */
+                id: string;
+                role: string;
+                phone: string;
+            };
+            registrationTicket?: string;
+            expireIn?: number;
+        };
+        CompleteRegisterRequest: {
+            registrationTicket: string;
+            /** @enum {boolean} */
+            agreedToTerms: true;
+            /** Format: uuid */
+            challengeId: string;
+            deviceId?: string;
+        };
+        CompleteRegisterResponse: {
+            accessToken: string;
+            refreshToken: string;
+            accessExpiresAt: number;
+            refreshExpiresAt: number;
+            user: {
+                /** Format: uuid */
+                id: string;
+                role: string;
+                phone: string;
+            };
         };
         GeocodeRequest: {
             address: string;

@@ -121,17 +121,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       const user = this.verifyHandshake(client);
       (client.data as { user?: WsUser }).user = user;
 
-      if (user.role === 'rider') {
+      if (user.role === 'RIDER') {
         await client.join(RIDERS_ROOM);
       }
       // 审查报告 P0-2 修复：customer_service + super_admin 自动加入 customer-service room
       // dispatch.reportIssue 推 'dispatch:issue-reported' 到这个 room，否则客服收不到 WS 推送
-      if (user.role === 'customer_service' || user.role === 'super_admin') {
+      if (user.role === 'CUSTOMER_SERVICE' || user.role === 'SUPER_ADMIN') {
         await client.join(CUSTOMER_SERVICE_ROOM);
       }
       // W4-REVIEW P0-4 修复：warehouse_staff 自动加入 warehouse:{warehouseId} room
       // broadcastInventoryAlert 推 'inventory:low-stock' 到这个 room
-      if (user.role === 'warehouse_staff') {
+      if (user.role === 'WAREHOUSE_STAFF') {
         try {
           const staff = await db.warehouseStaff.findMany({
             where: { userId: user.sub },
@@ -314,7 +314,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (!user) {
       return { ok: false, error: 'not authenticated' };
     }
-    if (user.role !== 'rider') {
+    if (user.role !== 'RIDER') {
       return { ok: false, error: 'only rider can push location' };
     }
     if (!data?.orderId || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
@@ -611,7 +611,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     const orderId = parts.length >= 5 ? parts[4] : null;
 
     // 平台与客服角色允许任意会话
-    if (user.role === 'super_admin' || user.role === 'customer_service') {
+    if (user.role === 'SUPER_ADMIN' || user.role === 'CUSTOMER_SERVICE') {
       return { ok: true };
     }
 
@@ -624,10 +624,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       //     · 扩 Role 加 'merchant_staff'
       //     · 新增 verifyShopMembership(shopId, user.sub) 校验 staff 属于该 shop
       //     · 此分支改为：
-      //         if (user.role === 'customer' && user.sub === customerId) return ok;
+      //         if (user.role === 'CUSTOMER' && user.sub === customerId) return ok;
       //         if (user.role === 'merchant_staff' && await verifyShopMembership(partyB, user.sub)) return ok;
       //   - 同时 customer_service 是否真需要介入 cm（当前是放过的）需要业务确认
-      if (user.role === 'customer' && user.sub === customerId) {
+      if (user.role === 'CUSTOMER' && user.sub === customerId) {
         return { ok: true };
       }
       return { ok: false, error: 'not a participant of this customer_merchant conversation' };
@@ -635,7 +635,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     if (convType === 'cs') {
       // customer ↔ customer_service：customer 必须是 customerId；客服角色已放过
-      if (user.role === 'customer' && user.sub === customerId) {
+      if (user.role === 'CUSTOMER' && user.sub === customerId) {
         return { ok: true };
       }
       return { ok: false, error: 'not a participant of this customer_service conversation' };
@@ -646,7 +646,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       if (!orderId) {
         return { ok: false, error: 'customer_rider conversation requires orderId' };
       }
-      if (user.role === 'customer' && user.sub === customerId) {
+      if (user.role === 'CUSTOMER' && user.sub === customerId) {
         // 校验订单归属
         const belongs = await this.verifyOrderOwnership(orderId, customerId);
         if (!belongs) {
@@ -654,7 +654,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         }
         return { ok: true };
       }
-      if (user.role === 'rider' && user.sub === partyB) {
+      if (user.role === 'RIDER' && user.sub === partyB) {
         // rider 不强校验订单归属（已通过派单系统获得该订单）
         return { ok: true };
       }

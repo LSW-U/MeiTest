@@ -113,7 +113,7 @@ export class ClientCatalogController {
 // ============================================================================
 
 @Controller('api/v1/admin/products')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class AdminProductController {
   constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
 
@@ -206,7 +206,7 @@ export class AdminProductController {
 }
 
 @Controller('api/v1/admin/skus')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class AdminSkuController {
   constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
 
@@ -236,7 +236,7 @@ export class AdminSkuController {
 }
 
 @Controller('api/v1/admin/categories')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class AdminCategoryController {
   constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
 
@@ -283,7 +283,7 @@ export class AdminCategoryController {
 }
 
 @Controller('api/v1/admin/banners')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class AdminBannerController {
   constructor(@Inject(CatalogService) private readonly catalog: CatalogService) {}
 

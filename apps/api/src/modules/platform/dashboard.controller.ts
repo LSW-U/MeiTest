@@ -14,7 +14,7 @@ import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { DashboardTimeRange } from '@meimart/api-contract';
 
 @Controller('api/v1/admin/platform/dashboard')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class DashboardController {
   constructor(@Inject(DashboardService) private readonly dashboard: DashboardService) {}
 

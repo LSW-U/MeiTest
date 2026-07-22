@@ -59,7 +59,7 @@ const ReviewRefundRequest = z.object({
 // ============================================================================
 
 @Controller('api/v1/client/refunds')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class ClientRefundController {
   constructor(@Inject(RefundService) private readonly refundService: RefundService) {}
 
@@ -116,7 +116,7 @@ export class ClientRefundController {
 // ============================================================================
 
 @Controller('api/v1/admin/refunds')
-@Roles('super_admin', 'warehouse_staff', 'customer_service')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
 export class AdminRefundController {
   constructor(@Inject(RefundService) private readonly refundService: RefundService) {}
 

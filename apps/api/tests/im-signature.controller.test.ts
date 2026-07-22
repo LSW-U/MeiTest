@@ -40,7 +40,7 @@ describe('ImSignatureController', () => {
   it('返回完整 ImSignature 结构', () => {
     const req = makeReq({
       sub: 'c-1',
-      role: 'customer',
+      role: 'CUSTOMER',
       deviceType: 'client_app',
     });
 
@@ -52,7 +52,7 @@ describe('ImSignatureController', () => {
     expect(data.transport).toBe('websocket');
     expect(data.authScheme).toBe('bearer');
     expect(data.userId).toBe('c-1');
-    expect(data.role).toBe('customer');
+    expect(data.role).toBe('CUSTOMER');
     expect(data.serverEvents).toContain('im:message');
     expect(data.clientEvents).toEqual(
       expect.arrayContaining(['im:join', 'im:leave', 'im:send', 'im:read']),
@@ -72,7 +72,7 @@ describe('ImSignatureController', () => {
     process.env.WS_URL = 'wss://ws.custom.example.com';
     const req = makeReq({
       sub: 'r-1',
-      role: 'rider',
+      role: 'RIDER',
       deviceType: 'rider_app',
     });
 
@@ -84,7 +84,7 @@ describe('ImSignatureController', () => {
     const req = makeReq(
       {
         sub: 'a-1',
-        role: 'super_admin',
+        role: 'SUPER_ADMIN',
         deviceType: 'admin_web',
       },
       {
@@ -101,7 +101,7 @@ describe('ImSignatureController', () => {
     const req = makeReq(
       {
         sub: 'a-1',
-        role: 'super_admin',
+        role: 'SUPER_ADMIN',
         deviceType: 'admin_web',
       },
       {
@@ -118,7 +118,7 @@ describe('ImSignatureController', () => {
     const req = makeReq(
       {
         sub: 'a-1',
-        role: 'super_admin',
+        role: 'SUPER_ADMIN',
         deviceType: 'admin_web',
       },
       {
@@ -134,11 +134,11 @@ describe('ImSignatureController', () => {
   it('不同角色（customer_service）通过', () => {
     const req = makeReq({
       sub: 'cs-1',
-      role: 'customer_service',
+      role: 'CUSTOMER_SERVICE',
       deviceType: 'admin_web',
     });
 
     const result = controller.signature(req);
-    expect(result.data.role).toBe('customer_service');
+    expect(result.data.role).toBe('CUSTOMER_SERVICE');
   });
 });

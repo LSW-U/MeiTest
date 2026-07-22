@@ -22,7 +22,7 @@ import {
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
 @Controller('api/v1/admin/settle/settlements')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class SettlementController {
   constructor(@Inject(SettlementService) private readonly settle: SettlementService) {}
 

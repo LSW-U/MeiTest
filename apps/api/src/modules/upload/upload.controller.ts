@@ -9,7 +9,7 @@
  *     - 返回 { success: true, data: { url, key, size } }
  *
  * 安全：
- *   - @Roles('super_admin', 'warehouse_staff') — 后台权限
+ *   - @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF') — 后台权限
  *   - DeviceTypeGuard 自动校验 admin_web deviceType（admin 前缀路由默认）
  *   - 服务端生成 key，不信任客户端文件名
  *   - magic bytes 校验：不依赖客户端 Content-Type，读前 16 字节判断真实文件类型
@@ -96,7 +96,7 @@ function detectImageFormat(buf: Buffer): 'jpg' | 'png' | 'webp' | null {
 }
 
 @Controller('api/v1/admin/uploads')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class UploadController {
   private readonly logger = new Logger(UploadController.name);
 

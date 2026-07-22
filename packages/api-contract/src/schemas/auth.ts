@@ -14,11 +14,11 @@ import { Id } from './common';
 
 /** 用户角色（5 个真实角色） */
 export const Role = z.enum([
-  'super_admin',
-  'customer',
-  'rider',
-  'warehouse_staff',
-  'customer_service',
+  'SUPER_ADMIN',
+  'CUSTOMER',
+  'RIDER',
+  'WAREHOUSE_STAFF',
+  'CUSTOMER_SERVICE',
 ]);
 export type Role = z.infer<typeof Role>;
 

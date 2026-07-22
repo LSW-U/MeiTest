@@ -52,7 +52,7 @@ interface RequestWithUser {
 }
 
 @Controller('api/v1/admin/riders')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class AdminRiderController {
   constructor(@Inject(RiderService) private readonly riderService: RiderService) {}
 

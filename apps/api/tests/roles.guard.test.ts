@@ -33,7 +33,7 @@ describe('RolesGuard', () => {
   it('无 @Roles() 声明 → 默认拒绝（E-AUTH-008）', () => {
     const reflector = createMockReflector({ isPublic: false, roles: undefined });
     const guard = new RolesGuard(reflector);
-    const ctx = createMockContext({}, { sub: 'u1', role: 'customer', deviceType: 'client_app' });
+    const ctx = createMockContext({}, { sub: 'u1', role: 'CUSTOMER', deviceType: 'client_app' });
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     try {
       guard.canActivate(ctx);
@@ -47,17 +47,17 @@ describe('RolesGuard', () => {
   it('角色匹配 → 通过', () => {
     const reflector = createMockReflector({
       isPublic: false,
-      roles: ['super_admin', 'warehouse_staff'],
+      roles: ['SUPER_ADMIN', 'WAREHOUSE_STAFF'],
     });
     const guard = new RolesGuard(reflector);
-    const ctx = createMockContext({}, { sub: 'u1', role: 'super_admin', deviceType: 'admin_web' });
+    const ctx = createMockContext({}, { sub: 'u1', role: 'SUPER_ADMIN', deviceType: 'admin_web' });
     expect(guard.canActivate(ctx)).toBe(true);
   });
 
   it('角色不匹配 → 拒绝（E-AUTH-010）', () => {
-    const reflector = createMockReflector({ isPublic: false, roles: ['super_admin'] });
+    const reflector = createMockReflector({ isPublic: false, roles: ['SUPER_ADMIN'] });
     const guard = new RolesGuard(reflector);
-    const ctx = createMockContext({}, { sub: 'u1', role: 'customer', deviceType: 'client_app' });
+    const ctx = createMockContext({}, { sub: 'u1', role: 'CUSTOMER', deviceType: 'client_app' });
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
     try {
       guard.canActivate(ctx);
@@ -69,7 +69,7 @@ describe('RolesGuard', () => {
   });
 
   it('无 user → 拒绝（E-AUTH-007）', () => {
-    const reflector = createMockReflector({ isPublic: false, roles: ['customer'] });
+    const reflector = createMockReflector({ isPublic: false, roles: ['CUSTOMER'] });
     const guard = new RolesGuard(reflector);
     const ctx = createMockContext({}, undefined);
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);

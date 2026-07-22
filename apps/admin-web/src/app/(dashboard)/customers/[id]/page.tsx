@@ -110,7 +110,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
     name: '',
     phone: '',
     email: '',
-    role: 'customer',
+    role: 'CUSTOMER',
     phoneVerified: false,
     emailVerified: false,
   });

@@ -22,7 +22,7 @@ import { Audit } from '../../shared/decorators/audit.decorator';
 import type { Role, DeviceType } from '@meimart/api-contract';
 
 const MockLoginRequest = z.object({
-  role: z.enum(['super_admin', 'customer', 'rider', 'warehouse_staff', 'customer_service']),
+  role: z.enum(['SUPER_ADMIN', 'CUSTOMER', 'RIDER', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE']),
   deviceType: z.enum(['client_app', 'rider_app', 'admin_web']),
   userId: z.string().uuid().optional(),
 });
@@ -33,11 +33,11 @@ const SEED_ADMIN_PHONE = '+670999999999';
 
 /** 正常 role × deviceType 组合（用于检测非常规组合并 warning） */
 const NORMAL_COMBINATIONS: Record<Role, DeviceType[]> = {
-  super_admin: ['admin_web'],
-  customer: ['client_app'],
-  rider: ['rider_app'],
-  warehouse_staff: ['admin_web'],
-  customer_service: ['admin_web'],
+  SUPER_ADMIN: ['admin_web'],
+  CUSTOMER: ['client_app'],
+  RIDER: ['rider_app'],
+  WAREHOUSE_STAFF: ['admin_web'],
+  CUSTOMER_SERVICE: ['admin_web'],
 };
 
 @Controller('api/v1/common/auth')

@@ -45,7 +45,7 @@ export const ImSignature = z.object({
   /** 当前用户 ID（用于客户端构造 conversationId） */
   userId: z.string().min(1),
   /** 当前用户角色 */
-  role: z.enum(['customer', 'rider', 'super_admin', 'customer_service']),
+  role: z.enum(['CUSTOMER', 'RIDER', 'SUPER_ADMIN', 'CUSTOMER_SERVICE']),
   /** 服务端事件名（客户端订阅这些） */
   serverEvents: z.array(z.string()).min(1),
   /** 客户端可发送的事件名 */
@@ -69,7 +69,7 @@ export const ImMessage = z.object({
   conversationId: z.string().min(1),
   conversationType: ConversationType,
   senderId: z.string().min(1),
-  senderRole: z.enum(['customer', 'rider', 'super_admin', 'customer_service']),
+  senderRole: z.enum(['CUSTOMER', 'RIDER', 'SUPER_ADMIN', 'CUSTOMER_SERVICE']),
   content: z.string().min(1).max(2000),
   timestamp: z.number().int().nonnegative(),
 });

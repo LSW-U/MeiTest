@@ -13,6 +13,8 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
+import { UnifiedAuthController } from './unified-auth.controller';
+import { UnifiedAuthService } from './unified-auth.service';
 import { MockLoginController } from './mock-login.controller';
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -25,9 +27,10 @@ const isProduction = process.env.NODE_ENV === 'production';
       signOptions: { algorithm: 'HS256' },
     }),
   ],
-  // AuthController 所有环境注册；MockLoginController prod 不注册，路由根本不存在
-  controllers: isProduction ? [AuthController] : [AuthController, MockLoginController],
-  providers: [AuthService, JwtStrategy],
+  controllers: isProduction
+    ? [AuthController, UnifiedAuthController]
+    : [AuthController, UnifiedAuthController, MockLoginController],
+  providers: [AuthService, UnifiedAuthService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

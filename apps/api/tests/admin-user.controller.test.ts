@@ -68,7 +68,7 @@ describe('AdminUserController - 5 端点装配（W7-fix 审查 #14）', () => {
   });
 
   it('GET /:id - detail 调用 getUserDetail', async () => {
-    const mockData = { id: 'u-1', phone: '+67088888888', role: 'customer' };
+    const mockData = { id: 'u-1', phone: '+67088888888', role: 'CUSTOMER' };
     mockUserService.getUserDetail.mockResolvedValue(mockData);
 
     const result = await controller.detail('u-1');

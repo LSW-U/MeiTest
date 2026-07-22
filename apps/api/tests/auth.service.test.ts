@@ -99,7 +99,7 @@ describe('AuthService', () => {
     it('签发 client_app token（30d TTL）', async () => {
       const { token, expiresIn } = await service.signAccessToken(
         'user-1',
-        'customer',
+        'CUSTOMER',
         'client_app',
       );
       expect(token).toBeTruthy();
@@ -107,14 +107,14 @@ describe('AuthService', () => {
     });
 
     it('签发 rider_app token（12h TTL）', async () => {
-      const { token, expiresIn } = await service.signAccessToken('user-2', 'rider', 'rider_app');
+      const { token, expiresIn } = await service.signAccessToken('user-2', 'RIDER', 'rider_app');
       expect(expiresIn).toBe(12 * 60 * 60); // 12 小时
     });
 
     it('签发 admin_web token（2h TTL）', async () => {
       const { token, expiresIn } = await service.signAccessToken(
         'user-3',
-        'super_admin',
+        'SUPER_ADMIN',
         'admin_web',
       );
       expect(expiresIn).toBe(2 * 60 * 60); // 2 小时
@@ -143,10 +143,10 @@ describe('AuthService', () => {
 
   describe('verifyAccessToken', () => {
     it('正确 token 验证通过', async () => {
-      const { token } = await service.signAccessToken('user-1', 'customer', 'client_app');
+      const { token } = await service.signAccessToken('user-1', 'CUSTOMER', 'client_app');
       const payload = await service.verifyAccessToken(token);
       expect(payload.sub).toBe('user-1');
-      expect(payload.role).toBe('customer');
+      expect(payload.role).toBe('CUSTOMER');
       expect(payload.deviceType).toBe('client_app');
     });
 
@@ -187,23 +187,23 @@ describe('AuthService', () => {
 
   describe('inferDeviceTypeFromRole + toContractRole', () => {
     it('customer → client_app', () => {
-      expect(service.inferDeviceTypeFromRole('customer')).toBe('client_app');
+      expect(service.inferDeviceTypeFromRole('CUSTOMER')).toBe('client_app');
     });
 
     it('rider → rider_app', () => {
-      expect(service.inferDeviceTypeFromRole('rider')).toBe('rider_app');
+      expect(service.inferDeviceTypeFromRole('RIDER')).toBe('rider_app');
     });
 
     it('super_admin/warehouse_staff/customer_service → admin_web', () => {
-      expect(service.inferDeviceTypeFromRole('super_admin')).toBe('admin_web');
-      expect(service.inferDeviceTypeFromRole('warehouse_staff')).toBe('admin_web');
-      expect(service.inferDeviceTypeFromRole('customer_service')).toBe('admin_web');
+      expect(service.inferDeviceTypeFromRole('SUPER_ADMIN')).toBe('admin_web');
+      expect(service.inferDeviceTypeFromRole('WAREHOUSE_STAFF')).toBe('admin_web');
+      expect(service.inferDeviceTypeFromRole('CUSTOMER_SERVICE')).toBe('admin_web');
     });
 
     it('Prisma 大写 role 转 contract 小写', () => {
-      expect(service.toContractRole('SUPER_ADMIN')).toBe('super_admin');
-      expect(service.toContractRole('CUSTOMER')).toBe('customer');
-      expect(service.toContractRole('WAREHOUSE_STAFF')).toBe('warehouse_staff');
+      expect(service.toContractRole('SUPER_ADMIN')).toBe('SUPER_ADMIN');
+      expect(service.toContractRole('CUSTOMER')).toBe('CUSTOMER');
+      expect(service.toContractRole('WAREHOUSE_STAFF')).toBe('WAREHOUSE_STAFF');
     });
   });
 
@@ -221,7 +221,7 @@ describe('AuthService', () => {
 
       const result = await service.loginWithPassword('+670999999999', 'Pass1234');
       expect(result.userId).toBe('user-1');
-      expect(result.role).toBe('customer');
+      expect(result.role).toBe('CUSTOMER');
       expect(result.accessToken).toBeTruthy();
       expect(result.refreshToken).toBeTruthy();
     });
@@ -272,7 +272,7 @@ describe('AuthService', () => {
 
       const result = await service.loginWithSms('+670999999999', '123456');
       expect(result.userId).toBe('user-1');
-      expect(result.role).toBe('customer');
+      expect(result.role).toBe('CUSTOMER');
     });
 
     it('SMS 错误抛 E-USER-003', async () => {
@@ -293,7 +293,7 @@ describe('AuthService', () => {
 
       const result = await service.loginWithSms('+670888888888', '123456');
       expect(result.userId).toBe('new-user');
-      expect(result.role).toBe('customer');
+      expect(result.role).toBe('CUSTOMER');
       expect(userCreate).toHaveBeenCalled();
     });
   });
@@ -317,7 +317,7 @@ describe('AuthService', () => {
         smsCode: '123456',
       });
       expect(result.userId).toBe('new-user');
-      expect(result.role).toBe('customer');
+      expect(result.role).toBe('CUSTOMER');
     });
 
     it('手机号已注册抛 E-USER-004', async () => {

@@ -69,7 +69,7 @@ const AdminUpdateOrderRequest = z.object({
 });
 
 @Controller('api/v1/admin/orders')
-@Roles('super_admin', 'warehouse_staff', 'customer_service')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
 export class AdminOrderController {
   constructor(
     @Inject(OrderService) private readonly orderService: OrderService,

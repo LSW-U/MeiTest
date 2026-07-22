@@ -25,7 +25,7 @@ const UpdateBaseFeeRequest = z.object({
 });
 
 @Controller('api/v1/client/pricing')
-@Roles('customer')
+@Roles('CUSTOMER')
 export class ClientPricingController {
   constructor(@Inject(PricingService) private readonly pricing: PricingService) {}
 
@@ -62,7 +62,7 @@ export class ClientPricingController {
 }
 
 @Controller('api/v1/admin/pricing')
-@Roles('super_admin')
+@Roles('SUPER_ADMIN')
 export class AdminPricingController {
   constructor(@Inject(PricingService) private readonly pricing: PricingService) {}
 

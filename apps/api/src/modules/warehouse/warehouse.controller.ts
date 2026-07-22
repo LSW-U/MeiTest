@@ -31,7 +31,7 @@ import { Audit } from '../../shared/decorators/audit.decorator';
 import { db } from '../../shared/db';
 
 @Controller('api/v1/admin/warehouses')
-@Roles('super_admin', 'warehouse_staff')
+@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class WarehouseController {
   constructor(@Inject(WarehouseService) private readonly warehouses: WarehouseService) {}
 

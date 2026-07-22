@@ -14,7 +14,7 @@
  *   - W6 多商家开放后拆分：
  *     · /client/withdrawals — customer/rider 自申请，强制 requesterId = req.user.sub
  *     · /admin/withdrawals/on-behalf-of — 代录专用，写审计时区分 onBehalfOf
- *   - review2 安全建议：原 @Roles('super_admin','warehouse_staff','customer_service') 写操作
+ *   - review2 安全建议：原 @Roles('SUPER_ADMIN','WAREHOUSE_STAFF','CUSTOMER_SERVICE') 写操作
  *     让 warehouse_staff/customer_service 可代任意 shopId/riderId 发起提现，已收紧
  */
 import {
@@ -54,7 +54,7 @@ export class WithdrawalController {
    * 审计：service 写 WITHDRAWAL_CREATED 日志含 userId（执行代录的 admin）
    */
   @Post()
-  @Roles('super_admin')
+  @Roles('SUPER_ADMIN')
   @Audit({ resource: 'WithdrawalRequest' })
   async create(
     @Body(new ZodValidationPipe(WithdrawalCreateInput)) body: unknown,
@@ -68,14 +68,14 @@ export class WithdrawalController {
   }
 
   @Get()
-  @Roles('super_admin', 'warehouse_staff', 'customer_service')
+  @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
   async list(@Query(new ZodValidationPipe(WithdrawalQuery)) query: unknown) {
     const data = await this.withdraw.list(query as WithdrawalQueryType);
     return { success: true as const, data };
   }
 
   @Get(':id')
-  @Roles('super_admin', 'warehouse_staff', 'customer_service')
+  @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
   async detail(@Param('id') id: string) {
     const data = await this.withdraw.detail(id);
     return { success: true as const, data };
@@ -83,7 +83,7 @@ export class WithdrawalController {
 
   /** 审核（仅 super_admin） */
   @Post(':id/review')
-  @Roles('super_admin')
+  @Roles('SUPER_ADMIN')
   @Audit({ resource: 'WithdrawalRequest' })
   async review(
     @Param('id') id: string,
@@ -100,7 +100,7 @@ export class WithdrawalController {
 
   /** 线下打款完成（仅 super_admin） */
   @Post(':id/mark-paid')
-  @Roles('super_admin')
+  @Roles('SUPER_ADMIN')
   @Audit({ resource: 'WithdrawalRequest' })
   async markPaid(
     @Param('id') id: string,

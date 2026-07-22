@@ -62,11 +62,11 @@ components:
         role:
           type: string
           enum: &a1
-            - super_admin
-            - customer
-            - rider
-            - warehouse_staff
-            - customer_service
+            - SUPER_ADMIN
+            - CUSTOMER
+            - RIDER
+            - WAREHOUSE_STAFF
+            - CUSTOMER_SERVICE
         deviceType:
           type: string
           enum:
@@ -2605,10 +2605,10 @@ components:
         role:
           type: string
           enum: &a33
-            - customer
-            - rider
-            - super_admin
-            - customer_service
+            - CUSTOMER
+            - RIDER
+            - SUPER_ADMIN
+            - CUSTOMER_SERVICE
         serverEvents:
           type: array
           items:
@@ -2707,10 +2707,10 @@ components:
         senderRole:
           type: string
           enum:
-            - customer
-            - rider
-            - super_admin
-            - customer_service
+            - CUSTOMER
+            - RIDER
+            - SUPER_ADMIN
+            - CUSTOMER_SERVICE
         content:
           type: string
           minLength: 1
@@ -2918,6 +2918,122 @@ components:
         endAt:
           type: string
           format: date-time
+    SendSmsResponse:
+      type: object
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        expireIn:
+          type: integer
+      required:
+        - challengeId
+        - expireIn
+    VerifySmsRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 20
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+        challengeId:
+          type: string
+          format: uuid
+      required:
+        - phone
+        - code
+        - challengeId
+    VerifySmsResponse:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: &a39
+            - LOGIN
+            - REGISTER
+            - BLOCKED
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        accessExpiresAt:
+          type: integer
+        refreshExpiresAt:
+          type: integer
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            role:
+              type: string
+            phone:
+              type: string
+          required:
+            - id
+            - role
+            - phone
+        registrationTicket:
+          type: string
+        expireIn:
+          type: integer
+      required:
+        - action
+    CompleteRegisterRequest:
+      type: object
+      properties:
+        registrationTicket:
+          type: string
+          minLength: 10
+        agreedToTerms:
+          type: boolean
+          enum:
+            - true
+        challengeId:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+      required:
+        - registrationTicket
+        - agreedToTerms
+        - challengeId
+    CompleteRegisterResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        accessExpiresAt:
+          type: integer
+        refreshExpiresAt:
+          type: integer
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            role:
+              type: string
+            phone:
+              type: string
+          required:
+            - id
+            - role
+            - phone
+      required:
+        - accessToken
+        - refreshToken
+        - accessExpiresAt
+        - refreshExpiresAt
+        - user
     GeocodeRequest:
       type: object
       properties:
@@ -2940,7 +3056,7 @@ components:
           maximum: 180
         source:
           type: string
-          enum: &a42
+          enum: &a43
             - nominatim
             - fallback
         formattedAddress:
@@ -13280,6 +13396,373 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/common/auth/sms/send:
+    post:
+      tags:
+        - auth
+      description: 统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 8
+                  maxLength: 20
+                deviceId:
+                  type: string
+              required:
+                - phone
+      responses:
+        "202":
+          description: 验证码已发送
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      challengeId:
+                        type: string
+                        format: uuid
+                      expireIn:
+                        type: integer
+                    required:
+                      - challengeId
+                      - expireIn
+                required:
+                  - success
+                  - data
+        "429":
+          description: RATE_LIMIT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/sms/verify:
+    post:
+      tags:
+        - auth
+      description: 统一手机号入口：验证码校验 + 分流（LOGIN/REGISTER/BLOCKED）。不暴露手机号是否已注册。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  minLength: 8
+                  maxLength: 20
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                challengeId:
+                  type: string
+                  format: uuid
+              required:
+                - phone
+                - code
+                - challengeId
+      responses:
+        "200":
+          description: 校验结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                        enum: *a39
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+                      accessExpiresAt:
+                        type: integer
+                      refreshExpiresAt:
+                        type: integer
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          role:
+                            type: string
+                          phone:
+                            type: string
+                        required:
+                          - id
+                          - role
+                          - phone
+                      registrationTicket:
+                        type: string
+                      expireIn:
+                        type: integer
+                    required:
+                      - action
+                required:
+                  - success
+                  - data
+        "401":
+          description: SMS_CODE_INVALID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "429":
+          description: RATE_LIMIT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/common/auth/register/complete:
+    post:
+      tags:
+        - auth
+      description: 统一手机号入口：完成注册（ticket GETDEL 原子消费 + DB 事务创建 BUYER）。强制 role=CUSTOMER。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                registrationTicket:
+                  type: string
+                  minLength: 10
+                agreedToTerms:
+                  type: boolean
+                  enum:
+                    - true
+                challengeId:
+                  type: string
+                  format: uuid
+                deviceId:
+                  type: string
+              required:
+                - registrationTicket
+                - agreedToTerms
+                - challengeId
+      responses:
+        "200":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+                      accessExpiresAt:
+                        type: integer
+                      refreshExpiresAt:
+                        type: integer
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          role:
+                            type: string
+                          phone:
+                            type: string
+                        required:
+                          - id
+                          - role
+                          - phone
+                    required:
+                      - accessToken
+                      - refreshToken
+                      - accessExpiresAt
+                      - refreshExpiresAt
+                      - user
+                required:
+                  - success
+                  - data
+        "400":
+          description: MUST_AGREE_TERMS
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "410":
+          description: TICKET_INVALID_OR_USED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/common/rider/apply:
     post:
       tags:
@@ -13676,7 +14159,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: &a39
+                              enum: &a40
                                 - PENDING_ASSIGN
                                 - ASSIGNED
                                 - PICKED_UP
@@ -13792,7 +14275,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a39
+                        enum: *a40
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -13932,7 +14415,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a39
+                        enum: *a40
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -14076,7 +14559,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a39
+                        enum: *a40
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -14225,7 +14708,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a39
+                        enum: *a40
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -14503,7 +14986,7 @@ paths:
                   format: uuid
                 reason:
                   type: string
-                  enum: &a40
+                  enum: &a41
                     - OUT_OF_STOCK
                     - QUALITY_ISSUE
                     - WRONG_ITEM
@@ -14546,14 +15029,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a40
+                        enum: *a41
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: &a41
+                        enum: &a42
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -14670,14 +15153,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a40
+                          enum: *a41
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a41
+                          enum: *a42
                         transactionId:
                           type: string
                           nullable: true
@@ -14765,14 +15248,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a40
+                        enum: *a41
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a41
+                        enum: *a42
                       transactionId:
                         type: string
                         nullable: true
@@ -14889,14 +15372,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a40
+                        enum: *a41
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a41
+                        enum: *a42
                       transactionId:
                         type: string
                         nullable: true
@@ -14985,14 +15468,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a40
+                          enum: *a41
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a41
+                          enum: *a42
                         transactionId:
                           type: string
                           nullable: true
@@ -15080,14 +15563,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a40
+                        enum: *a41
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a41
+                        enum: *a42
                       transactionId:
                         type: string
                         nullable: true
@@ -15224,14 +15707,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a40
+                        enum: *a41
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a41
+                        enum: *a42
                       transactionId:
                         type: string
                         nullable: true
@@ -15474,7 +15957,7 @@ paths:
                     maximum: 180
                   source:
                     type: string
-                    enum: *a42
+                    enum: *a43
                   formattedAddress:
                     type: string
                     nullable: true

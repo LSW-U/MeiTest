@@ -87,7 +87,7 @@ vi.mock('../src/shared/db', () => ({
 vi.mock('../src/modules/auth/auth.service', () => ({
   AuthService: class {
     toContractRole(prismaRole: string) {
-      return prismaRole.toLowerCase();
+      return prismaRole;
     }
   },
 }));
@@ -97,7 +97,7 @@ import { UserService } from '../src/modules/user/user.service';
 describe('UserService', () => {
   let service: UserService;
   // @ts-expect-error mock AuthService
-  const mockAuth = { toContractRole: (r: string) => r.toLowerCase() } as never;
+  const mockAuth = { toContractRole: (r: string) => r } as never;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -123,7 +123,7 @@ describe('UserService', () => {
 
       const profile = await service.getProfile('user-1');
       expect(profile.id).toBe('user-1');
-      expect(profile.role).toBe('customer');
+      expect(profile.role).toBe('CUSTOMER');
       expect(profile.name).toBe('Alice');
     });
 

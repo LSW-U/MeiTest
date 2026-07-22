@@ -30,7 +30,7 @@ export class ShopController {
 
   /** 后台查看（super_admin） */
   @Get('admin/shop')
-  @Roles('super_admin')
+  @Roles('SUPER_ADMIN')
   async getAdmin() {
     const data = await this.shops.getShop();
     return { success: true, data };
@@ -38,7 +38,7 @@ export class ShopController {
 
   /** 后台编辑（super_admin） */
   @Patch('admin/shop')
-  @Roles('super_admin')
+  @Roles('SUPER_ADMIN')
   @Audit({ resource: 'Shop' })
   async update(@Body(new ZodValidationPipe(UpdateShopRequest)) body: Partial<{
     name: Record<string, string>;
