@@ -18,7 +18,9 @@
  *
  * manifest §4 报备：扩 W1 完成的 auth 模块（auth.service.ts 加业务方法 + 新增 auth.controller.ts）
  */
-import { Controller, Post, Body, Inject, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Inject, HttpCode, HttpStatus, UnauthorizedException, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { setAuthCookiesForDevice, clearAuthCookies, getRefreshTokenFromCookie } from '../../shared/auth/cookie-helper';
 import {
   LoginPasswordRequest,
   LoginSmsRequest,
@@ -49,8 +51,13 @@ export class AuthController {
   )
   @Post('login-password')
   @HttpCode(HttpStatus.OK)
-  async loginPassword(@Body(new ZodValidationPipe(LoginPasswordRequest)) body: { phone: string; password: string }) {
+  async loginPassword(
+    @Body(new ZodValidationPipe(LoginPasswordRequest)) body: { phone: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.auth.loginWithPassword(body.phone, body.password);
+    // 约束 6：admin_web → httpOnly cookie（按 role 推断 deviceType）；移动端 Bearer 不动 cookie
+    setAuthCookiesForDevice(res, this.auth.inferDeviceTypeFromRole(result.role), result);
     return {
       success: true,
       data: {
@@ -73,8 +80,12 @@ export class AuthController {
   )
   @Post('login-sms')
   @HttpCode(HttpStatus.OK)
-  async loginSms(@Body(new ZodValidationPipe(LoginSmsRequest)) body: { phone: string; smsCode: string }) {
+  async loginSms(
+    @Body(new ZodValidationPipe(LoginSmsRequest)) body: { phone: string; smsCode: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.auth.loginWithSms(body.phone, body.smsCode);
+    setAuthCookiesForDevice(res, this.auth.inferDeviceTypeFromRole(result.role), result);
     return {
       success: true,
       data: {
@@ -97,14 +108,18 @@ export class AuthController {
   )
   @Post('register')
   @HttpCode(HttpStatus.OK)
-  async register(@Body(new ZodValidationPipe(RegisterRequest)) body: {
-    phone: string;
-    password: string;
-    email?: string;
-    name?: string;
-    smsCode?: string;
-  }) {
+  async register(
+    @Body(new ZodValidationPipe(RegisterRequest)) body: {
+      phone: string;
+      password: string;
+      email?: string;
+      name?: string;
+      smsCode?: string;
+    },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.auth.registerUser(body);
+    setAuthCookiesForDevice(res, this.auth.inferDeviceTypeFromRole(result.role), result);
     return {
       success: true,
       data: {
@@ -158,11 +173,23 @@ export class AuthController {
   @RateLimit({ key: 'refresh:ip:${ip}', limit: 30, window: 60 })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body(new ZodValidationPipe(RefreshRequest)) body: { refreshToken: string }) {
+  async refresh(
+    @Body(new ZodValidationPipe(RefreshRequest)) body: { refreshToken?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // 约束 6 双通道：body 优先（移动端 Bearer），fallback httpOnly cookie（admin_web）
+    const refreshToken = body.refreshToken ?? getRefreshTokenFromCookie(req);
+    if (!refreshToken) {
+      throw new UnauthorizedException({
+        code: 'E-AUTH-005',
+        message: 'Refresh token required (provide via body or cookie)',
+      });
+    }
     // v1.2 Token Family：原子消费旧 refresh token（Lua 标记 used）
     // - 重放（旧 token 再次用）-> Lua 撤销整个 family + REPLAY
     // - 并发刷新同一旧 jti -> 只一个 OK，另一个 REPLAY
-    const { payload, familyId, userId } = await this.auth.consumeRefreshToken(body.refreshToken);
+    const { payload, familyId, userId } = await this.auth.consumeRefreshToken(refreshToken);
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException({
@@ -193,15 +220,15 @@ export class AuthController {
     const access = await this.auth.signAccessToken(user.id, role, deviceType);
     const refresh = await this.auth.signRefreshToken(user.id, deviceType, familyId);
     const now = Math.floor(Date.now() / 1000);
-    return {
-      success: true,
-      data: {
-        accessToken: access.token,
-        refreshToken: refresh.token,
-        accessExpiresAt: now + access.expiresIn,
-        refreshExpiresAt: now + refresh.expiresIn,
-      },
+    const tokenPair = {
+      accessToken: access.token,
+      refreshToken: refresh.token,
+      accessExpiresAt: now + access.expiresIn,
+      refreshExpiresAt: now + refresh.expiresIn,
     };
+    // 约束 6：admin_web 轮换后更新 httpOnly cookie
+    setAuthCookiesForDevice(res, deviceType, tokenPair);
+    return { success: true, data: tokenPair };
   }
 
   /** Logout：refresh token jti 加 Redis 黑名单 */
@@ -211,8 +238,18 @@ export class AuthController {
   @RateLimit({ key: 'logout:ip:${ip}', limit: 30, window: 60 })
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Body(new ZodValidationPipe(LogoutRequest)) body: { refreshToken: string }) {
-    await this.auth.logout(body.refreshToken);
+  async logout(
+    @Body(new ZodValidationPipe(LogoutRequest)) body: { refreshToken?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // 约束 6 双通道：body 优先，fallback cookie；都没有则跳过 service（仅清 cookie）
+    const refreshToken = body.refreshToken ?? getRefreshTokenFromCookie(req);
+    if (refreshToken) {
+      await this.auth.logout(refreshToken);
+    }
+    // 无条件 clear cookie（幂等：移动端调到也无副作用）
+    clearAuthCookies(res);
     return { success: true, data: null };
   }
 }

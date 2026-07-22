@@ -406,7 +406,7 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        refreshToken: string;
+                        refreshToken?: string;
                     };
                 };
             };
@@ -470,7 +470,7 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        refreshToken: string;
+                        refreshToken?: string;
                     };
                 };
             };
@@ -9678,14 +9678,14 @@ export interface components {
             smsCode?: string;
         };
         RefreshRequest: {
-            refreshToken: string;
+            refreshToken?: string;
         };
         RefreshResponseData: {
             accessToken: string;
             refreshToken: string;
         };
         LogoutRequest: {
-            refreshToken: string;
+            refreshToken?: string;
         };
         SendSmsRequest: {
             phone: string;

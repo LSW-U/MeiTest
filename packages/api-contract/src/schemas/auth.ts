@@ -121,9 +121,16 @@ export const PasswordResetRequest = z.object({
     .regex(/\d/, 'PASSWORD_NEED_DIGIT'),
 });
 
-/** 刷新 token 请求 */
+/**
+ * 刷新 token 请求
+ *
+ * refreshToken optional（约束 6 双通道）：
+ * - 移动端：body 带 refreshToken（Bearer + SecureStore）
+ * - admin-web：不带 body，后端从 httpOnly cookie 读（前端 JS 读不到 cookie）
+ * - 后端：body.refreshToken ?? cookie，两者都没有 → 401
+ */
 export const RefreshRequest = z.object({
-  refreshToken: z.string().min(1),
+  refreshToken: z.string().min(1).optional(),
 });
 
 /** 刷新 token 响应 data */
@@ -132,9 +139,14 @@ export const RefreshResponseData = z.object({
   refreshToken: z.string(),
 });
 
-/** logout 请求（必传 refreshToken，服务端加 Redis 黑名单） */
+/**
+ * logout 请求（约束 6 双通道）
+ *
+ * refreshToken optional：移动端 body 带，admin-web 从 httpOnly cookie 读。
+ * 服务端撤销整个 refresh family（v1.2 Token Family）。
+ */
 export const LogoutRequest = z.object({
-  refreshToken: z.string().min(1),
+  refreshToken: z.string().min(1).optional(),
 });
 
 /** 发送 SMS 验证码请求（v0.3 保留 stub 实现） */

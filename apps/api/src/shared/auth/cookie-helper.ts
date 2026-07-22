@@ -11,18 +11,31 @@
  * - path: '/api/v1'（限制 cookie 范围）
  */
 import type { Response } from 'express';
+import type { DeviceType } from '@meimart/api-contract';
 
 const COOKIE_PATH = '/api/v1';
-const IS_PROD = process.env.NODE_ENV === 'production';
+
+/** 是否生产环境（函数形式：env 可被测试动态切换，避免模块常量在加载时冻结导致 prod 分支不可测） */
+function isProd(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
 
 const ACCESS_COOKIE = 'admin_access_token';
 const REFRESH_COOKIE = 'admin_refresh_token';
+
+/** access token + refresh token 凑对（登录/刷新端点的返回子集） */
+export interface TokenPairForCookie {
+  accessToken: string;
+  refreshToken: string;
+  accessExpiresAt: number;
+  refreshExpiresAt: number;
+}
 
 /** access token cookie 选项 */
 function accessCookieOptions(maxAgeMs: number) {
   return {
     httpOnly: true,
-    secure: IS_PROD,
+    secure: isProd(),
     sameSite: 'lax' as const,
     path: COOKIE_PATH,
     maxAge: maxAgeMs,
@@ -33,7 +46,7 @@ function accessCookieOptions(maxAgeMs: number) {
 function refreshCookieOptions(maxAgeMs: number) {
   return {
     httpOnly: true,
-    secure: IS_PROD,
+    secure: isProd(),
     sameSite: 'lax' as const,
     path: COOKIE_PATH,
     maxAge: maxAgeMs,
@@ -65,7 +78,35 @@ export function setAuthCookies(
 }
 
 /**
+ * 按 deviceType 条件设置 auth cookies（登录 / 刷新端点统一入口）
+ *
+ * - `admin_web`：set cookie（Web 双通道用）
+ * - `client_app` / `rider_app`：**不 set**（移动端走 Bearer + SecureStore，
+ *   避免给 native 响应塞无用 Set-Cookie，也防 WebView 场景误存 customer token）
+ *
+ * 逻辑收敛在此处：所有认证端点统一调本函数，避免散落 5+ 处 `if (deviceType === 'admin_web')` 漏判。
+ */
+export function setAuthCookiesForDevice(
+  res: Response,
+  deviceType: DeviceType,
+  tokens: TokenPairForCookie,
+): void {
+  if (deviceType !== 'admin_web') return;
+  setAuthCookies(
+    res,
+    tokens.accessToken,
+    tokens.refreshToken,
+    tokens.accessExpiresAt,
+    tokens.refreshExpiresAt,
+  );
+}
+
+/**
  * 清除 auth cookies（logout 时调）
+ *
+ * 幂等：对不存在的 cookie 无副作用。移动端 logout 调到也安全（响应多个空 Set-Cookie 头无害）。
+ * 不按 deviceType 判断 —— logout 时无法可靠拿到 deviceType（refreshToken 可能已失效），
+ * 无条件 clear 最安全。
  */
 export function clearAuthCookies(res: Response): void {
   res.clearCookie(ACCESS_COOKIE, { path: COOKIE_PATH });

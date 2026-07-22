@@ -11,8 +11,10 @@
  *
  * 路径：POST /api/v1/common/auth/mock-login
  */
-import { Controller, Post, Body, HttpException, HttpStatus, Inject } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Inject, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { z } from 'zod';
+import { setAuthCookiesForDevice } from '../../shared/auth/cookie-helper';
 import { AuthService } from './auth.service';
 import { db } from '../../shared/db';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
@@ -49,6 +51,7 @@ export class MockLoginController {
   @Post('mock-login')
   async mockLogin(
     @Body(new ZodValidationPipe(MockLoginRequest)) body: MockLoginRequestType,
+    @Res({ passthrough: true }) res: Response,
   ) {
     // 找 user：优先 userId（调用方指定），其次按 phone 找 seed admin
     const user = body.userId
@@ -78,6 +81,8 @@ export class MockLoginController {
 
     // 签发 token（role 用客户端传的，不强制 DB 一致 — mock 测试灵活性）
     const tokenPair = await this.auth.signTokenPair(user.id, body.role, body.deviceType);
+    // 约束 6：admin_web mock 登录也走 httpOnly cookie（dev/staging 联调 admin-web 用）
+    setAuthCookiesForDevice(res, body.deviceType, tokenPair);
 
     logger.warn({
       msg: 'MOCK_LOGIN_USED',

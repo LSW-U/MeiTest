@@ -221,8 +221,6 @@ components:
         refreshToken:
           type: string
           minLength: 1
-      required:
-        - refreshToken
     RefreshResponseData:
       type: object
       properties:
@@ -239,8 +237,6 @@ components:
         refreshToken:
           type: string
           minLength: 1
-      required:
-        - refreshToken
     SendSmsRequest:
       type: object
       properties:
@@ -3545,8 +3541,6 @@ paths:
                 refreshToken:
                   type: string
                   minLength: 1
-              required:
-                - refreshToken
       responses:
         "200":
           description: 刷新成功
@@ -3605,8 +3599,6 @@ paths:
                 refreshToken:
                   type: string
                   minLength: 1
-              required:
-                - refreshToken
       responses:
         "200":
           description: 登出成功

@@ -14,6 +14,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Role, DeviceType } from '@meimart/api-contract';
 import type { JwtPayload } from '../auth.types';
 import { assertJwtSecret } from '../../../shared/auth/assert-jwt-secret';
+import { getAccessTokenFromCookie } from '../../../shared/auth/cookie-helper';
 
 export interface RequestUser {
   sub: string;
@@ -25,7 +26,11 @@ export interface RequestUser {
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // 约束 6 双通道：Authorization Bearer 优先（移动端），fallback httpOnly cookie（admin_web）
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req) => getAccessTokenFromCookie(req ?? {}) ?? null,
+      ]),
       ignoreExpiration: false,
       // P0-1：长度校验抽到 assertJwtSecret，与 AuthService getter 一致
       // （原 `?? ''` 对空字符串无效，会 verify 静默失败）
