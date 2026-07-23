@@ -57,7 +57,21 @@ export class AuthController {
   ) {
     const result = await this.auth.loginWithPassword(body.phone, body.password);
     // 约束 6：admin_web → httpOnly cookie（按 role 推断 deviceType）；移动端 Bearer 不动 cookie
-    setAuthCookiesForDevice(res, this.auth.inferDeviceTypeFromRole(result.role), result);
+    const deviceType = this.auth.inferDeviceTypeFromRole(result.role);
+    setAuthCookiesForDevice(res, deviceType, result);
+    // F7：admin_web token 仅进 httpOnly cookie，body 不回吐（防 XSS 经 fetch response 读 token 架空 httpOnly）
+    // 移动端（client_app/rider_app）继续 body 返回 token（靠 body 存 SecureStore，无 cookie 通道）
+    if (deviceType === 'admin_web') {
+      return {
+        success: true,
+        data: {
+          userId: result.userId,
+          role: result.role,
+          accessExpiresAt: result.accessExpiresAt,
+          refreshExpiresAt: result.refreshExpiresAt,
+        },
+      };
+    }
     return {
       success: true,
       data: {
@@ -237,6 +251,16 @@ export class AuthController {
     };
     // 约束 6：admin_web 轮换后更新 httpOnly cookie
     setAuthCookiesForDevice(res, deviceType, tokenPair);
+    // F7：admin_web token 仅 cookie，body 不回吐（防静默刷新时 XSS 经 response 读 token）
+    if (deviceType === 'admin_web') {
+      return {
+        success: true,
+        data: {
+          accessExpiresAt: tokenPair.accessExpiresAt,
+          refreshExpiresAt: tokenPair.refreshExpiresAt,
+        },
+      };
+    }
     return { success: true, data: tokenPair };
   }
 
