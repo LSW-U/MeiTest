@@ -32,14 +32,16 @@ export const ErrorCodes = {
   E_AUTH_005: 'E-AUTH-005',
   /** Refresh token 已被 logout 黑名单 */
   E_AUTH_006: 'E-AUTH-006',
-  /** 禁止访问（无 authenticated user） */
-  E_AUTH_007: 'E-AUTH-007',
   /** 端点未声明 @Roles() 或 @Public()（least privilege 默认拒绝） */
   E_AUTH_008: 'E-AUTH-008',
   /** Mock 用户未找到（dev/staging） */
   E_AUTH_009: 'E-AUTH-009',
   /** 角色权限不足 */
   E_AUTH_010: 'E-AUTH-010',
+  /** CSRF token 缺失或无效（双重提交校验失败） */
+  E_AUTH_011: 'E-AUTH-011',
+  /** 资源归属拒绝（不属于当前用户） */
+  E_AUTH_012: 'E-AUTH-012',
 
   /** 参数校验失败（zod/class-validator） */
   E_COMMON_001: 'E-COMMON-001',

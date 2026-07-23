@@ -246,16 +246,16 @@ describe('AuthService', () => {
       );
     });
 
-    it('SUSPENDED 用户抛 E-USER-005', async () => {
+    it('SUSPENDED 用户抛通用 E-USER-006（防枚举，不暴露注册状态）', async () => {
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
         password: 'hash',
         role: 'CUSTOMER',
         status: 'SUSPENDED',
       });
-      await expect(service.loginWithPassword('+670999999999', 'Pass1234')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.loginWithPassword('+670999999999', 'Pass1234')).rejects.toMatchObject({
+        response: { code: 'E-USER-006' },
+      });
     });
   });
 

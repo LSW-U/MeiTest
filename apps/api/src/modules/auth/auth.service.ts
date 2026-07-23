@@ -303,11 +303,9 @@ export class AuthService {
       throw new UnauthorizedException(GENERIC_AUTH_FAIL);
     }
     if (user.status !== 'ACTIVE') {
-      // 用户禁用：也是「无法登录」，但攻击者已知手机号注册了；返回 E-USER-005 暴露注册状态可接受（禁用 = 主动禁用）
-      throw new UnauthorizedException({
-        code: 'E-USER-005',
-        message: `User status is ${user.status}, login disabled`,
-      });
+      // 防枚举：禁用用户也返回通用 E-USER-006（不暴露"该手机号已注册"，攻击者无法区分未注册/密码错/禁用），status 只进日志
+      logger.warn({ msg: 'LOGIN_DISABLED_USER', userId: user.id, status: user.status });
+      throw new UnauthorizedException(GENERIC_AUTH_FAIL);
     }
     // SMS 注册用户无密码（password null）-> 统一错误码拒绝（不暴露"未设密码"）
     if (!user.password) {
@@ -375,9 +373,11 @@ export class AuthService {
       });
       logger.info({ msg: 'SMS_LOGIN_AUTO_REGISTER', userId: user.id, phone });
     } else if (user.status !== 'ACTIVE') {
+      // 防枚举：禁用用户返回通用错误（不暴露注册状态），status 只进日志
+      logger.warn({ msg: 'SMS_LOGIN_DISABLED_USER', userId: user.id, status: user.status });
       throw new UnauthorizedException({
-        code: 'E-USER-005',
-        message: `User status is ${user.status}, login disabled`,
+        code: 'E-USER-006',
+        message: 'Phone or password invalid',
       });
     }
 

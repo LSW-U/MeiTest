@@ -87,7 +87,7 @@ async function bootstrap() {
     origin: corsOriginEnv ? corsOriginEnv.split(',').map((s) => s.trim()) : true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id', 'Idempotency-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Trace-Id', 'X-Perspective', 'Accept-Language', 'X-Request-Id', 'Idempotency-Key', 'X-CSRF-Token'],
   });
 
   // Helmet 安全头（约束 7：按环境 + Swagger 兼容）

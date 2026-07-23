@@ -25,7 +25,7 @@ const ACCESS_COOKIE = 'admin_access_token';
 const REFRESH_COOKIE = 'admin_refresh_token';
 /** CSRF 双重提交 token cookie 名（非 httpOnly：前端 JS 需读取后放 X-CSRF-Token header） */
 export const CSRF_COOKIE = 'admin_csrf';
-/** CSRF header 名（前端 apiFetch 注入 + 后端 CsrfMiddleware 校验） */
+/** CSRF header 名（前端 apiFetch 注入 + 后端 CsrfGuard 校验） */
 export const CSRF_HEADER = 'x-csrf-token';
 
 /** access token + refresh token 凑对（登录/刷新端点的返回子集） */
@@ -116,7 +116,7 @@ export function setAuthCookiesForDevice(
     tokens.refreshExpiresAt,
   );
   // 约束 6 CSRF 双重提交：登录/刷新时生成随机 token，set 非 httpOnly cookie
-  // 前端 JS 读后放 X-CSRF-Token header，后端 CsrfMiddleware 校验 header === cookie（攻击者跨域读不到 cookie，无法伪造匹配的 header）
+  // 前端 JS 读后放 X-CSRF-Token header，后端 CsrfGuard 校验 header === cookie（攻击者跨域读不到 cookie，无法伪造匹配的 header）
   const now = Math.floor(Date.now() / 1000);
   const accessMaxAge = Math.max(0, (tokens.accessExpiresAt - now) * 1000);
   const csrfToken = randomBytes(32).toString('base64url');

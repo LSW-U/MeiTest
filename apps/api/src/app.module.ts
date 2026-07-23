@@ -4,7 +4,7 @@ import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { TraceIdMiddleware } from './shared/middleware/trace-id.middleware';
-import { CsrfMiddleware } from './shared/middleware/csrf.middleware';
+import { CsrfGuard } from './shared/guards/csrf.guard';
 import { HealthController } from './modules/health/health.controller';
 import { MeController } from './modules/me/me.controller';
 import { AuthModule } from './modules/auth/auth.module';
@@ -84,6 +84,8 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: DeviceTypeGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // CSRF 双重提交（约束 6）：放最后，鉴权链过后校验 mutate 请求；admin cookie 存在才校验
+    { provide: APP_GUARD, useClass: CsrfGuard },
     // 全局拦截器（顺序：Logging → Audit）
     // TraceId 改用 Middleware（在 Guard 之前），Interceptor 仅保留兼容
     {
@@ -113,8 +115,6 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // TraceId 最先注入 ALS（Guard 抛错时 AllExceptionsFilter 也能拿 traceId）
     consumer.apply(TraceIdMiddleware).forRoutes('*');
-    // CSRF 双重提交校验（约束 6）：在 Guard 之前生效，仅校验带 admin cookie 的 mutate 请求；
-    // 移动端 Bearer / 登录前请求无 admin cookie → middleware 内自动放行
-    consumer.apply(CsrfMiddleware).forRoutes('*');
+    // CSRF 校验已迁移为 CsrfGuard（APP_GUARD），抛 ForbiddenException 经 AllExceptionsFilter 获 traceId
   }
 }

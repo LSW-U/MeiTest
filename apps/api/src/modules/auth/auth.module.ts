@@ -5,7 +5,7 @@
  * - JwtStrategy 注册（passport-jwt）
  * - AuthService 导出
  * - AuthController 注册（正式生产端点：密码+SMS 登录注册刷新登出）
- * - MockLoginController 仅 dev/staging 注册（prod NODE_ENV=production 时路由不存在）
+ * - MockLoginController 仅 dev/test 注册（staging/prod 路由不存在，防公网 mock 登录拿 super_admin）
  */
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -17,7 +17,9 @@ import { UnifiedAuthController } from './unified-auth.controller';
 import { UnifiedAuthService } from './unified-auth.service';
 import { MockLoginController } from './mock-login.controller';
 
-const isProduction = process.env.NODE_ENV === 'production';
+/** MockLogin 仅 dev/test 注册（对齐 loginWithSms 自动注册守卫）；staging/prod 公网部署时 mock-login 路由不存在 */
+const enableMockLogin =
+  process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 
 @Module({
   imports: [
@@ -27,9 +29,9 @@ const isProduction = process.env.NODE_ENV === 'production';
       signOptions: { algorithm: 'HS256' },
     }),
   ],
-  controllers: isProduction
-    ? [AuthController, UnifiedAuthController]
-    : [AuthController, UnifiedAuthController, MockLoginController],
+  controllers: enableMockLogin
+    ? [AuthController, UnifiedAuthController, MockLoginController]
+    : [AuthController, UnifiedAuthController],
   providers: [AuthService, UnifiedAuthService, JwtStrategy],
   exports: [AuthService],
 })
