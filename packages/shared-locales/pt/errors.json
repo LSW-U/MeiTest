@@ -76,5 +76,10 @@
   "E-USER-007": "Recurso não encontrado",
   "E-WAREHOUSE-001": "Código de armazém já existe",
   "E-WAREHOUSE-002": "Fora da área de entrega",
-  "E-WAREHOUSE-003": "Armazém não encontrado"
+  "E-WAREHOUSE-003": "Armazém não encontrado",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order"
 }

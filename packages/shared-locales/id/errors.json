@@ -76,5 +76,10 @@
   "E-USER-007": "Sumber daya tidak ditemukan",
   "E-WAREHOUSE-001": "Kode gudang sudah ada",
   "E-WAREHOUSE-002": "Di luar jangkauan pengiriman",
-  "E-WAREHOUSE-003": "Gudang tidak ditemukan"
+  "E-WAREHOUSE-003": "Gudang tidak ditemukan",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order"
 }

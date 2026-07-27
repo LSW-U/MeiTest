@@ -27,6 +27,7 @@ import {
   Warehouse,
   ShoppingCart,
   RotateCcw,
+  MessageSquare,
   Bike,
   Users,
   Tag,
@@ -78,6 +79,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.refunds',
     href: '/refunds',
     icon: RotateCcw,
+    perspectives: ['platform', 'merchant', 'support'],
+  },
+  {
+    labelKey: 'menu.reviews',
+    href: '/reviews',
+    icon: MessageSquare,
     perspectives: ['platform', 'merchant', 'support'],
   },
   {

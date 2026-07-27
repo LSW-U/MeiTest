@@ -214,8 +214,11 @@ model User {
   warehouseStaff  WarehouseStaff?
   customerService CustomerService?
   // V2-S7：审核人关联（admin 审核 RiderProfile 申请时记录）
-  reviewedRiders  RiderProfile[] @relation("ReviewedRiders")
-  refunds         Refund[]
+  reviewedRiders    RiderProfile[] @relation("ReviewedRiders")
+  // reviews-1：客户发的评论 + 骑手评价（评价人反向）
+  reviews           Review[]
+  riderReviewsGiven RiderReview[]
+  refunds           Refund[]
 
   @@index([role, status])
   @@map("users")
@@ -356,6 +359,7 @@ model Product {
   category  Category?  @relation(fields: [categoryId], references: [id])
   skus      Sku[]
   favorites Favorite[]
+  reviews   Review[] // reviews-1：商品评论反向
 
   @@index([shopId, status])
   @@index([categoryId, status])
@@ -502,6 +506,7 @@ model Order {
   deliveryTask   DeliveryTask?
   paymentIntent  PaymentIntent?
   review         Review?
+  riderReview    RiderReview? // reviews-1：骑手评价反向
   cashCollection CashCollection?
 
   @@index([userId, createdAt])
@@ -686,6 +691,7 @@ model RiderProfile {
   orders            Order[]
   deliveryTasks     DeliveryTask[]
   cashCollections   CashCollection[]
+  riderReviews      RiderReview[] // reviews-1：骑手评价反向（rating 汇总来源）
 
   @@index([applicationStatus])
   @@map("rider_profiles")
@@ -831,12 +837,66 @@ model Review {
   /// 多语言评论文本(用户输入语言为 key)
   content   Json
   images    String[]
+
+  // reviews-1：评论中心扩展 —— 审核 + 分类 + 商家回复 + 商品绑定
+  /// 审核状态（决策1：默认 APPROVED 直接发布）
+  status     ReviewStatus   @default(APPROVED) @map("status")
+  /// 客户评论分类（决策2：PRODUCT 商品评论 / DELIVERY 配送评论）
+  category   ReviewCategory @map("category")
+  /// 商家回复（多语言 i18n，可选）
+  reply      Json?  @map("reply")
+  repliedAt  DateTime? @map("replied_at")
+  /// 商品评论绑定（可选；订单整体评论则空）
+  productId  String?  @map("product_id")
+
   createdAt DateTime @default(now()) @map("created_at")
 
-  order Order @relation(fields: [orderId], references: [id])
+  order   Order    @relation(fields: [orderId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([category, status])
+  @@index([productId])
   @@map("reviews")
+}
+
+/// 评论审核状态（reviews-1）
+enum ReviewStatus {
+  PENDING  // 待审核（决策1 默认 APPROVED，PENDING 预留给后续审核流程）
+  APPROVED // 已通过
+  REJECTED // 已拒绝
+}
+
+/// 客户评论分类（reviews-1，决策2）
+enum ReviewCategory {
+  PRODUCT  // 商品评论
+  DELIVERY // 配送评论
+}
+
+/// 骑手评价（reviews-1）：客户对骑手的评价，独立于 Review（评订单/商品）
+/// 一订单一条骑手评价（orderId unique）；评价写入锁当前 Order.riderId（F6）
+model RiderReview {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @map("order_id") // 一个订单一条骑手评价
+  riderId   String   @map("rider_id") // 评价对象（RiderProfile.id）
+  userId    String   @map("user_id") // 评价人（客户）
+  userName  String   @map("user_name")
+  rating    Int // 1-5 星
+  /// 骑手标签固定枚举（i18n key）：on_time / polite / professional / careful（决策3）
+  tags      String[]
+  /// 文字评价（多语言 i18n，可选）
+  comment   Json?
+  status    ReviewStatus @default(APPROVED) @map("status")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order        @relation(fields: [orderId], references: [id])
+  rider RiderProfile @relation(fields: [riderId], references: [id])
+  user  User         @relation(fields: [userId], references: [id])
+
+  @@index([riderId, status])
+  @@index([userId])
+  @@map("rider_reviews")
 }
 
 model Notification {

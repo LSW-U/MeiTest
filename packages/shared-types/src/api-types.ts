@@ -9623,6 +9623,567 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/orders/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户提交订单/商品评论。校验：订单已送达（DELIVERED/DELIVERED_PAID/DELIVERED_UNPAID/COMPLETED）+ 一订单一条（F2/F5） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        rating: number;
+                        content: {
+                            [key: string]: string;
+                        };
+                        /** @default [] */
+                        images?: string[];
+                        /** @enum {string} */
+                        category: "PRODUCT" | "DELIVERY";
+                        /** Format: uuid */
+                        productId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 评论创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-REVIEW-005 无权 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-REVIEW-002 未送达 / E-REVIEW-003 已评论 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{id}/rider-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 订单的骑手评价（无则 data=null） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 骑手评价 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            riderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            rating: number;
+                            tags: ("on_time" | "polite" | "professional" | "careful")[];
+                            comment: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 客户提交骑手评价。校验：订单已送达 + 有骑手 + 一订单一条。写入后全量重算 RiderProfile.rating（F4/F6） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        rating: number;
+                        /** @default [] */
+                        tags?: ("on_time" | "polite" | "professional" | "careful")[];
+                        comment?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 骑手评价创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            riderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            rating: number;
+                            tags: ("on_time" | "polite" | "professional" | "careful")[];
+                            comment: {
+                                [key: string]: string;
+                            } | null;
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-REVIEW-002/003/004 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品评论列表（仅 APPROVED，游标分页） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 评论列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / cursor / limit */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 列表（items 按 type 是客户评论或骑手评价） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Admin 评论详情（?type=customer|rider 区分表） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-REVIEW-001 不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** @description Admin 硬删评论（?type 区分表；删骑手评价后重算 rating） */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-REVIEW-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description Admin 审核 status + 商家回复 reply（?type 区分表；骑手评价仅 status） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status?: "PENDING" | "APPROVED" | "REJECTED";
+                        reply?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-REVIEW-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10841,6 +11402,54 @@ export interface components {
             url: string;
             key: string;
             size: number;
+        };
+        Review: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            userId: string;
+            userName: string;
+            avatarUrl: string | null;
+            rating: number;
+            content: {
+                [key: string]: string;
+            };
+            images: string[];
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** @enum {string} */
+            category: "PRODUCT" | "DELIVERY";
+            reply: {
+                [key: string]: string;
+            } | null;
+            /** Format: date-time */
+            repliedAt: string | null;
+            /** Format: uuid */
+            productId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RiderReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            riderId: string;
+            /** Format: uuid */
+            userId: string;
+            userName: string;
+            rating: number;
+            tags: ("on_time" | "polite" | "professional" | "careful")[];
+            comment: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** Format: date-time */
+            createdAt: string;
         };
     };
     responses: never;

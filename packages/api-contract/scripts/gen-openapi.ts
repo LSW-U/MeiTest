@@ -146,6 +146,13 @@ import {
   GeocodeResponseData,
   // upload（W7-feature 商品图片上传）
   UploadResponseData,
+  // review（评论中心 reviews-2）
+  Review,
+  RiderReview,
+  CreateReviewRequest,
+  CreateRiderReviewRequest,
+  AdminListReviewsQuery,
+  AdminUpdateReviewRequest,
   // common
   ErrorResponse,
   Id,
@@ -2441,6 +2448,113 @@ registry.registerPath({
 });
 
 // ===== 生成 =====
+// ===== review schemas + paths（评论中心 reviews-2）=====
+registry.register('Review', Review);
+registry.register('RiderReview', RiderReview);
+
+// C 端：提交订单/商品评论
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/orders/{id}/review',
+  tags: ['review'],
+  description: '客户提交订单/商品评论。校验：订单已送达（DELIVERED/DELIVERED_PAID/DELIVERED_UNPAID/COMPLETED）+ 一订单一条（F2/F5）',
+  request: {
+    body: { content: { 'application/json': { schema: CreateReviewRequest } } },
+  },
+  responses: {
+    200: { description: '评论创建成功', content: { 'application/json': { schema: Review } } },
+    403: { description: 'E-REVIEW-005 无权', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-REVIEW-002 未送达 / E-REVIEW-003 已评论', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// C 端：提交骑手评价
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/orders/{id}/rider-review',
+  tags: ['review'],
+  description: '客户提交骑手评价。校验：订单已送达 + 有骑手 + 一订单一条。写入后全量重算 RiderProfile.rating（F4/F6）',
+  request: {
+    body: { content: { 'application/json': { schema: CreateRiderReviewRequest } } },
+  },
+  responses: {
+    200: { description: '骑手评价创建成功', content: { 'application/json': { schema: RiderReview } } },
+    409: { description: 'E-REVIEW-002/003/004', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// C 端：商品评论列表（商品详情页，仅 APPROVED）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/{id}/reviews',
+  tags: ['review'],
+  description: '商品评论列表（仅 APPROVED，游标分页）',
+  responses: {
+    200: { description: '评论列表', content: { 'application/json': { schema: Review } } },
+  },
+});
+
+// C 端：订单的骑手评价（订单详情展示）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders/{id}/rider-review',
+  tags: ['review'],
+  description: '订单的骑手评价（无则 data=null）',
+  responses: {
+    200: { description: '骑手评价', content: { 'application/json': { schema: RiderReview } } },
+  },
+});
+
+// Admin：评论列表（type=customer|rider + 多维筛选 + 分页）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/reviews',
+  tags: ['review'],
+  description: 'Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / cursor / limit',
+  responses: {
+    200: { description: '列表（items 按 type 是客户评论或骑手评价）', content: { 'application/json': { schema: Review } } },
+  },
+});
+
+// Admin：评论详情
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/reviews/{id}',
+  tags: ['review'],
+  description: 'Admin 评论详情（?type=customer|rider 区分表）',
+  responses: {
+    200: { description: '详情', content: { 'application/json': { schema: Review } } },
+    404: { description: 'E-REVIEW-001 不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// Admin：审核 status + 商家回复 reply
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/reviews/{id}',
+  tags: ['review'],
+  description: 'Admin 审核 status + 商家回复 reply（?type 区分表；骑手评价仅 status）',
+  request: {
+    body: { content: { 'application/json': { schema: AdminUpdateReviewRequest } } },
+  },
+  responses: {
+    200: { description: '更新成功', content: { 'application/json': { schema: Review } } },
+    404: { description: 'E-REVIEW-001', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// Admin：硬删（决策4）
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/reviews/{id}',
+  tags: ['review'],
+  description: 'Admin 硬删评论（?type 区分表；删骑手评价后重算 rating）',
+  responses: {
+    200: { description: '删除成功' },
+    404: { description: 'E-REVIEW-001', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({
   openapi: '3.0.3',
@@ -2475,6 +2589,7 @@ const openapi = generator.generateDocument({
     { name: 'im', description: 'IM 自建 WebSocket 用户签名（M W3）' },
     { name: 'upload', description: '商品图片上传（W7-feature）' },
     { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
+    { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
   ],
 });
 
