@@ -67,6 +67,17 @@ export const ErrorCodes = {
   E_PAYMENT_002: 'E-PAYMENT-002',
   /** 支付失败 */
   E_PAYMENT_003: 'E-PAYMENT-003',
+
+  /** 评论/评价不存在（404） */
+  E_REVIEW_001: 'E-REVIEW-001',
+  /** 订单未送达，不可评论（409） */
+  E_REVIEW_002: 'E-REVIEW-002',
+  /** 该订单已评论（409，重复评论） */
+  E_REVIEW_003: 'E-REVIEW-003',
+  /** 订单未分配骑手，不可评价骑手（409） */
+  E_REVIEW_004: 'E-REVIEW-004',
+  /** 无权操作此评论（403） */
+  E_REVIEW_005: 'E-REVIEW-005',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
