@@ -76,5 +76,10 @@
   "E-USER-007": "Rekursu lahetan",
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
-  "E-WAREHOUSE-003": "Armazén laha iha"
+  "E-WAREHOUSE-003": "Armazén laha iha",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order"
 }
