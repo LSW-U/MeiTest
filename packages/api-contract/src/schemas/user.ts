@@ -13,6 +13,9 @@ import { OrderNo, OrderStatus } from './order';
 
 export const UserStatus = z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']);
 
+/** 会员等级（B8，由 points 阈值实时算：≥5000 gold / ≥1000 silver / else bronze） */
+export const MemberLevel = z.enum(['gold', 'silver', 'bronze']);
+
 /** 用户实体（API 响应基准；phone 脱敏返回，例：770****234） */
 export const User = z.object({
   id: Id,
@@ -22,6 +25,10 @@ export const User = z.object({
   avatarUrl: z.string().nullable(),
   role: Role,
   status: UserStatus,
+  /** 会员等级（B8，实时算）。profile 返数值，其他场景可选 */
+  memberLevel: MemberLevel.optional(),
+  /** 会员积分（B8，$1=1pt，聚合已成交订单 payableAmount/100） */
+  points: z.number().int().nonnegative().optional(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });

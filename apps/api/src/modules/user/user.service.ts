@@ -52,6 +52,8 @@ export class UserService {
     if (!user) {
       throw new NotFoundException({ code: 'E-USER-007', message: 'User not found' });
     }
+    // B8：points 实时聚合已成交订单（$1=1pt），memberLevel 由阈值算
+    const { points, memberLevel } = await this.computeMemberPoints(userId);
     return {
       id: user.id,
       phone: user.phone,
@@ -62,9 +64,31 @@ export class UserService {
       status: user.status,
       phoneVerified: user.phoneVerified,
       emailVerified: user.emailVerified,
+      points,
+      memberLevel,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+  }
+
+  /**
+   * 计算会员积分 + 等级（B8）
+   *
+   * points = 已成交订单（DELIVERED_PAID + COMPLETED）payableAmount 总和 / 100（$1=1pt）
+   * memberLevel 阈值：≥5000 gold / ≥1000 silver / else bronze（可调）
+   * 实时聚合，不读 user.points 缓存字段（保证准确；DB 字段为未来 increment 缓存预留）
+   */
+  private async computeMemberPoints(userId: string): Promise<{
+    points: number;
+    memberLevel: 'gold' | 'silver' | 'bronze';
+  }> {
+    const agg = await db.order.aggregate({
+      where: { userId, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
+      _sum: { payableAmount: true },
+    });
+    const points = Math.floor((agg._sum.payableAmount ?? 0) / 100);
+    const memberLevel = points >= 5000 ? 'gold' : points >= 1000 ? 'silver' : 'bronze';
+    return { points, memberLevel };
   }
 
   async updateProfile(userId: string, input: { name?: string; avatarUrl?: string; email?: string }) {
