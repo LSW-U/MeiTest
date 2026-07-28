@@ -100,12 +100,6 @@ export class ReviewService {
       });
     }
 
-    // 一次评论（orderId unique 兜底 + 先查给友好错误）
-    const existing = await db.review.findUnique({ where: { orderId: input.orderId } });
-    if (existing) {
-      throw new ConflictException({ code: 'E-REVIEW-003', message: 'Order already reviewed' });
-    }
-
     // productId 须在订单商品内
     if (input.productId) {
       const inOrder = order.items.some((i) => i.productId === input.productId);
@@ -117,22 +111,37 @@ export class ReviewService {
       }
     }
 
-    const review = await db.review.create({
-      data: {
-        orderId: input.orderId,
-        userId: input.userId,
-        userName: order.user.name ?? '',
-        avatarUrl: order.user.avatarUrl,
-        rating: input.rating,
-        content: input.content as Prisma.InputJsonValue,
-        images: input.images,
-        category: input.category,
-        productId: input.productId,
-        status: 'APPROVED', // 决策1：默认直接发布
-      },
-    });
-
-    return this.toReviewView(review);
+    // P0-2：existing 检查 + create 进事务（防并发双击撞 orderId unique），P2002 兜底转 E-REVIEW-003
+    try {
+      const review = await withTransaction(async (tx) => {
+        const existing = await tx.review.findUnique({ where: { orderId: input.orderId } });
+        if (existing) {
+          throw new ConflictException({ code: 'E-REVIEW-003', message: 'Order already reviewed' });
+        }
+        const created = await tx.review.create({
+          data: {
+            orderId: input.orderId,
+            userId: input.userId,
+            userName: order.user.name ?? '',
+            avatarUrl: order.user.avatarUrl,
+            rating: input.rating,
+            content: input.content as Prisma.InputJsonValue,
+            images: input.images,
+            category: input.category,
+            productId: input.productId,
+            status: 'APPROVED', // 决策1：默认直接发布
+          },
+        });
+        return created;
+      });
+      return this.toReviewView(review);
+    } catch (e) {
+      // 并发：existing 检查过了但 create 撞 unique（双击/恶意并发）
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException({ code: 'E-REVIEW-003', message: 'Order already reviewed' });
+      }
+      throw e;
+    }
   }
 
   /**
@@ -165,11 +174,6 @@ export class ReviewService {
       });
     }
 
-    const existing = await db.riderReview.findUnique({ where: { orderId: input.orderId } });
-    if (existing) {
-      throw new ConflictException({ code: 'E-REVIEW-003', message: 'Rider already reviewed' });
-    }
-
     // F6：锁当前骑手。订单无骑手 -> 不能评
     if (!order.riderId) {
       throw new ConflictException({
@@ -179,24 +183,35 @@ export class ReviewService {
     }
 
     const riderId = order.riderId;
-    const created = await withTransaction(async (tx) => {
-      const review = await tx.riderReview.create({
-        data: {
-          orderId: input.orderId,
-          riderId,
-          userId: input.userId,
-          userName: order.user.name ?? '',
-          rating: input.rating,
-          tags: input.tags,
-          comment: (input.comment as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-          status: 'APPROVED',
-        },
+    // P1-1：existing 检查 + create + recalc 进同一事务，P2002 兜底（对齐 createReview P0-2）
+    try {
+      const created = await withTransaction(async (tx) => {
+        const existing = await tx.riderReview.findUnique({ where: { orderId: input.orderId } });
+        if (existing) {
+          throw new ConflictException({ code: 'E-REVIEW-003', message: 'Rider already reviewed' });
+        }
+        const review = await tx.riderReview.create({
+          data: {
+            orderId: input.orderId,
+            riderId,
+            userId: input.userId,
+            userName: order.user.name ?? '',
+            rating: input.rating,
+            tags: input.tags,
+            comment: (input.comment as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+            status: 'APPROVED',
+          },
+        });
+        await this.recalcRiderRating(riderId, tx);
+        return review;
       });
-      await this.recalcRiderRating(riderId, tx);
-      return review;
-    });
-
-    return this.toRiderReviewView(created);
+      return this.toRiderReviewView(created);
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException({ code: 'E-REVIEW-003', message: 'Rider already reviewed' });
+      }
+      throw e;
+    }
   }
 
   /** 商品评论列表（C 端商品详情页，仅 APPROVED） */
@@ -348,13 +363,19 @@ export class ReviewService {
     if (!existing) {
       throw new NotFoundException({ code: 'E-REVIEW-001', message: 'Rider review not found' });
     }
-    if (!input.status) return this.toRiderReviewView(existing);
-    const updated = await db.riderReview.update({
-      where: { id },
-      data: { status: input.status },
+    // P1-5：status 未传 或 与当前相同 → 短路（避免无谓 update + recalc）
+    if (!input.status || existing.status === input.status) {
+      return this.toRiderReviewView(existing);
+    }
+    // P1-2：update + recalc 进事务（防 update 成功 recalc 失败致评分漂移）
+    const updated = await withTransaction(async (tx) => {
+      const r = await tx.riderReview.update({
+        where: { id },
+        data: { status: input.status },
+      });
+      await this.recalcRiderRating(existing.riderId, tx);
+      return r;
     });
-    // status 变化影响 APPROVED 集合 → 重算骑手评分
-    await this.recalcRiderRating(existing.riderId);
     return this.toRiderReviewView(updated);
   }
 
@@ -372,8 +393,11 @@ export class ReviewService {
     if (!existing) {
       throw new NotFoundException({ code: 'E-REVIEW-001', message: 'Rider review not found' });
     }
-    await db.riderReview.delete({ where: { id } });
-    await this.recalcRiderRating(existing.riderId);
+    // P1-2：delete + recalc 进事务（防 delete 成功 recalc 失败致评分漂移）
+    await withTransaction(async (tx) => {
+      await tx.riderReview.delete({ where: { id } });
+      await this.recalcRiderRating(existing.riderId, tx);
+    });
   }
 
   // ===================== 内部 =====================

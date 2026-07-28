@@ -22,6 +22,7 @@ import {
   Req,
   HttpException,
   HttpStatus,
+  BadRequestException,
   Inject,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -43,9 +44,19 @@ interface RequestWithUser {
   headers: Record<string, string | string[] | undefined>;
 }
 
-/** query.type 字符串 → ReviewType（默认 customer） */
+/**
+ * query.type 字符串 → ReviewType
+ *
+ * P1-3：type 缺失/非法 → 400（防默认 customer 误把骑手评价 id 当客户评论操作）。
+ * list 端点走 AdminListReviewsQuery schema（type 可选，由 schema 处理），不经过此函数。
+ */
 function parseType(t: string | undefined): ReviewType {
-  return t === 'rider' ? 'rider' : 'customer';
+  if (t === 'customer') return 'customer';
+  if (t === 'rider') return 'rider';
+  throw new BadRequestException({
+    code: 'E-COMMON-001',
+    message: '?type= must be "customer" or "rider"',
+  });
 }
 
 @Controller('api/v1/admin/reviews')

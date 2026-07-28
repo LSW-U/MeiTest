@@ -287,4 +287,57 @@ describe('ReviewService (reviews-2)', () => {
       expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
     });
   });
+
+  describe('adminUpdateReview - reply + P1-5 短路 + recalc', () => {
+    const baseReview = {
+      id: 'r1', orderId: 'o1', userId: 'u1', userName: 'Alice', avatarUrl: null,
+      rating: 5, content: { en: 'good' }, images: [], status: 'APPROVED',
+      category: 'PRODUCT', reply: null, repliedAt: null, productId: null,
+      createdAt: new Date('2026-07-28T00:00:00Z'),
+    };
+    const baseRiderReview = {
+      id: 'rr1', orderId: 'o1', riderId: 'rdr1', userId: 'u1', userName: 'Alice',
+      rating: 5, tags: ['on_time'], comment: null, status: 'APPROVED',
+      createdAt: new Date('2026-07-28T00:00:00Z'),
+    };
+
+    it('customer 写 reply -> update reply + repliedAt', async () => {
+      mockDb.review.findUnique.mockResolvedValue(baseReview);
+      mockDb.review.update.mockResolvedValue({ ...baseReview, reply: { en: 'thanks' }, repliedAt: new Date() });
+      const r = await service.adminUpdateReview('r1', 'customer', { reply: { en: 'thanks' } });
+      expect(mockDb.review.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ reply: { en: 'thanks' } }) }),
+      );
+      expect(r.id).toBe('r1');
+    });
+
+    it('rider status 变化 -> 事务 update + recalc', async () => {
+      mockDb.riderReview.findUnique.mockResolvedValue({ ...baseRiderReview, status: 'PENDING' });
+      mockTx.riderReview.update.mockResolvedValue({ ...baseRiderReview, status: 'APPROVED' });
+      mockTx.riderReview.aggregate.mockResolvedValue({ _avg: { rating: 5 }, _count: 1 });
+      mockTx.riderProfile.update.mockResolvedValue({});
+      await service.adminUpdateReview('rr1', 'rider', { status: 'APPROVED' });
+      expect(mockWithTransaction).toHaveBeenCalled();
+      expect(mockTx.riderReview.update).toHaveBeenCalled();
+      expect(mockTx.riderReview.aggregate).toHaveBeenCalled();
+    });
+
+    it('rider status 不变 -> 短路（P1-5：不 update 不 recalc）', async () => {
+      mockDb.riderReview.findUnique.mockResolvedValue({ ...baseRiderReview, status: 'APPROVED' });
+      const r = await service.adminUpdateReview('rr1', 'rider', { status: 'APPROVED' });
+      expect(mockDb.riderReview.update).not.toHaveBeenCalled();
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
+      expect(r.id).toBe('rr1');
+    });
+  });
+
+  describe('listProductReviews - P0-1 只返 APPROVED', () => {
+    it('where 含 status APPROVED（不暴露 PENDING/REJECTED）', async () => {
+      mockDb.review.findMany.mockResolvedValue([]);
+      await service.listProductReviews('p1', { limit: 10 });
+      expect(mockDb.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { productId: 'p1', status: 'APPROVED' } }),
+      );
+    });
+  });
 });

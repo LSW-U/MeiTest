@@ -31,6 +31,7 @@ import { CreateReviewRequest, CreateRiderReviewRequest } from '@meimart/api-cont
 import { ReviewService } from './review.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import { Public } from '../../shared/decorators/public.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type {
@@ -102,7 +103,8 @@ export class ReviewController {
     return { success: true as const, data: review };
   }
 
-  /** 商品评论列表（C 端商品详情页，仅 APPROVED） */
+  /** 商品评论列表（C 端商品详情页，P0-1 修复：@Public 公开访问 + 仅返 APPROVED） */
+  @Public()
   @Get('products/:id/reviews')
   async listProductReviews(
     @Param('id') productId: string,
