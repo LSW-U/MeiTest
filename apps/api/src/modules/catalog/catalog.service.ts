@@ -55,9 +55,10 @@ export class CatalogService {
       db.product.count({ where }),
     ]);
 
-    const [defaultSkuMap, stockMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
     ]);
 
     return {
@@ -65,6 +66,7 @@ export class CatalogService {
         ...this.toProductDTO(p),
         defaultSkuId: defaultSkuMap.get(p.id) ?? null,
         stock: stockMap.get(p.id),
+        rating: ratingMap.get(p.id),
       })),
       page,
       pageSize,
@@ -82,11 +84,15 @@ export class CatalogService {
     if (!product) {
       throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     }
-    const stockMap = await this.batchGetProductStock([id]);
+    const [stockMap, ratingMap] = await Promise.all([
+      this.batchGetProductStock([id]),
+      this.batchGetProductRating([id]),
+    ]);
     return {
       ...this.toProductDTO(product),
       defaultSkuId: product.skus[0]?.id ?? null,
       stock: stockMap.get(id),
+      rating: ratingMap.get(id),
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -98,14 +104,16 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    const [defaultSkuMap, stockMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
     }));
   }
 
@@ -117,14 +125,16 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    const [defaultSkuMap, stockMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
     }));
   }
 
@@ -135,14 +145,16 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    const [defaultSkuMap, stockMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
     }));
   }
 
@@ -498,6 +510,28 @@ export class CatalogService {
     for (const s of stocks) {
       const pid = s.sku.productId;
       map.set(pid, (map.get(pid) ?? 0) + s.quantity);
+    }
+    return map;
+  }
+
+  /**
+   * 批量查询每个商品的评分（B7：聚合 APPROVED reviews 的 AVG(rating)）
+   *
+   * 用于商品列表/详情评分展示，避免 N+1。只返有 APPROVED 评论的 productId；
+   * 无评论的不在 Map 中（前端 rating=undefined 条件渲染隐藏）。
+   */
+  private async batchGetProductRating(productIds: string[]): Promise<Map<string, number>> {
+    if (productIds.length === 0) return new Map();
+    const rows = await db.review.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds }, status: 'APPROVED' },
+      _avg: { rating: true },
+    });
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      if (r.productId && r._avg.rating != null) {
+        map.set(r.productId, Number(r._avg.rating.toFixed(1)));
+      }
     }
     return map;
   }

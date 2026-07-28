@@ -33,6 +33,8 @@ export const Product = z.object({
   salesCount: z.number().int(),
   /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息（前端降级），0=断货 */
   stock: z.number().int().optional(),
+  /** 评分（B7：聚合 APPROVED reviews 的 AVG(rating)，1 位小数）。undefined=无评论，前端条件渲染隐藏 */
+  rating: z.number().optional(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -49,6 +51,8 @@ export const ProductSummary = z.object({
   salesCount: z.number().int(),
   /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息，0=断货 */
   stock: z.number().int().optional(),
+  /** 评分（B7：聚合 APPROVED reviews AVG）。undefined=无评论 */
+  rating: z.number().optional(),
 });
 
 /** 创建商品请求 */
