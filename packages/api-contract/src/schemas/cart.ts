@@ -72,4 +72,6 @@ export const CheckoutPreview = z.object({
   deliveryFee: Money,
   payableAmount: Money,
   warnings: z.array(z.string()),
+  /** 最早送达时间 ISO（B9，MVP now+2h 估算，未考虑仓库营业时间/运力） */
+  estimatedDeliveryTime: IsoTimestamp,
 });

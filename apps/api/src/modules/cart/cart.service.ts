@@ -383,6 +383,8 @@ export class CartService {
     deliveryFee: number;
     payableAmount: number;
     warnings: string[];
+    /** 最早送达时间 ISO（B9）。MVP 固定 now+2h 估算，未考虑仓库营业时间/运力，后续接 dispatch */
+    estimatedDeliveryTime: string;
   }> {
     const cart = await this.getOrCreateCart(userId);
     const items = await db.cartItem.findMany({
@@ -435,6 +437,8 @@ export class CartService {
 
     const deliveryFee = warehouseMatch?.deliveryFee ?? 0;
     const payableAmount = itemsSubtotal + deliveryFee;
+    // B9：ETA 简单估算 = now + 2h（MVP 不考虑仓库营业时间/运力，后续接 dispatch 算法）
+    const estimatedDeliveryTime = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
     return {
       items: itemViews,
@@ -443,6 +447,7 @@ export class CartService {
       deliveryFee,
       payableAmount,
       warnings,
+      estimatedDeliveryTime,
     };
   }
 
