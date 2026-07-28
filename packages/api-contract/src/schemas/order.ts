@@ -142,3 +142,15 @@ export const CreateOrderRequest = z.object({
 export const CancelOrderRequest = z.object({
   reason: z.string().min(1).max(200),
 });
+
+/**
+ * 订单状态计数（B3，个人中心 4 宫格 badge 数据源）
+ *
+ * 返回每个 OrderStatus 的原始计数（0 填充），前端按本地 ORDER_COUNT_MAP 聚合成 4 桶：
+ *   to-pay: PENDING_PAYMENT | to-ship: PENDING_CONFIRM+CONFIRMED
+ *   to-receive: PICKED+OUT_FOR_DELIVERY | review: DELIVERED_*+COMPLETED
+ * 解决列表派生计数（单页 limit=20，订单超 20 偏低）问题。
+ */
+export const OrderCounts = z.object({
+  counts: z.record(OrderStatus, z.number().int().nonnegative()),
+});

@@ -1057,6 +1057,30 @@ export class OrderService {
   }
 
   /**
+   * 用户订单状态计数（B3，个人中心 4 宫格 badge 数据源）
+   *
+   * groupBy status 一次查询所有状态计数（不限分页），解决列表派生（单页 limit=20，订单超 20 偏低）。
+   * 返回所有 OrderStatus 枚举值（0 填充），前端按 ORDER_COUNT_MAP 聚合 4 桶，无需处理缺失 key。
+   * 注：ALL_STATUSES 与 contract OrderStatus 枚举保持一致，改枚举时同步。
+   */
+  async getOrderCounts(userId: string): Promise<{ counts: Record<string, number> }> {
+    const rows = await db.order.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { _all: true },
+    });
+    const ALL_STATUSES = [
+      'PENDING_PAYMENT', 'PENDING_CONFIRM', 'CONFIRMED', 'PICKED',
+      'OUT_FOR_DELIVERY', 'DELIVERED_PAID', 'DELIVERED', 'DELIVERED_UNPAID',
+      'COMPLETED', 'CANCELLED',
+    ];
+    const counts: Record<string, number> = {};
+    for (const s of ALL_STATUSES) counts[s] = 0;
+    for (const r of rows) counts[r.status] = r._count._all;
+    return { counts };
+  }
+
+  /**
    * 查询全部订单（admin 视角，跨用户）
    *
    * W4 新增：admin-web /orders 页面需要
