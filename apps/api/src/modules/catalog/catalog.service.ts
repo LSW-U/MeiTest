@@ -227,6 +227,15 @@ export class CatalogService {
     return skus.map((s) => this.toSkuDTO(s));
   }
 
+  /** 客户端商品规格列表（B6，只返 ACTIVE SKU，供规格选择器） */
+  async listClientSkusByProduct(productId: string) {
+    const skus = await db.sku.findMany({
+      where: { productId, status: 'ACTIVE' },
+      orderBy: { price: 'asc' },
+    });
+    return skus.map((s) => this.toSkuDTO(s));
+  }
+
   async createSku(productId: string, input: {
     name: Record<string, string>;
     attributes: Record<string, unknown>;

@@ -88,6 +88,13 @@ export class ClientProductController {
     const data = await this.catalog.getProduct(id);
     return { success: true, data };
   }
+
+  /** 商品规格列表（B6，只返 ACTIVE SKU，供 C 端规格选择器，替代前端 variantTemplates 配置） */
+  @Get(':id/skus')
+  async listSkus(@Param('id') id: string) {
+    const data = await this.catalog.listClientSkusByProduct(id);
+    return { success: true, data };
+  }
 }
 
 @Controller('api/v1/client')
