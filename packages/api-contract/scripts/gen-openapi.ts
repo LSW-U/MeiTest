@@ -87,6 +87,7 @@ import {
   PaymentMethod,
   OrderStatus,
   PaymentStatus,
+  OrderCounts,
   // cart
   Cart,
   CartItem,
@@ -94,6 +95,7 @@ import {
   UpdateCartItemRequest,
   CheckoutPreviewRequest,
   CheckoutPreview,
+  BatchDeleteCartItemsRequest,
   // payment
   PaymentIntent,
   UploadReceiptRequest,
@@ -130,6 +132,7 @@ import {
   UpdatePromotionRequest as UpdatePromotionRequestSchema,
   ValidatePromotionRequest as ValidatePromotionRequestSchema,
   ValidatePromotionResponse as ValidatePromotionResponseSchema,
+  ClientCoupon as ClientCouponSchema,
   // unified-auth（W7-ext-H 统一手机号入口）
   UnifiedSendSmsRequest as SendSmsRequestSchema,
   UnifiedSendSmsResponse as SendSmsResponseSchema,
@@ -230,13 +233,16 @@ registry.register('UpdateOrderRequest', UpdateOrderRequest);
 registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
 registry.register('OrderStatus', OrderStatus);
+registry.register('OrderCounts', OrderCounts);
 
 registry.register('Cart', Cart);
 registry.register('CartItem', CartItem);
 registry.register('AddCartItemRequest', AddCartItemRequest);
 registry.register('UpdateCartItemRequest', UpdateCartItemRequest);
+registry.register('BatchDeleteCartItemsRequest', BatchDeleteCartItemsRequest);
 registry.register('CheckoutPreviewRequest', CheckoutPreviewRequest);
 registry.register('CheckoutPreview', CheckoutPreview);
+registry.register('ClientCoupon', ClientCouponSchema);
 
 registry.register('PaymentIntent', PaymentIntent);
 registry.register('UploadReceiptRequest', UploadReceiptRequest);
@@ -701,6 +707,17 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/client/products/{id}/skus',
+  tags: ['product'],
+  description: '商品规格列表（B6，只返 ACTIVE SKU，供 C 端规格选择器）',
+  responses: {
+    200: { description: 'SKU 列表', content: { 'application/json': { schema: Sku.array() } } },
+    404: { description: 'PRODUCT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/client/products/recommendations',
   tags: ['product'],
   description: '推荐商品（按销量 top N）',
@@ -964,6 +981,16 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders/counts',
+  tags: ['order'],
+  description: '订单状态计数（B3，个人中心 4 宫格 badge 数据源，per-status 计数）',
+  responses: {
+    200: { description: '各状态订单数', content: { 'application/json': { schema: OrderCounts } } },
+  },
+});
+
 // ===== platform paths（流程 M） =====
 registry.registerPath({
   method: 'get',
@@ -1155,6 +1182,22 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'post',
+  path: '/api/v1/client/cart/items/batch-delete',
+  tags: ['cart'],
+  description: '批量删除购物车项（B2，管理模式批量删，替代 N 次单删）',
+  request: {
+    body: { content: { 'application/json': { schema: BatchDeleteCartItemsRequest } } },
+  },
+  responses: {
+    200: {
+      description: '批量删除后的购物车',
+      content: { 'application/json': { schema: Cart } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
   path: '/api/v1/client/cart/checkout-preview',
   tags: ['cart'],
   description: '结算前预览（按地址匹配仓库 + 库存/价格校验 + 金额汇总）',
@@ -1167,6 +1210,16 @@ registry.registerPath({
       content: { 'application/json': { schema: CheckoutPreview } },
     },
     409: { description: 'NO_SELECTED_ITEMS / OUT_OF_DELIVERY_RANGE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/coupons',
+  tags: ['promotion'],
+  description: '我的优惠券列表（B10，MVP 全局可用券：ACTIVE + 有效期内 + 未超额）',
+  responses: {
+    200: { description: '可用优惠券列表', content: { 'application/json': { schema: ClientCouponSchema.array() } } },
   },
 });
 
