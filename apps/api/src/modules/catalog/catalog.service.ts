@@ -55,12 +55,16 @@ export class CatalogService {
       db.product.count({ where }),
     ]);
 
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+    ]);
 
     return {
       items: items.map((p) => ({
         ...this.toProductDTO(p),
         defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+        stock: stockMap.get(p.id),
       })),
       page,
       pageSize,
@@ -78,9 +82,11 @@ export class CatalogService {
     if (!product) {
       throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     }
+    const stockMap = await this.batchGetProductStock([id]);
     return {
       ...this.toProductDTO(product),
       defaultSkuId: product.skus[0]?.id ?? null,
+      stock: stockMap.get(id),
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -92,10 +98,14 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
     }));
   }
 
@@ -107,10 +117,14 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
     }));
   }
 
@@ -121,10 +135,14 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
     }));
   }
 
@@ -454,6 +472,27 @@ export class CatalogService {
    *
    * 默认 SKU 选取规则与 recomputeProductPriceMin 一致：最低价 ACTIVE SKU。
    */
+  /**
+   * 批量查询每个商品的库存总量（B1：聚合 Stock 表，全仓库所有 ACTIVE SKU 求和）
+   *
+   * 用于商品列表/详情/推荐，避免 N+1。一次查所有相关 ACTIVE SKU 的 Stock，按 productId 求和。
+   * 只返回有 Stock 记录的 productId；无记录的商品不在 Map 中（前端按 stock=undefined "无库存信息"降级）。
+   * 注：stock 是跨仓库聚合的展示值；真实可购数量以下单时按地址匹配仓库后的校验为准。
+   */
+  private async batchGetProductStock(productIds: string[]): Promise<Map<string, number>> {
+    if (productIds.length === 0) return new Map();
+    const stocks = await db.stock.findMany({
+      where: { sku: { productId: { in: productIds }, status: 'ACTIVE' } },
+      select: { quantity: true, sku: { select: { productId: true } } },
+    });
+    const map = new Map<string, number>();
+    for (const s of stocks) {
+      const pid = s.sku.productId;
+      map.set(pid, (map.get(pid) ?? 0) + s.quantity);
+    }
+    return map;
+  }
+
   private async batchGetDefaultSkuIds(productIds: string[]): Promise<Map<string, string>> {
     if (productIds.length === 0) return new Map();
     const skus = await db.sku.findMany({

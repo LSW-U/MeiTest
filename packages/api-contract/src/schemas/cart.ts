@@ -38,6 +38,8 @@ export const CartItem = z.object({
   unitPrice: Money,
   quantity: z.number().int().positive(),
   isSelected: z.boolean(),
+  /** 当前库存（全仓库聚合实时查，B12）。undefined=无库存信息 */
+  stock: z.number().int().optional(),
   addedAt: IsoTimestamp,
 });
 

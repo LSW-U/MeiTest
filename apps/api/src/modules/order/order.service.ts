@@ -101,6 +101,8 @@ export interface OrderWithRelations {
     unitPrice: number;
     quantity: number;
     subtotal: number;
+    /** 当前库存（全仓库聚合，B12）。undefined=无库存信息 */
+    stock?: number;
   }>;
   events: Array<{
     id: string;
@@ -1048,7 +1050,7 @@ export class OrderService {
     const items = hasMore ? orders.slice(0, limit) : orders;
 
     return {
-      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o)),
+      items: await Promise.all(items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o))),
       nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
       hasMore,
     };
@@ -1093,7 +1095,7 @@ export class OrderService {
     const items = hasMore ? orders.slice(0, limit) : orders;
 
     return {
-      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o)),
+      items: await Promise.all(items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o))),
       nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
       hasMore,
     };
@@ -1119,7 +1121,7 @@ export class OrderService {
   }
 
   /** Prisma Order → API DTO（DateTime → ISO 字符串） */
-  private toOrderWithRelations(order: unknown): OrderWithRelations {
+  private async toOrderWithRelations(order: unknown): Promise<OrderWithRelations> {
     const o = order as {
       id: string;
       orderNo: string;
@@ -1149,6 +1151,13 @@ export class OrderService {
       orderPromotions?: Array<Record<string, unknown>>;
     };
     const toIso = (d: Date | null) => (d ? d.toISOString() : null);
+    // B12：实时查 items 的 SKU 当前库存（全仓库聚合，每单一次 groupBy）
+    const skuIds = [...new Set(o.items.map((i) => i.skuId as string))];
+    const stockRows = skuIds.length
+      ? await db.stock.groupBy({ by: ['skuId'], where: { skuId: { in: skuIds } }, _sum: { quantity: true } })
+      : [];
+    const stockMap = new Map<string, number>();
+    for (const r of stockRows) stockMap.set(r.skuId, r._sum.quantity ?? 0);
     return {
       id: o.id,
       orderNo: o.orderNo,
@@ -1183,6 +1192,7 @@ export class OrderService {
         unitPrice: i.unitPrice as number,
         quantity: i.quantity as number,
         subtotal: i.subtotal as number,
+        stock: stockMap.get(i.skuId as string),
       })),
       events: o.events.map((e) => ({
         id: e.id as string,

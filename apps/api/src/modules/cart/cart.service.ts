@@ -52,6 +52,8 @@ export interface CartItemView {
   unitPrice: number;
   quantity: number;
   isSelected: boolean;
+  /** 当前库存（全仓库聚合实时查，B12）。undefined=无库存信息。不进缓存，每次 getCart 实时补 */
+  stock?: number;
   addedAt: string;
 }
 
@@ -108,9 +110,8 @@ export class CartService {
     }
   }
 
-  /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
-  async getCart(userId: string): Promise<CartView> {
-    // 1. 先查 Redis（缓存损坏降级到 DB，不阻塞用户）
+  /** 读购物车缓存（容错，损坏/异常返 null） */
+  private async readCartCache(userId: string): Promise<CartView | null> {
     try {
       const cached = await redis.get(this.cacheKey(userId));
       if (cached) {
@@ -122,7 +123,6 @@ export class CartService {
             userId,
             error: (parseErr as Error).message,
           });
-          // 继续走 DB 路径
         }
       }
     } catch (e) {
@@ -131,6 +131,50 @@ export class CartService {
         userId,
         error: (e as Error).message,
       });
+    }
+    return null;
+  }
+
+  /**
+   * 批量查询 SKU 当前库存（全仓库聚合，B12）
+   * 只返回有 Stock 记录的 skuId；无记录的不在 Map 中（item.stock=undefined "无库存信息"）。
+   */
+  private async batchGetSkuStock(skuIds: string[]): Promise<Map<string, number>> {
+    if (skuIds.length === 0) return new Map();
+    const rows = await db.stock.groupBy({
+      by: ['skuId'],
+      where: { skuId: { in: skuIds } },
+      _sum: { quantity: true },
+    });
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      map.set(r.skuId, r._sum.quantity ?? 0);
+    }
+    return map;
+  }
+
+  /**
+   * 给 CartView 的 items 实时补 stock（不写回缓存）
+   *
+   * stock 是关键超卖校验数据，不宜滞后；故缓存不存 stock，每次 getCart 实时补。
+   * 空购物车短路（无 items 不查）。
+   */
+  private async withStock(view: CartView): Promise<CartView> {
+    if (view.items.length === 0) return view;
+    const stockMap = await this.batchGetSkuStock(view.items.map((i) => i.skuId));
+    return {
+      ...view,
+      items: view.items.map((i) => ({ ...i, stock: stockMap.get(i.skuId) })),
+    };
+  }
+
+  /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
+  async getCart(userId: string): Promise<CartView> {
+    // 1. 先查 Redis（缓存损坏降级到 DB，不阻塞用户）
+    const cached = await this.readCartCache(userId);
+    if (cached) {
+      // 缓存命中：stock 实时补（缓存不存 stock）
+      return this.withStock(cached);
     }
 
     // 2. Miss 或缓存损坏：查 DB
@@ -167,10 +211,11 @@ export class CartService {
       totalSubtotal,
     };
 
-    // 3. 回填 Redis
+    // 3. 回填 Redis（不含 stock，stock 由 withStock 实时补）
     await this.setCache(userId, view);
 
-    return view;
+    // 4. 实时补 stock 后返回
+    return this.withStock(view);
   }
 
   /** 加购 / 同 sku 累加数量 */
@@ -347,6 +392,7 @@ export class CartService {
     }
 
     const warnings: string[] = [];
+    const stockMap = await this.batchGetSkuStock(items.map((i) => i.skuId));
     const itemViews: CartItemView[] = items.map((i) => ({
       id: i.id,
       skuId: i.skuId,
@@ -358,6 +404,7 @@ export class CartService {
       quantity: i.quantity,
       isSelected: i.isSelected,
       addedAt: i.addedAt.toISOString(),
+      stock: stockMap.get(i.skuId),
     }));
 
     const itemsSubtotal = itemViews.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);

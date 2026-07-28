@@ -31,6 +31,8 @@ export const Product = z.object({
   /** 默认 SKU id（最低价 ACTIVE SKU），前端列表"加购物车"直接用 */
   defaultSkuId: Id.nullable(),
   salesCount: z.number().int(),
+  /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息（前端降级），0=断货 */
+  stock: z.number().int().optional(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -45,6 +47,8 @@ export const ProductSummary = z.object({
   defaultSkuId: Id.nullable(),
   status: ProductStatus,
   salesCount: z.number().int(),
+  /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息，0=断货 */
+  stock: z.number().int().optional(),
 });
 
 /** 创建商品请求 */

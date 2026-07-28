@@ -79,6 +79,8 @@ export const OrderItem = z.object({
   unitPrice: Money,
   quantity: z.number().int().positive(),
   subtotal: Money,
+  /** 当前库存（全仓库聚合，B12）。undefined=无库存信息 */
+  stock: z.number().int().optional(),
 });
 
 /** 订单实体（含 warehouseId，按收货地址 PostGIS 匹配） */
