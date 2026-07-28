@@ -35,6 +35,9 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
     address: {
       findUnique: vi.fn(),
     },
+    stock: {
+      groupBy: vi.fn(),
+    },
   },
   mockRedis: {
     get: vi.fn(),
@@ -66,6 +69,8 @@ describe('CartService - Redis 缓存层', () => {
     mockRedis.get.mockReset();
     mockRedis.set.mockReset();
     mockRedis.del.mockReset();
+    // B12：getCart -> withStock -> batchGetSkuStock 默认返空（items stock undefined）
+    mockDb.stock.groupBy.mockResolvedValue([]);
   });
 
   describe('getCart - 缓存命中', () => {

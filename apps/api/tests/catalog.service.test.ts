@@ -31,6 +31,8 @@ const m = vi.hoisted(() => ({
   bannerUpdate: vi.fn(),
   bannerDelete: vi.fn(),
   shopFindFirst: vi.fn(),
+  stockFindMany: vi.fn(),
+  reviewGroupBy: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -67,6 +69,8 @@ vi.mock('../src/shared/db', () => ({
       delete: m.bannerDelete,
     },
     shop: { findFirst: m.shopFindFirst },
+    stock: { findMany: m.stockFindMany },
+    review: { groupBy: m.reviewGroupBy },
   },
 }));
 
@@ -78,6 +82,10 @@ describe('CatalogService', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     service = new CatalogService();
+    // B1/B7/B11：stock/rating/categoryName 聚合默认返空（字段 undefined/null，不阻塞主流程断言）
+    m.stockFindMany.mockResolvedValue([]);
+    m.reviewGroupBy.mockResolvedValue([]);
+    m.categoryFindMany.mockResolvedValue([]);
   });
 
   const mockProduct = {
