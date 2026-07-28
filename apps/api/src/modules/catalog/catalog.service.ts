@@ -55,10 +55,11 @@ export class CatalogService {
       db.product.count({ where }),
     ]);
 
-    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
     ]);
 
     return {
@@ -67,6 +68,7 @@ export class CatalogService {
         defaultSkuId: defaultSkuMap.get(p.id) ?? null,
         stock: stockMap.get(p.id),
         rating: ratingMap.get(p.id),
+        categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
       })),
       page,
       pageSize,
@@ -84,15 +86,17 @@ export class CatalogService {
     if (!product) {
       throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     }
-    const [stockMap, ratingMap] = await Promise.all([
+    const [stockMap, ratingMap, categoryMap] = await Promise.all([
       this.batchGetProductStock([id]),
       this.batchGetProductRating([id]),
+      this.batchGetCategoryNameMap([product.categoryId]),
     ]);
     return {
       ...this.toProductDTO(product),
       defaultSkuId: product.skus[0]?.id ?? null,
       stock: stockMap.get(id),
       rating: ratingMap.get(id),
+      categoryName: product.categoryId ? (categoryMap.get(product.categoryId) ?? null) : null,
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -104,16 +108,18 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -125,16 +131,18 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -145,16 +153,18 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    const [defaultSkuMap, stockMap, ratingMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -533,6 +543,26 @@ export class CatalogService {
         map.set(r.productId, Number(r._avg.rating.toFixed(1)));
       }
     }
+    return map;
+  }
+
+  /**
+   * 批量查询 categoryId -> 多语言分类名 map（B11：商品 DTO 补 categoryName）
+   *
+   * 解决前端拿 categoryId(uuid) 无法显示分类名的问题。categorySlug 未补（Category 表无 slug 字段，
+   * 加需 migration+回填；B6 已提供真实 SKU 端点绕过 variantTemplates 按 slug 匹配）。
+   */
+  private async batchGetCategoryNameMap(
+    categoryIds: (string | null)[],
+  ): Promise<Map<string, Record<string, string>>> {
+    const validIds = [...new Set(categoryIds.filter((id): id is string => id !== null))];
+    if (validIds.length === 0) return new Map();
+    const cats = await db.category.findMany({
+      where: { id: { in: validIds } },
+      select: { id: true, name: true },
+    });
+    const map = new Map<string, Record<string, string>>();
+    for (const c of cats) map.set(c.id, c.name as Record<string, string>);
     return map;
   }
 

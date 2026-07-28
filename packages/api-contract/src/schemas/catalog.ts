@@ -21,6 +21,8 @@ export const Product = z.object({
   id: Id,
   shopId: Id,
   categoryId: Id.nullable(),
+  /** 分类名（多语言，B11）。null=无分类。categorySlug 未补（Category 表无 slug 字段） */
+  categoryName: I18nText.nullable(),
   name: I18nText,
   description: I18nText.nullable(),
   mainImage: z.string(),
