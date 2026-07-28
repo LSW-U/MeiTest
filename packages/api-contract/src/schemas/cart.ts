@@ -25,6 +25,8 @@ export const UpdateCartItemRequest = z.object({
 /** 结算前预览请求 */
 export const CheckoutPreviewRequest = z.object({
   addressId: Id,
+  /** 可选优惠券码（B5：传入则后端聚合 discount，前端免二次调 validate） */
+  couponCode: z.string().optional(),
 });
 
 /** 批量删除购物车项请求（B2，管理模式批量删，替代 forEach N 次单删） */
@@ -71,6 +73,12 @@ export const CheckoutPreview = z.object({
   itemsSubtotal: Money,
   deliveryFee: Money,
   payableAmount: Money,
+  /** 折扣金额（B5：传 couponCode 时由 promotions/validate 聚合，未传=0） */
+  discount: Money,
+  /** 回显传入的券码（未传=null） */
+  couponCode: z.string().nullable(),
+  /** 券是否有效（前端展示原因） */
+  couponValid: z.boolean(),
   warnings: z.array(z.string()),
   /** 最早送达时间 ISO（B9，MVP now+2h 估算，未考虑仓库营业时间/运力） */
   estimatedDeliveryTime: IsoTimestamp,

@@ -2504,6 +2504,8 @@ registry.registerPath({
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);
 registry.register('RiderReview', RiderReview);
+registry.register('CreateReviewRequest', CreateReviewRequest);
+registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
 
 // C 端：提交订单/商品评论
 registry.registerPath({

@@ -122,7 +122,7 @@ export class CartController {
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
-    const data = await this.cartService.previewCheckout(user.sub, body.addressId);
+    const data = await this.cartService.previewCheckout(user.sub, body.addressId, body.couponCode);
     return { success: true as const, data };
   }
 }

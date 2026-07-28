@@ -20,8 +20,9 @@
  *   - 读：getCart 先查 Redis，miss 查 DB + 回填
  *   - 容错：Redis 异常不阻塞业务（catch + 降级到 DB）
  */
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
+import { PromotionService } from '../promotion/promotion.service';
 import { db, findWarehouseByPoint } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
@@ -74,6 +75,7 @@ const CART_CACHE_TTL_SEC = 5 * 60;
 
 @Injectable()
 export class CartService {
+  constructor(@Inject(PromotionService) private readonly promotions: PromotionService) {}
   /** Redis 缓存 key：`cart:{userId}` */
   private cacheKey(userId: string): string {
     return `cart:${userId}`;
@@ -376,12 +378,21 @@ export class CartService {
    * 返回 checkoutView（订单预览，未下单）
    * 注意：本方法不锁库存（事务在 OrderService.createOrder 中），仅校验
    */
-  async previewCheckout(userId: string, addressId: string): Promise<{
+  async previewCheckout(
+    userId: string,
+    addressId: string,
+    couponCode?: string,
+  ): Promise<{
     items: CartItemView[];
     warehouseMatch: { id: string; code: string; deliveryFee: number } | null;
     itemsSubtotal: number;
     deliveryFee: number;
     payableAmount: number;
+    /** 折扣金额（B5：传 couponCode 时聚合，未传=0） */
+    discount: number;
+    /** 回显传入的券码（未传=null） */
+    couponCode: string | null;
+    couponValid: boolean;
     warnings: string[];
     /** 最早送达时间 ISO（B9）。MVP 固定 now+2h 估算，未考虑仓库营业时间/运力，后续接 dispatch */
     estimatedDeliveryTime: string;
@@ -436,7 +447,15 @@ export class CartService {
     }
 
     const deliveryFee = warehouseMatch?.deliveryFee ?? 0;
-    const payableAmount = itemsSubtotal + deliveryFee;
+    // B5：聚合 discount（传 couponCode 时调 promotions/validate，前端免二次请求 + 金额一致）
+    let discount = 0;
+    let couponValid = false;
+    if (couponCode) {
+      const validation = await this.promotions.validatePromotion(couponCode, itemsSubtotal, deliveryFee);
+      discount = validation.discount;
+      couponValid = validation.valid;
+    }
+    const payableAmount = itemsSubtotal + deliveryFee - discount;
     // B9：ETA 简单估算 = now + 2h（MVP 不考虑仓库营业时间/运力，后续接 dispatch 算法）
     const estimatedDeliveryTime = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
@@ -445,6 +464,9 @@ export class CartService {
       warehouseMatch,
       itemsSubtotal,
       deliveryFee,
+      discount,
+      couponCode: couponCode ?? null,
+      couponValid,
       payableAmount,
       warnings,
       estimatedDeliveryTime,

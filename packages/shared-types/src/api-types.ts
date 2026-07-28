@@ -4487,6 +4487,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         addressId: string;
+                        couponCode?: string;
                     };
                 };
             };
@@ -4528,6 +4529,9 @@ export interface paths {
                             itemsSubtotal: number;
                             deliveryFee: number;
                             payableAmount: number;
+                            discount: number;
+                            couponCode: string | null;
+                            couponValid: boolean;
                             warnings: string[];
                             /** Format: date-time */
                             estimatedDeliveryTime: string;
@@ -11369,6 +11373,7 @@ export interface components {
         CheckoutPreviewRequest: {
             /** Format: uuid */
             addressId: string;
+            couponCode?: string;
         };
         CheckoutPreview: {
             items: {
@@ -11401,6 +11406,9 @@ export interface components {
             itemsSubtotal: number;
             deliveryFee: number;
             payableAmount: number;
+            discount: number;
+            couponCode: string | null;
+            couponValid: boolean;
             warnings: string[];
             /** Format: date-time */
             estimatedDeliveryTime: string;
@@ -11795,6 +11803,26 @@ export interface components {
             status: "PENDING" | "APPROVED" | "REJECTED";
             /** Format: date-time */
             createdAt: string;
+        };
+        CreateReviewRequest: {
+            rating: number;
+            content: {
+                [key: string]: string;
+            };
+            /** @default [] */
+            images: string[];
+            /** @enum {string} */
+            category: "PRODUCT" | "DELIVERY";
+            /** Format: uuid */
+            productId?: string;
+        };
+        CreateRiderReviewRequest: {
+            rating: number;
+            /** @default [] */
+            tags: ("on_time" | "polite" | "professional" | "careful")[];
+            comment?: {
+                [key: string]: string;
+            };
         };
     };
     responses: never;
