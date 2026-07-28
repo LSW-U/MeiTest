@@ -357,6 +357,19 @@ export class CartService {
     return this.getCart(userId);
   }
 
+  /** 批量删除 items（B2，管理模式批量删，单事务 deleteMany 替代 N 次 forEach） */
+  async removeItems(userId: string, itemIds: string[]): Promise<CartView> {
+    if (itemIds.length === 0) return this.getCart(userId);
+    const cart = await db.cart.findUnique({ where: { userId } });
+    if (!cart) return this.getCart(userId);
+    // where 含 cartId 防越权：itemIds 中属他人购物车的 id 不匹配 cartId，自动忽略不删
+    await db.cartItem.deleteMany({
+      where: { id: { in: itemIds }, cartId: cart.id },
+    });
+    await this.invalidateCache(userId);
+    return this.getCart(userId);
+  }
+
   /**
    * 结算前校验：选中 items 的库存 + 价格是否有效
    *

@@ -24,7 +24,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { AddCartItemRequest, UpdateCartItemRequest, CheckoutPreviewRequest } from '@meimart/api-contract';
+import { AddCartItemRequest, UpdateCartItemRequest, CheckoutPreviewRequest, BatchDeleteCartItemsRequest } from '@meimart/api-contract';
 import { CartService } from './cart.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -96,6 +96,20 @@ export class CartController {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
     const data = await this.cartService.removeItem(user.sub, id);
+    return { success: true as const, data };
+  }
+
+  @Post('items/batch-delete')
+  @Audit({ resource: 'Cart' })
+  async removeItems(
+    @Body(new ZodValidationPipe(BatchDeleteCartItemsRequest)) body: z.infer<typeof BatchDeleteCartItemsRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.cartService.removeItems(user.sub, body.itemIds);
     return { success: true as const, data };
   }
 

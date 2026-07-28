@@ -27,6 +27,11 @@ export const CheckoutPreviewRequest = z.object({
   addressId: Id,
 });
 
+/** 批量删除购物车项请求（B2，管理模式批量删，替代 forEach N 次单删） */
+export const BatchDeleteCartItemsRequest = z.object({
+  itemIds: z.array(Id).min(1).max(100),
+});
+
 /** CartItem 视图 */
 export const CartItem = z.object({
   id: Id,
