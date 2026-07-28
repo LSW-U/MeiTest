@@ -163,3 +163,21 @@ export class ClientPromotionController {
     return { success: true as const, data };
   }
 }
+
+/**
+ * Client Coupon Controller - 客户端优惠券列表（B10）
+ *
+ * 路由前缀 /api/v1/client/coupons（role: customer）
+ * MVP 无领券机制（无 UserPromotion 表），返回全局可用券（ACTIVE + 有效期内 + 未超额）。
+ */
+@Controller('api/v1/client/coupons')
+@Roles('CUSTOMER')
+export class ClientCouponController {
+  constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
+
+  @Get()
+  async list() {
+    const data = await this.promoService.listClientCoupons();
+    return { success: true as const, data };
+  }
+}

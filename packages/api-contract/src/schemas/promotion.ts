@@ -77,3 +77,24 @@ export const ValidatePromotionResponse = z.object({
   reason: z.string().optional(),
   type: PromotionType.optional(),
 });
+
+/**
+ * 客户端优惠券视图（B10，GET /client/coupons 列表）
+ *
+ * MVP 无领券机制（无 UserPromotion 表），返回当前 ACTIVE + 有效期内 + 未超额的全局 Promotion。
+ * 状态统一 available；used/expired 需领券表，后续迭代。
+ * 隐藏 createdBy / usedCount / totalQuota / perUserLimit 等管理字段。
+ */
+export const ClientCoupon = z.object({
+  id: Id,
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  type: PromotionType,
+  value: z.number().int().nonnegative(),
+  minOrderAmount: z.number().int().nonnegative(),
+  maxDiscountAmount: z.number().int().nonnegative().nullable(),
+  startAt: IsoTimestamp,
+  endAt: IsoTimestamp,
+  status: z.literal('available'),
+});
