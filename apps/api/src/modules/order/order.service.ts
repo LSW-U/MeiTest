@@ -47,6 +47,7 @@ import type {
 import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
 import { PromotionService } from '../promotion/promotion.service';
+import { OrderStatus } from '@meimart/api-contract';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
@@ -1019,7 +1020,8 @@ export class OrderService {
         message: 'Order not found',
       });
     }
-    return this.toOrderWithRelations(order);
+    const stockMap = await this.batchGetSkuStock(order.items.map((i: { skuId: string }) => i.skuId));
+    return this.toOrderWithRelations(order, stockMap);
   }
 
   /**
@@ -1049,8 +1051,17 @@ export class OrderService {
     const hasMore = orders.length > limit;
     const items = hasMore ? orders.slice(0, limit) : orders;
 
+    // F1：列表层一次查全页 skuId 的 stock（批量，避每单一次 groupBy 的 N+1）
+    const skuIds = [
+      ...new Set(
+        items.flatMap((o: Record<string, unknown>) =>
+          ((o.items as Array<{ skuId: string }>) ?? []).map((i) => i.skuId),
+        ),
+      ),
+    ];
+    const stockMap = await this.batchGetSkuStock(skuIds);
     return {
-      items: await Promise.all(items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o))),
+      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o, stockMap)),
       nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
       hasMore,
     };
@@ -1069,13 +1080,9 @@ export class OrderService {
       where: { userId },
       _count: { _all: true },
     });
-    const ALL_STATUSES = [
-      'PENDING_PAYMENT', 'PENDING_CONFIRM', 'CONFIRMED', 'PICKED',
-      'OUT_FOR_DELIVERY', 'DELIVERED_PAID', 'DELIVERED', 'DELIVERED_UNPAID',
-      'COMPLETED', 'CANCELLED',
-    ];
+    // F3：从 contract OrderStatus 派生，消除手动同步（改枚举自动跟随）
     const counts: Record<string, number> = {};
-    for (const s of ALL_STATUSES) counts[s] = 0;
+    for (const s of OrderStatus.options) counts[s] = 0;
     for (const r of rows) counts[r.status] = r._count._all;
     return { counts };
   }
@@ -1118,8 +1125,17 @@ export class OrderService {
     const hasMore = orders.length > limit;
     const items = hasMore ? orders.slice(0, limit) : orders;
 
+    // F1：列表层一次查全页 skuId 的 stock（批量，避每单一次 groupBy 的 N+1）
+    const skuIds = [
+      ...new Set(
+        items.flatMap((o: Record<string, unknown>) =>
+          ((o.items as Array<{ skuId: string }>) ?? []).map((i) => i.skuId),
+        ),
+      ),
+    ];
+    const stockMap = await this.batchGetSkuStock(skuIds);
     return {
-      items: await Promise.all(items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o))),
+      items: items.map((o: Record<string, unknown>) => this.toOrderWithRelations(o, stockMap)),
       nextCursor: hasMore ? (items[items.length - 1] as { id: string }).id : null,
       hasMore,
     };
@@ -1141,11 +1157,28 @@ export class OrderService {
         message: `Order not found: ${orderId}`,
       });
     }
-    return this.toOrderWithRelations(order);
+    const stockMap = await this.batchGetSkuStock(order.items.map((i: { skuId: string }) => i.skuId));
+    return this.toOrderWithRelations(order, stockMap);
   }
 
-  /** Prisma Order → API DTO（DateTime → ISO 字符串） */
-  private async toOrderWithRelations(order: unknown): Promise<OrderWithRelations> {
+  /**
+   * 批量查 SKU 当前库存（F1：列表层一次查全页 skuId，避每单一次 groupBy 的 N+1）
+   * 复用 cart.service.batchGetSkuStock 同款逻辑（全仓库聚合 groupBy）。
+   */
+  private async batchGetSkuStock(skuIds: string[]): Promise<Map<string, number>> {
+    if (skuIds.length === 0) return new Map();
+    const rows = await db.stock.groupBy({
+      by: ['skuId'],
+      where: { skuId: { in: skuIds } },
+      _sum: { quantity: true },
+    });
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(r.skuId, r._sum.quantity ?? 0);
+    return map;
+  }
+
+  /** Prisma Order → API DTO（DateTime → ISO 字符串），stock 由调用方批量查后传入 */
+  private toOrderWithRelations(order: unknown, stockMap: Map<string, number>): OrderWithRelations {
     const o = order as {
       id: string;
       orderNo: string;
@@ -1175,13 +1208,6 @@ export class OrderService {
       orderPromotions?: Array<Record<string, unknown>>;
     };
     const toIso = (d: Date | null) => (d ? d.toISOString() : null);
-    // B12：实时查 items 的 SKU 当前库存（全仓库聚合，每单一次 groupBy）
-    const skuIds = [...new Set(o.items.map((i) => i.skuId as string))];
-    const stockRows = skuIds.length
-      ? await db.stock.groupBy({ by: ['skuId'], where: { skuId: { in: skuIds } }, _sum: { quantity: true } })
-      : [];
-    const stockMap = new Map<string, number>();
-    for (const r of stockRows) stockMap.set(r.skuId, r._sum.quantity ?? 0);
     return {
       id: o.id,
       orderNo: o.orderNo,
