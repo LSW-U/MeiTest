@@ -74,7 +74,8 @@ export class UserService {
   /**
    * 计算会员积分 + 等级（B8）
    *
-   * points = 已成交订单（DELIVERED_PAID + COMPLETED）payableAmount 总和 / 100（$1=1pt）
+   * points = 已成交订单（DELIVERED_PAID + COMPLETED）totalAmount 总和 / 100（$1=1pt）
+   * 口径（F2）：按商品总额 totalAmount（=itemsSubtotal），不含运费（代收成本）、不减折扣（营销成本）。
    * memberLevel 阈值：≥5000 gold / ≥1000 silver / else bronze（可调）
    * 实时聚合，不读 user.points 缓存字段（保证准确；DB 字段为未来 increment 缓存预留）
    */
@@ -84,9 +85,9 @@ export class UserService {
   }> {
     const agg = await db.order.aggregate({
       where: { userId, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
-      _sum: { payableAmount: true },
+      _sum: { totalAmount: true },
     });
-    const points = Math.floor((agg._sum.payableAmount ?? 0) / 100);
+    const points = Math.floor((agg._sum.totalAmount ?? 0) / 100);
     const memberLevel = points >= 5000 ? 'gold' : points >= 1000 ? 'silver' : 'bronze';
     return { points, memberLevel };
   }

@@ -125,8 +125,8 @@ describe('UserService', () => {
         createdAt: new Date('2026-01-01'),
         updatedAt: new Date('2026-01-02'),
       });
-      // B8：getProfile 聚合已成交订单算 points（50000 分 = 500pt → bronze）
-      dbMocks.orderAggregate.mockResolvedValueOnce({ _sum: { payableAmount: 50000 } });
+      // B8/F2：getProfile 聚合已成交订单 totalAmount 算 points（50000 分 = 500pt → bronze，不含运费）
+      dbMocks.orderAggregate.mockResolvedValueOnce({ _sum: { totalAmount: 50000 } });
 
       const profile = await service.getProfile('user-1');
       expect(profile.id).toBe('user-1');

@@ -448,6 +448,8 @@ export class CartService {
 
     const deliveryFee = warehouseMatch?.deliveryFee ?? 0;
     // B5：聚合 discount（传 couponCode 时调 promotions/validate，前端免二次请求 + 金额一致）
+    // 注（F12）：couponValid 是即时校验快照，不保证下单成功——下单走 applyPromotion 事务内
+    // 重新校验 + increment usedCount，preview 与下单间存在 TOCTOU（券可能被用完），金额以下单事务为准。
     let discount = 0;
     let couponValid = false;
     if (couponCode) {

@@ -2165,6 +2165,7 @@ components:
           format: uuid
         couponCode:
           type: string
+          maxLength: 50
       required:
         - addressId
     CheckoutPreview:
@@ -8824,6 +8825,7 @@ paths:
                   format: uuid
                 couponCode:
                   type: string
+                  maxLength: 50
               required:
                 - addressId
       responses:
