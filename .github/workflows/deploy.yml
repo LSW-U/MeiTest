@@ -1,11 +1,10 @@
 name: Deploy Staging
 
-# merge PR 到 main 后自动部署 staging（印尼雅加达）
+# 手动触发部署 staging（印尼雅加达）
 # 前置：GitHub Secrets 配置 STAGING_HOST / STAGING_SSH_KEY / STAGING_USER
+# 注意：取消 push main 自动触发，避免暂无服务器时每次合并都报红叉
 on:
-  push:
-    branches: [main]
-  workflow_dispatch: # 手动触发
+  workflow_dispatch:
 
 concurrency:
   group: deploy-staging
