@@ -197,6 +197,9 @@ model User {
   emailVerified  Boolean     @default(false) @map("email_verified")
   lastDeviceType DeviceType? @map("last_device_type") // 最近一次登录设备
   lastLoginAt    DateTime?   @map("last_login_at")
+  /// 会员积分（$1=1pt，即 payableAmount 100 分 = 1pt）。
+  /// 字段入库为未来订单成交时 increment 缓存预留；当前 profile 实时聚合已成交订单返回，保证准确。
+  points         Int         @default(0)
   // W7-fix：密码重置时间戳，refresh 端点检查 token.iat < passwordChangedAt 拒绝旧 token
   passwordChangedAt DateTime? @map("password_changed_at")
   // W7-ext-H-unified-auth：统一入口 complete 时写（服务条款 + 隐私政策确认版本）

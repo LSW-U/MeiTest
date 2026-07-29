@@ -6,11 +6,13 @@
 import { Module } from '@nestjs/common';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
+import { PromotionModule } from '../promotion/promotion.module';
 
 /** CartService DI token（OrderService 用此 token 注入避免循环依赖） */
 export const CART_SERVICE_TOKEN = Symbol('CART_SERVICE_TOKEN');
 
 @Module({
+  imports: [PromotionModule],
   controllers: [CartController],
   providers: [
     CartService,

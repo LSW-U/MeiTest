@@ -55,12 +55,20 @@ export class CatalogService {
       db.product.count({ where }),
     ]);
 
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+    ]);
 
     return {
       items: items.map((p) => ({
         ...this.toProductDTO(p),
         defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+        stock: stockMap.get(p.id),
+        rating: ratingMap.get(p.id),
+        categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
       })),
       page,
       pageSize,
@@ -78,9 +86,17 @@ export class CatalogService {
     if (!product) {
       throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     }
+    const [stockMap, ratingMap, categoryMap] = await Promise.all([
+      this.batchGetProductStock([id]),
+      this.batchGetProductRating([id]),
+      this.batchGetCategoryNameMap([product.categoryId]),
+    ]);
     return {
       ...this.toProductDTO(product),
       defaultSkuId: product.skus[0]?.id ?? null,
+      stock: stockMap.get(id),
+      rating: ratingMap.get(id),
+      categoryName: product.categoryId ? (categoryMap.get(product.categoryId) ?? null) : null,
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -92,10 +108,18 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -107,10 +131,18 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -121,10 +153,18 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    const defaultSkuMap = await this.batchGetDefaultSkuIds(items.map((p) => p.id));
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
+      this.batchGetProductStock(items.map((p) => p.id)),
+      this.batchGetProductRating(items.map((p) => p.id)),
+      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+    ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
+      stock: stockMap.get(p.id),
+      rating: ratingMap.get(p.id),
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
     }));
   }
 
@@ -204,6 +244,15 @@ export class CatalogService {
   async listSkusByProduct(productId: string) {
     const skus = await db.sku.findMany({
       where: { productId },
+      orderBy: { price: 'asc' },
+    });
+    return skus.map((s) => this.toSkuDTO(s));
+  }
+
+  /** 客户端商品规格列表（B6，只返 ACTIVE SKU，供规格选择器） */
+  async listClientSkusByProduct(productId: string) {
+    const skus = await db.sku.findMany({
+      where: { productId, status: 'ACTIVE' },
       orderBy: { price: 'asc' },
     });
     return skus.map((s) => this.toSkuDTO(s));
@@ -454,6 +503,69 @@ export class CatalogService {
    *
    * 默认 SKU 选取规则与 recomputeProductPriceMin 一致：最低价 ACTIVE SKU。
    */
+  /**
+   * 批量查询每个商品的库存总量（B1：聚合 Stock 表，全仓库所有 ACTIVE SKU 求和）
+   *
+   * 用于商品列表/详情/推荐，避免 N+1。一次查所有相关 ACTIVE SKU 的 Stock，按 productId 求和。
+   * 只返回有 Stock 记录的 productId；无记录的商品不在 Map 中（前端按 stock=undefined "无库存信息"降级）。
+   * 注：stock 是跨仓库聚合的展示值；真实可购数量以下单时按地址匹配仓库后的校验为准。
+   */
+  private async batchGetProductStock(productIds: string[]): Promise<Map<string, number>> {
+    if (productIds.length === 0) return new Map();
+    const stocks = await db.stock.findMany({
+      where: { sku: { productId: { in: productIds }, status: 'ACTIVE' } },
+      select: { quantity: true, sku: { select: { productId: true } } },
+    });
+    const map = new Map<string, number>();
+    for (const s of stocks) {
+      const pid = s.sku.productId;
+      map.set(pid, (map.get(pid) ?? 0) + s.quantity);
+    }
+    return map;
+  }
+
+  /**
+   * 批量查询每个商品的评分（B7：聚合 APPROVED reviews 的 AVG(rating)）
+   *
+   * 用于商品列表/详情评分展示，避免 N+1。只返有 APPROVED 评论的 productId；
+   * 无评论的不在 Map 中（前端 rating=undefined 条件渲染隐藏）。
+   */
+  private async batchGetProductRating(productIds: string[]): Promise<Map<string, number>> {
+    if (productIds.length === 0) return new Map();
+    const rows = await db.review.groupBy({
+      by: ['productId'],
+      where: { productId: { in: productIds }, status: 'APPROVED' },
+      _avg: { rating: true },
+    });
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      if (r.productId && r._avg.rating != null) {
+        map.set(r.productId, Number(r._avg.rating.toFixed(1)));
+      }
+    }
+    return map;
+  }
+
+  /**
+   * 批量查询 categoryId -> 多语言分类名 map（B11：商品 DTO 补 categoryName）
+   *
+   * 解决前端拿 categoryId(uuid) 无法显示分类名的问题。categorySlug 未补（Category 表无 slug 字段，
+   * 加需 migration+回填；B6 已提供真实 SKU 端点绕过 variantTemplates 按 slug 匹配）。
+   */
+  private async batchGetCategoryNameMap(
+    categoryIds: (string | null)[],
+  ): Promise<Map<string, Record<string, string>>> {
+    const validIds = [...new Set(categoryIds.filter((id): id is string => id !== null))];
+    if (validIds.length === 0) return new Map();
+    const cats = await db.category.findMany({
+      where: { id: { in: validIds } },
+      select: { id: true, name: true },
+    });
+    const map = new Map<string, Record<string, string>>();
+    for (const c of cats) map.set(c.id, c.name as Record<string, string>);
+    return map;
+  }
+
   private async batchGetDefaultSkuIds(productIds: string[]): Promise<Map<string, string>> {
     if (productIds.length === 0) return new Map();
     const skus = await db.sku.findMany({

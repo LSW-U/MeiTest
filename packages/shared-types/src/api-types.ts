@@ -533,6 +533,9 @@ export interface paths {
                             role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            /** @enum {string} */
+                            memberLevel?: "gold" | "silver" | "bronze";
+                            points?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -582,6 +585,9 @@ export interface paths {
                             role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
                             /** @enum {string} */
                             status: "ACTIVE" | "SUSPENDED" | "DELETED";
+                            /** @enum {string} */
+                            memberLevel?: "gold" | "silver" | "bronze";
+                            points?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -2056,6 +2062,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                stock?: number;
+                                rating?: number;
                             }[];
                             total: number;
                             page: number;
@@ -2103,6 +2111,9 @@ export interface paths {
                             shopId: string;
                             /** Format: uuid */
                             categoryId: string | null;
+                            categoryName: {
+                                [key: string]: string;
+                            } | null;
                             name: {
                                 [key: string]: string;
                             };
@@ -2120,11 +2131,87 @@ export interface paths {
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
                         };
+                    };
+                };
+                /** @description PRODUCT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/{id}/skus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品规格列表（B6，只返 ACTIVE SKU，供 C 端规格选择器） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SKU 列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            attributes: {
+                                [key: string]: unknown;
+                            };
+                            price: number;
+                            imageUrl: string | null;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        }[];
                     };
                 };
                 /** @description PRODUCT_NOT_FOUND */
@@ -2192,6 +2279,8 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                         }[];
                     };
                 };
@@ -2241,6 +2330,8 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                         }[];
                     };
                 };
@@ -2404,6 +2495,9 @@ export interface paths {
                             shopId: string;
                             /** Format: uuid */
                             categoryId: string | null;
+                            categoryName: {
+                                [key: string]: string;
+                            } | null;
                             name: {
                                 [key: string]: string;
                             };
@@ -2421,6 +2515,8 @@ export interface paths {
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -2509,6 +2605,9 @@ export interface paths {
                             shopId: string;
                             /** Format: uuid */
                             categoryId: string | null;
+                            categoryName: {
+                                [key: string]: string;
+                            } | null;
                             name: {
                                 [key: string]: string;
                             };
@@ -2526,6 +2625,8 @@ export interface paths {
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -2580,6 +2681,9 @@ export interface paths {
                             shopId: string;
                             /** Format: uuid */
                             categoryId: string | null;
+                            categoryName: {
+                                [key: string]: string;
+                            } | null;
                             name: {
                                 [key: string]: string;
                             };
@@ -2597,6 +2701,8 @@ export interface paths {
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
+                            stock?: number;
+                            rating?: number;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -3212,6 +3318,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
+                                stock?: number;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -3313,6 +3420,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
+                                stock?: number;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -3378,6 +3486,55 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 订单状态计数（B3，个人中心 4 宫格 badge 数据源，per-status 计数） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 各状态订单数 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            counts: {
+                                PENDING_PAYMENT?: number;
+                                PENDING_CONFIRM?: number;
+                                CONFIRMED?: number;
+                                PICKED?: number;
+                                OUT_FOR_DELIVERY?: number;
+                                DELIVERED_PAID?: number;
+                                DELIVERED?: number;
+                                DELIVERED_UNPAID?: number;
+                                COMPLETED?: number;
+                                CANCELLED?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3821,6 +3978,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
+                                stock?: number;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -4000,6 +4158,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 isSelected: boolean;
+                                stock?: number;
                                 /** Format: date-time */
                                 addedAt: string;
                             }[];
@@ -4075,6 +4234,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 isSelected: boolean;
+                                stock?: number;
                                 /** Format: date-time */
                                 addedAt: string;
                             }[];
@@ -4160,6 +4320,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 isSelected: boolean;
+                                stock?: number;
                                 /** Format: date-time */
                                 addedAt: string;
                             }[];
@@ -4219,6 +4380,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 isSelected: boolean;
+                                stock?: number;
                                 /** Format: date-time */
                                 addedAt: string;
                             }[];
@@ -4229,6 +4391,78 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/client/cart/items/batch-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量删除购物车项（B2，管理模式批量删，替代 N 次单删） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        itemIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 批量删除后的购物车 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** Format: uuid */
+                            warehouseId: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                skuId: string;
+                                /** Format: uuid */
+                                productId: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
+                                productImage: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
+                                unitPrice: number;
+                                quantity: number;
+                                isSelected: boolean;
+                                stock?: number;
+                                /** Format: date-time */
+                                addedAt: string;
+                            }[];
+                            selectedSubtotal: number;
+                            totalSubtotal: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/client/cart/checkout-preview": {
@@ -4253,6 +4487,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         addressId: string;
+                        couponCode?: string;
                     };
                 };
             };
@@ -4281,6 +4516,7 @@ export interface paths {
                                 unitPrice: number;
                                 quantity: number;
                                 isSelected: boolean;
+                                stock?: number;
                                 /** Format: date-time */
                                 addedAt: string;
                             }[];
@@ -4293,7 +4529,12 @@ export interface paths {
                             itemsSubtotal: number;
                             deliveryFee: number;
                             payableAmount: number;
+                            discount: number;
+                            couponCode: string | null;
+                            couponValid: boolean;
                             warnings: string[];
+                            /** Format: date-time */
+                            estimatedDeliveryTime: string;
                         };
                     };
                 };
@@ -4318,6 +4559,59 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的优惠券列表（B10，MVP 全局可用券：ACTIVE + 有效期内 + 未超额） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 可用优惠券列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            name: string;
+                            description: string | null;
+                            /** @enum {string} */
+                            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                            value: number;
+                            minOrderAmount: number;
+                            maxDiscountAmount: number | null;
+                            /** Format: date-time */
+                            startAt: string;
+                            /** Format: date-time */
+                            endAt: string;
+                            /** @enum {string} */
+                            status: "available";
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5618,6 +5912,7 @@ export interface paths {
                                         unitPrice: number;
                                         quantity: number;
                                         subtotal: number;
+                                        stock?: number;
                                     }[];
                                     totalAmount: number;
                                     deliveryFee: number;
@@ -5766,6 +6061,7 @@ export interface paths {
                                     unitPrice: number;
                                     quantity: number;
                                     subtotal: number;
+                                    stock?: number;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -5887,6 +6183,7 @@ export interface paths {
                                     unitPrice: number;
                                     quantity: number;
                                     subtotal: number;
+                                    stock?: number;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -10296,6 +10593,9 @@ export interface components {
             role: "SUPER_ADMIN" | "CUSTOMER" | "RIDER" | "WAREHOUSE_STAFF" | "CUSTOMER_SERVICE";
             /** @enum {string} */
             status: "ACTIVE" | "SUSPENDED" | "DELETED";
+            /** @enum {string} */
+            memberLevel?: "gold" | "silver" | "bronze";
+            points?: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -10690,6 +10990,9 @@ export interface components {
             shopId: string;
             /** Format: uuid */
             categoryId: string | null;
+            categoryName: {
+                [key: string]: string;
+            } | null;
             name: {
                 [key: string]: string;
             };
@@ -10707,6 +11010,8 @@ export interface components {
             /** Format: uuid */
             defaultSkuId: string | null;
             salesCount: number;
+            stock?: number;
+            rating?: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -10725,6 +11030,8 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
             salesCount: number;
+            stock?: number;
+            rating?: number;
         };
         CreateProductRequest: {
             /** Format: uuid */
@@ -10904,6 +11211,7 @@ export interface components {
                 unitPrice: number;
                 quantity: number;
                 subtotal: number;
+                stock?: number;
             }[];
             totalAmount: number;
             deliveryFee: number;
@@ -10959,6 +11267,7 @@ export interface components {
             unitPrice: number;
             quantity: number;
             subtotal: number;
+            stock?: number;
         };
         CreateOrderRequest: {
             /** Format: uuid */
@@ -10983,6 +11292,20 @@ export interface components {
         PaymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
         /** @enum {string} */
         OrderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+        OrderCounts: {
+            counts: {
+                PENDING_PAYMENT?: number;
+                PENDING_CONFIRM?: number;
+                CONFIRMED?: number;
+                PICKED?: number;
+                OUT_FOR_DELIVERY?: number;
+                DELIVERED_PAID?: number;
+                DELIVERED?: number;
+                DELIVERED_UNPAID?: number;
+                COMPLETED?: number;
+                CANCELLED?: number;
+            };
+        };
         Cart: {
             /** Format: uuid */
             id: string;
@@ -11007,6 +11330,7 @@ export interface components {
                 unitPrice: number;
                 quantity: number;
                 isSelected: boolean;
+                stock?: number;
                 /** Format: date-time */
                 addedAt: string;
             }[];
@@ -11030,6 +11354,7 @@ export interface components {
             unitPrice: number;
             quantity: number;
             isSelected: boolean;
+            stock?: number;
             /** Format: date-time */
             addedAt: string;
         };
@@ -11042,9 +11367,13 @@ export interface components {
             quantity?: number;
             isSelected?: boolean;
         };
+        BatchDeleteCartItemsRequest: {
+            itemIds: string[];
+        };
         CheckoutPreviewRequest: {
             /** Format: uuid */
             addressId: string;
+            couponCode?: string;
         };
         CheckoutPreview: {
             items: {
@@ -11064,6 +11393,7 @@ export interface components {
                 unitPrice: number;
                 quantity: number;
                 isSelected: boolean;
+                stock?: number;
                 /** Format: date-time */
                 addedAt: string;
             }[];
@@ -11076,7 +11406,30 @@ export interface components {
             itemsSubtotal: number;
             deliveryFee: number;
             payableAmount: number;
+            discount: number;
+            couponCode: string | null;
+            couponValid: boolean;
             warnings: string[];
+            /** Format: date-time */
+            estimatedDeliveryTime: string;
+        };
+        ClientCoupon: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            description: string | null;
+            /** @enum {string} */
+            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+            value: number;
+            minOrderAmount: number;
+            maxDiscountAmount: number | null;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            /** @enum {string} */
+            status: "available";
         };
         PaymentIntent: {
             /** Format: uuid */
@@ -11450,6 +11803,26 @@ export interface components {
             status: "PENDING" | "APPROVED" | "REJECTED";
             /** Format: date-time */
             createdAt: string;
+        };
+        CreateReviewRequest: {
+            rating: number;
+            content: {
+                [key: string]: string;
+            };
+            /** @default [] */
+            images: string[];
+            /** @enum {string} */
+            category: "PRODUCT" | "DELIVERY";
+            /** Format: uuid */
+            productId?: string;
+        };
+        CreateRiderReviewRequest: {
+            rating: number;
+            /** @default [] */
+            tags: ("on_time" | "polite" | "professional" | "careful")[];
+            comment?: {
+                [key: string]: string;
+            };
         };
     };
     responses: never;

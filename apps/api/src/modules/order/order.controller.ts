@@ -154,6 +154,21 @@ export class OrderController {
   }
 
   /**
+   * 订单状态计数（B3，个人中心 4 宫格 badge 数据源）
+   *
+   * 必须在 @Get(':id') 前注册，否则 GET /counts 被 :id 动态路由吞掉（id='counts'）。
+   */
+  @Get('counts')
+  async getOrderCounts(@Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.orderService.getOrderCounts(user.sub);
+    return { success: true as const, data };
+  }
+
+  /**
    * 订单详情（含 items + events）
    */
   @Get(':id')

@@ -73,6 +73,21 @@ export interface AppliedDiscount {
   discountAmount: number;
 }
 
+/** 客户端优惠券视图（B10，隐藏 createdBy/usedCount/totalQuota/perUserLimit 等管理字段） */
+export interface ClientCouponView {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  type: PromotionTypeValue;
+  value: number;
+  minOrderAmount: number;
+  maxDiscountAmount: number | null;
+  startAt: string;
+  endAt: string;
+  status: 'available';
+}
+
 @Injectable()
 export class PromotionService {
   /** 列表（按 status / type 筛选 + 关键字） */
@@ -341,6 +356,27 @@ export class PromotionService {
     return { valid: true, discount, type: promo.type };
   }
 
+  /**
+   * 客户端可用优惠券列表（B10，GET /client/coupons）
+   *
+   * 返回当前 ACTIVE + 有效期内 + 未超额的 Promotion（client 视图，隐藏管理字段）。
+   * MVP 无领券机制（无 UserPromotion 表），状态统一 available；used/expired 需领券表后续迭代。
+   */
+  async listClientCoupons(): Promise<ClientCouponView[]> {
+    const now = new Date();
+    const rows = await db.promotion.findMany({
+      where: {
+        status: 'ACTIVE',
+        startAt: { lte: now },
+        endAt: { gte: now },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows
+      .filter((r) => r.totalQuota === null || r.usedCount < r.totalQuota)
+      .map((r) => this.toClientCouponView(r));
+  }
+
   /** 计算折扣金额（分） */
   private computeDiscount(
     promo: { type: PromotionTypeValue; value: number; maxDiscountAmount: number | null },
@@ -447,6 +483,34 @@ export class PromotionService {
       createdBy: r.createdBy,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
+    };
+  }
+
+  /** Prisma row -> 客户端优惠券视图（隐藏 createdBy/usedCount/totalQuota/perUserLimit） */
+  private toClientCouponView(r: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    type: PromotionTypeValue;
+    value: number;
+    minOrderAmount: number;
+    maxDiscountAmount: number | null;
+    startAt: Date;
+    endAt: Date;
+  }): ClientCouponView {
+    return {
+      id: r.id,
+      code: r.code,
+      name: r.name,
+      description: r.description,
+      type: r.type,
+      value: r.value,
+      minOrderAmount: r.minOrderAmount,
+      maxDiscountAmount: r.maxDiscountAmount,
+      startAt: r.startAt.toISOString(),
+      endAt: r.endAt.toISOString(),
+      status: 'available',
     };
   }
 }

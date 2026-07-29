@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockRedis } = vi.hoisted(() => ({
+const { mockDb, mockRedis, mockPromotions } = vi.hoisted(() => ({
   mockDb: {
     cart: {
       findUnique: vi.fn(),
@@ -35,11 +35,17 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
     address: {
       findUnique: vi.fn(),
     },
+    stock: {
+      groupBy: vi.fn(),
+    },
   },
   mockRedis: {
     get: vi.fn(),
     set: vi.fn(),
     del: vi.fn(),
+  },
+  mockPromotions: {
+    validatePromotion: vi.fn(),
   },
 }));
 
@@ -59,13 +65,16 @@ describe('CartService - Redis 缓存层', () => {
   let service: CartService;
 
   beforeEach(() => {
-    service = new CartService();
+    service = new CartService(mockPromotions as never);
     Object.values(mockDb).forEach((table) => {
       Object.values(table).forEach((fn) => fn.mockReset());
     });
     mockRedis.get.mockReset();
     mockRedis.set.mockReset();
     mockRedis.del.mockReset();
+    mockPromotions.validatePromotion.mockReset();
+    // B12：getCart -> withStock -> batchGetSkuStock 默认返空（items stock undefined）
+    mockDb.stock.groupBy.mockResolvedValue([]);
   });
 
   describe('getCart - 缓存命中', () => {
@@ -274,6 +283,54 @@ describe('CartService - Redis 缓存层', () => {
       await expect(
         service.addItem({ userId: 'u1', skuId: 'sku-1', quantity: 1 }),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe('previewCheckout - couponCode 聚合 discount（B5/F11）', () => {
+    const selectedItems = [
+      { id: 'i1', skuId: 's1', productId: 'p1', productName: { en: 'M' }, productImage: 'i', skuName: { en: '1L' }, unitPrice: 100, quantity: 2, isSelected: true, addedAt: new Date('2026-06-25T00:00:00Z') },
+    ];
+    const setupCart = () => {
+      mockDb.cart.findUnique.mockResolvedValue({ id: 'c1', userId: 'u1', warehouseId: null });
+      mockDb.cartItem.findMany.mockResolvedValue(selectedItems);
+      mockDb.address.findUnique.mockResolvedValue({ id: 'a1', userId: 'u1', lat: null, lng: null });
+      mockDb.stock.groupBy.mockResolvedValue([]);
+    };
+
+    it('无选中项 → 抛 ConflictException（E-CART-004，couponCode 前置校验）', async () => {
+      mockDb.cart.findUnique.mockResolvedValue({ id: 'c1', userId: 'u1', warehouseId: null });
+      mockDb.cartItem.findMany.mockResolvedValue([]);
+      await expect(service.previewCheckout('u1', 'a1')).rejects.toThrow(/No selected items/);
+    });
+
+    it('不传 couponCode → discount=0 + couponCode=null + 不调 validate', async () => {
+      setupCart();
+      const result = await service.previewCheckout('u1', 'a1');
+      expect(result.discount).toBe(0);
+      expect(result.couponCode).toBeNull();
+      expect(result.couponValid).toBe(false);
+      expect(result.payableAmount).toBe(200); // 200 + 0 - 0
+      expect(mockPromotions.validatePromotion).not.toHaveBeenCalled();
+    });
+
+    it('传有效券 → 聚合 discount + payableAmount 减折扣 + couponValid=true', async () => {
+      setupCart();
+      mockPromotions.validatePromotion.mockResolvedValue({ valid: true, discount: 50, type: 'FIXED_AMOUNT' });
+      const result = await service.previewCheckout('u1', 'a1', 'SAVE50');
+      expect(result.discount).toBe(50);
+      expect(result.couponValid).toBe(true);
+      expect(result.couponCode).toBe('SAVE50');
+      expect(result.payableAmount).toBe(150); // 200 + 0 - 50
+      expect(mockPromotions.validatePromotion).toHaveBeenCalledWith('SAVE50', 200, 0);
+    });
+
+    it('传无效券 → discount=0 + couponValid=false', async () => {
+      setupCart();
+      mockPromotions.validatePromotion.mockResolvedValue({ valid: false, discount: 0, reason: 'NOT_IN_PERIOD' });
+      const result = await service.previewCheckout('u1', 'a1', 'EXPIRED');
+      expect(result.discount).toBe(0);
+      expect(result.couponValid).toBe(false);
+      expect(result.payableAmount).toBe(200); // 不减
     });
   });
 });

@@ -25,6 +25,7 @@ const dbMocks = {
   notificationUpdate: vi.fn(),
   notificationUpdateMany: vi.fn(),
   notificationCount: vi.fn(),
+  orderAggregate: vi.fn(),
   $transaction: vi.fn(),
 };
 const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
@@ -46,6 +47,7 @@ const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
     notificationUpdate: vi.fn(),
     notificationUpdateMany: vi.fn(),
     notificationCount: vi.fn(),
+    orderAggregate: vi.fn(),
     $transaction: vi.fn(),
   },
 }));
@@ -78,6 +80,9 @@ vi.mock('../src/shared/db', () => ({
       update: hoistedMocks.notificationUpdate,
       updateMany: hoistedMocks.notificationUpdateMany,
       count: hoistedMocks.notificationCount,
+    },
+    order: {
+      aggregate: hoistedMocks.orderAggregate,
     },
     $transaction: hoistedMocks.$transaction,
   },
@@ -120,11 +125,15 @@ describe('UserService', () => {
         createdAt: new Date('2026-01-01'),
         updatedAt: new Date('2026-01-02'),
       });
+      // B8/F2：getProfile 聚合已成交订单 totalAmount 算 points（50000 分 = 500pt → bronze，不含运费）
+      dbMocks.orderAggregate.mockResolvedValueOnce({ _sum: { totalAmount: 50000 } });
 
       const profile = await service.getProfile('user-1');
       expect(profile.id).toBe('user-1');
       expect(profile.role).toBe('CUSTOMER');
       expect(profile.name).toBe('Alice');
+      expect(profile.points).toBe(500);
+      expect(profile.memberLevel).toBe('bronze');
     });
 
     it('找不到用户抛 NotFoundException', async () => {

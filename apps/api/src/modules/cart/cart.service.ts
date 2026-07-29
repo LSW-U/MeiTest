@@ -20,8 +20,9 @@
  *   - 读：getCart 先查 Redis，miss 查 DB + 回填
  *   - 容错：Redis 异常不阻塞业务（catch + 降级到 DB）
  */
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
+import { PromotionService } from '../promotion/promotion.service';
 import { db, findWarehouseByPoint } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
@@ -52,6 +53,8 @@ export interface CartItemView {
   unitPrice: number;
   quantity: number;
   isSelected: boolean;
+  /** 当前库存（全仓库聚合实时查，B12）。undefined=无库存信息。不进缓存，每次 getCart 实时补 */
+  stock?: number;
   addedAt: string;
 }
 
@@ -72,6 +75,7 @@ const CART_CACHE_TTL_SEC = 5 * 60;
 
 @Injectable()
 export class CartService {
+  constructor(@Inject(PromotionService) private readonly promotions: PromotionService) {}
   /** Redis 缓存 key：`cart:{userId}` */
   private cacheKey(userId: string): string {
     return `cart:${userId}`;
@@ -108,9 +112,8 @@ export class CartService {
     }
   }
 
-  /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
-  async getCart(userId: string): Promise<CartView> {
-    // 1. 先查 Redis（缓存损坏降级到 DB，不阻塞用户）
+  /** 读购物车缓存（容错，损坏/异常返 null） */
+  private async readCartCache(userId: string): Promise<CartView | null> {
     try {
       const cached = await redis.get(this.cacheKey(userId));
       if (cached) {
@@ -122,7 +125,6 @@ export class CartService {
             userId,
             error: (parseErr as Error).message,
           });
-          // 继续走 DB 路径
         }
       }
     } catch (e) {
@@ -131,6 +133,50 @@ export class CartService {
         userId,
         error: (e as Error).message,
       });
+    }
+    return null;
+  }
+
+  /**
+   * 批量查询 SKU 当前库存（全仓库聚合，B12）
+   * 只返回有 Stock 记录的 skuId；无记录的不在 Map 中（item.stock=undefined "无库存信息"）。
+   */
+  private async batchGetSkuStock(skuIds: string[]): Promise<Map<string, number>> {
+    if (skuIds.length === 0) return new Map();
+    const rows = await db.stock.groupBy({
+      by: ['skuId'],
+      where: { skuId: { in: skuIds } },
+      _sum: { quantity: true },
+    });
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      map.set(r.skuId, r._sum.quantity ?? 0);
+    }
+    return map;
+  }
+
+  /**
+   * 给 CartView 的 items 实时补 stock（不写回缓存）
+   *
+   * stock 是关键超卖校验数据，不宜滞后；故缓存不存 stock，每次 getCart 实时补。
+   * 空购物车短路（无 items 不查）。
+   */
+  private async withStock(view: CartView): Promise<CartView> {
+    if (view.items.length === 0) return view;
+    const stockMap = await this.batchGetSkuStock(view.items.map((i) => i.skuId));
+    return {
+      ...view,
+      items: view.items.map((i) => ({ ...i, stock: stockMap.get(i.skuId) })),
+    };
+  }
+
+  /** 获取（或初始化）用户购物车（带 Redis 读缓存） */
+  async getCart(userId: string): Promise<CartView> {
+    // 1. 先查 Redis（缓存损坏降级到 DB，不阻塞用户）
+    const cached = await this.readCartCache(userId);
+    if (cached) {
+      // 缓存命中：stock 实时补（缓存不存 stock）
+      return this.withStock(cached);
     }
 
     // 2. Miss 或缓存损坏：查 DB
@@ -167,10 +213,11 @@ export class CartService {
       totalSubtotal,
     };
 
-    // 3. 回填 Redis
+    // 3. 回填 Redis（不含 stock，stock 由 withStock 实时补）
     await this.setCache(userId, view);
 
-    return view;
+    // 4. 实时补 stock 后返回
+    return this.withStock(view);
   }
 
   /** 加购 / 同 sku 累加数量 */
@@ -312,19 +359,43 @@ export class CartService {
     return this.getCart(userId);
   }
 
+  /** 批量删除 items（B2，管理模式批量删，单事务 deleteMany 替代 N 次 forEach） */
+  async removeItems(userId: string, itemIds: string[]): Promise<CartView> {
+    if (itemIds.length === 0) return this.getCart(userId);
+    const cart = await db.cart.findUnique({ where: { userId } });
+    if (!cart) return this.getCart(userId);
+    // where 含 cartId 防越权：itemIds 中属他人购物车的 id 不匹配 cartId，自动忽略不删
+    await db.cartItem.deleteMany({
+      where: { id: { in: itemIds }, cartId: cart.id },
+    });
+    await this.invalidateCache(userId);
+    return this.getCart(userId);
+  }
+
   /**
    * 结算前校验：选中 items 的库存 + 价格是否有效
    *
    * 返回 checkoutView（订单预览，未下单）
    * 注意：本方法不锁库存（事务在 OrderService.createOrder 中），仅校验
    */
-  async previewCheckout(userId: string, addressId: string): Promise<{
+  async previewCheckout(
+    userId: string,
+    addressId: string,
+    couponCode?: string,
+  ): Promise<{
     items: CartItemView[];
     warehouseMatch: { id: string; code: string; deliveryFee: number } | null;
     itemsSubtotal: number;
     deliveryFee: number;
     payableAmount: number;
+    /** 折扣金额（B5：传 couponCode 时聚合，未传=0） */
+    discount: number;
+    /** 回显传入的券码（未传=null） */
+    couponCode: string | null;
+    couponValid: boolean;
     warnings: string[];
+    /** 最早送达时间 ISO（B9）。MVP 固定 now+2h 估算，未考虑仓库营业时间/运力，后续接 dispatch */
+    estimatedDeliveryTime: string;
   }> {
     const cart = await this.getOrCreateCart(userId);
     const items = await db.cartItem.findMany({
@@ -347,6 +418,7 @@ export class CartService {
     }
 
     const warnings: string[] = [];
+    const stockMap = await this.batchGetSkuStock(items.map((i) => i.skuId));
     const itemViews: CartItemView[] = items.map((i) => ({
       id: i.id,
       skuId: i.skuId,
@@ -358,6 +430,7 @@ export class CartService {
       quantity: i.quantity,
       isSelected: i.isSelected,
       addedAt: i.addedAt.toISOString(),
+      stock: stockMap.get(i.skuId),
     }));
 
     const itemsSubtotal = itemViews.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
@@ -374,15 +447,31 @@ export class CartService {
     }
 
     const deliveryFee = warehouseMatch?.deliveryFee ?? 0;
-    const payableAmount = itemsSubtotal + deliveryFee;
+    // B5：聚合 discount（传 couponCode 时调 promotions/validate，前端免二次请求 + 金额一致）
+    // 注（F12）：couponValid 是即时校验快照，不保证下单成功——下单走 applyPromotion 事务内
+    // 重新校验 + increment usedCount，preview 与下单间存在 TOCTOU（券可能被用完），金额以下单事务为准。
+    let discount = 0;
+    let couponValid = false;
+    if (couponCode) {
+      const validation = await this.promotions.validatePromotion(couponCode, itemsSubtotal, deliveryFee);
+      discount = validation.discount;
+      couponValid = validation.valid;
+    }
+    const payableAmount = itemsSubtotal + deliveryFee - discount;
+    // B9：ETA 简单估算 = now + 2h（MVP 不考虑仓库营业时间/运力，后续接 dispatch 算法）
+    const estimatedDeliveryTime = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
     return {
       items: itemViews,
       warehouseMatch,
       itemsSubtotal,
       deliveryFee,
+      discount,
+      couponCode: couponCode ?? null,
+      couponValid,
       payableAmount,
       warnings,
+      estimatedDeliveryTime,
     };
   }
 

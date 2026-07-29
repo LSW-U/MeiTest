@@ -21,6 +21,8 @@ export const Product = z.object({
   id: Id,
   shopId: Id,
   categoryId: Id.nullable(),
+  /** 分类名（多语言，B11）。null=无分类。categorySlug 未补（Category 表无 slug 字段） */
+  categoryName: I18nText.nullable(),
   name: I18nText,
   description: I18nText.nullable(),
   mainImage: z.string(),
@@ -31,6 +33,10 @@ export const Product = z.object({
   /** 默认 SKU id（最低价 ACTIVE SKU），前端列表"加购物车"直接用 */
   defaultSkuId: Id.nullable(),
   salesCount: z.number().int(),
+  /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息（前端降级），0=断货 */
+  stock: z.number().int().optional(),
+  /** 评分（B7：聚合 APPROVED reviews 的 AVG(rating)，1 位小数）。undefined=无评论，前端条件渲染隐藏 */
+  rating: z.number().optional(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -45,6 +51,10 @@ export const ProductSummary = z.object({
   defaultSkuId: Id.nullable(),
   status: ProductStatus,
   salesCount: z.number().int(),
+  /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息，0=断货 */
+  stock: z.number().int().optional(),
+  /** 评分（B7：聚合 APPROVED reviews AVG）。undefined=无评论 */
+  rating: z.number().optional(),
 });
 
 /** 创建商品请求 */
