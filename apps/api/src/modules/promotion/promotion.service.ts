@@ -85,7 +85,7 @@ export interface ClientCouponView {
   maxDiscountAmount: number | null;
   startAt: string;
   endAt: string;
-  status: 'available';
+  status: 'available' | 'used' | 'expired';
 }
 
 @Injectable()
@@ -357,24 +357,59 @@ export class PromotionService {
   }
 
   /**
-   * 客户端可用优惠券列表（B10，GET /client/coupons）
+   * 客户端优惠券列表（B10 + used/expired 扩展，GET /client/coupons?status=）
    *
-   * 返回当前 ACTIVE + 有效期内 + 未超额的 Promotion（client 视图，隐藏管理字段）。
-   * MVP 无领券机制（无 UserPromotion 表），状态统一 available；used/expired 需领券表后续迭代。
+   * - available（默认）：ACTIVE + 有效期内 + 未超额
+   * - used：该用户用过的券（OrderPromotion JOIN Order.userId，去重 promotionId，按最近使用排序）
+   * - expired（E2）：我用过且已过期（usedPromoIds ∩ endAt<now）
+   *
+   * MVP 无领券机制，靠 OrderPromotion（下单用券记录）派生 used/expired，不需新表。
+   * 隐藏 createdBy/usedCount/totalQuota/perUserLimit 管理字段。
    */
-  async listClientCoupons(): Promise<ClientCouponView[]> {
+  async listClientCoupons(
+    status: 'available' | 'used' | 'expired' = 'available',
+    userId?: string,
+  ): Promise<ClientCouponView[]> {
     const now = new Date();
+
+    // used / expired 都需先查用户用过的 promotionId（OrderPromotion JOIN Order.userId）
+    if (status === 'used' || status === 'expired') {
+      if (!userId) return [];
+      const usedRecords = await db.orderPromotion.findMany({
+        where: { order: { userId } },
+        select: { promotionId: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      // 去重 promotionId，保留每券最近一次使用时间（用于 used 排序）
+      const latestUsedAt = new Map<string, Date>();
+      for (const r of usedRecords) {
+        if (!latestUsedAt.has(r.promotionId)) latestUsedAt.set(r.promotionId, r.createdAt);
+      }
+      const promoIds = [...latestUsedAt.keys()];
+      if (promoIds.length === 0) return [];
+
+      const expired = status === 'expired';
+      const rows = await db.promotion.findMany({
+        where: expired ? { id: { in: promoIds }, endAt: { lt: now } } : { id: { in: promoIds } },
+        orderBy: expired ? { endAt: 'desc' } : undefined,
+      });
+      // used 按"最近使用时间"desc 排序（DB 无法直接按 OrderPromotion.createdAt 排 Promotion，内存排）
+      if (!expired) {
+        rows.sort(
+          (a, b) => (latestUsedAt.get(b.id)?.getTime() ?? 0) - (latestUsedAt.get(a.id)?.getTime() ?? 0),
+        );
+      }
+      return rows.map((r) => this.toClientCouponView(r, status));
+    }
+
+    // available（现有逻辑，向后兼容）
     const rows = await db.promotion.findMany({
-      where: {
-        status: 'ACTIVE',
-        startAt: { lte: now },
-        endAt: { gte: now },
-      },
+      where: { status: 'ACTIVE', startAt: { lte: now }, endAt: { gte: now } },
       orderBy: { createdAt: 'desc' },
     });
     return rows
       .filter((r) => r.totalQuota === null || r.usedCount < r.totalQuota)
-      .map((r) => this.toClientCouponView(r));
+      .map((r) => this.toClientCouponView(r, 'available'));
   }
 
   /** 计算折扣金额（分） */
@@ -486,19 +521,22 @@ export class PromotionService {
     };
   }
 
-  /** Prisma row -> 客户端优惠券视图（隐藏 createdBy/usedCount/totalQuota/perUserLimit） */
-  private toClientCouponView(r: {
-    id: string;
-    code: string;
-    name: string;
-    description: string | null;
-    type: PromotionTypeValue;
-    value: number;
-    minOrderAmount: number;
-    maxDiscountAmount: number | null;
-    startAt: Date;
-    endAt: Date;
-  }): ClientCouponView {
+  /** Prisma row -> 客户端优惠券视图（status 由调用方按 available/used/expired 传入） */
+  private toClientCouponView(
+    r: {
+      id: string;
+      code: string;
+      name: string;
+      description: string | null;
+      type: PromotionTypeValue;
+      value: number;
+      minOrderAmount: number;
+      maxDiscountAmount: number | null;
+      startAt: Date;
+      endAt: Date;
+    },
+    status: 'available' | 'used' | 'expired' = 'available',
+  ): ClientCouponView {
     return {
       id: r.id,
       code: r.code,
@@ -510,7 +548,7 @@ export class PromotionService {
       maxDiscountAmount: r.maxDiscountAmount,
       startAt: r.startAt.toISOString(),
       endAt: r.endAt.toISOString(),
-      status: 'available',
+      status,
     };
   }
 }

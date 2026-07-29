@@ -96,5 +96,5 @@ export const ClientCoupon = z.object({
   maxDiscountAmount: z.number().int().nonnegative().nullable(),
   startAt: IsoTimestamp,
   endAt: IsoTimestamp,
-  status: z.literal('available'),
+  status: z.enum(['available', 'used', 'expired']),
 });

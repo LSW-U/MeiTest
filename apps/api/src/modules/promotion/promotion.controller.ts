@@ -21,6 +21,7 @@ import {
   Param,
   Query,
   Req,
+  BadRequestException,
   HttpException,
   HttpStatus,
   Inject,
@@ -176,8 +177,23 @@ export class ClientCouponController {
   constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
 
   @Get()
-  async list() {
-    const data = await this.promoService.listClientCoupons();
+  async list(@Query('status') status: string | undefined, @Req() req: RequestWithUser) {
+    const validStatuses = ['available', 'used', 'expired'];
+    const s = status ?? 'available';
+    if (!validStatuses.includes(s)) {
+      throw new BadRequestException({
+        code: 'E-COMMON-001',
+        message: 'status must be one of: available, used, expired',
+      });
+    }
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.promoService.listClientCoupons(
+      s as 'available' | 'used' | 'expired',
+      user.sub,
+    );
     return { success: true as const, data };
   }
 }
