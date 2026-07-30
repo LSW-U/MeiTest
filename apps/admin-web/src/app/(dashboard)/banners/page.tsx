@@ -281,7 +281,7 @@ export default function BannersPage() {
               <DeleteBannerDialog
                 banner={row}
                 pending={deleteMutation.isPending}
-                onConfirm={() => deleteMutation.mutate(row.id)}
+                onConfirm={() => deleteMutation.mutateAsync(row.id)}
               />
             </div>
           )}
@@ -345,7 +345,7 @@ function CreateBannerDialog({
     if (!imageUrl) return;
     onCreate({
       imageUrl,
-      alt,
+      alt: Object.keys(alt).length ? alt : undefined,
       linkType,
       linkValue: linkValue || undefined,
       sortOrder: parseInt(sortOrder, 10) || 0,
@@ -428,7 +428,7 @@ function EditBannerDialog({
   banner: Banner;
   onSave: (input: {
     imageUrl?: string;
-    alt?: I18nText;
+    alt?: I18nText | null;
     linkType?: BannerLinkType;
     linkValue?: string | null;
     sortOrder?: number;
@@ -462,7 +462,7 @@ function EditBannerDialog({
     e.preventDefault();
     onSave({
       imageUrl,
-      alt,
+      alt: Object.keys(alt).length ? alt : null,
       linkType,
       linkValue: linkValue || null,
       sortOrder: parseInt(sortOrder, 10) || 0,
@@ -546,20 +546,28 @@ function DeleteBannerDialog({
 }: {
   banner: Banner;
   pending: boolean;
-  onConfirm: () => void;
+  onConfirm: () => Promise<unknown>;
 }) {
   const { toast } = useToast();
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
 
-  const handleConfirm = () => {
-    onConfirm();
-    setOpen(false);
-    toast({
-      title: t('w.banners.deleted'),
-      description: banner.alt?.en ?? '',
-      variant: 'info',
-    });
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      setOpen(false);
+      toast({
+        title: t('w.banners.deleted'),
+        description: banner.alt?.en ?? '',
+        variant: 'info',
+      });
+    } catch (err) {
+      toast({
+        title: t('w.banners.deleteTitle'),
+        description: err instanceof ApiError ? err.message : String(err),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

@@ -17,7 +17,7 @@
  */
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
@@ -248,7 +248,7 @@ export default function CategoriesPage() {
       else next.add(id);
       return next;
     });
-  const isExpanded = (id: string) => !collapsedIds.has(id);
+  const isExpanded = useCallback((id: string) => !collapsedIds.has(id), [collapsedIds]);
 
   /** DataTable 展示行：大类 +（展开则跟子分类）的平铺序列 */
   const displayRows: Category[] = useMemo(() => {
@@ -260,8 +260,7 @@ export default function CategoriesPage() {
       }
     });
     return rows;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree, collapsedIds]);
+  }, [tree, isExpanded]);
 
   /** 新建 Dialog：F5 "添加子分类" 预填 parent */
   const [createOpen, setCreateOpen] = useState(false);

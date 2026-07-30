@@ -28,6 +28,13 @@ export class HomeService {
     return source
       .filter((e) => e.status === 'ACTIVE')
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map(({ status: _status, ...rest }) => rest);
+      .map((e) => ({
+        id: e.id,
+        titleKey: e.titleKey,
+        icon: e.icon,
+        theme: e.theme,
+        link: e.link,
+        sortOrder: e.sortOrder,
+      }));
   }
 }
