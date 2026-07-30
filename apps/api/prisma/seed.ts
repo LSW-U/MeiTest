@@ -189,44 +189,55 @@ async function main() {
   // ===== 4. products + skus + stock（基于 seed-data.json，含真实图片 URL） =====
   const warehouses = await prisma.warehouse.findMany();
 
-  // 4a. 创建分类：4 个顶级大类 + 现有 slug 作为子分类挂 "Food & Grocery" 下（演示两层）
+  // 4a. 创建分类：4 顶级大类 + 每大类下子分类（§6.1，演示两层；商品挂叶子子分类）
   await prisma.category.deleteMany();
   const TOP_CATEGORIES = [
-    { name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia' }, sortOrder: 1 },
-    { name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza' }, sortOrder: 2 },
-    { name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele' }, sortOrder: 3 },
-    { name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes' }, sortOrder: 4 },
+    { slug: 'groceries', name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia' }, sortOrder: 1 },
+    { slug: 'beauty', name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza' }, sortOrder: 2 },
+    { slug: 'skin-care', name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele' }, sortOrder: 3 },
+    { slug: 'fragrances', name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes' }, sortOrder: 4 },
   ];
-  let groceriesId = '';
+  const topIdBySlug = new Map<string, string>();
   for (const t of TOP_CATEGORIES) {
-    const cat = await prisma.category.create({
-      data: { name: t.name, iconUrl: '', sortOrder: t.sortOrder },
-    });
-    if (t.name.en === 'Food & Grocery') groceriesId = cat.id;
+    const cat = await prisma.category.create({ data: { name: t.name, iconUrl: '', sortOrder: t.sortOrder } });
+    topIdBySlug.set(t.slug, cat.id);
   }
-  // 子分类：按 seed-data 的 category slug 去重，挂 Food & Grocery 大类下
-  const categoryMap = new Map<string, string>(); // category slug -> categoryId
-  const uniqueCategories = [...new Set(seedData.map((p: any) => p.category))];
-  for (const catSlug of uniqueCategories) {
-    const sample = seedData.find((p: any) => p.category === catSlug) as any;
+  // 子分类（§6.1：每大类下 3-4 个，name 用多语言而非顶级名重复）
+  const SUB_CATEGORIES_DEF = [
+    { parentSlug: 'groceries', slug: 'fresh-produce', name: { en: 'Fresh Produce', zh: '生鲜果蔬', id: 'Produk Segar', pt: 'Produtos Frescos' }, sortOrder: 1 },
+    { parentSlug: 'groceries', slug: 'pantry', name: { en: 'Pantry Staples', zh: '粮油干货', id: 'Bahan Pokok', pt: 'Despensa' }, sortOrder: 2 },
+    { parentSlug: 'groceries', slug: 'snacks', name: { en: 'Snacks', zh: '零食', id: 'Camilan', pt: 'Lanches' }, sortOrder: 3 },
+    { parentSlug: 'groceries', slug: 'beverages', name: { en: 'Beverages', zh: '饮料', id: 'Minuman', pt: 'Bebidas' }, sortOrder: 4 },
+    { parentSlug: 'beauty', slug: 'skincare', name: { en: 'Skincare', zh: '护肤', id: 'Perawatan Wajah', pt: 'Cuidados Rosto' }, sortOrder: 1 },
+    { parentSlug: 'beauty', slug: 'makeup', name: { en: 'Makeup', zh: '彩妆', id: 'Makeup', pt: 'Maquiagem' }, sortOrder: 2 },
+    { parentSlug: 'beauty', slug: 'body-care', name: { en: 'Body Care', zh: '身体护理', id: 'Perawatan Tubuh', pt: 'Cuidados Corpo' }, sortOrder: 3 },
+    { parentSlug: 'skin-care', slug: 'face-care', name: { en: 'Face Care', zh: '面部护理', id: 'Perawatan Wajah', pt: 'Cuidados Rosto' }, sortOrder: 1 },
+    { parentSlug: 'skin-care', slug: 'sun-care', name: { en: 'Sun Care', zh: '防晒', id: 'Tabir Surya', pt: 'Proteção Solar' }, sortOrder: 2 },
+    { parentSlug: 'fragrances', slug: 'women', name: { en: 'Women', zh: '女士', id: 'Wanita', pt: 'Mulher' }, sortOrder: 1 },
+    { parentSlug: 'fragrances', slug: 'men', name: { en: 'Men', zh: '男士', id: 'Pria', pt: 'Homem' }, sortOrder: 2 },
+    { parentSlug: 'fragrances', slug: 'unisex', name: { en: 'Unisex', zh: '中性', id: 'Unisex', pt: 'Unisex' }, sortOrder: 3 },
+  ];
+  // 每大类的子分类 id 列表（商品按 index 轮流分配，演示子分类有商品）
+  const subIdsByParent = new Map<string, string[]>();
+  for (const s of SUB_CATEGORIES_DEF) {
+    const parentTopId = topIdBySlug.get(s.parentSlug)!;
     const cat = await prisma.category.create({
-      data: {
-        name: sample.categoryName,
-        iconUrl: CATEGORY_ICONS[catSlug] ?? '',
-        sortOrder: sample.categorySortOrder,
-        parentId: groceriesId, // 挂 Food & Grocery 下（演示两层）
-      },
+      data: { name: s.name, iconUrl: CATEGORY_ICONS[s.slug] ?? '', sortOrder: s.sortOrder, parentId: parentTopId },
     });
-    categoryMap.set(catSlug, cat.id);
+    if (!subIdsByParent.has(s.parentSlug)) subIdsByParent.set(s.parentSlug, []);
+    subIdsByParent.get(s.parentSlug)!.push(cat.id);
   }
-  console.log(`  ✅ ${TOP_CATEGORIES.length} 顶级 + ${uniqueCategories.length} 子分类（挂 Food & Grocery）: ${uniqueCategories.join(', ')}`);
+  console.log(`  ✅ ${TOP_CATEGORIES.length} 顶级 + ${SUB_CATEGORIES_DEF.length} 子分类`);
 
   // 4b. 创建商品 + SKU + stock
   for (const [idx, p] of seedData.entries()) {
     const product = await prisma.product.create({
       data: {
         shopId: shop.id,
-        categoryId: categoryMap.get(p.category) ?? null,
+        categoryId: (() => {
+          const subs = subIdsByParent.get(p.category);
+          return subs && subs.length ? subs[idx % subs.length] : null;
+        })(),
         name: p.name, // 4 语言简短商品名（apply-translations.mjs 填充）
         description: p.description,
         mainImage: p.mainImage,
