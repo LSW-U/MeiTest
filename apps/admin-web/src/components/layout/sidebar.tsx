@@ -34,6 +34,7 @@ import {
   BarChart3,
   Settings,
   Image,
+  Flame,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -110,6 +111,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.promotions',
     href: '/promotions',
     icon: Tag,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.hotSearch',
+    href: '/hot-search',
+    icon: Flame,
     perspectives: ['platform'],
   },
   {

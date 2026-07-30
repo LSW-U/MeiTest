@@ -27,7 +27,8 @@
     "footerFlow": "W3-W 流程",
     "perspectiveLabel": "视角",
     "reviews": "评论管理",
-    "banners": "轮播图"
+    "banners": "轮播图",
+    "hotSearch": "热搜"
   },
   "dashboard": {
     "title": "平台数据看板",

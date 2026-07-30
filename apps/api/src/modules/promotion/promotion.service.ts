@@ -284,8 +284,16 @@ export class PromotionService {
       });
     }
 
-    // 单用户限用：MVP 留口子不强制（W8 再接 OrderPromotion 计数）
-    void userId;
+    // P1-1：单用户限用校验（事务内 count OrderPromotion，防超 perUserLimit 滥用）
+    const userUsedCount = await client.orderPromotion.count({
+      where: { promotionId: promo.id, order: { userId } },
+    });
+    if (userUsedCount >= promo.perUserLimit) {
+      throw new BadRequestException({
+        code: 'E-PROMO-020',
+        message: `Promotion per-user limit reached (${promo.perUserLimit})`,
+      });
+    }
 
     const discountAmount = this.computeDiscount(promo, totalAmount, deliveryFee);
 
@@ -390,7 +398,10 @@ export class PromotionService {
 
       const expired = status === 'expired';
       const rows = await db.promotion.findMany({
-        where: expired ? { id: { in: promoIds }, endAt: { lt: now } } : { id: { in: promoIds } },
+        // P1-3：过滤 DELETED 券（软删不进 used/expired 历史；PAUSED 保留 -- 用户用过的暂停券仍可见）
+        where: expired
+          ? { id: { in: promoIds }, endAt: { lt: now }, status: { not: 'DELETED' } }
+          : { id: { in: promoIds }, status: { not: 'DELETED' } },
         orderBy: expired ? { endAt: 'desc' } : undefined,
       });
       // used 按"最近使用时间"desc 排序（DB 无法直接按 OrderPromotion.createdAt 排 Promotion，内存排）
