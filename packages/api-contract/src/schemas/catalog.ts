@@ -101,14 +101,21 @@ export const CreateSkuRequest = z.object({
 /** 修改 SKU 请求 */
 export const UpdateSkuRequest = CreateSkuRequest.partial();
 
-/** 分类实体（平铺，前端按 parentId 组装树形） */
-export const Category = z.object({
+/** 分类基础字段（叶子节点用，无 children） */
+const CategoryBase = z.object({
   id: Id,
   name: I18nText,
   /** W7-ext-A：必须是合法 URL 或空字符串，禁止 emoji 当 iconUrl 写库 */
   iconUrl: z.string().url().or(z.literal('')),
   parentId: Id.nullable(),
   sortOrder: z.number().int(),
+  /** 上下架状态（admin 端可见；client 端 service 已过滤 ACTIVE，不返此字段） */
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+});
+/** 分类实体（支持两层：client 端 children 嵌套只含 ACTIVE，admin 端平铺带 parentId 含 INACTIVE） */
+export const Category = CategoryBase.extend({
+  /** 子分类（client 端 service 组装嵌套；admin 端平铺不返；MVP 锁 2 层，叶子无 children） */
+  children: z.array(CategoryBase).optional(),
 });
 
 /** 创建分类请求 */
@@ -120,8 +127,10 @@ export const CreateCategoryRequest = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-/** 修改分类请求 */
-export const UpdateCategoryRequest = CreateCategoryRequest.partial();
+/** 修改分类请求（含 status toggle，修现存 admin-web status 写不进库的不一致） */
+export const UpdateCategoryRequest = CreateCategoryRequest.partial().extend({
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+});
 
 /** Banner 实体 */
 export const Banner = z.object({

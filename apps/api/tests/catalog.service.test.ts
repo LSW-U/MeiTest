@@ -25,6 +25,7 @@ const m = vi.hoisted(() => ({
   categoryCreate: vi.fn(),
   categoryUpdate: vi.fn(),
   categoryDelete: vi.fn(),
+  categoryCount: vi.fn(),
   bannerFindMany: vi.fn(),
   bannerFindUnique: vi.fn(),
   bannerCreate: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock('../src/shared/db', () => ({
       create: m.categoryCreate,
       update: m.categoryUpdate,
       delete: m.categoryDelete,
+      count: m.categoryCount,
     },
     banner: {
       findMany: m.bannerFindMany,
@@ -271,19 +273,40 @@ describe('CatalogService', () => {
   });
 
   describe('Category', () => {
-    it('listCategories 返回排序后的分类', async () => {
+    it('listCategoryTree 返两层嵌套（roots + children，按 sortOrder）', async () => {
       m.categoryFindMany.mockResolvedValueOnce([
-        {
-          id: 'cat-1',
-          name: { en: 'Drinks' },
-          iconUrl: 'icon.png',
-          parentId: null,
-          sortOrder: 1,
-        },
+        { id: 'cat-1', name: { en: 'Drinks' }, iconUrl: 'i', parentId: null, sortOrder: 1, status: 'ACTIVE' },
+        { id: 'cat-2', name: { en: 'Coffee' }, iconUrl: 'i', parentId: 'cat-1', sortOrder: 1, status: 'ACTIVE' },
+        { id: 'cat-3', name: { en: 'Tea' }, iconUrl: 'i', parentId: 'cat-1', sortOrder: 2, status: 'ACTIVE' },
       ]);
-      const list = await service.listCategories();
-      expect(list[0].id).toBe('cat-1');
-      expect(list[0].name.en).toBe('Drinks');
+      const tree = await service.listCategoryTree();
+      expect(tree).toHaveLength(1);
+      expect(tree[0].id).toBe('cat-1');
+      expect(tree[0].children).toHaveLength(2);
+      expect(tree[0].children?.map((c) => c.id)).toEqual(['cat-2', 'cat-3']);
+    });
+
+    it('createCategory parentId 不存在 -> E-CATALOG-010', async () => {
+      m.categoryFindUnique.mockResolvedValueOnce(null);
+      await expect(
+        service.createCategory({ name: { en: 'X' }, iconUrl: '', parentId: 'missing' }),
+      ).rejects.toMatchObject({ response: { code: 'E-CATALOG-010' }, status: 400 });
+    });
+
+    it('createCategory parent 非顶级 -> E-CATALOG-011（锁 2 层）', async () => {
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'p', parentId: 'grandpa' });
+      await expect(
+        service.createCategory({ name: { en: 'X' }, iconUrl: '', parentId: 'p' }),
+      ).rejects.toMatchObject({ response: { code: 'E-CATALOG-011' }, status: 400 });
+    });
+
+    it('deleteCategory 有 ACTIVE 子分类 -> E-CATALOG-014', async () => {
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'cat-1', parentId: null });
+      m.categoryCount.mockResolvedValueOnce(2);
+      await expect(service.deleteCategory('cat-1')).rejects.toMatchObject({
+        response: { code: 'E-CATALOG-014' },
+        status: 400,
+      });
     });
 
     it('deleteCategory 找不到抛 NotFoundException', async () => {

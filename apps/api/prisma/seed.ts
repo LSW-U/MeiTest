@@ -189,8 +189,22 @@ async function main() {
   // ===== 4. products + skus + stock（基于 seed-data.json，含真实图片 URL） =====
   const warehouses = await prisma.warehouse.findMany();
 
-  // 4a. 创建分类（按 seed-data.json 中的品类去重）
+  // 4a. 创建分类：4 个顶级大类 + 现有 slug 作为子分类挂 "Food & Grocery" 下（演示两层）
   await prisma.category.deleteMany();
+  const TOP_CATEGORIES = [
+    { name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia' }, sortOrder: 1 },
+    { name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza' }, sortOrder: 2 },
+    { name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele' }, sortOrder: 3 },
+    { name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes' }, sortOrder: 4 },
+  ];
+  let groceriesId = '';
+  for (const t of TOP_CATEGORIES) {
+    const cat = await prisma.category.create({
+      data: { name: t.name, iconUrl: '', sortOrder: t.sortOrder },
+    });
+    if (t.name.en === 'Food & Grocery') groceriesId = cat.id;
+  }
+  // 子分类：按 seed-data 的 category slug 去重，挂 Food & Grocery 大类下
   const categoryMap = new Map<string, string>(); // category slug -> categoryId
   const uniqueCategories = [...new Set(seedData.map((p: any) => p.category))];
   for (const catSlug of uniqueCategories) {
@@ -200,11 +214,12 @@ async function main() {
         name: sample.categoryName,
         iconUrl: CATEGORY_ICONS[catSlug] ?? '',
         sortOrder: sample.categorySortOrder,
+        parentId: groceriesId, // 挂 Food & Grocery 下（演示两层）
       },
     });
     categoryMap.set(catSlug, cat.id);
   }
-  console.log(`  ✅ ${uniqueCategories.length} categories: ${uniqueCategories.join(', ')}`);
+  console.log(`  ✅ ${TOP_CATEGORIES.length} 顶级 + ${uniqueCategories.length} 子分类（挂 Food & Grocery）: ${uniqueCategories.join(', ')}`);
 
   // 4b. 创建商品 + SKU + stock
   for (const [idx, p] of seedData.entries()) {

@@ -31,10 +31,20 @@ export class CatalogService {
     const pageSize = Math.min(opts.pageSize ?? 20, 100);
     const skip = (page - 1) * pageSize;
 
+    // 子分类适配：categoryId 是大类（有子分类）-> 返大类+所有子分类商品；叶子 -> 返自身
+    let categoryIdFilter: { in: string[] } | undefined;
+    if (opts.categoryId) {
+      const children = await db.category.findMany({
+        where: { parentId: opts.categoryId },
+        select: { id: true },
+      });
+      categoryIdFilter = { in: [opts.categoryId, ...children.map((c) => c.id)] };
+    }
+
     const where: Prisma.ProductWhereInput = {
       ...(opts.status && { status: opts.status }),
       ...(!opts.status && { status: 'ACTIVE' }), // 默认 ACTIVE
-      ...(opts.categoryId && { categoryId: opts.categoryId }),
+      ...(categoryIdFilter && { categoryId: categoryIdFilter }),
       ...(opts.keyword && {
         OR: [
           { name: { path: ['en'], string_contains: opts.keyword } },
@@ -333,14 +343,49 @@ export class CatalogService {
 
   // ===== Category =====
 
-  async listCategories() {
-    const items = await db.category.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] });
+  /** client：返两层嵌套树，只含 ACTIVE，按 sortOrder + id 排（删 name:'asc' JSONB 可疑排序） */
+  async listCategoryTree() {
+    const items = await db.category.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
+    return this.buildCategoryTree(items);
+  }
+
+  /** admin：返平铺带 parentId（含 INACTIVE + status），前端组装树做 CRUD */
+  async listCategoriesAdmin() {
+    const items = await db.category.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    });
     return items.map((c) => ({
       id: c.id,
       name: c.name as Record<string, string>,
       iconUrl: c.iconUrl,
       parentId: c.parentId,
       sortOrder: c.sortOrder,
+      status: c.status as 'ACTIVE' | 'INACTIVE',
+    }));
+  }
+
+  /** 平铺 -> 两层嵌套（MVP 锁 2 层：roots + 直接 children，不递归；client tree 不返 status） */
+  private buildCategoryTree(rows: Array<{
+    id: string;
+    name: unknown;
+    iconUrl: string;
+    parentId: string | null;
+    sortOrder: number;
+  }>) {
+    const toNode = (c: { id: string; name: unknown; iconUrl: string; parentId: string | null; sortOrder: number }) => ({
+      id: c.id,
+      name: c.name as Record<string, string>,
+      iconUrl: c.iconUrl,
+      parentId: c.parentId,
+      sortOrder: c.sortOrder,
+    });
+    const roots = rows.filter((r) => !r.parentId);
+    return roots.map((r) => ({
+      ...toNode(r),
+      children: rows.filter((c) => c.parentId === r.id).map(toNode),
     }));
   }
 
@@ -349,13 +394,21 @@ export class CatalogService {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
+    status?: 'ACTIVE' | 'INACTIVE';
   }) {
+    if (input.parentId) {
+      const parent = await db.category.findUnique({ where: { id: input.parentId } });
+      if (!parent) throw new BadRequestException({ code: 'E-CATALOG-010', message: 'Parent category not found' });
+      // MVP 锁 2 层：parent 必须是顶级（parentId = null）
+      if (parent.parentId) throw new BadRequestException({ code: 'E-CATALOG-011', message: 'Only 2 levels supported' });
+    }
     const created = await db.category.create({
       data: {
         name: input.name,
         iconUrl: input.iconUrl,
         parentId: input.parentId ?? null,
         sortOrder: input.sortOrder ?? 0,
+        status: (input.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
       },
     });
     return {
@@ -364,6 +417,7 @@ export class CatalogService {
       iconUrl: created.iconUrl,
       parentId: created.parentId,
       sortOrder: created.sortOrder,
+      status: created.status as 'ACTIVE' | 'INACTIVE',
     };
   }
 
@@ -372,9 +426,20 @@ export class CatalogService {
     iconUrl: string;
     parentId: string | null;
     sortOrder: number;
+    status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.category.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
+
+    if (input.parentId !== undefined && input.parentId !== null) {
+      if (input.parentId === id) throw new BadRequestException({ code: 'E-CATALOG-012', message: 'Cannot set self as parent' });
+      const parent = await db.category.findUnique({ where: { id: input.parentId } });
+      if (!parent) throw new BadRequestException({ code: 'E-CATALOG-010', message: 'Parent category not found' });
+      if (parent.parentId) throw new BadRequestException({ code: 'E-CATALOG-011', message: 'Only 2 levels supported' });
+      // 该分类已有子分类，不能再挂为别人子分类（避免变 3 层）
+      const childCount = await db.category.count({ where: { parentId: id } });
+      if (childCount > 0) throw new BadRequestException({ code: 'E-CATALOG-013', message: 'Has subcategories, cannot become subcategory' });
+    }
 
     const updated = await db.category.update({
       where: { id },
@@ -383,6 +448,7 @@ export class CatalogService {
         ...(input.iconUrl !== undefined && { iconUrl: input.iconUrl }),
         ...(input.parentId !== undefined && { parentId: input.parentId }),
         ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
+        ...(input.status !== undefined && { status: input.status }),
       },
     });
     return {
@@ -391,12 +457,16 @@ export class CatalogService {
       iconUrl: updated.iconUrl,
       parentId: updated.parentId,
       sortOrder: updated.sortOrder,
+      status: updated.status as 'ACTIVE' | 'INACTIVE',
     };
   }
 
   async deleteCategory(id: string) {
     const existing = await db.category.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
+    // 子分类保护：有 ACTIVE 子分类时禁止删（先删子分类）
+    const childCount = await db.category.count({ where: { parentId: id, status: 'ACTIVE' } });
+    if (childCount > 0) throw new BadRequestException({ code: 'E-CATALOG-014', message: 'Please delete subcategories first' });
     // 软删除：分类可能被 Product 引用，硬删会丢商品归类
     await db.category.update({ where: { id }, data: { status: 'INACTIVE' } });
   }

@@ -104,7 +104,7 @@ export class ClientCatalogController {
 
   @Get('categories')
   async categories() {
-    const data = await this.catalog.listCategories();
+    const data = await this.catalog.listCategoryTree();
     return { success: true, data };
   }
 
@@ -249,7 +249,7 @@ export class AdminCategoryController {
 
   @Get()
   async list() {
-    const data = await this.catalog.listCategories();
+    const data = await this.catalog.listCategoriesAdmin();
     return { success: true, data };
   }
 
@@ -260,6 +260,7 @@ export class AdminCategoryController {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
+    status?: 'ACTIVE' | 'INACTIVE';
   }) {
     const data = await this.catalog.createCategory(body);
     return { success: true, data };
@@ -274,6 +275,7 @@ export class AdminCategoryController {
       iconUrl: string;
       parentId: string | null;
       sortOrder: number;
+      status: 'ACTIVE' | 'INACTIVE';
     }>,
   ) {
     const data = await this.catalog.updateCategory(id, body);

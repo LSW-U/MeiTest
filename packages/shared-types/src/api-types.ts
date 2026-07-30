@@ -2377,6 +2377,21 @@ export interface paths {
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
+                            /** @enum {string} */
+                            status?: "ACTIVE" | "INACTIVE";
+                            children?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                iconUrl: string | "";
+                                /** Format: uuid */
+                                parentId: string | null;
+                                sortOrder: number;
+                                /** @enum {string} */
+                                status?: "ACTIVE" | "INACTIVE";
+                            }[];
                         }[];
                     };
                 };
@@ -2830,6 +2845,21 @@ export interface paths {
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
+                            /** @enum {string} */
+                            status?: "ACTIVE" | "INACTIVE";
+                            children?: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                iconUrl: string | "";
+                                /** Format: uuid */
+                                parentId: string | null;
+                                sortOrder: number;
+                                /** @enum {string} */
+                                status?: "ACTIVE" | "INACTIVE";
+                            }[];
                         };
                     };
                 };
@@ -11127,6 +11157,21 @@ export interface components {
             /** Format: uuid */
             parentId: string | null;
             sortOrder: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+            children?: {
+                /** Format: uuid */
+                id: string;
+                name: {
+                    [key: string]: string;
+                };
+                iconUrl: string | "";
+                /** Format: uuid */
+                parentId: string | null;
+                sortOrder: number;
+                /** @enum {string} */
+                status?: "ACTIVE" | "INACTIVE";
+            }[];
         };
         CreateCategoryRequest: {
             name: {
@@ -11145,6 +11190,8 @@ export interface components {
             /** Format: uuid */
             parentId?: string | null;
             sortOrder?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
         };
         Banner: {
             /** Format: uuid */
