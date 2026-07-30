@@ -53,6 +53,8 @@ tags:
     description: 地址 geocoding（W7 P0-3）
   - name: review
     description: 评论中心（客户评论 + 骑手评价，reviews-2）
+  - name: home
+    description: 首页活动入口（PromoDock）
 components:
   schemas:
     JwtPayload:
@@ -3352,7 +3354,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a50 []
+          default: &a52 []
         category:
           type: string
           enum: *a20
@@ -3376,13 +3378,45 @@ components:
             type: string
             enum: *a21
           maxItems: 4
-          default: &a51 []
+          default: &a53 []
         comment:
           type: object
           additionalProperties:
             type: string
       required:
         - rating
+    HomeEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        titleKey:
+          type: string
+        icon:
+          type: string
+        theme:
+          type: string
+          enum: &a50
+            - deals
+            - coupons
+            - delivery
+            - points
+        link:
+          type: string
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum: &a51
+            - ACTIVE
+            - INACTIVE
+      required:
+        - id
+        - titleKey
+        - icon
+        - theme
+        - link
+        - sortOrder
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -16822,6 +16856,44 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/home-entries:
+    get:
+      tags:
+        - home
+      description: 首页活动入口（PromoDock 常驻 4 入口配置，@Public。按 sortOrder 升序，仅返 ACTIVE）
+      responses:
+        "200":
+          description: 活动入口列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    titleKey:
+                      type: string
+                    icon:
+                      type: string
+                    theme:
+                      type: string
+                      enum: *a50
+                    link:
+                      type: string
+                    sortOrder:
+                      type: integer
+                    status:
+                      type: string
+                      enum: *a51
+                  required:
+                    - id
+                    - titleKey
+                    - icon
+                    - theme
+                    - link
+                    - sortOrder
   /api/v1/client/orders/{id}/review:
     post:
       tags:
@@ -16848,7 +16920,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a50
+                  default: *a52
                 category:
                   type: string
                   enum: *a20
@@ -17009,7 +17081,7 @@ paths:
                     type: string
                     enum: *a21
                   maxItems: 4
-                  default: *a51
+                  default: *a53
                 comment:
                   type: object
                   additionalProperties:
