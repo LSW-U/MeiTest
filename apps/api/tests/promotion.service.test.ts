@@ -13,6 +13,7 @@ const { mockDb } = vi.hoisted(() => ({
     },
     orderPromotion: {
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     $executeRaw: vi.fn(),
   },
@@ -420,7 +421,9 @@ describe('PromotionService (W7-ext-G)', () => {
       expect(result.map((x) => x.id)).toEqual(['promo-2', 'promo-1']);
       expect(result[0].status).toBe('used');
       expect(mockDb.promotion.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: ['promo-1', 'promo-2'] } } }),
+        expect.objectContaining({
+          where: expect.objectContaining({ id: { in: ['promo-1', 'promo-2'] } }),
+        }),
       );
     });
 
