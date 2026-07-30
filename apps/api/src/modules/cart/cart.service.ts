@@ -393,6 +393,8 @@ export class CartService {
     /** 回显传入的券码（未传=null） */
     couponCode: string | null;
     couponValid: boolean;
+    /** 券无效原因（couponValid=false 时回显，F14；如 NOT_IN_PERIOD/BELOW_MIN_ORDER） */
+    couponReason?: string | null;
     warnings: string[];
     /** 最早送达时间 ISO（B9）。MVP 固定 now+2h 估算，未考虑仓库营业时间/运力，后续接 dispatch */
     estimatedDeliveryTime: string;
@@ -452,10 +454,12 @@ export class CartService {
     // 重新校验 + increment usedCount，preview 与下单间存在 TOCTOU（券可能被用完），金额以下单事务为准。
     let discount = 0;
     let couponValid = false;
+    let couponReason: string | null = null;
     if (couponCode) {
       const validation = await this.promotions.validatePromotion(couponCode, itemsSubtotal, deliveryFee);
       discount = validation.discount;
       couponValid = validation.valid;
+      if (!validation.valid) couponReason = validation.reason ?? null;
     }
     const payableAmount = itemsSubtotal + deliveryFee - discount;
     // B9：ETA 简单估算 = now + 2h（MVP 不考虑仓库营业时间/运力，后续接 dispatch 算法）
@@ -469,6 +473,7 @@ export class CartService {
       discount,
       couponCode: couponCode ?? null,
       couponValid,
+      couponReason,
       payableAmount,
       warnings,
       estimatedDeliveryTime,

@@ -136,6 +136,30 @@ describe('UserService', () => {
       expect(profile.memberLevel).toBe('bronze');
     });
 
+    it('F10：积分 ≥1000 → silver', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        id: 'user-1', phone: '+670999999999', email: null, name: 'Silver', avatarUrl: null,
+        role: 'CUSTOMER', status: 'ACTIVE', phoneVerified: true, emailVerified: false,
+        createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-02'),
+      });
+      dbMocks.orderAggregate.mockResolvedValueOnce({ _sum: { totalAmount: 100000 } }); // 1000pt → silver
+      const profile = await service.getProfile('user-1');
+      expect(profile.points).toBe(1000);
+      expect(profile.memberLevel).toBe('silver');
+    });
+
+    it('F10：积分 ≥5000 → gold', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        id: 'user-1', phone: '+670999999999', email: null, name: 'Gold', avatarUrl: null,
+        role: 'CUSTOMER', status: 'ACTIVE', phoneVerified: true, emailVerified: false,
+        createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-02'),
+      });
+      dbMocks.orderAggregate.mockResolvedValueOnce({ _sum: { totalAmount: 500000 } }); // 5000pt → gold
+      const profile = await service.getProfile('user-1');
+      expect(profile.points).toBe(5000);
+      expect(profile.memberLevel).toBe('gold');
+    });
+
     it('找不到用户抛 NotFoundException', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce(null);
       await expect(service.getProfile('missing')).rejects.toThrow(NotFoundException);

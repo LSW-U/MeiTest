@@ -41,6 +41,10 @@ export interface AdminUserListItem {
   totalSpent: number;
 }
 
+/** 会员等级积分阈值（F9：抽模块级常量，便于调整） */
+const MEMBER_GOLD_THRESHOLD = 5000;
+const MEMBER_SILVER_THRESHOLD = 1000;
+
 @Injectable()
 export class UserService {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
@@ -76,7 +80,7 @@ export class UserService {
    *
    * points = 已成交订单（DELIVERED_PAID + COMPLETED）totalAmount 总和 / 100（$1=1pt）
    * 口径（F2）：按商品总额 totalAmount（=itemsSubtotal），不含运费（代收成本）、不减折扣（营销成本）。
-   * memberLevel 阈值：≥5000 gold / ≥1000 silver / else bronze（可调）
+   * memberLevel 阈值：≥MEMBER_GOLD_THRESHOLD(5000) gold / ≥MEMBER_SILVER_THRESHOLD(1000) silver / else bronze
    * 实时聚合，不读 user.points 缓存字段（保证准确；DB 字段为未来 increment 缓存预留）
    */
   private async computeMemberPoints(userId: string): Promise<{
@@ -88,7 +92,8 @@ export class UserService {
       _sum: { totalAmount: true },
     });
     const points = Math.floor((agg._sum.totalAmount ?? 0) / 100);
-    const memberLevel = points >= 5000 ? 'gold' : points >= 1000 ? 'silver' : 'bronze';
+    const memberLevel =
+      points >= MEMBER_GOLD_THRESHOLD ? 'gold' : points >= MEMBER_SILVER_THRESHOLD ? 'silver' : 'bronze';
     return { points, memberLevel };
   }
 

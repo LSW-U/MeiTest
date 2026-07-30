@@ -2303,6 +2303,9 @@ components:
           nullable: true
         couponValid:
           type: boolean
+        couponReason:
+          type: string
+          nullable: true
         warnings:
           type: array
           items:
@@ -9042,6 +9045,9 @@ paths:
                     nullable: true
                   couponValid:
                     type: boolean
+                  couponReason:
+                    type: string
+                    nullable: true
                   warnings:
                     type: array
                     items:

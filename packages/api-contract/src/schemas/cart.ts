@@ -79,6 +79,8 @@ export const CheckoutPreview = z.object({
   couponCode: z.string().nullable(),
   /** 券是否有效（F12：即时校验快照，不保证下单成功，以下单事务 applyPromotion 为准） */
   couponValid: z.boolean(),
+  /** 券无效原因（couponValid=false 时回显，F14，如 NOT_IN_PERIOD/BELOW_MIN_ORDER；valid=true 时 null） */
+  couponReason: z.string().nullable().optional(),
   warnings: z.array(z.string()),
   /** 最早送达时间 ISO（B9，MVP now+2h 估算，未考虑仓库营业时间/运力） */
   estimatedDeliveryTime: IsoTimestamp,

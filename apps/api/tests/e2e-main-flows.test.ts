@@ -468,3 +468,44 @@ describe('e2e: 异常路径', () => {
     expect(matching.status).toBe('COMPLETED');
   });
 });
+
+// F4：路由顺序锁定 + 新端点 happy path（防 @Get('counts') 被 @Get(':id') 吞）
+describe('e2e: 路由顺序 + 新端点 happy path', () => {
+  let customerToken: string;
+
+  it('准备', async () => {
+    customerToken = await mockLogin('CUSTOMER', 'client_app');
+  });
+
+  it('GET /client/orders/counts 返 200 + counts 结构（路由顺序锁定，防 :id 吞）', async () => {
+    const res = await apiCall('/client/orders/counts', customerToken);
+    expect(res.success).toBe(true);
+    expect(res.data.counts).toBeDefined();
+    // 0 填充所有 OrderStatus key
+    expect(res.data.counts).toHaveProperty('PENDING_PAYMENT');
+    expect(res.data.counts).toHaveProperty('COMPLETED');
+    expect(res.data.counts).toHaveProperty('CANCELLED');
+  });
+
+  it('GET /client/coupons 返 200 + array（B10 available 默认）', async () => {
+    const res = await apiCall('/client/coupons', customerToken);
+    expect(res.success).toBe(true);
+    expect(Array.isArray(res.data)).toBe(true);
+  });
+
+  it('GET /client/coupons?status=used 返 200 + array（used/expired 扩展）', async () => {
+    const res = await apiCall('/client/coupons?status=used', customerToken);
+    expect(res.success).toBe(true);
+    expect(Array.isArray(res.data)).toBe(true);
+  });
+
+  it('GET /client/products/:id/skus 返 200 + array（B6）', async () => {
+    const products = await apiCall('/client/products?pageSize=1', customerToken);
+    expect(products.success).toBe(true);
+    expect(products.data.items.length).toBeGreaterThan(0);
+    const pid = products.data.items[0].id;
+    const res = await apiCall(`/client/products/${pid}/skus`, customerToken);
+    expect(res.success).toBe(true);
+    expect(Array.isArray(res.data)).toBe(true);
+  });
+});

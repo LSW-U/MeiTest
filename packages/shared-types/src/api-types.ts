@@ -4562,6 +4562,7 @@ export interface paths {
                             discount: number;
                             couponCode: string | null;
                             couponValid: boolean;
+                            couponReason?: string | null;
                             warnings: string[];
                             /** Format: date-time */
                             estimatedDeliveryTime: string;
@@ -11456,6 +11457,7 @@ export interface components {
             discount: number;
             couponCode: string | null;
             couponValid: boolean;
+            couponReason?: string | null;
             warnings: string[];
             /** Format: date-time */
             estimatedDeliveryTime: string;
