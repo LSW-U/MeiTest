@@ -61,6 +61,7 @@
   "E-PAYMENT-010": "Payment not yet paid",
   "E-PLATFORM-002": "System config key not found",
   "E-PRICING-001": "Order total does not meet minimum order amount",
+  "E-PROMO-020": "Promotion per-user usage limit reached",
   "E-RIDER-001": "Perfil rider la hela (favur rezijaprimeiru)",
   "E-RIDER-002": "Perfil rider iha ona (la bele rejista dala rua)",
   "E-RIDER-003": "idCardNumber presiza (minimal 6 karakter)",

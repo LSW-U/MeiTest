@@ -13,6 +13,7 @@ const { mockDb } = vi.hoisted(() => ({
     },
     orderPromotion: {
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     $executeRaw: vi.fn(),
   },
@@ -31,6 +32,8 @@ describe('PromotionService (W7-ext-G)', () => {
   beforeEach(() => {
     Object.values(mockDb.promotion).forEach((fn) => fn.mockReset());
     mockDb.orderPromotion.findMany.mockReset();
+    mockDb.orderPromotion.count.mockReset();
+    mockDb.orderPromotion.count.mockResolvedValue(0); // P1-1：默认未用过（perUserLimit 校验通过）
     mockDb.$executeRaw.mockReset();
     // @ts-expect-error - no constructor args needed
     service = new PromotionService();
@@ -253,6 +256,17 @@ describe('PromotionService (W7-ext-G)', () => {
       ).rejects.toMatchObject({ response: { code: 'E-PROMO-013' }, status: 409 });
     });
 
+    it('perUserLimit 达上限 -> E-PROMO-020（P1-1，不 increment usedCount）', async () => {
+      mockDb.promotion.findUnique.mockResolvedValue({ ...basePromo, perUserLimit: 1 });
+      mockDb.orderPromotion.count.mockResolvedValueOnce(1); // 已用 1 次 = perUserLimit
+      mockDb.$executeRaw.mockResolvedValue(1);
+      await expect(
+        service.applyPromotion('SAVE10', 'user-1', 2000, 500),
+      ).rejects.toMatchObject({ response: { code: 'E-PROMO-020' }, status: 400 });
+      // perUserLimit 校验在 $executeRaw increment 前，不应扣配额
+      expect(mockDb.$executeRaw).not.toHaveBeenCalled();
+    });
+
     it('PERCENTAGE Happy path -> discount = totalAmount * value / 100，受 maxDiscountAmount 上限', async () => {
       // totalAmount=2000, value=10% -> 200，未超 maxDiscount=500 -> discount=200
       mockDb.promotion.findUnique.mockResolvedValue(basePromo);
@@ -420,7 +434,7 @@ describe('PromotionService (W7-ext-G)', () => {
       expect(result.map((x) => x.id)).toEqual(['promo-2', 'promo-1']);
       expect(result[0].status).toBe('used');
       expect(mockDb.promotion.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: ['promo-1', 'promo-2'] } } }),
+        expect.objectContaining({ where: { id: { in: ['promo-1', 'promo-2'] }, status: { not: 'DELETED' } } }),
       );
     });
 

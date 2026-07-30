@@ -61,6 +61,7 @@
   "E-PAYMENT-010": "Pembayaran belum dilunasi",
   "E-PLATFORM-002": "Kunci konfigurasi sistem tidak ditemukan",
   "E-PRICING-001": "Total pesanan tidak memenuhi jumlah minimal",
+  "E-PROMO-020": "Batas penggunaan kupon per pengguna tercapai",
   "E-RIDER-001": "Profil rider tidak ditemukan (silakan daftar dulu)",
   "E-RIDER-002": "Profil rider sudah ada (tidak bisa mendaftar dua kali)",
   "E-RIDER-003": "idCardNumber wajib (minimal 6 karakter)",
