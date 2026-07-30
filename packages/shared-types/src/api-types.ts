@@ -9972,6 +9972,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/home-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 首页活动入口（PromoDock 常驻 4 入口配置，@Public。按 sortOrder 升序，仅返 ACTIVE） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 活动入口列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            titleKey: string;
+                            icon: string;
+                            /** @enum {string} */
+                            theme: "deals" | "coupons" | "delivery" | "points";
+                            link: string;
+                            sortOrder: number;
+                            /** @enum {string} */
+                            status?: "ACTIVE" | "INACTIVE";
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders/{id}/review": {
         parameters: {
             query?: never;
@@ -11893,6 +11939,17 @@ export interface components {
             comment?: {
                 [key: string]: string;
             };
+        };
+        HomeEntry: {
+            id: string;
+            titleKey: string;
+            icon: string;
+            /** @enum {string} */
+            theme: "deals" | "coupons" | "delivery" | "points";
+            link: string;
+            sortOrder: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
         };
     };
     responses: never;

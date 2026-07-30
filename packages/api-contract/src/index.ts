@@ -12,6 +12,7 @@ export * from './schemas/cart';
 export * from './schemas/catalog';
 export * from './schemas/dispatch';
 export * from './schemas/geo';
+export * from './schemas/home';
 export * from './schemas/im';
 export * from './schemas/order';
 export * from './schemas/payment';

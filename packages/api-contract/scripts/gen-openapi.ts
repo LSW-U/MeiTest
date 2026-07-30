@@ -149,6 +149,8 @@ import {
   GeocodeResponseData,
   // upload（W7-feature 商品图片上传）
   UploadResponseData,
+  // home（活动入口 PromoDock）
+  HomeEntry,
   // review（评论中心 reviews-2）
   Review,
   RiderReview,
@@ -2506,12 +2508,27 @@ registry.registerPath({
   },
 });
 
+// ===== Home Entries（活动入口 PromoDock，路线 A 配置接口）=====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/home-entries',
+  tags: ['home'],
+  description: '首页活动入口（PromoDock 常驻 4 入口配置，@Public。按 sortOrder 升序，仅返 ACTIVE）',
+  responses: {
+    200: {
+      description: '活动入口列表',
+      content: { 'application/json': { schema: HomeEntry.array() } },
+    },
+  },
+});
+
 // ===== 生成 =====
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);
 registry.register('RiderReview', RiderReview);
 registry.register('CreateReviewRequest', CreateReviewRequest);
 registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
+registry.register('HomeEntry', HomeEntry);
 
 // C 端：提交订单/商品评论
 registry.registerPath({
@@ -2651,6 +2668,7 @@ const openapi = generator.generateDocument({
     { name: 'upload', description: '商品图片上传（W7-feature）' },
     { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
     { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
+    { name: 'home', description: '首页活动入口（PromoDock）' },
   ],
 });
 
