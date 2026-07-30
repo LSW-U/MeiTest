@@ -210,6 +210,7 @@ model User {
   // 关联
   cart            Cart?
   orders          Order[]
+  userCoupons      UserCoupon[]
   addresses       Address[]
   favorites       Favorite[]
   auditLogs       AuditLog[]
@@ -521,6 +522,7 @@ model Order {
   @@index([orderNo])
   refunds Refund[]
   orderPromotions OrderPromotion[]
+  userCoupons      UserCoupon[]
   @@map("orders")
 }
 
@@ -1074,6 +1076,7 @@ model Promotion {
   updatedAt         DateTime        @updatedAt        @map("updated_at")
 
   orderPromotions   OrderPromotion[]
+  userCoupons        UserCoupon[]
 
   @@index([status, startAt, endAt])
   @@index([code])
@@ -1101,6 +1104,32 @@ model OrderPromotion {
   @@map("order_promotions")
 }
 
+// 23. UserCoupon（领券卡包，P1 领券体系）
+model UserCoupon {
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  promotionId  String           @map("promotion_id")
+  /// 冗余存领券时的 code（防模板改名/删除后无法追溯）
+  code         String           @db.VarChar(20)
+  status       UserCouponStatus @default(UNUSED)
+  receivedAt   DateTime         @default(now()) @map("received_at")
+  /// 使用时间（status=USED 时）
+  usedAt       DateTime?        @map("used_at")
+  /// 关联订单（status=USED 时；阶段1 USED 终态，退款不还券）
+  orderId      String?          @map("order_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id])
+  promotion  Promotion  @relation(fields: [promotionId], references: [id])
+  order      Order?     @relation(fields: [orderId], references: [id])
+
+  // 同券每人限领 1 张（配合 Promotion.perUserLimit，替代旧 count 校验）
+  @@unique([userId, promotionId])
+  @@index([userId, status])
+  @@index([status])
+  @@map("user_coupons")
+}
+
 enum PromotionType {
   PERCENTAGE
   FIXED_AMOUNT
@@ -1111,6 +1140,12 @@ enum PromotionStatus {
   ACTIVE
   PAUSED
   DELETED
+}
+
+enum UserCouponStatus {
+  UNUSED
+  USED
+  EXPIRED
 }
 
 // 23. SearchLog (热搜 2026-07-31) — 搜索日志明细（审计 + 零结果词分析，不参与热搜查询）
