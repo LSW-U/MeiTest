@@ -33,6 +33,7 @@ import {
   Tag,
   BarChart3,
   Settings,
+  Image,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/categories',
     icon: FolderTree,
     perspectives: ['platform', 'merchant'],
+  },
+  {
+    labelKey: 'menu.banners',
+    href: '/banners',
+    icon: Image,
+    perspectives: ['platform'],
   },
   {
     labelKey: 'menu.warehouses',

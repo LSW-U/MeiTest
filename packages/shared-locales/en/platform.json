@@ -26,7 +26,8 @@
     "settings": "Settings",
     "footerFlow": "W3-W flow",
     "perspectiveLabel": "Perspective",
-    "reviews": "Reviews"
+    "reviews": "Reviews",
+    "banners": "Banners"
   },
   "dashboard": {
     "title": "Platform Dashboard",
