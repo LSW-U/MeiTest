@@ -82,8 +82,9 @@ export class SearchService {
     const pinned = terms
       .filter((t) => t.type === 'PINNED')
       .sort((a, b) => a.sortOrder - b.sortOrder);
+    // Why: blocked 用 toLowerCase normalize（PINNED "Apple" vs BLOCKED "apple" 算同词）
     const blocked = new Set(
-      terms.filter((t) => t.type === 'BLOCKED').map((t) => t.word),
+      terms.filter((t) => t.type === 'BLOCKED').map((t) => t.word.toLowerCase()),
     );
     const manual = terms
       .filter((t) => t.type === 'MANUAL')
@@ -105,12 +106,16 @@ export class SearchService {
     }
 
     const result: { word: string; searchCount: number }[] = [];
+    // Why: seen 用 toLowerCase key 去重 - PINNED "Apple"（seed 大写）与 ZSET "apple"
+    //   （recordSearch normalize 小写）算同词，避免热搜榜出现两个 apple
     const seen = new Set<string>();
     const push = (word: string): void => {
+      const key = word.toLowerCase();
       if (result.length >= safeLimit) return;
-      if (blocked.has(word) || seen.has(word)) return;
-      result.push({ word, searchCount: zsetScore.get(word) ?? 0 });
-      seen.add(word);
+      if (blocked.has(key) || seen.has(key)) return;
+      // Why: searchCount 用 key 取（ZSET 是 normalize 小写 key，PINNED 大写转小写匹配真实 score）
+      result.push({ word, searchCount: zsetScore.get(key) ?? 0 });
+      seen.add(key);
     };
     pinned.forEach((p) => push(p.word));
     zsetWords.forEach((w) => push(w));
