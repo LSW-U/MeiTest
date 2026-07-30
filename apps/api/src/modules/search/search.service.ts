@@ -38,23 +38,30 @@ export class SearchService {
     resultCount: number,
     clientIp: string | null,
   ): Promise<void> {
-    const word = raw.trim().toLowerCase().slice(0, 50);
-    if (!word || !SUPPORTED_LANGS.includes(lang)) return;
+    // fire-and-forget 调用（catalog.service listProducts 内 void），失败必须吞掉，
+    // 否则 redis/db 异常冒 UnhandledPromiseRejection（Node warn/exit）影响进程稳定。
+    try {
+      const word = raw.trim().toLowerCase().slice(0, 50);
+      if (!word || !SUPPORTED_LANGS.includes(lang)) return;
 
-    const dedupeKey = `search:dedupe:${userId ?? clientIp ?? 'anon'}:${lang}:${word}`;
-    const set = await redis.set(dedupeKey, '1', 'EX', DEDUPE_TTL, 'NX');
-    if (!set) return; // 10s 内重复，不记
+      const dedupeKey = `search:dedupe:${userId ?? clientIp ?? 'anon'}:${lang}:${word}`;
+      const set = await redis.set(dedupeKey, '1', 'EX', DEDUPE_TTL, 'NX');
+      if (!set) return; // 10s 内重复，不记
 
-    await db.searchLog.create({
-      data: {
-        word,
-        rawWord: raw.slice(0, 100),
-        lang,
-        userId,
-        resultCount,
-      },
-    });
-    await redis.zincrby(HOT_KEY(lang), 1, word);
+      await db.searchLog.create({
+        data: {
+          word,
+          rawWord: raw.slice(0, 100),
+          lang,
+          userId,
+          resultCount,
+        },
+      });
+      await redis.zincrby(HOT_KEY(lang), 1, word);
+    } catch (err) {
+      // 热搜记录失败不影响搜索响应，仅日志
+      console.error('[recordSearch] failed (non-fatal, search continues):', err);
+    }
   }
 
   /**

@@ -88,7 +88,7 @@ export class CatalogService {
     // 热搜记录：fire-and-forget（不阻塞搜索响应），仅 keyword 搜索记（纯 categoryId 浏览不记）
     if (kw) {
       void this.search.recordSearch(
-        opts.keyword!,
+        opts.keyword ?? '',
         opts.lang ?? 'en',
         opts.userId ?? null,
         total,
