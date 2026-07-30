@@ -53,6 +53,8 @@ tags:
     description: 地址 geocoding（W7 P0-3）
   - name: review
     description: 评论中心（客户评论 + 骑手评价，reviews-2）
+  - name: home
+    description: 首页活动入口（PromoDock）
 components:
   schemas:
     JwtPayload:
@@ -724,7 +726,7 @@ components:
           maxLength: 100
         role:
           type: string
-          enum: &a41
+          enum: &a42
             - SUPER_ADMIN
             - CUSTOMER
             - RIDER
@@ -2361,7 +2363,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: &a37
+          enum: &a38
             - available
             - used
             - expired
@@ -2773,20 +2775,20 @@ components:
           minLength: 1
         transport:
           type: string
-          enum: &a38
+          enum: &a39
             - websocket
             - polling
           default: websocket
         authScheme:
           type: string
-          enum: &a39
+          enum: &a40
             - bearer
         userId:
           type: string
           minLength: 1
         role:
           type: string
-          enum: &a40
+          enum: &a41
             - CUSTOMER
             - RIDER
             - SUPER_ADMIN
@@ -2916,7 +2918,7 @@ components:
       properties:
         vehicleType:
           type: string
-          enum: &a44
+          enum: &a45
             - MOTORCYCLE
             - BICYCLE
             - CAR
@@ -2982,7 +2984,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: &a45
+          enum: &a46
             - ACTIVE
             - PAUSED
             - DELETED
@@ -3131,7 +3133,7 @@ components:
       properties:
         action:
           type: string
-          enum: &a46
+          enum: &a47
             - LOGIN
             - REGISTER
             - BLOCKED
@@ -3235,7 +3237,7 @@ components:
           maximum: 180
         source:
           type: string
-          enum: &a50
+          enum: &a51
             - nominatim
             - fallback
         formattedAddress:
@@ -3401,7 +3403,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a51 []
+          default: &a54 []
         category:
           type: string
           enum: *a21
@@ -3425,13 +3427,45 @@ components:
             type: string
             enum: *a22
           maxItems: 4
-          default: &a52 []
+          default: &a55 []
         comment:
           type: object
           additionalProperties:
             type: string
       required:
         - rating
+    HomeEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        titleKey:
+          type: string
+        icon:
+          type: string
+        theme:
+          type: string
+          enum: &a52
+            - deals
+            - coupons
+            - delivery
+            - points
+        link:
+          type: string
+        sortOrder:
+          type: integer
+        status:
+          type: string
+          enum: &a53
+            - ACTIVE
+            - INACTIVE
+      required:
+        - id
+        - titleKey
+        - icon
+        - theme
+        - link
+        - sortOrder
   parameters: {}
 paths:
   /api/v1/common/auth/login-password:
@@ -9153,7 +9187,7 @@ paths:
                       format: date-time
                     status:
                       type: string
-                      enum: *a37
+                      enum: *a38
                   required:
                     - id
                     - code
@@ -9507,17 +9541,17 @@ paths:
                     minLength: 1
                   transport:
                     type: string
-                    enum: *a38
+                    enum: *a39
                     default: websocket
                   authScheme:
                     type: string
-                    enum: *a39
+                    enum: *a40
                   userId:
                     type: string
                     minLength: 1
                   role:
                     type: string
-                    enum: *a40
+                    enum: *a41
                   serverEvents:
                     type: array
                     items:
@@ -9639,7 +9673,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a41
+            enum: *a42
           required: false
           name: role
           in: query
@@ -12065,7 +12099,7 @@ paths:
                               type: string
                             vehicleType:
                               type: string
-                              enum: &a42
+                              enum: &a43
                                 - MOTORCYCLE
                                 - BICYCLE
                                 - CAR
@@ -12074,7 +12108,7 @@ paths:
                               nullable: true
                             status:
                               type: string
-                              enum: &a43
+                              enum: &a44
                                 - OFFLINE
                                 - ONLINE
                                 - BUSY
@@ -12221,13 +12255,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -12387,13 +12421,13 @@ paths:
                           type: string
                         vehicleType:
                           type: string
-                          enum: *a42
+                          enum: *a43
                         vehiclePlate:
                           type: string
                           nullable: true
                         status:
                           type: string
-                          enum: *a43
+                          enum: *a44
                         totalDeliveries:
                           type: integer
                           minimum: 0
@@ -12519,13 +12553,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -12602,7 +12636,7 @@ paths:
               properties:
                 vehicleType:
                   type: string
-                  enum: *a44
+                  enum: *a45
                 vehiclePlate:
                   type: string
                   nullable: true
@@ -12639,13 +12673,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -13103,7 +13137,7 @@ paths:
                           format: date-time
                         status:
                           type: string
-                          enum: *a45
+                          enum: *a46
                         createdBy:
                           type: string
                         createdAt:
@@ -13305,7 +13339,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a45
+                        enum: *a46
                       createdBy:
                         type: string
                       createdAt:
@@ -13463,7 +13497,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a45
+                        enum: *a46
                       createdBy:
                         type: string
                       createdAt:
@@ -13630,7 +13664,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a45
+                        enum: *a46
                       createdBy:
                         type: string
                       createdAt:
@@ -13788,7 +13822,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a45
+                        enum: *a46
                       createdBy:
                         type: string
                       createdAt:
@@ -13946,7 +13980,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a45
+                        enum: *a46
                       createdBy:
                         type: string
                       createdAt:
@@ -14362,7 +14396,7 @@ paths:
                     properties:
                       action:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       accessToken:
                         type: string
                       refreshToken:
@@ -14669,13 +14703,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -14765,13 +14799,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -14842,7 +14876,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: *a43
+                  enum: *a44
                 acceptMode:
                   type: string
                   enum:
@@ -14877,13 +14911,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a42
+                        enum: *a43
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a43
+                        enum: *a44
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -15008,7 +15042,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: &a47
+                              enum: &a48
                                 - PENDING_ASSIGN
                                 - ASSIGNED
                                 - PICKED_UP
@@ -15124,7 +15158,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -15264,7 +15298,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -15408,7 +15442,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -15557,7 +15591,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -15835,7 +15869,7 @@ paths:
                   format: uuid
                 reason:
                   type: string
-                  enum: &a48
+                  enum: &a49
                     - OUT_OF_STOCK
                     - QUALITY_ISSUE
                     - WRONG_ITEM
@@ -15878,14 +15912,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a48
+                        enum: *a49
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: &a49
+                        enum: &a50
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -16002,14 +16036,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a48
+                          enum: *a49
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a49
+                          enum: *a50
                         transactionId:
                           type: string
                           nullable: true
@@ -16097,14 +16131,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a48
+                        enum: *a49
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       transactionId:
                         type: string
                         nullable: true
@@ -16221,14 +16255,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a48
+                        enum: *a49
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       transactionId:
                         type: string
                         nullable: true
@@ -16317,14 +16351,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a48
+                          enum: *a49
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a49
+                          enum: *a50
                         transactionId:
                           type: string
                           nullable: true
@@ -16412,14 +16446,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a48
+                        enum: *a49
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       transactionId:
                         type: string
                         nullable: true
@@ -16556,14 +16590,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a48
+                        enum: *a49
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       transactionId:
                         type: string
                         nullable: true
@@ -16806,7 +16840,7 @@ paths:
                     maximum: 180
                   source:
                     type: string
-                    enum: *a50
+                    enum: *a51
                   formattedAddress:
                     type: string
                     nullable: true
@@ -16986,6 +17020,44 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/home-entries:
+    get:
+      tags:
+        - home
+      description: 首页活动入口（PromoDock 常驻 4 入口配置，@Public。按 sortOrder 升序，仅返 ACTIVE）
+      responses:
+        "200":
+          description: 活动入口列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    titleKey:
+                      type: string
+                    icon:
+                      type: string
+                    theme:
+                      type: string
+                      enum: *a52
+                    link:
+                      type: string
+                    sortOrder:
+                      type: integer
+                    status:
+                      type: string
+                      enum: *a53
+                  required:
+                    - id
+                    - titleKey
+                    - icon
+                    - theme
+                    - link
+                    - sortOrder
   /api/v1/client/orders/{id}/review:
     post:
       tags:
@@ -17012,7 +17084,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a51
+                  default: *a54
                 category:
                   type: string
                   enum: *a21
@@ -17173,7 +17245,7 @@ paths:
                     type: string
                     enum: *a22
                   maxItems: 4
-                  default: *a52
+                  default: *a55
                 comment:
                   type: object
                   additionalProperties:
