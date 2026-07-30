@@ -407,6 +407,8 @@ model Category {
   children Category[] @relation("CategoryTree")
   products Product[]
 
+  @@index([parentId])
+  @@index([status, sortOrder])
   @@map("categories")
 }
 
