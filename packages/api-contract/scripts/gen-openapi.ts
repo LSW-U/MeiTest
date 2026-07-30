@@ -151,6 +151,12 @@ import {
   UploadResponseData,
   // home（活动入口 PromoDock）
   HomeEntry,
+  // search（热搜 2026-07-31）
+  HotSearchTermItem,
+  HotSearchTerm,
+  CreateHotSearchTermRequest as CreateHotSearchTermRequestSchema,
+  UpdateHotSearchTermRequest as UpdateHotSearchTermRequestSchema,
+  ZeroResultTerm,
   // review（评论中心 reviews-2）
   Review,
   RiderReview,
@@ -2522,6 +2528,26 @@ registry.registerPath({
   },
 });
 
+// ===== Search（热搜，2026-07-31）=====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/search/hot',
+  tags: ['search'],
+  description: '热搜榜（Redis ZSET 计数排行 + 运营种子词，@Public）。返 HotSearchTermItem[]，word 是实际搜索词非 i18n key。',
+  request: {
+    query: z.object({
+      limit: z.number().int().min(1).max(20).optional(),
+      lang: z.enum(['en', 'zh', 'id', 'pt', 'tet']).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '热搜列表（PINNED 前置 + BLOCKED 剔除 + ZSET 真实 + MANUAL 兜底）',
+      content: { 'application/json': { schema: HotSearchTermItem.array() } },
+    },
+  },
+});
+
 // ===== 生成 =====
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);
@@ -2529,6 +2555,11 @@ registry.register('RiderReview', RiderReview);
 registry.register('CreateReviewRequest', CreateReviewRequest);
 registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
 registry.register('HomeEntry', HomeEntry);
+registry.register('HotSearchTermItem', HotSearchTermItem);
+registry.register('HotSearchTerm', HotSearchTerm);
+registry.register('CreateHotSearchTermRequest', CreateHotSearchTermRequestSchema);
+registry.register('UpdateHotSearchTermRequest', UpdateHotSearchTermRequestSchema);
+registry.register('ZeroResultTerm', ZeroResultTerm);
 
 // C 端：提交订单/商品评论
 registry.registerPath({
@@ -2669,6 +2700,7 @@ const openapi = generator.generateDocument({
     { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
     { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
     { name: 'home', description: '首页活动入口（PromoDock）' },
+    { name: 'search', description: '热搜词（Redis ZSET + 运营种子词）' },
   ],
 });
 

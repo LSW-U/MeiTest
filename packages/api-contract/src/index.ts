@@ -21,6 +21,7 @@ export * from './schemas/promotion';
 export * from './schemas/refund';
 export * from './schemas/review';
 export * from './schemas/rider';
+export * from './schemas/search';
 export * from './schemas/settle';
 export * from './schemas/shop';
 export * from './schemas/unified-auth';

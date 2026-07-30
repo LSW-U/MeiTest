@@ -1113,6 +1113,50 @@ enum PromotionStatus {
   DELETED
 }
 
+// 23. SearchLog (热搜 2026-07-31) — 搜索日志明细（审计 + 零结果词分析，不参与热搜查询）
+//     热搜查询走 Redis ZSET，本表仅审计/运营报表，90 天定期清理
+model SearchLog {
+  id          BigInt   @id @default(autoincrement())
+  /// normalize 后的词（trim + lowerCase + slice 50）
+  word        String   @db.VarChar(50)
+  /// 原始词（审计用）
+  rawWord     String   @db.VarChar(100) @map("raw_word")
+  lang        String   @db.VarChar(8)
+  /// 登录用户（可空，匿名也记；纯字符串不加 FK 避免 User 删除阻塞）
+  userId      String?  @map("user_id")
+  /// 搜索结果数（0 = 零结果词，运营补商品依据）
+  resultCount Int      @map("result_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([word, lang])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("search_logs")
+}
+
+// 24. HotSearchTerm (热搜 2026-07-31) — 运营种子词表（PINNED 置顶 / MANUAL 种子 / BLOCKED 屏蔽）
+//     冷启动兜底 + 违规词屏蔽 + 置顶，admin-web 管理
+model HotSearchTerm {
+  id        String        @id @default(uuid())
+  word      String        @db.VarChar(50)
+  lang      String        @db.VarChar(8)
+  type      HotSearchType
+  /// PINNED 间排序（MANUAL/BLOCKED 不用）
+  sortOrder Int           @default(0) @map("sort_order")
+  status    String        @default("ACTIVE")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@unique([word, lang, type])
+  @@map("hot_search_terms")
+}
+
+enum HotSearchType {
+  PINNED
+  MANUAL
+  BLOCKED
+}
+
 // ============================================================================
 // 文档说明 — W1-D2-T3 任务执行时的注意事项
 // ----------------------------------------------------------------------------

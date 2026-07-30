@@ -10018,6 +10018,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/search/hot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 热搜榜（Redis ZSET 计数排行 + 运营种子词，@Public）。返 HotSearchTermItem[]，word 是实际搜索词非 i18n key。 */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    lang?: "en" | "zh" | "id" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 热搜列表（PINNED 前置 + BLOCKED 剔除 + ZSET 真实 + MANUAL 兜底） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            word: string;
+                            searchCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders/{id}/review": {
         parameters: {
             query?: never;
@@ -11950,6 +11992,48 @@ export interface components {
             sortOrder: number;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE";
+        };
+        HotSearchTermItem: {
+            word: string;
+            searchCount: number;
+        };
+        HotSearchTerm: {
+            /** Format: uuid */
+            id: string;
+            word: string;
+            /** @enum {string} */
+            lang: "en" | "zh" | "id" | "pt" | "tet";
+            /** @enum {string} */
+            type: "PINNED" | "MANUAL" | "BLOCKED";
+            sortOrder: number;
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateHotSearchTermRequest: {
+            word: string;
+            /** @enum {string} */
+            lang: "en" | "zh" | "id" | "pt" | "tet";
+            /** @enum {string} */
+            type: "PINNED" | "MANUAL" | "BLOCKED";
+            sortOrder?: number;
+            status?: string;
+        };
+        UpdateHotSearchTermRequest: {
+            word?: string;
+            /** @enum {string} */
+            lang?: "en" | "zh" | "id" | "pt" | "tet";
+            /** @enum {string} */
+            type?: "PINNED" | "MANUAL" | "BLOCKED";
+            sortOrder?: number;
+            status?: string;
+        };
+        ZeroResultTerm: {
+            word: string;
+            lang: string;
+            count: number;
         };
     };
     responses: never;

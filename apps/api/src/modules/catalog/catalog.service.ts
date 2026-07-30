@@ -11,12 +11,15 @@
  * - 客户端列表只返回 ACTIVE 商品，后台可看全部
  * - 搜索按 i18n name 匹配（4 语言任一命中）
  */
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
+import { SearchService } from '../search/search.service';
 
 @Injectable()
 export class CatalogService {
+  constructor(@Inject(SearchService) private readonly search: SearchService) {}
+
   // ===== 客户端：商品浏览 =====
 
   /** 商品列表（客户端只看 ACTIVE） */
@@ -26,6 +29,12 @@ export class CatalogService {
     page?: number;
     pageSize?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+    /** 搜索记录用：语言（热搜 ZSET 分语言） */
+    lang?: string;
+    /** 搜索记录用：登录用户（@Public 端点为 null） */
+    userId?: string | null;
+    /** 搜索记录用：客户端 IP（匿名 dedupe 兜底） */
+    clientIp?: string | null;
   } = {}) {
     const page = opts.page ?? 1;
     const pageSize = Math.min(opts.pageSize ?? 20, 100);
@@ -41,16 +50,20 @@ export class CatalogService {
       categoryIdFilter = { in: [opts.categoryId, ...children.map((c) => c.id)] };
     }
 
+    // F2 normalize：trim + lowerCase，避免大小写/空格敏感（与热搜 normalize 对齐）
+    const kw = opts.keyword?.trim().toLowerCase();
+
     const where: Prisma.ProductWhereInput = {
       ...(opts.status && { status: opts.status }),
       ...(!opts.status && { status: 'ACTIVE' }), // 默认 ACTIVE
       ...(categoryIdFilter && { categoryId: categoryIdFilter }),
-      ...(opts.keyword && {
+      ...(kw && {
         OR: [
-          { name: { path: ['en'], string_contains: opts.keyword } },
-          { name: { path: ['zh'], string_contains: opts.keyword } },
-          { name: { path: ['id'], string_contains: opts.keyword } },
-          { name: { path: ['pt'], string_contains: opts.keyword } },
+          { name: { path: ['en'], string_contains: kw } },
+          { name: { path: ['zh'], string_contains: kw } },
+          { name: { path: ['id'], string_contains: kw } },
+          { name: { path: ['pt'], string_contains: kw } },
+          { name: { path: ['tet'], string_contains: kw } }, // F1 补 tet（5 语言一致）
         ],
       }),
     };
@@ -71,6 +84,17 @@ export class CatalogService {
       this.batchGetProductRating(items.map((p) => p.id)),
       this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
     ]);
+
+    // 热搜记录：fire-and-forget（不阻塞搜索响应），仅 keyword 搜索记（纯 categoryId 浏览不记）
+    if (kw) {
+      void this.search.recordSearch(
+        opts.keyword!,
+        opts.lang ?? 'en',
+        opts.userId ?? null,
+        total,
+        opts.clientIp ?? null,
+      );
+    }
 
     return {
       items: items.map((p) => ({

@@ -16,10 +16,13 @@ import {
   Body,
   Param,
   Query,
+  Headers,
+  Req,
   Inject,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { detectLanguage } from '@meimart/shared-utils';
 import {
   CreateProductRequest,
   UpdateProductRequest,
@@ -52,12 +55,22 @@ export class ClientProductController {
     @Query('keyword') keyword?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Headers('accept-language') acceptLang?: string,
+    @Req() req?: any,
   ) {
+    const lang = detectLanguage(acceptLang);
+    const clientIp =
+      (req?.headers?.['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+      (req?.ip as string | undefined) ||
+      null;
     const data = await this.catalog.listProducts({
       categoryId,
       keyword,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
+      lang,
+      userId: req?.user?.id ?? null,
+      clientIp,
     });
     return { success: true, data };
   }
@@ -75,10 +88,23 @@ export class ClientProductController {
   }
 
   @Get('search')
-  async search(@Query('keyword') keyword?: string, @Query('page') page?: string) {
+  async search(
+    @Query('keyword') keyword?: string,
+    @Query('page') page?: string,
+    @Headers('accept-language') acceptLang?: string,
+    @Req() req?: any,
+  ) {
+    const lang = detectLanguage(acceptLang);
+    const clientIp =
+      (req?.headers?.['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
+      (req?.ip as string | undefined) ||
+      null;
     const data = await this.catalog.listProducts({
       keyword,
       page: page ? Number(page) : undefined,
+      lang,
+      userId: req?.user?.id ?? null,
+      clientIp,
     });
     return { success: true, data };
   }

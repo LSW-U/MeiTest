@@ -30,6 +30,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { RiderModule } from './modules/rider/rider.module';
 import { PromotionModule } from './modules/promotion/promotion.module';
 import { SettleModule } from './modules/settle/settle.module';
+import { SearchModule } from './modules/search/search.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { UserModule } from './modules/user/user.module';
@@ -65,6 +66,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     RiderModule,
     PromotionModule,
     SettleModule,
+    SearchModule,
     ShopModule,
     UploadModule,
     UserModule,

@@ -83,7 +83,7 @@ describe('CatalogService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService();
+    service = new CatalogService({ recordSearch: vi.fn().mockResolvedValue(undefined) } as any);
     // B1/B7/B11：stock/rating/categoryName 聚合默认返空（字段 undefined/null，不阻塞主流程断言）
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
@@ -133,7 +133,7 @@ describe('CatalogService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             OR: expect.arrayContaining([
-              expect.objectContaining({ name: { path: ['en'], string_contains: 'Milk' } }),
+              expect.objectContaining({ name: { path: ['en'], string_contains: 'milk' } }),
             ]),
           }),
         }),
