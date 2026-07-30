@@ -75,7 +75,7 @@ describe('cookie-helper', () => {
       expect(res.cookie).toHaveBeenCalledWith(
         'admin_csrf',
         expect.any(String),
-        expect.objectContaining({ httpOnly: false, sameSite: 'lax', path: '/api/v1' }),
+        expect.objectContaining({ httpOnly: false, sameSite: 'lax', path: '/' }),
       );
     });
 
