@@ -1217,9 +1217,15 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/client/coupons',
   tags: ['promotion'],
-  description: '我的优惠券列表（B10，MVP 全局可用券：ACTIVE + 有效期内 + 未超额）',
+  description: '我的优惠券列表（B10 + used/expired：?status=available|used|expired，默认 available）',
+  request: {
+    query: z.object({
+      status: z.enum(['available', 'used', 'expired']).optional(),
+    }),
+  },
   responses: {
-    200: { description: '可用优惠券列表', content: { 'application/json': { schema: ClientCouponSchema.array() } } },
+    200: { description: '优惠券列表（按 status 过滤）', content: { 'application/json': { schema: ClientCouponSchema.array() } } },
+    400: { description: 'INVALID_STATUS', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

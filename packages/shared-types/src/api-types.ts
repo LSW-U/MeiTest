@@ -4603,17 +4603,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 我的优惠券列表（B10，MVP 全局可用券：ACTIVE + 有效期内 + 未超额） */
+        /** @description 我的优惠券列表（B10 + used/expired：?status=available|used|expired，默认 available） */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: "available" | "used" | "expired";
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description 可用优惠券列表 */
+                /** @description 优惠券列表（按 status 过滤） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4635,8 +4637,27 @@ export interface paths {
                             /** Format: date-time */
                             endAt: string;
                             /** @enum {string} */
-                            status: "available";
+                            status: "available" | "used" | "expired";
                         }[];
+                    };
+                };
+                /** @description INVALID_STATUS */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
                     };
                 };
             };
@@ -11478,7 +11499,7 @@ export interface components {
             /** Format: date-time */
             endAt: string;
             /** @enum {string} */
-            status: "available";
+            status: "available" | "used" | "expired";
         };
         PaymentIntent: {
             /** Format: uuid */

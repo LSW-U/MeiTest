@@ -2361,8 +2361,10 @@ components:
           format: date-time
         status:
           type: string
-          enum:
+          enum: &a37
             - available
+            - used
+            - expired
       required:
         - id
         - code
@@ -9099,10 +9101,20 @@ paths:
     get:
       tags:
         - promotion
-      description: 我的优惠券列表（B10，MVP 全局可用券：ACTIVE + 有效期内 + 未超额）
+      description: 我的优惠券列表（B10 + used/expired：?status=available|used|expired，默认 available）
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - available
+              - used
+              - expired
+          required: false
+          name: status
+          in: query
       responses:
         "200":
-          description: 可用优惠券列表
+          description: 优惠券列表（按 status 过滤）
           content:
             application/json:
               schema:
@@ -9141,8 +9153,7 @@ paths:
                       format: date-time
                     status:
                       type: string
-                      enum:
-                        - available
+                      enum: *a37
                   required:
                     - id
                     - code
@@ -9155,6 +9166,35 @@ paths:
                     - startAt
                     - endAt
                     - status
+        "400":
+          description: INVALID_STATUS
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/client/payments/methods:
     get:
       tags:
