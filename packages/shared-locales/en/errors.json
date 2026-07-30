@@ -27,6 +27,7 @@
   "E-CATALOG-012": "Cannot set a category as its own parent",
   "E-CATALOG-013": "Category has subcategories, cannot become a subcategory",
   "E-CATALOG-014": "Please delete subcategories first",
+  "E-CATALOG-015": "Category has active products, cannot delete",
   "E-COMMON-001": "Invalid request parameters",
   "E-COMMON-002": "Internal server error, please try again later",
   "E-COMMON-003": "Resource not found",

@@ -27,6 +27,7 @@
   "E-CATALOG-012": "Não é possível definir uma categoria como pai de si mesma",
   "E-CATALOG-013": "A categoria tem subcategorias, não pode se tornar uma subcategoria",
   "E-CATALOG-014": "Exclua as subcategorias primeiro",
+  "E-CATALOG-015": "Categoria tem produtos ativos, não pode ser excluída",
   "E-COMMON-001": "Parâmetros de pedido inválidos",
   "E-COMMON-002": "Erro interno do servidor, tente novamente mais tarde",
   "E-COMMON-003": "Recurso não encontrado",

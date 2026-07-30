@@ -309,6 +309,16 @@ describe('CatalogService', () => {
       });
     });
 
+    it('deleteCategory 有在售商品 -> E-CATALOG-015（审查建议 2）', async () => {
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'cat-1', parentId: null });
+      m.categoryCount.mockResolvedValueOnce(0); // 无子分类（过 014 校验）
+      m.productCount.mockResolvedValueOnce(3); // 3 个在售商品
+      await expect(service.deleteCategory('cat-1')).rejects.toMatchObject({
+        response: { code: 'E-CATALOG-015' },
+        status: 400,
+      });
+    });
+
     it('deleteCategory 找不到抛 NotFoundException', async () => {
       m.categoryFindUnique.mockResolvedValueOnce(null);
       await expect(service.deleteCategory('missing')).rejects.toThrow(NotFoundException);

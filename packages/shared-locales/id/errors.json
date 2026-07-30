@@ -27,6 +27,7 @@
   "E-CATALOG-012": "Tidak dapat menjadikan kategori sebagai induknya sendiri",
   "E-CATALOG-013": "Kategori memiliki subkategori, tidak dapat menjadi subkategori",
   "E-CATALOG-014": "Harap hapus subkategori terlebih dahulu",
+  "E-CATALOG-015": "Kategori memiliki produk aktif, tidak dapat dihapus",
   "E-COMMON-001": "Parameter permintaan tidak valid",
   "E-COMMON-002": "Kesalahan server internal, silakan coba lagi nanti",
   "E-COMMON-003": "Sumber daya tidak ditemukan",

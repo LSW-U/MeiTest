@@ -467,6 +467,9 @@ export class CatalogService {
     // 子分类保护：有 ACTIVE 子分类时禁止删（先删子分类）
     const childCount = await db.category.count({ where: { parentId: id, status: 'ACTIVE' } });
     if (childCount > 0) throw new BadRequestException({ code: 'E-CATALOG-014', message: 'Please delete subcategories first' });
+    // 商品保护：有在售商品引用该分类时禁止删（避免商品孤儿/幽灵分类名，审查建议 2）
+    const productCount = await db.product.count({ where: { categoryId: id, status: 'ACTIVE' } });
+    if (productCount > 0) throw new BadRequestException({ code: 'E-CATALOG-015', message: 'Category has active products, cannot delete' });
     // 软删除：分类可能被 Product 引用，硬删会丢商品归类
     await db.category.update({ where: { id }, data: { status: 'INACTIVE' } });
   }

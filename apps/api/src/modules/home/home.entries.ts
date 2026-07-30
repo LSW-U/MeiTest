@@ -7,8 +7,10 @@
  * link 治理（需求 §5，不接受点击进空页）：
  * - deals    -> /product/list（热销榜，后端 /client/products 默认 salesCount 序）
  * - coupons  -> /coupons（可达，/client/coupons）
- * - delivery -> /coupons?type=FREE_DELIVERY（免邮券，后端 /client/coupons 接 type 筛选；注意该端点需 CUSTOMER 登录）
- * - points   -> /profile（可达，/client/user/profile 返 points）
+ * - delivery -> /coupons?type=FREE_DELIVERY（免邮券，⚠️ 需 CUSTOMER 登录）
+ * - points   -> /profile（/client/user/profile，⚠️ 需 CUSTOMER 登录）
+ * ⚠️ home-entries 端点 @Public，但 coupons/delivery/points 的 link 指向 @Roles('CUSTOMER') 端点，
+ *   游客点击会 401。客户端应处理未登录态（跳登录页/隐藏入口）。后端鉴权仍生效（非漏洞，体验断裂）。
  *
  * titleKey 对应跨 repo MeiMart1.0 locales 的 promotion 块（客户端 en/zh/tet 已齐 flashDeals/coupons/freeShip/points）。
  * theme/icon 是前端资源（色板 promotionThemes.ts / Material Symbols），后端只传枚举名/图标名。
