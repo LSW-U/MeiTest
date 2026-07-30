@@ -51,22 +51,30 @@ export class CatalogService {
     }
 
     // F2 normalize：trim + lowerCase，避免大小写/空格敏感（与热搜 normalize 对齐）
-    const kw = opts.keyword?.trim().toLowerCase();
+    // Why: trim 不 toLowerCase - 搜索用 raw ILIKE（大小写不敏感），
+    //   Prisma JSONB string_contains 大小写敏感（搜 Apple 转 apple 后搜不到大写 Apple）
+    const kw = opts.keyword?.trim();
 
     const where: Prisma.ProductWhereInput = {
       ...(opts.status && { status: opts.status }),
       ...(!opts.status && { status: 'ACTIVE' }), // 默认 ACTIVE
       ...(categoryIdFilter && { categoryId: categoryIdFilter }),
-      ...(kw && {
-        OR: [
-          { name: { path: ['en'], string_contains: kw } },
-          { name: { path: ['zh'], string_contains: kw } },
-          { name: { path: ['id'], string_contains: kw } },
-          { name: { path: ['pt'], string_contains: kw } },
-          { name: { path: ['tet'], string_contains: kw } }, // F1 补 tet（5 语言一致）
-        ],
-      }),
     };
+
+    // Why: 搜索用 raw ILIKE（大小写不敏感，5 语言 OR）- 修 string_contains 大小写敏感 bug
+    //   搜 Apple/apple 都能匹配 name.en "Apple"（ILIKE 大小写不敏感）
+    if (kw) {
+      const pattern = `%${kw}%`;
+      const rows = await db.$queryRaw<{ id: string }[]>`
+        SELECT id FROM products
+        WHERE name->>'en' ILIKE ${pattern}
+           OR name->>'zh' ILIKE ${pattern}
+           OR name->>'id' ILIKE ${pattern}
+           OR name->>'pt' ILIKE ${pattern}
+           OR name->>'tet' ILIKE ${pattern}
+      `;
+      where.id = { in: rows.map((r) => r.id) };
+    }
 
     const [items, total] = await Promise.all([
       db.product.findMany({
