@@ -71,7 +71,7 @@
     },
     "categories": {
       "title": "Kategori",
-      "listDesc": "Kelola kategori produk (MVP: daftar datar, tanpa pohon).",
+      "listDesc": "Kelola kategori produk (pohon dua tingkat).",
       "emptyDesc": "Gunakan 'Buat Kategori' untuk menambahkan.",
       "newCat": "Kategori Baru",
       "iconUrlRequired": "URL Ikon",
@@ -101,7 +101,17 @@
       "deleteCancel": "Batal",
       "deleteConfirm": "Hapus",
       "deleting": "Menghapus...",
-      "newCardTitle": "Kategori Baru"
+      "newCardTitle": "Kategori Baru",
+      "formParentLabel": "Kategori Induk",
+      "addChildCategory": "Tambah subkategori",
+      "columnChildrenCount": "Subkategori",
+      "treeExpand": "Perluas",
+      "treeCollapse": "Lipat",
+      "columnStatus": "Status",
+      "statusActive": "Aktif",
+      "statusInactive": "Nonaktif",
+      "deleteBlockedChildren": "Hapus {count} subkategori terlebih dahulu",
+      "noCategory": "Tanpa kategori"
     },
     "warehouses": {
       "title": "Gudang",

@@ -71,7 +71,7 @@
     },
     "categories": {
       "title": "Kategoria",
-      "listDesc": "Jere kategoria produtu (MVP: lista planu)",
+      "listDesc": "Jere kategoria produtu (árvore nivel rua).",
       "emptyDesc": "Halan 'Kria Kategoria' atu aumenta uluk.",
       "newCat": "Kategoria Foun",
       "iconUrlRequired": "URL Íkone",
@@ -101,7 +101,17 @@
       "deleteCancel": "Cancel",
       "deleteConfirm": "Delete",
       "deleting": "Deleting...",
-      "newCardTitle": "Kategoria Foun"
+      "newCardTitle": "Kategoria Foun",
+      "formParentLabel": "Kategoria Main",
+      "addChildCategory": "Aumenta subkategoria",
+      "columnChildrenCount": "Subkategoria",
+      "treeExpand": "Hatete",
+      "treeCollapse": "Taka",
+      "columnStatus": "Status",
+      "statusActive": "Aktivu",
+      "statusInactive": "Inativu",
+      "deleteBlockedChildren": "Hapus {count} subkategoria uluk",
+      "noCategory": "La iha kategoria"
     },
     "warehouses": {
       "title": "Armazén",

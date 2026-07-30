@@ -71,7 +71,7 @@
     },
     "categories": {
       "title": "Categorias",
-      "listDesc": "Gerenciar categorias de produtos (MVP: lista plana).",
+      "listDesc": "Gerenciar categorias de produtos (árvore de dois níveis).",
       "emptyDesc": "Use 'Criar Categoria' para adicionar.",
       "newCat": "Nova Categoria",
       "iconUrlRequired": "URL do Ícone",
@@ -101,7 +101,17 @@
       "deleteCancel": "Cancelar",
       "deleteConfirm": "Excluir",
       "deleting": "Excluindo...",
-      "newCardTitle": "Nova Categoria"
+      "newCardTitle": "Nova Categoria",
+      "formParentLabel": "Categoria Pai",
+      "addChildCategory": "Adicionar subcategoria",
+      "columnChildrenCount": "Subcategorias",
+      "treeExpand": "Expandir",
+      "treeCollapse": "Recolher",
+      "columnStatus": "Status",
+      "statusActive": "Ativo",
+      "statusInactive": "Inativo",
+      "deleteBlockedChildren": "Exclua {count} subcategoria(s) primeiro",
+      "noCategory": "Sem categoria"
     },
     "warehouses": {
       "title": "Armazéns",

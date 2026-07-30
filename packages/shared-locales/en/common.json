@@ -71,7 +71,7 @@
     },
     "categories": {
       "title": "Categories",
-      "listDesc": "Manage product categories (MVP: flat list, no tree).",
+      "listDesc": "Manage product categories (two-level tree).",
       "emptyDesc": "Use 'Create Category' to add the first one.",
       "newCat": "New Category",
       "iconUrlRequired": "Icon URL",
@@ -101,7 +101,17 @@
       "deleteCancel": "Cancel",
       "deleteConfirm": "Delete",
       "deleting": "Deleting...",
-      "newCardTitle": "New Category"
+      "newCardTitle": "New Category",
+      "formParentLabel": "Parent Category",
+      "addChildCategory": "Add subcategory",
+      "columnChildrenCount": "Subcategories",
+      "treeExpand": "Expand",
+      "treeCollapse": "Collapse",
+      "columnStatus": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "deleteBlockedChildren": "Please delete {count} subcategory(s) first",
+      "noCategory": "No category"
     },
     "warehouses": {
       "title": "Warehouses",

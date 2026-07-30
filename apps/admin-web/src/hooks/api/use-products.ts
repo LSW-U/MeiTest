@@ -34,6 +34,8 @@ export interface Product {
   priceMax?: number;
   salesCount?: number;
   categoryId?: string;
+  /** 分类名（多语言，后端 adminListProducts 已挂，前端列表展示用） */
+  categoryName?: I18nText;
 }
 
 export interface CreateProductInput {
@@ -43,7 +45,7 @@ export interface CreateProductInput {
   description?: I18nText;
   images?: string[];
   status?: 'ACTIVE' | 'INACTIVE';
-  categoryId?: string;
+  categoryId?: string | null;
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {}

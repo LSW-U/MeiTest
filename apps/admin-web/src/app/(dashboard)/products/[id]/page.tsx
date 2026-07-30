@@ -45,6 +45,7 @@ import {
 } from '@/hooks/api/use-products';
 import { apiUploadFile, type ApiSuccess } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { CategorySelect } from '@/components/common/category-select';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
@@ -69,6 +70,7 @@ export default function ProductDetailPage() {
   const [name, setName] = useState<I18nText>({});
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +80,7 @@ export default function ProductDetailPage() {
       setName(productQ.data.data.name ?? {});
       setMainImage(productQ.data.data.mainImage ?? '');
       setDescription(productQ.data.data.description ?? {});
+      setCategoryId(productQ.data.data.categoryId ?? null);
     }
   }, [productQ.data]);
 
@@ -112,7 +115,12 @@ export default function ProductDetailPage() {
   const handleSaveBasic = async () => {
     await updateMutation.mutateAsync({
       id,
-      input: { name, mainImage: mainImage || undefined, description },
+      input: {
+        name,
+        mainImage: mainImage || undefined,
+        description,
+        categoryId: categoryId ?? null,
+      },
     });
   };
 
@@ -247,6 +255,10 @@ export default function ProductDetailPage() {
                 )}
               </div>
               {i18nInputs(t('w.form.description'), description, setDescription)}
+              <div className="space-y-2">
+                <Label>{t('w.form.category')}</Label>
+                <CategorySelect value={categoryId} onChange={setCategoryId} />
+              </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"

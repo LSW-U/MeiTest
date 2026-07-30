@@ -62,6 +62,13 @@ export default function ProductsListPage() {
       render: (row) => <span className="text-muted-foreground">{row.name?.zh ?? '—'}</span>,
     },
     {
+      key: 'category',
+      header: t('w.form.category'),
+      render: (row) => (
+        <span className="text-muted-foreground">{row.categoryName?.en ?? '—'}</span>
+      ),
+    },
+    {
       key: 'priceMin',
       header: t('w.products.columnMinPrice'),
       render: (row) =>

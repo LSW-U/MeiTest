@@ -71,7 +71,7 @@
     },
     "categories": {
       "title": "分类",
-      "listDesc": "管理商品分类（MVP：扁平列表，无树）。",
+      "listDesc": "管理商品分类（两级树形）。",
       "emptyDesc": "用「新建分类」加第一个。",
       "newCat": "新建分类",
       "iconUrlRequired": "图标 URL",
@@ -101,7 +101,17 @@
       "deleteCancel": "取消",
       "deleteConfirm": "删除",
       "deleting": "删除中...",
-      "newCardTitle": "新建分类"
+      "newCardTitle": "新建分类",
+      "formParentLabel": "父分类",
+      "addChildCategory": "添加子分类",
+      "columnChildrenCount": "子分类数",
+      "treeExpand": "展开",
+      "treeCollapse": "收起",
+      "columnStatus": "状态",
+      "statusActive": "上架",
+      "statusInactive": "下架",
+      "deleteBlockedChildren": "请先删除 {count} 个子分类",
+      "noCategory": "无分类"
     },
     "warehouses": {
       "title": "仓库",

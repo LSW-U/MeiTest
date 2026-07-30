@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateProduct } from '@/hooks/api/use-products';
-import { useCategories } from '@/hooks/api/use-categories';
+import { CategorySelect } from '@/components/common/category-select';
 import { apiUploadFile, type ApiSuccess } from '@/lib/api';
 import type { I18nText } from '@/hooks/api/use-products';
 
@@ -50,14 +50,12 @@ export default function CreateProductPage() {
   const t = useTranslations('common');
   const router = useRouter();
   const createMutation = useCreateProduct();
-  const categoriesQ = useCategories();
-  const categories = categoriesQ.data?.data ?? [];
 
   const [name, setName] = useState<I18nText>({});
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
   const [unit, setUnit] = useState<I18nText>({});
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -215,18 +213,7 @@ export default function CreateProductPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t('w.form.category')}</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('w.form.selectCategoryOptional')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name.en ?? c.name.zh ?? c.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategorySelect value={categoryId} onChange={setCategoryId} />
             </div>
             <div className="space-y-2">
               <Label>{t('w.form.status')}</Label>

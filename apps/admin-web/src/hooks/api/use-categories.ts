@@ -76,3 +76,23 @@ export function useDeleteCategory() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }
+
+/** 两层分类树节点（buildCategoryTree 产出，大类含 children；子分类无 children） */
+export interface CategoryNode extends Category {
+  children: Category[];
+}
+
+/**
+ * 平铺分类列表 -> 两层嵌套树（MVP 锁 2 层）
+ *
+ * 供 admin-web 分类页树形展示。后端 listCategoriesAdmin 返平铺带 parentId，
+ * 这里组装成大类 + 直接子分类（不递归孙级，锁 2 层）。按 sortOrder 升序。
+ */
+export function buildCategoryTree(flat: Category[]): CategoryNode[] {
+  const bySort = (a: Category, b: Category) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  const roots = flat.filter((c) => !c.parentId).sort(bySort);
+  return roots.map((root) => ({
+    ...root,
+    children: flat.filter((c) => c.parentId === root.id).sort(bySort),
+  }));
+}
