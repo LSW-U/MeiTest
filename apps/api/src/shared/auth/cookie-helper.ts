@@ -64,7 +64,10 @@ function csrfCookieOptions(maxAgeMs: number) {
     httpOnly: false,
     secure: isProd(),
     sameSite: 'lax' as const,
-    path: COOKIE_PATH,
+    // ⚠️ Path 必须用根 /：前端 JS（document.cookie）在任意页面（/categories 等）需读 admin_csrf
+    // 设 X-CSRF-Token header。Path=/api/v1 时 /categories 页 document.cookie 读不到 → header 不设 → 403 E-AUTH-011。
+    // access/refresh 仍用 /api/v1（httpOnly + 限 API 路径，安全）。
+    path: '/',
     maxAge: maxAgeMs,
   };
 }
