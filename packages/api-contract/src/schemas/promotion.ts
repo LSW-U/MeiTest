@@ -98,3 +98,38 @@ export const ClientCoupon = z.object({
   endAt: IsoTimestamp,
   status: z.enum(['available', 'used', 'expired']),
 });
+
+/**
+ * 我的卡包视图（P1 领券体系，UserCoupon 实例维度）
+ *
+ * 与 ClientCoupon（模板维度）区别：
+ *   - id = UserCoupon.id（下单 couponId 传这个）
+ *   - status = unused/used/expired（用户实例状态，精确）
+ *   - 带 promotionId / receivedAt / usedAt / orderId（追溯）
+ */
+export const MyCoupon = z.object({
+  /** UserCoupon.id */
+  id: Id,
+  promotionId: Id,
+  code: z.string(),
+  status: z.enum(['unused', 'used', 'expired']),
+  type: PromotionType,
+  value: z.number().int().nonnegative(),
+  minOrderAmount: z.number().int().nonnegative(),
+  maxDiscountAmount: z.number().int().nonnegative().nullable(),
+  name: z.string(),
+  description: z.string().nullable(),
+  startAt: IsoTimestamp,
+  endAt: IsoTimestamp,
+  /** 领取时间 */
+  receivedAt: IsoTimestamp,
+  /** 使用时间（status=used 时） */
+  usedAt: IsoTimestamp.nullable(),
+  /** 关联订单（status=used 时） */
+  orderId: Id.nullable(),
+});
+
+/** 码兑换领取请求（输码领到卡包，POST /client/coupons/redeem） */
+export const RedeemCouponRequest = z.object({
+  code: z.string().min(1).max(20),
+});

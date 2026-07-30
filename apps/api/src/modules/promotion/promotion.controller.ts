@@ -166,33 +166,79 @@ export class ClientPromotionController {
 }
 
 /**
- * Client Coupon Controller - 客户端优惠券列表（B10）
+ * Client Coupon Controller - 客户端优惠券（B10 + P1 领券卡包体系）
  *
  * 路由前缀 /api/v1/client/coupons（role: customer）
- * MVP 无领券机制（无 UserPromotion 表），返回全局可用券（ACTIVE + 有效期内 + 未超额）。
+ *
+ * P1 领券卡包体系（2026-07-31，方案 §3.3）：
+ *   GET    /available             领券中心（可领模板，排除已领）
+ *   POST   /:promotionId/claim    领取（生成 UserCoupon UNUSED）
+ *   POST   /redeem                码兑换领取（输 code -> 领到卡包）
+ *   GET    /?status=unused|used|expired  我的卡包（精确查 UserCoupon）
  */
+const RedeemCouponRequest = z.object({
+  code: z.string().min(1).max(20),
+});
+
 @Controller('api/v1/client/coupons')
 @Roles('CUSTOMER')
 export class ClientCouponController {
   constructor(@Inject(PromotionService) private readonly promoService: PromotionService) {}
 
+  /** 领券中心：可领模板列表（排除当前用户已领） */
+  @Get('available')
+  async listAvailable(@Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.promoService.listAvailableTemplates(user.sub);
+    return { success: true as const, data };
+  }
+
+  /** 码兑换领取（输码领到卡包） */
+  @Post('redeem')
+  async redeem(
+    @Body(new ZodValidationPipe(RedeemCouponRequest)) body: z.infer<typeof RedeemCouponRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.promoService.redeemCoupon(body.code, user.sub);
+    return { success: true as const, data };
+  }
+
+  /** 领取优惠券（按模板 id） */
+  @Post(':promotionId/claim')
+  async claim(@Param('promotionId') promotionId: string, @Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const data = await this.promoService.claimCoupon(promotionId, user.sub);
+    return { success: true as const, data };
+  }
+
+  /** 我的卡包（按 unused/used/expired 精确查 UserCoupon） */
   @Get()
   async list(@Query('status') status: string | undefined, @Req() req: RequestWithUser) {
-    const validStatuses = ['available', 'used', 'expired'];
-    const s = status ?? 'available';
+    const validStatuses = ['unused', 'used', 'expired'];
+    const s = status ?? 'unused';
     if (!validStatuses.includes(s)) {
       throw new BadRequestException({
         code: 'E-COMMON-001',
-        message: 'status must be one of: available, used, expired',
+        message: 'status must be one of: unused, used, expired',
       });
     }
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
-    const data = await this.promoService.listClientCoupons(
-      s as 'available' | 'used' | 'expired',
+    const data = await this.promoService.listMyCoupons(
       user.sub,
+      s as 'unused' | 'used' | 'expired',
     );
     return { success: true as const, data };
   }

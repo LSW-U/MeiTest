@@ -1086,6 +1086,7 @@ model Promotion {
 // 22. OrderPromotion (W7-ext-G-fix2 2026-07-13)
 //     订单-促销关联：下单时写入，冗余存 code + discountAmount
 //     promotion 改名/删除后仍可追溯历史订单用了哪个码、抵扣多少
+//     P1 领券体系（2026-07-31）：加 userCouponId 关联 UserCoupon（下单用券时写）
 model OrderPromotion {
   id             String   @id @default(uuid())
   orderId        String   @map("order_id")
@@ -1094,13 +1095,17 @@ model OrderPromotion {
   code           String   @db.VarChar(20)
   /// 实际抵扣金额（分），= 下单时算出的 discountAmount
   discountAmount Int      @map("discount_amount")
+  /// 关联 UserCoupon（P1 领券体系；旧码即用流程的记录为 null）
+  userCouponId   String?  @map("user_coupon_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  order      Order      @relation(fields: [orderId], references: [id])
-  promotion  Promotion  @relation(fields: [promotionId], references: [id])
+  order       Order       @relation(fields: [orderId], references: [id])
+  promotion   Promotion   @relation(fields: [promotionId], references: [id])
+  userCoupon  UserCoupon? @relation(fields: [userCouponId], references: [id])
 
   @@index([orderId])
   @@index([promotionId])
+  @@index([userCouponId])
   @@map("order_promotions")
 }
 
@@ -1119,9 +1124,10 @@ model UserCoupon {
   orderId      String?          @map("order_id")
   createdAt    DateTime         @default(now()) @map("created_at")
 
-  user       User       @relation(fields: [userId], references: [id])
-  promotion  Promotion  @relation(fields: [promotionId], references: [id])
-  order      Order?     @relation(fields: [orderId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+  promotion       Promotion       @relation(fields: [promotionId], references: [id])
+  order           Order?          @relation(fields: [orderId], references: [id])
+  orderPromotions OrderPromotion[]
 
   // 同券每人限领 1 张（配合 Promotion.perUserLimit，替代旧 count 校验）
   @@unique([userId, promotionId])

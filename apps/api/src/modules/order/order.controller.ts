@@ -116,6 +116,7 @@ export class OrderController {
       paymentMethod: body.paymentMethod as PaymentMethodValue,
       deviceType: user.deviceType,
       perspective,
+      couponId: body.couponId,
     };
 
     const order = await this.idempotencyService.withIdempotency(
