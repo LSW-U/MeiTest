@@ -34,6 +34,7 @@ const m = vi.hoisted(() => ({
   shopFindFirst: vi.fn(),
   stockFindMany: vi.fn(),
   reviewGroupBy: vi.fn(),
+  queryRaw: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -73,6 +74,7 @@ vi.mock('../src/shared/db', () => ({
     shop: { findFirst: m.shopFindFirst },
     stock: { findMany: m.stockFindMany },
     review: { groupBy: m.reviewGroupBy },
+    $queryRaw: m.queryRaw,
   },
 }));
 
@@ -123,19 +125,19 @@ describe('CatalogService', () => {
       expect(result.items[0].defaultSkuId).toBe('sku-default');
     });
 
-    it('按 keyword 搜索', async () => {
+    it('按 keyword 搜索（raw ILIKE 大小写不敏感）', async () => {
+      m.queryRaw.mockResolvedValueOnce([{ id: 'prod-1' }]);
       m.productFindMany.mockResolvedValueOnce([mockProduct]);
       m.productCount.mockResolvedValueOnce(1);
       m.skuFindMany.mockResolvedValueOnce([]);
 
-      await service.listProducts({ keyword: 'Milk' });
+      await service.listProducts({ keyword: 'milk' });
+
+      // raw ILIKE 搜 id（5 语言 OR），再 findMany where id in
+      expect(m.queryRaw).toHaveBeenCalled();
       expect(m.productFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({ name: { path: ['en'], string_contains: 'milk' } }),
-            ]),
-          }),
+          where: expect.objectContaining({ id: { in: ['prod-1'] } }),
         }),
       );
     });
