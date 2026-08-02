@@ -136,6 +136,12 @@ export const CreateOrderRequest = z.object({
     .min(1),
   remark: z.string().max(200).optional(),
   paymentMethod: PaymentMethod,
+  /**
+   * 用户券实例 id（UserCoupon.id，P1 领券体系）。
+   * 结算页从"我的卡包"选券传入；事务内 applyCoupon 校验 + 标 USED。
+   * 不传 = 不用券。
+   */
+  couponId: Id.optional(),
 });
 
 /** 取消订单请求 */

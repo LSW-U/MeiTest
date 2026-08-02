@@ -41,8 +41,11 @@ export interface CreateOrderInput {
   deviceType: ContractDeviceType;
   /** 操作视角（审计用） */
   perspective?: string;
-  /** 促销码（W7-ext-G，可选） */
-  promoCode?: string;
+  /**
+   * 用户券实例 id（UserCoupon.id，P1 领券体系）。
+   * 结算页从卡包选券传入，事务内 applyCoupon 校验 + 标 USED。
+   */
+  couponId?: string;
 }
 
 /** 下单后返回（service → controller → client） */

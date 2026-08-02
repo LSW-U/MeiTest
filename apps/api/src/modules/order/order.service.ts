@@ -252,20 +252,27 @@ export class OrderService {
     // ===== Step 6: 事务创建 Order + Items + 扣库存 + Event =====
     try {
       const created = await withTransaction(async (tx: Tx) => {
-        // 6.0 应用促销码（W7-ext-G）：校验 + 计算 discount + 原子 increment usedCount
+        // 6.0 应用优惠券（P1 领券体系）：校验 UserCoupon + 计算 discount + 标 USED
+        //     applyCoupon 不写 orderId（order.id 此刻不存在），6.1.1 回填 UserCoupon.orderId
         let discountAmount = 0;
-        let appliedPromo:
-          | { promotionId: string; code: string; type: string; discountAmount: number }
+        let appliedCoupon:
+          | {
+              userCouponId: string;
+              promotionId: string;
+              code: string;
+              type: string;
+              discountAmount: number;
+            }
           | null = null;
-        if (input.promoCode) {
-          appliedPromo = await this.promotionService.applyPromotion(
-            input.promoCode,
+        if (input.couponId) {
+          appliedCoupon = await this.promotionService.applyCoupon(
+            input.couponId,
             input.userId,
             itemsSubtotal,
             deliveryFee,
             tx,
           );
-          discountAmount = appliedPromo.discountAmount;
+          discountAmount = appliedCoupon.discountAmount;
         }
         const payableAmount = totalAmount - discountAmount;
 
@@ -293,15 +300,21 @@ export class OrderService {
           },
         });
 
-        // 6.1.1 写 OrderPromotion 关联（W7-ext-G-fix2）：冗余存 code + discountAmount
-        //       promotion 改名/删除后仍可追溯历史订单用了哪个码
-        if (appliedPromo) {
+        // 6.1.1 用券关联回填（P1 领券体系）：
+        //       a) UserCoupon.orderId 关联当前订单（applyCoupon 标 USED 时未写 orderId）
+        //       b) OrderPromotion 快照（冗余 code + discountAmount + userCouponId，防模板改名/删除后无法追溯）
+        if (appliedCoupon) {
+          await tx.userCoupon.update({
+            where: { id: appliedCoupon.userCouponId },
+            data: { orderId: order.id },
+          });
           await tx.orderPromotion.create({
             data: {
               orderId: order.id,
-              promotionId: appliedPromo.promotionId,
-              code: appliedPromo.code,
-              discountAmount: appliedPromo.discountAmount,
+              promotionId: appliedCoupon.promotionId,
+              code: appliedCoupon.code,
+              discountAmount: appliedCoupon.discountAmount,
+              userCouponId: appliedCoupon.userCouponId,
             },
           });
         }

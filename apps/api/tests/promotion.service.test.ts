@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb } = vi.hoisted(() => ({
+const { mockDb, mockWithTransaction } = vi.hoisted(() => ({
   mockDb: {
     promotion: {
       findUnique: vi.fn(),
@@ -15,11 +15,20 @@ const { mockDb } = vi.hoisted(() => ({
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    userCoupon: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
     $executeRaw: vi.fn(),
   },
+  // withTransaction：把回调用 mockDb 当 tx 执行（让 tx.userCoupon.create / tx.$executeRaw 命中 mock）
+  mockWithTransaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
 }));
 
-vi.mock('../src/shared/db', () => ({ db: mockDb }));
+vi.mock('../src/shared/db', () => ({ db: mockDb, withTransaction: mockWithTransaction }));
 vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
@@ -34,11 +43,19 @@ describe('PromotionService (W7-ext-G)', () => {
     mockDb.orderPromotion.findMany.mockReset();
     mockDb.orderPromotion.count.mockReset();
     mockDb.orderPromotion.count.mockResolvedValue(0); // P1-1：默认未用过（perUserLimit 校验通过）
+    Object.values(mockDb.userCoupon).forEach((fn) => fn.mockReset());
     mockDb.$executeRaw.mockReset();
+    mockWithTransaction.mockReset();
+    // 重置后恢复默认实现（把回调用 mockDb 执行）
+    mockWithTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
     // @ts-expect-error - no constructor args needed
     service = new PromotionService();
   });
 
+  // 动态时间窗（避免硬编码日期随日历过期）——now-30d ~ now+30d，永在有效期内
+  const _now = new Date();
   const basePromo = {
     id: 'promo-1',
     code: 'SAVE10',
@@ -51,8 +68,8 @@ describe('PromotionService (W7-ext-G)', () => {
     totalQuota: 100,
     usedCount: 5,
     perUserLimit: 1,
-    startAt: new Date('2026-07-01T00:00:00.000Z'),
-    endAt: new Date('2026-07-31T23:59:59.000Z'),
+    startAt: new Date(_now.getTime() - 30 * 24 * 60 * 60 * 1000),
+    endAt: new Date(_now.getTime() + 30 * 24 * 60 * 60 * 1000),
     status: 'ACTIVE' as const,
     createdBy: 'admin-1',
     createdAt: new Date('2026-06-25T00:00:00.000Z'),
@@ -474,6 +491,336 @@ describe('PromotionService (W7-ext-G)', () => {
           }),
         }),
       );
+    });
+  });
+
+  // ==========================================================================
+  // P1 领券卡包体系（UserCoupon 维度，2026-07-31）
+  // ==========================================================================
+  describe('P1 领券卡包体系', () => {
+    const promoRow = {
+      ...basePromo,
+      startAt: new Date('2026-01-01T00:00:00.000Z'),
+      endAt: new Date('2099-12-31T00:00:00.000Z'),
+    };
+
+    describe('listAvailableTemplates', () => {
+      it('返 ACTIVE + 有效期内 + 未超额，排除当前用户已领（NOT userCoupons.some userId）', async () => {
+        mockDb.promotion.findMany.mockResolvedValue([promoRow]);
+        const result = await service.listAvailableTemplates('user-1');
+        expect(result).toHaveLength(1);
+        expect(result[0].status).toBe('available');
+        expect(mockDb.promotion.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              status: 'ACTIVE',
+              NOT: { userCoupons: { some: { userId: 'user-1' } } },
+            }),
+          }),
+        );
+      });
+
+      it('超额（usedCount >= totalQuota）-> 内存过滤掉', async () => {
+        mockDb.promotion.findMany.mockResolvedValue([
+          { ...promoRow, usedCount: 100, totalQuota: 100 },
+        ]);
+        const result = await service.listAvailableTemplates('user-1');
+        expect(result).toHaveLength(0);
+      });
+    });
+
+    describe('claimCoupon', () => {
+      it('模板不存在 -> E-COUPON-004 / 404', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(null);
+        await expect(service.claimCoupon('p-x', 'user-1')).rejects.toMatchObject({
+          response: { code: 'E-COUPON-004' },
+          status: 404,
+        });
+      });
+
+      it('模板非 ACTIVE -> E-COUPON-004 / 409', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue({ ...promoRow, status: 'PAUSED' });
+        await expect(service.claimCoupon('p-1', 'user-1')).rejects.toMatchObject({
+          response: { code: 'E-COUPON-004' },
+          status: 409,
+        });
+      });
+
+      it('配额已满（$executeRaw 影响 0 行）-> E-COUPON-004 / 409', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(promoRow);
+        mockDb.userCoupon.create.mockResolvedValue({ id: 'uc-1', promotion: promoRow });
+        mockDb.$executeRaw.mockResolvedValue(0);
+        await expect(service.claimCoupon('p-1', 'user-1')).rejects.toMatchObject({
+          response: { code: 'E-COUPON-004' },
+          status: 409,
+        });
+      });
+
+      it('Happy path -> create UserCoupon(UNUSED) + increment usedCount + 返 MyCoupon', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(promoRow);
+        const createdUc = {
+          id: 'uc-1',
+          promotionId: 'promo-1',
+          code: 'SAVE10',
+          status: 'UNUSED',
+          receivedAt: new Date('2026-07-31T00:00:00Z'),
+          usedAt: null,
+          orderId: null,
+          promotion: promoRow,
+        };
+        mockDb.userCoupon.create.mockResolvedValue(createdUc);
+        mockDb.$executeRaw.mockResolvedValue(1);
+
+        const result = await service.claimCoupon('p-1', 'user-1');
+
+        expect(mockDb.userCoupon.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              userId: 'user-1',
+              promotionId: 'promo-1',
+              code: 'SAVE10',
+              status: 'UNUSED',
+            }),
+          }),
+        );
+        // 原子 increment 配额守卫
+        expect(mockDb.$executeRaw).toHaveBeenCalled();
+        expect(result.id).toBe('uc-1');
+        expect(result.status).toBe('unused');
+      });
+
+      it('重复领取（P2002 unique 冲突）-> E-COUPON-003 / 409', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(promoRow);
+        const p2002 = new (class extends Error {
+          code = 'P2002';
+        })();
+        // 模拟 PrismaClientKnownRequestError 形态（instanceof 校验在 service 内）
+        const { Prisma } = await import('../src/prisma/client');
+        Object.setPrototypeOf(p2002, Prisma.PrismaClientKnownRequestError.prototype);
+        mockDb.userCoupon.create.mockRejectedValue(p2002);
+        mockDb.$executeRaw.mockResolvedValue(1);
+
+        await expect(service.claimCoupon('p-1', 'user-1')).rejects.toMatchObject({
+          response: { code: 'E-COUPON-003' },
+          status: 409,
+        });
+      });
+    });
+
+    describe('redeemCoupon', () => {
+      it('码不存在 -> E-COUPON-004 / 400', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(null);
+        await expect(service.redeemCoupon('NOPE', 'user-1')).rejects.toMatchObject({
+          response: { code: 'E-COUPON-004' },
+          status: 400,
+        });
+      });
+
+      it('Happy path -> 按 code 大写找模板后 claim', async () => {
+        mockDb.promotion.findUnique.mockResolvedValue(promoRow); // claimCoupon 内再查一次 by id
+        mockDb.userCoupon.create.mockResolvedValue({
+          id: 'uc-2',
+          promotionId: 'promo-1',
+          code: 'SAVE10',
+          status: 'UNUSED',
+          receivedAt: new Date('2026-07-31T00:00:00Z'),
+          usedAt: null,
+          orderId: null,
+          promotion: promoRow,
+        });
+        mockDb.$executeRaw.mockResolvedValue(1);
+
+        const result = await service.redeemCoupon('save10', 'user-1');
+
+        // findUnique 被 code（大写）查
+        expect(mockDb.promotion.findUnique).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { code: 'SAVE10' } }),
+        );
+        expect(result.id).toBe('uc-2');
+        expect(result.status).toBe('unused');
+      });
+    });
+
+    describe('listMyCoupons', () => {
+      const ucRow = {
+        id: 'uc-1',
+        promotionId: 'promo-1',
+        code: 'SAVE10',
+        status: 'UNUSED',
+        receivedAt: new Date('2026-07-31T00:00:00Z'),
+        usedAt: null,
+        orderId: null,
+        promotion: promoRow,
+      };
+
+      it('unused -> where 含 status=UNUSED + promotion.endAt>=now', async () => {
+        mockDb.userCoupon.findMany.mockResolvedValue([ucRow]);
+        const result = await service.listMyCoupons('user-1', 'unused');
+        expect(mockDb.userCoupon.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              userId: 'user-1',
+              status: 'UNUSED',
+              promotion: { endAt: { gte: expect.any(Date) } },
+            }),
+          }),
+        );
+        expect(result[0].status).toBe('unused');
+      });
+
+      it('used -> where status=USED，行派生 status=used', async () => {
+        mockDb.userCoupon.findMany.mockResolvedValue([
+          { ...ucRow, status: 'USED', usedAt: new Date('2026-07-31T10:00:00Z'), orderId: 'o-1' },
+        ]);
+        const result = await service.listMyCoupons('user-1', 'used');
+        expect(mockDb.userCoupon.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ where: expect.objectContaining({ status: 'USED' }) }),
+        );
+        expect(result[0].status).toBe('used');
+        expect(result[0].orderId).toBe('o-1');
+      });
+
+      it('expired -> where OR（EXPIRED 或 UNUSED+endAt<now）', async () => {
+        mockDb.userCoupon.findMany.mockResolvedValue([
+          { ...ucRow, status: 'EXPIRED' },
+        ]);
+        const result = await service.listMyCoupons('user-1', 'expired');
+        expect(mockDb.userCoupon.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              OR: expect.arrayContaining([
+                { status: 'EXPIRED' },
+                { status: 'UNUSED', promotion: { endAt: { lt: expect.any(Date) } } },
+              ]),
+            }),
+          }),
+        );
+        expect(result[0].status).toBe('expired');
+      });
+
+      it('UNUSED 但模板已过期（定时任务未跑）-> 派生 expired（查询兜底）', async () => {
+        mockDb.userCoupon.findMany.mockResolvedValue([
+          { ...ucRow, promotion: { ...promoRow, endAt: new Date('2020-01-01T00:00:00Z') } },
+        ]);
+        const result = await service.listMyCoupons('user-1');
+        expect(result[0].status).toBe('expired');
+      });
+    });
+
+    describe('applyCoupon', () => {
+      const ucWithPromo = {
+        id: 'uc-1',
+        userId: 'user-1',
+        promotionId: 'promo-1',
+        code: 'SAVE10',
+        status: 'UNUSED',
+        promotion: promoRow,
+      };
+
+      it('不存在 -> E-COUPON-001 / 404', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue(null);
+        await expect(service.applyCoupon('uc-x', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-001' },
+          status: 404,
+        });
+      });
+
+      it('不归属当前用户 -> E-COUPON-001 / 404（不泄漏存在性）', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue({ ...ucWithPromo, userId: 'other' });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-001' },
+          status: 404,
+        });
+      });
+
+      it('已用（status=USED）-> E-COUPON-002 / 409', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue({ ...ucWithPromo, status: 'USED' });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-002' },
+          status: 409,
+        });
+      });
+
+      it('已过期（endAt<now）-> E-COUPON-002 / 409', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue({
+          ...ucWithPromo,
+          promotion: { ...promoRow, endAt: new Date('2020-01-01T00:00:00Z') },
+        });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-002' },
+          status: 409,
+        });
+      });
+
+      it('模板暂停 -> E-COUPON-004 / 409', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue({
+          ...ucWithPromo,
+          promotion: { ...promoRow, status: 'PAUSED' },
+        });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-004' },
+          status: 409,
+        });
+      });
+
+      it('未达 minOrderAmount -> E-COUPON-005 / 400', async () => {
+        // promoRow.minOrderAmount=1000，传 500
+        mockDb.userCoupon.findUnique.mockResolvedValue(ucWithPromo);
+        await expect(service.applyCoupon('uc-1', 'user-1', 500, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-005' },
+          status: 400,
+        });
+      });
+
+      it('Happy path -> 原子标 USED（updateMany WHERE UNUSED）+ 返 discount（不 increment，已在 claim 占位）', async () => {
+        mockDb.userCoupon.findUnique.mockResolvedValue(ucWithPromo);
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 1 });
+        // totalAmount=2000, PERCENTAGE 10% -> 200
+        const result = await service.applyCoupon('uc-1', 'user-1', 2000, 500);
+        expect(mockDb.userCoupon.updateMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: 'uc-1', status: 'UNUSED' },
+            data: expect.objectContaining({ status: 'USED', usedAt: expect.any(Date) }),
+          }),
+        );
+        expect(result.discountAmount).toBe(200);
+        expect(result.userCouponId).toBe('uc-1');
+        // applyCoupon 不 increment promotion.usedCount
+        expect(mockDb.$executeRaw).not.toHaveBeenCalled();
+      });
+
+      it('并发双用券（updateMany count=0）-> E-COUPON-002 / 409（防 TOCTOU 双抵扣）', async () => {
+        // 读快照是 UNUSED（通过 status 检查），但原子翻转时已被并发抢先（count=0）
+        mockDb.userCoupon.findUnique.mockResolvedValue(ucWithPromo);
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 0 });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-002' },
+          status: 409,
+        });
+      });
+    });
+
+    describe('expireStaleCoupons', () => {
+      it('updateMany where=UNUSED+promotion.endAt<now -> EXPIRED，返 count', async () => {
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 7 });
+        const result = await service.expireStaleCoupons();
+        expect(mockDb.userCoupon.updateMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              status: 'UNUSED',
+              promotion: { endAt: { lt: expect.any(Date) } },
+            }),
+            data: { status: 'EXPIRED' },
+          }),
+        );
+        expect(result.expired).toBe(7);
+      });
+
+      it('无过期 -> count=0', async () => {
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 0 });
+        const result = await service.expireStaleCoupons();
+        expect(result.expired).toBe(0);
+      });
     });
   });
 

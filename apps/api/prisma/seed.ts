@@ -457,6 +457,54 @@ async function main() {
   console.log('  ✅ 2 banners');
   // === END FLOW W ===
 
+  // === HotSearchTerm seed（运营种子词，热搜榜 PINNED 前置 + MANUAL 兜底）===
+  // Why: 前端 Popular 区接 GET /client/search/hot，端点就绪但表空 -> 前端隐藏。
+  //      seed 5 语言 × 6 词（PINNED 2 置顶 + MANUAL 4 兜底），覆盖 SUPPORTED_LANGS。
+  //      ZSET 真实搜索次数累积后，PINNED + ZSET 合并（listHot service 逻辑）。
+  await prisma.hotSearchTerm.deleteMany();
+  const HOT_SEARCH_SEED = [
+    // en
+    { word: 'Apple', lang: 'en', type: 'PINNED' as const, sortOrder: 1 },
+    { word: 'Milk', lang: 'en', type: 'PINNED' as const, sortOrder: 2 },
+    { word: 'Oil', lang: 'en', type: 'MANUAL' as const, sortOrder: 1 },
+    { word: 'Rice', lang: 'en', type: 'MANUAL' as const, sortOrder: 2 },
+    { word: 'Salmon', lang: 'en', type: 'MANUAL' as const, sortOrder: 3 },
+    { word: 'Eggs', lang: 'en', type: 'MANUAL' as const, sortOrder: 4 },
+    // zh
+    { word: '苹果', lang: 'zh', type: 'PINNED' as const, sortOrder: 1 },
+    { word: '牛奶', lang: 'zh', type: 'PINNED' as const, sortOrder: 2 },
+    { word: '食用油', lang: 'zh', type: 'MANUAL' as const, sortOrder: 1 },
+    { word: '大米', lang: 'zh', type: 'MANUAL' as const, sortOrder: 2 },
+    { word: '三文鱼', lang: 'zh', type: 'MANUAL' as const, sortOrder: 3 },
+    { word: '鸡蛋', lang: 'zh', type: 'MANUAL' as const, sortOrder: 4 },
+    // id（印尼语）
+    { word: 'Apel', lang: 'id', type: 'PINNED' as const, sortOrder: 1 },
+    { word: 'Susu', lang: 'id', type: 'PINNED' as const, sortOrder: 2 },
+    { word: 'Minyak', lang: 'id', type: 'MANUAL' as const, sortOrder: 1 },
+    { word: 'Beras', lang: 'id', type: 'MANUAL' as const, sortOrder: 2 },
+    { word: 'Salmon', lang: 'id', type: 'MANUAL' as const, sortOrder: 3 },
+    { word: 'Telur', lang: 'id', type: 'MANUAL' as const, sortOrder: 4 },
+    // pt（葡语）
+    { word: 'Maçã', lang: 'pt', type: 'PINNED' as const, sortOrder: 1 },
+    { word: 'Leite', lang: 'pt', type: 'PINNED' as const, sortOrder: 2 },
+    { word: 'Óleo', lang: 'pt', type: 'MANUAL' as const, sortOrder: 1 },
+    { word: 'Arroz', lang: 'pt', type: 'MANUAL' as const, sortOrder: 2 },
+    { word: 'Salmão', lang: 'pt', type: 'MANUAL' as const, sortOrder: 3 },
+    { word: 'Ovos', lang: 'pt', type: 'MANUAL' as const, sortOrder: 4 },
+    // tet（德顿语，英文 fallback）
+    { word: 'Apple', lang: 'tet', type: 'PINNED' as const, sortOrder: 1 },
+    { word: 'Milk', lang: 'tet', type: 'PINNED' as const, sortOrder: 2 },
+    { word: 'Oil', lang: 'tet', type: 'MANUAL' as const, sortOrder: 1 },
+    { word: 'Rice', lang: 'tet', type: 'MANUAL' as const, sortOrder: 2 },
+    { word: 'Salmon', lang: 'tet', type: 'MANUAL' as const, sortOrder: 3 },
+    { word: 'Eggs', lang: 'tet', type: 'MANUAL' as const, sortOrder: 4 },
+  ];
+  await prisma.hotSearchTerm.createMany({
+    data: HOT_SEARCH_SEED.map((t) => ({ ...t, status: 'ACTIVE' })),
+    skipDuplicates: true,
+  });
+  console.log(`  ✅ ${HOT_SEARCH_SEED.length} hot search terms (5 langs × 6: 2 PINNED + 4 MANUAL)`);
+
   console.log('\n🎉 Seed completed!');
   console.log(`   Login: phone=+670999999999, password=admin12345`);
 }

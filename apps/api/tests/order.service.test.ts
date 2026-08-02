@@ -369,16 +369,17 @@ describe('OrderService.createOrder', () => {
     expect(mockCart.clearOrderedItems).toHaveBeenCalledWith('user-1', ['sku-1']);
   });
 
-  it('W7-ext-G-fix2: 传 promoCode -> applyPromotion + 写 OrderPromotion 关联', async () => {
-    // 注入 promotionService mock
-    const mockApplyPromotion = vi.fn().mockResolvedValue({
+  it('P1 领券体系: 传 couponId -> applyCoupon + 回填 UserCoupon.orderId + 写 OrderPromotion 关联', async () => {
+    // 注入 promotionService mock（applyCoupon 替代 applyPromotion）
+    const mockApplyCoupon = vi.fn().mockResolvedValue({
+      userCouponId: 'uc-1',
       promotionId: 'promo-1',
       code: 'SAVE10',
       type: 'PERCENTAGE',
       discountAmount: 20,
     });
     (service as { promotionService: unknown }).promotionService = {
-      applyPromotion: mockApplyPromotion,
+      applyCoupon: mockApplyCoupon,
     };
 
     mockDb.address.findUnique.mockResolvedValue({
@@ -403,12 +404,14 @@ describe('OrderService.createOrder', () => {
     ]);
     mockOrderNo.nextOrderNo.mockResolvedValue('MM20260625010000001');
     const txOrderPromotionCreate = vi.fn().mockResolvedValue({});
+    const txUserCouponUpdate = vi.fn().mockResolvedValue({});
     mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
         orderPromotion: { create: txOrderPromotionCreate },
+        userCoupon: { update: txUserCouponUpdate },
       };
       return fn(tx);
     });
@@ -439,24 +442,30 @@ describe('OrderService.createOrder', () => {
       items: [{ skuId: 'sku-1', quantity: 2 }],
       paymentMethod: 'COD',
       deviceType: 'client_app',
-      promoCode: 'save10',
+      couponId: 'uc-1',
     });
 
-    // applyPromotion 被调，传 code + userId + itemsSubtotal(200) + deliveryFee(0) + tx
-    expect(mockApplyPromotion).toHaveBeenCalledWith(
-      'save10',
+    // applyCoupon 被调，传 couponId + userId + itemsSubtotal(200) + deliveryFee(0) + tx
+    expect(mockApplyCoupon).toHaveBeenCalledWith(
+      'uc-1',
       'user-1',
       200,
       0,
       expect.objectContaining({ order: expect.any(Object) }),
     );
-    // OrderPromotion 关联写入（冗余 code + discountAmount）
+    // UserCoupon.orderId 回填为新建订单 id
+    expect(txUserCouponUpdate).toHaveBeenCalledWith({
+      where: { id: 'uc-1' },
+      data: { orderId: 'order-1' },
+    });
+    // OrderPromotion 关联写入（含 userCouponId）
     expect(txOrderPromotionCreate).toHaveBeenCalledWith({
       data: {
         orderId: 'order-1',
         promotionId: 'promo-1',
         code: 'SAVE10',
         discountAmount: 20,
+        userCouponId: 'uc-1',
       },
     });
     expect(result.id).toBe('order-1');

@@ -133,6 +133,8 @@ import {
   ValidatePromotionRequest as ValidatePromotionRequestSchema,
   ValidatePromotionResponse as ValidatePromotionResponseSchema,
   ClientCoupon as ClientCouponSchema,
+  MyCoupon as MyCouponSchema,
+  RedeemCouponRequest as RedeemCouponRequestSchema,
   // unified-auth（W7-ext-H 统一手机号入口）
   UnifiedSendSmsRequest as SendSmsRequestSchema,
   UnifiedSendSmsResponse as SendSmsResponseSchema,
@@ -251,6 +253,8 @@ registry.register('BatchDeleteCartItemsRequest', BatchDeleteCartItemsRequest);
 registry.register('CheckoutPreviewRequest', CheckoutPreviewRequest);
 registry.register('CheckoutPreview', CheckoutPreview);
 registry.register('ClientCoupon', ClientCouponSchema);
+registry.register('MyCoupon', MyCouponSchema);
+registry.register('RedeemCouponRequest', RedeemCouponRequestSchema);
 
 registry.register('PaymentIntent', PaymentIntent);
 registry.register('UploadReceiptRequest', UploadReceiptRequest);
@@ -1223,16 +1227,70 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/client/coupons/available',
+  tags: ['promotion'],
+  description:
+    '领券中心（P1 领券体系）。返可领模板：ACTIVE + 有效期内 + 未超额 + 当前用户未领过。' +
+    'Role: customer。返回 ClientCoupon[]（status 固定 available）。',
+  responses: {
+    200: {
+      description: '可领模板列表',
+      content: { 'application/json': { schema: ClientCouponSchema.array() } },
+    },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/coupons/{promotionId}/claim',
+  tags: ['promotion'],
+  description:
+    '领取优惠券（P1 领券体系）。按模板 id 领取，生成 UserCoupon(UNUSED)。' +
+    '同券每人限领 1 张（@@unique），重复领抛 E-COUPON-003；模板不可领抛 E-COUPON-004。',
+  request: { params: z.object({ promotionId: Id }) },
+  responses: {
+    200: {
+      description: '领取成功',
+      content: { 'application/json': { schema: MyCouponSchema } },
+    },
+    409: { description: 'E-COUPON-003 已领过 / E-COUPON-004 模板不可领', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/coupons/redeem',
+  tags: ['promotion'],
+  description:
+    '码兑换领取（P1 领券体系）。输优惠码领到卡包（不再"即用"）。按 code 找模板后等同 claim。' +
+    '码不存在/不可领抛 E-COUPON-004；已领过抛 E-COUPON-003。',
+  request: { body: { content: { 'application/json': { schema: RedeemCouponRequestSchema } } } },
+  responses: {
+    200: {
+      description: '兑换领取成功',
+      content: { 'application/json': { schema: MyCouponSchema } },
+    },
+    400: { description: 'E-COUPON-004 码无效/模板不可领', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-COUPON-003 已领过', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/client/coupons',
   tags: ['promotion'],
-  description: '我的优惠券列表（B10 + used/expired：?status=available|used|expired，默认 available）',
+  description:
+    '我的卡包（P1 领券体系，精确查 UserCoupon）。?status=unused|used|expired，默认 unused。' +
+    'unused=UNUSED 且未过期；used=USED；expired=EXPIRED 或 UNUSED 但模板已过期（定时任务未跑的查询兜底）。' +
+    '【BREAKING】P1 起响应从 ClientCoupon（模板维度）改为 MyCoupon（实例维度），status 枚举由 available 改 unused。',
   request: {
     query: z.object({
-      status: z.enum(['available', 'used', 'expired']).optional(),
+      status: z.enum(['unused', 'used', 'expired']).optional(),
     }),
   },
   responses: {
-    200: { description: '优惠券列表（按 status 过滤）', content: { 'application/json': { schema: ClientCouponSchema.array() } } },
+    200: { description: '我的卡包（按 status 过滤）', content: { 'application/json': { schema: MyCouponSchema.array() } } },
     400: { description: 'INVALID_STATUS', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });

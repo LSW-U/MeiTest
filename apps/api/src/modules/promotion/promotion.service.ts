@@ -10,7 +10,8 @@
  * 错误码段：E-PROMO-001 ~ E-PROMO-099
  */
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { db } from '../../shared/db';
+import { Prisma } from '../../prisma/client';
+import { db, withTransaction } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 
@@ -86,6 +87,45 @@ export interface ClientCouponView {
   startAt: string;
   endAt: string;
   status: 'available' | 'used' | 'expired';
+}
+
+/**
+ * 我的卡包视图（P1 领券体系，UserCoupon 实例维度）
+ *
+ * 与 ClientCouponView（模板维度）的区别：
+ *   - id = UserCoupon.id（不是 Promotion.id）
+ *   - status = unused/used/expired（用户实例状态，精确）
+ *   - 带 promotionId / receivedAt / usedAt / orderId（追溯用）
+ */
+export interface MyCouponView {
+  /** UserCoupon.id（下单用 couponId 传这个） */
+  id: string;
+  promotionId: string;
+  code: string;
+  status: 'unused' | 'used' | 'expired';
+  type: PromotionTypeValue;
+  value: number;
+  minOrderAmount: number;
+  maxDiscountAmount: number | null;
+  name: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  /** 领取时间 */
+  receivedAt: string;
+  /** 使用时间（status=used 时） */
+  usedAt: string | null;
+  /** 关联订单（status=used 时） */
+  orderId: string | null;
+}
+
+/** applyCoupon 返回（createOrder 事务内用） */
+export interface AppliedCouponDiscount {
+  userCouponId: string;
+  promotionId: string;
+  code: string;
+  type: PromotionTypeValue;
+  discountAmount: number;
 }
 
 @Injectable()
@@ -367,6 +407,10 @@ export class PromotionService {
   /**
    * 客户端优惠券列表（B10 + used/expired 扩展，GET /client/coupons?status=）
    *
+   * @deprecated P1 领券卡包体系（2026-07-31）后改用 listMyCoupons（UserCoupon 精确查）。
+   * 此方法从 OrderPromotion 派生 used/expired（不精确），仅保留给未迁移的旧调用方，
+   * controller 已切到 listMyCoupons。后续前端全量迁移后删除本法 + 其单测。
+   *
    * - available（默认）：ACTIVE + 有效期内 + 未超额
    * - used：该用户用过的券（OrderPromotion JOIN Order.userId，去重 promotionId，按最近使用排序）
    * - expired（E2）：我用过且已过期（usedPromoIds ∩ endAt<now）
@@ -421,6 +465,348 @@ export class PromotionService {
     return rows
       .filter((r) => r.totalQuota === null || r.usedCount < r.totalQuota)
       .map((r) => this.toClientCouponView(r, 'available'));
+  }
+
+  // ============================================================================
+  // P1 领券卡包体系（UserCoupon 维度）
+  // 决策依据：方案 §3/§6（2026-07-31）
+  //   - 领券中心：listAvailableTemplates（全局可领模板，排除已领）
+  //   - 领取：claimCoupon / redeemCoupon（码兑换）-> 生成 UserCoupon(UNUSED)
+  //   - 卡包：listMyCoupons（按 unused/used/expired 精确查 UserCoupon）
+  //   - 下单用券：applyCoupon（createOrder 事务内调，UNUSED -> USED）
+  //   - 过期：expireStaleCoupons（BullMQ 每 5min 扫，UNUSED + endAt<now -> EXPIRED）
+  // 错误码段：E-COUPON-001 ~ E-COUPON-005
+  // ============================================================================
+
+  /**
+   * 领券中心：可领的模板列表（GET /client/coupons/available）
+   *
+   * 筛选：ACTIVE + 有效期内 + 未超额 + 当前用户未领过（NOT userCoupons.some）
+   * 返回 ClientCouponView（status='available'），与旧 listClientCoupons('available') 形状一致。
+   */
+  async listAvailableTemplates(userId: string): Promise<ClientCouponView[]> {
+    const now = new Date();
+    const rows = await db.promotion.findMany({
+      where: {
+        status: 'ACTIVE',
+        startAt: { lte: now },
+        endAt: { gte: now },
+        // 排除当前用户已领过的券（@@unique 保证每券每人 1 张，some 即"已领"）
+        NOT: { userCoupons: { some: { userId } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    // totalQuota 可空，DB 层无法表达 usedCount < totalQuota（nullable 比较），内存过滤
+    return rows
+      .filter((r) => r.totalQuota === null || r.usedCount < r.totalQuota)
+      .map((r) => this.toClientCouponView(r, 'available'));
+  }
+
+  /**
+   * 领取优惠券（POST /client/coupons/:promotionId/claim）
+   *
+   * 流程：校验模板可领 -> 事务内创建 UserCoupon(UNUSED) + 原子 increment promotion.usedCount（配额守卫）
+   * 配额语义：usedCount = 已发放数（"限发 N 张"），领取即占位，下单不重复 increment
+   * 重复领取：@@unique([userId,promotionId]) 触发 P2002 -> E-COUPON-003
+   */
+  async claimCoupon(promotionId: string, userId: string): Promise<MyCouponView> {
+    const promo = await db.promotion.findUnique({ where: { id: promotionId } });
+    if (!promo) {
+      throw new NotFoundException({ code: 'E-COUPON-004', message: 'Coupon template not available' });
+    }
+    this.assertTemplateClaimable(promo);
+
+    try {
+      const uc = await withTransaction(async (tx: Tx) => {
+        const created = await tx.userCoupon.create({
+          data: {
+            userId,
+            promotionId: promo.id,
+            code: promo.code,
+            status: 'UNUSED',
+          },
+          include: { promotion: true },
+        });
+        // 原子 increment + 配额守卫（消除 read-check-then-write race，防并发超发）
+        // affected=0 = 配额已满（或并发抢光），抛 E-COUPON-004，事务回滚 UserCoupon 创建
+        const affected = await tx.$executeRaw`
+          UPDATE "promotions"
+          SET used_count = used_count + 1
+          WHERE id = ${promo.id}
+            AND (total_quota IS NULL OR used_count < total_quota)
+        `;
+        if (affected === 0) {
+          throw new ConflictException({
+            code: 'E-COUPON-004',
+            message: 'Coupon quota exhausted',
+          });
+        }
+        return created;
+      });
+
+      logger.info({
+        msg: 'COUPON_CLAIMED',
+        userCouponId: uc.id,
+        userId,
+        promotionId: promo.id,
+        code: promo.code,
+      });
+      return this.toMyCouponView(uc);
+    } catch (e) {
+      // P2002 = @@unique([userId, promotionId]) 冲突 -> 已领过
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException({
+          code: 'E-COUPON-003',
+          message: 'Coupon already claimed by this user',
+        });
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * 码兑换领取（POST /client/coupons/redeem）
+   *
+   * 优惠码不再"即用"，改为"输码领到卡包"。按 code 找模板 -> claimCoupon。
+   * 码不存在 / 不 ACTIVE / 不在有效期 -> E-COUPON-004（统一"模板不可领"）
+   */
+  async redeemCoupon(code: string, userId: string): Promise<MyCouponView> {
+    const normalizedCode = code.trim().toUpperCase();
+    const promo = await db.promotion.findUnique({ where: { code: normalizedCode } });
+    if (!promo) {
+      throw new BadRequestException({
+        code: 'E-COUPON-004',
+        message: 'Invalid coupon code',
+      });
+    }
+    return this.claimCoupon(promo.id, userId);
+  }
+
+  /**
+   * 我的卡包（GET /client/coupons?status=unused|used|expired）
+   *
+   * 精确查 UserCoupon（不再从 OrderPromotion 派生）：
+   *   - unused：status=UNUSED 且 promotion.endAt>=now（过期未标记的归 expired tab）
+   *   - used：status=USED
+   *   - expired：status=EXPIRED 或 (status=UNUSED 且 endAt<now)（定时任务未跑时的查询兜底）
+   *   - 不传 status：全部返回（按行派生 status）
+   */
+  async listMyCoupons(
+    userId: string,
+    status?: 'unused' | 'used' | 'expired',
+  ): Promise<MyCouponView[]> {
+    const now = new Date();
+    const baseWhere = { userId };
+
+    let where: Prisma.UserCouponWhereInput;
+    if (status === 'unused') {
+      where = { ...baseWhere, status: 'UNUSED', promotion: { endAt: { gte: now } } };
+    } else if (status === 'used') {
+      where = { ...baseWhere, status: 'USED' };
+    } else if (status === 'expired') {
+      // OR：已标记 EXPIRED，或 UNUSED 但模板已过期（定时任务未跑的兜底）
+      where = {
+        ...baseWhere,
+        OR: [
+          { status: 'EXPIRED' },
+          { status: 'UNUSED', promotion: { endAt: { lt: now } } },
+        ],
+      };
+    } else {
+      where = baseWhere;
+    }
+
+    const rows = await db.userCoupon.findMany({
+      where,
+      include: { promotion: true },
+      orderBy: { receivedAt: 'desc' },
+    });
+    return rows.map((r) => this.toMyCouponView(r));
+  }
+
+  /**
+   * 下单用券（createOrder 事务内调用，替代旧 applyPromotion）
+   *
+   * 校验：归属（userId）+ 状态（UNUSED，未过期）+ 模板（ACTIVE）+ 门槛
+   * 副作用：UserCoupon UNUSED -> USED（写 usedAt，不写 orderId -- 由 order.service 在 order.create 后回填）
+   * 注意：不 increment promotion.usedCount（已在 claimCoupon 领取时占位）
+   *
+   * 返回 AppliedCouponDiscount；无效抛 E-COUPON-001/002/004/005
+   */
+  async applyCoupon(
+    userCouponId: string,
+    userId: string,
+    totalAmount: number,
+    deliveryFee: number,
+    tx?: Tx,
+  ): Promise<AppliedCouponDiscount> {
+    const client = tx ?? db;
+    const uc = await client.userCoupon.findUnique({
+      where: { id: userCouponId },
+      include: { promotion: true },
+    });
+    // 不存在或不归属当前用户 -> E-COUPON-001（404，不泄漏存在性）
+    if (!uc || uc.userId !== userId) {
+      throw new NotFoundException({
+        code: 'E-COUPON-001',
+        message: 'Coupon not found or does not belong to you',
+      });
+    }
+    // 状态校验：USED / EXPIRED / (UNUSED 但模板已过期) -> E-COUPON-002
+    const now = new Date();
+    if (uc.status === 'USED') {
+      throw new ConflictException({ code: 'E-COUPON-002', message: 'Coupon already used' });
+    }
+    if (uc.status === 'EXPIRED' || uc.promotion.endAt < now) {
+      throw new ConflictException({ code: 'E-COUPON-002', message: 'Coupon has expired' });
+    }
+    // 模板状态（运营暂停）-> E-COUPON-004
+    if (uc.promotion.status !== 'ACTIVE') {
+      throw new ConflictException({
+        code: 'E-COUPON-004',
+        message: 'Coupon template is not active',
+      });
+    }
+    // 门槛校验 -> E-COUPON-005
+    if (totalAmount < uc.promotion.minOrderAmount) {
+      throw new BadRequestException({
+        code: 'E-COUPON-005',
+        message: `Order amount does not meet minimum ${uc.promotion.minOrderAmount}`,
+      });
+    }
+
+    const discountAmount = this.computeDiscount(uc.promotion, totalAmount, deliveryFee);
+
+    // 原子翻转 UNUSED -> USED（防双用券竞态）
+    // 上面 status 校验是 read-only 快速失败，这里是 source-of-truth 的原子抢占：
+    // 并发两个 createOrder 用同一 couponId 时，只有一个 updateMany 能匹配到 status='UNUSED'，
+    // 另一个 count=0 → E-COUPON-002（消除 read-check-then-write TOCTOU）
+    const flipped = await client.userCoupon.updateMany({
+      where: { id: uc.id, status: 'UNUSED' },
+      data: { status: 'USED', usedAt: now },
+    });
+    if (flipped.count === 0) {
+      // 被并发抢先用掉，或定时任务期间被标 EXPIRED
+      throw new ConflictException({
+        code: 'E-COUPON-002',
+        message: 'Coupon already used or expired',
+      });
+    }
+
+    logger.info({
+      msg: 'COUPON_APPLIED',
+      userCouponId: uc.id,
+      promotionId: uc.promotionId,
+      code: uc.code,
+      userId,
+      discountAmount,
+    });
+
+    return {
+      userCouponId: uc.id,
+      promotionId: uc.promotionId,
+      code: uc.code,
+      type: uc.promotion.type,
+      discountAmount,
+    };
+  }
+
+  /**
+   * 过期扫描（BullMQ 每 5min 调）
+   *
+   * 把 UNUSED 且 promotion.endAt<now 的 UserCoupon 标记为 EXPIRED。
+   * 幂等：updateMany 只影响 UNUSED 行，已 EXPIRED/USED 不动。
+   */
+  async expireStaleCoupons(): Promise<{ expired: number }> {
+    const now = new Date();
+    const result = await db.userCoupon.updateMany({
+      where: { status: 'UNUSED', promotion: { endAt: { lt: now } } },
+      data: { status: 'EXPIRED' },
+    });
+    if (result.count > 0) {
+      logger.info({ msg: 'COUPONS_EXPIRED', count: result.count });
+    }
+    return { expired: result.count };
+  }
+
+  /** 校验模板可领（claim/redeem 用）：ACTIVE + 有效期内 + 配额未满 -> 否则 E-COUPON-004 */
+  private assertTemplateClaimable(promo: {
+    status: PromotionStatusValue;
+    startAt: Date;
+    endAt: Date;
+    totalQuota: number | null;
+    usedCount: number;
+  }): void {
+    if (promo.status !== 'ACTIVE') {
+      throw new ConflictException({
+        code: 'E-COUPON-004',
+        message: 'Coupon template is not active',
+      });
+    }
+    const now = new Date();
+    if (now < promo.startAt || now > promo.endAt) {
+      throw new ConflictException({
+        code: 'E-COUPON-004',
+        message: 'Coupon template is not within valid period',
+      });
+    }
+    if (promo.totalQuota !== null && promo.usedCount >= promo.totalQuota) {
+      throw new ConflictException({
+        code: 'E-COUPON-004',
+        message: 'Coupon quota exhausted',
+      });
+    }
+  }
+
+  /** UserCoupon row -> MyCouponView（status 按行派生：UNUSED+endAt<now 视为 expired） */
+  private toMyCouponView(uc: {
+    id: string;
+    promotionId: string;
+    code: string;
+    status: 'UNUSED' | 'USED' | 'EXPIRED';
+    receivedAt: Date;
+    usedAt: Date | null;
+    orderId: string | null;
+    promotion: {
+      type: PromotionTypeValue;
+      value: number;
+      minOrderAmount: number;
+      maxDiscountAmount: number | null;
+      name: string;
+      description: string | null;
+      startAt: Date;
+      endAt: Date;
+    };
+  }): MyCouponView {
+    const now = new Date();
+    let derived: 'unused' | 'used' | 'expired';
+    if (uc.status === 'USED') {
+      derived = 'used';
+    } else if (uc.status === 'EXPIRED' || uc.promotion.endAt < now) {
+      derived = 'expired';
+    } else {
+      derived = 'unused';
+    }
+    return {
+      id: uc.id,
+      promotionId: uc.promotionId,
+      code: uc.code,
+      status: derived,
+      type: uc.promotion.type,
+      value: uc.promotion.value,
+      minOrderAmount: uc.promotion.minOrderAmount,
+      maxDiscountAmount: uc.promotion.maxDiscountAmount,
+      name: uc.promotion.name,
+      description: uc.promotion.description,
+      startAt: uc.promotion.startAt.toISOString(),
+      endAt: uc.promotion.endAt.toISOString(),
+      receivedAt: uc.receivedAt.toISOString(),
+      usedAt: uc.usedAt ? uc.usedAt.toISOString() : null,
+      orderId: uc.orderId,
+    };
   }
 
   /** 计算折扣金额（分） */

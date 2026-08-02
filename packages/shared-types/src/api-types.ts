@@ -3417,6 +3417,8 @@ export interface paths {
                         remark?: string;
                         /** @enum {string} */
                         paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                        /** Format: uuid */
+                        couponId?: string;
                     };
                 };
             };
@@ -4596,26 +4598,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/client/coupons": {
+    "/api/v1/client/coupons/available": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description 我的优惠券列表（B10 + used/expired：?status=available|used|expired，默认 available） */
+        /** @description 领券中心（P1 领券体系）。返可领模板：ACTIVE + 有效期内 + 未超额 + 当前用户未领过。Role: customer。返回 ClientCoupon[]（status 固定 available）。 */
         get: {
             parameters: {
-                query?: {
-                    status?: "available" | "used" | "expired";
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description 优惠券列表（按 status 过滤） */
+                /** @description 可领模板列表 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4638,6 +4638,275 @@ export interface paths {
                             endAt: string;
                             /** @enum {string} */
                             status: "available" | "used" | "expired";
+                        }[];
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coupons/{promotionId}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 领取优惠券（P1 领券体系）。按模板 id 领取，生成 UserCoupon(UNUSED)。同券每人限领 1 张（@@unique），重复领抛 E-COUPON-003；模板不可领抛 E-COUPON-004。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    promotionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 领取成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            promotionId: string;
+                            code: string;
+                            /** @enum {string} */
+                            status: "unused" | "used" | "expired";
+                            /** @enum {string} */
+                            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                            value: number;
+                            minOrderAmount: number;
+                            maxDiscountAmount: number | null;
+                            name: string;
+                            description: string | null;
+                            /** Format: date-time */
+                            startAt: string;
+                            /** Format: date-time */
+                            endAt: string;
+                            /** Format: date-time */
+                            receivedAt: string;
+                            /** Format: date-time */
+                            usedAt: string | null;
+                            /** Format: uuid */
+                            orderId: string | null;
+                        };
+                    };
+                };
+                /** @description E-COUPON-003 已领过 / E-COUPON-004 模板不可领 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coupons/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 码兑换领取（P1 领券体系）。输优惠码领到卡包（不再"即用"）。按 code 找模板后等同 claim。码不存在/不可领抛 E-COUPON-004；已领过抛 E-COUPON-003。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        code: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 兑换领取成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            promotionId: string;
+                            code: string;
+                            /** @enum {string} */
+                            status: "unused" | "used" | "expired";
+                            /** @enum {string} */
+                            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                            value: number;
+                            minOrderAmount: number;
+                            maxDiscountAmount: number | null;
+                            name: string;
+                            description: string | null;
+                            /** Format: date-time */
+                            startAt: string;
+                            /** Format: date-time */
+                            endAt: string;
+                            /** Format: date-time */
+                            receivedAt: string;
+                            /** Format: date-time */
+                            usedAt: string | null;
+                            /** Format: uuid */
+                            orderId: string | null;
+                        };
+                    };
+                };
+                /** @description E-COUPON-004 码无效/模板不可领 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-COUPON-003 已领过 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的卡包（P1 领券体系，精确查 UserCoupon）。?status=unused|used|expired，默认 unused。unused=UNUSED 且未过期；used=USED；expired=EXPIRED 或 UNUSED 但模板已过期（定时任务未跑的查询兜底）。【BREAKING】P1 起响应从 ClientCoupon（模板维度）改为 MyCoupon（实例维度），status 枚举由 available 改 unused。 */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "unused" | "used" | "expired";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 我的卡包（按 status 过滤） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            promotionId: string;
+                            code: string;
+                            /** @enum {string} */
+                            status: "unused" | "used" | "expired";
+                            /** @enum {string} */
+                            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+                            value: number;
+                            minOrderAmount: number;
+                            maxDiscountAmount: number | null;
+                            name: string;
+                            description: string | null;
+                            /** Format: date-time */
+                            startAt: string;
+                            /** Format: date-time */
+                            endAt: string;
+                            /** Format: date-time */
+                            receivedAt: string;
+                            /** Format: date-time */
+                            usedAt: string | null;
+                            /** Format: uuid */
+                            orderId: string | null;
                         }[];
                     };
                 };
@@ -11437,6 +11706,8 @@ export interface components {
             remark?: string;
             /** @enum {string} */
             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** Format: uuid */
+            couponId?: string;
         };
         CancelOrderRequest: {
             reason: string;
@@ -11588,6 +11859,35 @@ export interface components {
             endAt: string;
             /** @enum {string} */
             status: "available" | "used" | "expired";
+        };
+        MyCoupon: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            promotionId: string;
+            code: string;
+            /** @enum {string} */
+            status: "unused" | "used" | "expired";
+            /** @enum {string} */
+            type: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_DELIVERY";
+            value: number;
+            minOrderAmount: number;
+            maxDiscountAmount: number | null;
+            name: string;
+            description: string | null;
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            endAt: string;
+            /** Format: date-time */
+            receivedAt: string;
+            /** Format: date-time */
+            usedAt: string | null;
+            /** Format: uuid */
+            orderId: string | null;
+        };
+        RedeemCouponRequest: {
+            code: string;
         };
         PaymentIntent: {
             /** Format: uuid */
