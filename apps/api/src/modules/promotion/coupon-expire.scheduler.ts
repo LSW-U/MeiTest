@@ -21,6 +21,7 @@ const COUPON_EXPIRE_REPEAT_KEY = 'coupon-expire-every-5min';
 
 /** 每 5 分钟跑一次（秒位用非整 0/30，避开 fleet 同期撞 API） */
 const COUPON_EXPIRE_CRON_PATTERN = '*/5 * * * *';
+const COUPON_EXPIRE_CRON_TZ = 'Asia/Dili';
 
 /** 手动触发时用的 job name（与定时任务同 processor 处理） */
 export const COUPON_EXPIRE_JOB_RUN = 'expire-stale';
@@ -37,12 +38,13 @@ export class CouponExpireScheduler implements OnModuleInit {
       COUPON_EXPIRE_JOB_RUN,
       {} as CouponExpireJobData,
       {
-        repeat: { pattern: COUPON_EXPIRE_CRON_PATTERN, key: COUPON_EXPIRE_REPEAT_KEY },
+        repeat: { pattern: COUPON_EXPIRE_CRON_PATTERN, tz: COUPON_EXPIRE_CRON_TZ, key: COUPON_EXPIRE_REPEAT_KEY },
       },
     );
     logger.info({
       msg: 'coupon_expire_scheduler_registered',
       pattern: COUPON_EXPIRE_CRON_PATTERN,
+      tz: COUPON_EXPIRE_CRON_TZ,
     });
   }
 }

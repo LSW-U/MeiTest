@@ -680,11 +680,21 @@ export class PromotionService {
 
     const discountAmount = this.computeDiscount(uc.promotion, totalAmount, deliveryFee);
 
-    // 标记 USED（orderId 由 order.service 在 order.create 后回填）
-    await client.userCoupon.update({
-      where: { id: uc.id },
+    // 原子翻转 UNUSED -> USED（防双用券竞态）
+    // 上面 status 校验是 read-only 快速失败，这里是 source-of-truth 的原子抢占：
+    // 并发两个 createOrder 用同一 couponId 时，只有一个 updateMany 能匹配到 status='UNUSED'，
+    // 另一个 count=0 → E-COUPON-002（消除 read-check-then-write TOCTOU）
+    const flipped = await client.userCoupon.updateMany({
+      where: { id: uc.id, status: 'UNUSED' },
       data: { status: 'USED', usedAt: now },
     });
+    if (flipped.count === 0) {
+      // 被并发抢先用掉，或定时任务期间被标 EXPIRED
+      throw new ConflictException({
+        code: 'E-COUPON-002',
+        message: 'Coupon already used or expired',
+      });
+    }
 
     logger.info({
       msg: 'COUPON_APPLIED',

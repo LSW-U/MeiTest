@@ -52,6 +52,8 @@ describe('PromotionService (W7-ext-G)', () => {
     service = new PromotionService();
   });
 
+  // 动态时间窗（避免硬编码日期随日历过期）——now-30d ~ now+30d，永在有效期内
+  const _now = new Date();
   const basePromo = {
     id: 'promo-1',
     code: 'SAVE10',
@@ -64,8 +66,8 @@ describe('PromotionService (W7-ext-G)', () => {
     totalQuota: 100,
     usedCount: 5,
     perUserLimit: 1,
-    startAt: new Date('2026-07-01T00:00:00.000Z'),
-    endAt: new Date('2026-07-31T23:59:59.000Z'),
+    startAt: new Date(_now.getTime() - 30 * 24 * 60 * 60 * 1000),
+    endAt: new Date(_now.getTime() + 30 * 24 * 60 * 60 * 1000),
     status: 'ACTIVE' as const,
     createdBy: 'admin-1',
     createdAt: new Date('2026-06-25T00:00:00.000Z'),
@@ -757,14 +759,14 @@ describe('PromotionService (W7-ext-G)', () => {
         });
       });
 
-      it('Happy path -> 标 USED + 返 discount（不 increment，已在 claim 占位）', async () => {
+      it('Happy path -> 原子标 USED（updateMany WHERE UNUSED）+ 返 discount（不 increment，已在 claim 占位）', async () => {
         mockDb.userCoupon.findUnique.mockResolvedValue(ucWithPromo);
-        mockDb.userCoupon.update.mockResolvedValue({ ...ucWithPromo, status: 'USED' });
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 1 });
         // totalAmount=2000, PERCENTAGE 10% -> 200
         const result = await service.applyCoupon('uc-1', 'user-1', 2000, 500);
-        expect(mockDb.userCoupon.update).toHaveBeenCalledWith(
+        expect(mockDb.userCoupon.updateMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { id: 'uc-1' },
+            where: { id: 'uc-1', status: 'UNUSED' },
             data: expect.objectContaining({ status: 'USED', usedAt: expect.any(Date) }),
           }),
         );
@@ -772,6 +774,16 @@ describe('PromotionService (W7-ext-G)', () => {
         expect(result.userCouponId).toBe('uc-1');
         // applyCoupon 不 increment promotion.usedCount
         expect(mockDb.$executeRaw).not.toHaveBeenCalled();
+      });
+
+      it('并发双用券（updateMany count=0）-> E-COUPON-002 / 409（防 TOCTOU 双抵扣）', async () => {
+        // 读快照是 UNUSED（通过 status 检查），但原子翻转时已被并发抢先（count=0）
+        mockDb.userCoupon.findUnique.mockResolvedValue(ucWithPromo);
+        mockDb.userCoupon.updateMany.mockResolvedValue({ count: 0 });
+        await expect(service.applyCoupon('uc-1', 'user-1', 2000, 500)).rejects.toMatchObject({
+          response: { code: 'E-COUPON-002' },
+          status: 409,
+        });
       });
     });
 
