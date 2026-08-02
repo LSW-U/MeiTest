@@ -61,6 +61,7 @@
   "E-PAYMENT-010": "Payment not yet paid",
   "E-PLATFORM-002": "System config key not found",
   "E-PRICING-001": "Order total does not meet minimum order amount",
+  "E-PROMO-020": "Promotion per-user usage limit reached",
   "E-RIDER-001": "Rider profile not found (please apply first)",
   "E-RIDER-002": "Rider profile already exists (cannot apply twice)",
   "E-RIDER-003": "idCardNumber required (min 6 chars)",

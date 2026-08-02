@@ -61,6 +61,7 @@
   "E-PAYMENT-010": "Pagamento ainda não efetuado",
   "E-PLATFORM-002": "Chave de configuração do sistema não encontrada",
   "E-PRICING-001": "Total do pedido não atinge o valor mínimo",
+  "E-PROMO-020": "Limite de uso do cupom por usuário atingido",
   "E-RIDER-001": "Perfil do rider não encontrado (por favor, registre-se primeiro)",
   "E-RIDER-002": "Perfil do rider já existe (não pode se registrar duas vezes)",
   "E-RIDER-003": "idCardNumber obrigatório (mínimo 6 caracteres)",
