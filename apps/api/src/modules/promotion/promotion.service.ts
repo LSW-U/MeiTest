@@ -431,6 +431,8 @@ export class PromotionService {
         where: { order: { userId } },
         select: { promotionId: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
+        // F3：限制最近 200 条用券记录（防高频用户全量拉，去重后 promoIds 足够覆盖 used/expired）
+        take: 200,
       });
       // 去重 promotionId，保留每券最近一次使用时间（用于 used 排序）
       const latestUsedAt = new Map<string, Date>();
@@ -445,7 +447,7 @@ export class PromotionService {
         // P1-3：过滤 DELETED 券（软删不进 used/expired 历史；PAUSED 保留 -- 用户用过的暂停券仍可见）
         where: expired
           ? { id: { in: promoIds }, endAt: { lt: now }, status: { not: 'DELETED' } }
-          : { id: { in: promoIds }, status: { not: 'DELETED' } },
+          : { id: { in: promoIds }, endAt: { gte: now }, status: { not: 'DELETED' } },
         orderBy: expired ? { endAt: 'desc' } : undefined,
       });
       // used 按"最近使用时间"desc 排序（DB 无法直接按 OrderPromotion.createdAt 排 Promotion，内存排）
