@@ -557,13 +557,31 @@ describe('CatalogService', () => {
       expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
     });
 
-    it('updateProduct 触发 INCR catalog:count:ver（含 status 变化）', async () => {
+    it('updateProduct 改 status 触发 INCR catalog:count:ver（影响 ACTIVE count）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(mockProduct);
+      m.productUpdate.mockResolvedValueOnce({ ...mockProduct, status: 'INACTIVE' });
+
+      await service.updateProduct('prod-1', { status: 'INACTIVE' });
+
+      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+    });
+
+    it('updateProduct 改 categoryId 触发 INCR（影响分类 count）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(mockProduct);
+      m.productUpdate.mockResolvedValueOnce({ ...mockProduct, categoryId: 'cat-new' });
+
+      await service.updateProduct('prod-1', { categoryId: 'cat-new' });
+
+      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+    });
+
+    it('updateProduct 只改 mainImage 不触发 bump（精确失效，name/image 不影响 count）', async () => {
       m.productFindUnique.mockResolvedValueOnce(mockProduct);
       m.productUpdate.mockResolvedValueOnce({ ...mockProduct, mainImage: 'new.png' });
 
       await service.updateProduct('prod-1', { mainImage: 'new.png' });
 
-      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+      expect(m.redisIncr).not.toHaveBeenCalled();
     });
 
     it('deleteProduct 触发 INCR catalog:count:ver（软删 status→INACTIVE）', async () => {

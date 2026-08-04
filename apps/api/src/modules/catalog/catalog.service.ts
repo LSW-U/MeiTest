@@ -288,8 +288,10 @@ export class CatalogService {
         ...(input.status !== undefined && { status: input.status as ProductStatus }),
       },
     });
-    // count 缓存失效（status/categoryId 改变影响 ACTIVE count）
-    void this.bumpCountVersion();
+    // count 缓存失效：仅 status/categoryId 变化才影响 ACTIVE count（name/image/description/unit 不影响）
+    if (input.status !== undefined || input.categoryId !== undefined) {
+      void this.bumpCountVersion();
+    }
     return this.toProductDTO(updated);
   }
 
@@ -426,7 +428,8 @@ export class CatalogService {
 
     // cache key: catalog:count:v{ver}:{status}:{catHash}
     // catHash = categoryId in 数组排序 join（子分类适配下含 parent+children，set 稳定）
-    const status = (where.status as string | undefined) ?? 'ANY';
+    // 运行时校验（非 as）：防未来 where.status 变对象（如 { in: [...] }）时 join 成 [object Object] 共享 key
+    const status = typeof where.status === 'string' ? where.status : 'ANY';
     const categoryIdIn = (where.categoryId as { in?: string[] } | undefined)?.in;
     const catHash =
       categoryIdIn && categoryIdIn.length > 0
