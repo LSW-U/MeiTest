@@ -368,6 +368,8 @@ model Product {
   @@index([shopId, status])
   @@index([categoryId, status])
   @@index([status, salesCount])
+  // P2-1: 5 语言 name trigram 表达式 GIN 索引（加速 raw ILIKE '%kw%'，见 catalog.service.ts 5 语言 OR）
+  // Prisma 不支持表达式索引 @@index 声明，仅注释占位；raw SQL 见 migration 20260805120000_add_products_name_trgm_idx
   @@map("products")
 }
 
