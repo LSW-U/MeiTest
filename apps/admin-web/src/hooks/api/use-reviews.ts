@@ -66,7 +66,7 @@ export interface ReviewListQuery {
 
 export interface UpdateReviewInput {
   status?: ReviewStatus;
-  reply?: Record<string, string>;
+  reply?: Record<string, string> | null; // P1-8：null = 清除回复
 }
 
 function buildQuery(q: ReviewListQuery): string {

@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
@@ -61,6 +61,7 @@ export default function ReviewsListPage() {
   const [categoryFilter, setCategoryFilter] = useState<ReviewCategory | 'ALL'>('ALL');
   const [ratingFilter, setRatingFilter] = useState<(typeof RATING_FILTERS)[number]>('ALL');
   const [keyword, setKeyword] = useState('');
+  const deferredKeyword = useDeferredValue(keyword); // P1-9：debounce keyword，避免每键一搜放大后端 Json 全表扫描
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
 
   const { data, isLoading, error, refetch } = useAdminReviews({
@@ -68,7 +69,7 @@ export default function ReviewsListPage() {
     status: statusFilter === 'ALL' ? undefined : statusFilter,
     category: tab === 'customer' && categoryFilter !== 'ALL' ? categoryFilter : undefined,
     rating: ratingFilter === 'ALL' ? undefined : Number(ratingFilter),
-    keyword: keyword.trim() || undefined,
+    keyword: deferredKeyword.trim() || undefined,
   });
   const deleteMutation = useDeleteReview(tab);
 

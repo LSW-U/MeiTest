@@ -325,6 +325,66 @@ describe('CatalogService', () => {
       m.categoryFindUnique.mockResolvedValueOnce(null);
       await expect(service.deleteCategory('missing')).rejects.toThrow(NotFoundException);
     });
+
+    // ===== 审查 F1：补 update 锁 2 层校验（012/013）+ admin 含 INACTIVE + 软删过滤 + 商品查询适配 =====
+
+    it('updateCategory parentId=自身 -> E-CATALOG-012（自引用）', async () => {
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'cat-1', parentId: null });
+      await expect(
+        service.updateCategory('cat-1', { parentId: 'cat-1' }),
+      ).rejects.toMatchObject({ response: { code: 'E-CATALOG-012' }, status: 400 });
+    });
+
+    it('updateCategory 已有子分类还想挂父 -> E-CATALOG-013（锁 2 层）', async () => {
+      // existing=cat-1（顶级，已有子分类）；挂到 cat-2 下会变 3 层 -> 禁
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'cat-1', parentId: null }); // existing
+      m.categoryFindUnique.mockResolvedValueOnce({ id: 'cat-2', parentId: null }); // parent（顶级，合法）
+      m.categoryCount.mockResolvedValueOnce(1); // cat-1 已有 1 个子分类
+      await expect(
+        service.updateCategory('cat-1', { parentId: 'cat-2' }),
+      ).rejects.toMatchObject({ response: { code: 'E-CATALOG-013' }, status: 400 });
+    });
+
+    it('listCategoriesAdmin 返平铺含 INACTIVE（admin 不过滤 status）', async () => {
+      m.categoryFindMany.mockResolvedValueOnce([
+        { id: 'cat-1', name: { en: 'Drinks' }, iconUrl: 'i', parentId: null, sortOrder: 1, status: 'ACTIVE' },
+        { id: 'cat-2', name: { en: 'Old' }, iconUrl: 'i', parentId: null, sortOrder: 2, status: 'INACTIVE' },
+      ]);
+      const list = await service.listCategoriesAdmin();
+      expect(list).toHaveLength(2);
+      expect(list.map((c) => c.status)).toEqual(['ACTIVE', 'INACTIVE']);
+      // 关键：admin 看全部，where 不含 status 过滤
+      const callArg = m.categoryFindMany.mock.calls[0][0];
+      expect(callArg?.where?.status).toBeUndefined();
+    });
+
+    it('listCategoryTree 过滤 ACTIVE（软删 INACTIVE 不出现在客户端树）', async () => {
+      m.categoryFindMany.mockResolvedValueOnce([]);
+      await service.listCategoryTree();
+      // 关键：客户端树只返 ACTIVE（修软删分类仍返客户端的 bug，锁定回归）
+      expect(m.categoryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: 'ACTIVE' } }),
+      );
+    });
+
+    it('商品查询 categoryId=大类 返大类+子分类商品（categoryId in [大类, ...子分类]）', async () => {
+      // cat-parent 下有 1 个子分类 cat-child
+      m.categoryFindMany.mockResolvedValueOnce([{ id: 'cat-child' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      await service.listProducts({ categoryId: 'cat-parent' });
+
+      // 关键：where.categoryId = { in: [大类, ...所有子分类] }
+      expect(m.productFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            categoryId: { in: ['cat-parent', 'cat-child'] },
+          }),
+        }),
+      );
+    });
   });
 
   describe('Banner', () => {

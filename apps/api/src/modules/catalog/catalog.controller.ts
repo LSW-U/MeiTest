@@ -286,8 +286,9 @@ export class AdminCategoryController {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
-    status?: 'ACTIVE' | 'INACTIVE';
   }) {
+    // 注：create 不接 status，契约 CreateCategoryRequest 不含 status，永远默认 ACTIVE（审查 F3）
+    // status toggle 走 PATCH /:id（UpdateCategoryRequest 含 status）
     const data = await this.catalog.createCategory(body);
     return { success: true, data };
   }

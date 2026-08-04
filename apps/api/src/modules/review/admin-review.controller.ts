@@ -90,7 +90,7 @@ export class AdminReviewController {
 
   /** 审核 status + 商家回复 reply（?type 区分表） */
   @Patch(':id')
-  @Audit({ resource: 'Review', resourceIdParam: 'id' })
+  @Audit({ resource: 'Review', resourceIdParam: 'id', maskFields: ['content', 'reply', 'images', 'comment', 'username', 'avatarurl'] })
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(AdminUpdateReviewRequest)) body: z.infer<typeof AdminUpdateReviewRequest>,
@@ -110,7 +110,7 @@ export class AdminReviewController {
 
   /** 硬删（决策4，?type 区分表） */
   @Delete(':id')
-  @Audit({ resource: 'Review', resourceIdParam: 'id' })
+  @Audit({ resource: 'Review', resourceIdParam: 'id', maskFields: ['content', 'reply', 'images', 'comment', 'username', 'avatarurl'] })
   async remove(@Param('id') id: string, @Query('type') type: string | undefined) {
     await this.reviewService.adminDeleteReview(id, parseType(type));
     return { success: true as const, data: { id } };

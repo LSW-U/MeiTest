@@ -57,7 +57,7 @@ export class ReviewController {
 
   /** 提交订单/商品评论 */
   @Post('orders/:id/review')
-  @Audit({ resource: 'Review', resourceIdParam: 'id' })
+  @Audit({ resource: 'Review', resourceIdParam: 'id', maskFields: ['content', 'reply', 'images', 'comment', 'username', 'avatarurl'] })
   async createReview(
     @Param('id') orderId: string,
     @Body(new ZodValidationPipe(CreateReviewRequest)) body: z.infer<typeof CreateReviewRequest>,
@@ -82,7 +82,7 @@ export class ReviewController {
 
   /** 提交骑手评价 */
   @Post('orders/:id/rider-review')
-  @Audit({ resource: 'RiderReview', resourceIdParam: 'id' })
+  @Audit({ resource: 'RiderReview', resourceIdParam: 'id', maskFields: ['content', 'reply', 'images', 'comment', 'username', 'avatarurl'] })
   async createRiderReview(
     @Param('id') orderId: string,
     @Body(new ZodValidationPipe(CreateRiderReviewRequest)) body: z.infer<typeof CreateRiderReviewRequest>,

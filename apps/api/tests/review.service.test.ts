@@ -311,6 +311,15 @@ describe('ReviewService (reviews-2)', () => {
       expect(r.id).toBe('r1');
     });
 
+    it('customer reply=null -> 清除 reply + repliedAt（P1-8）', async () => {
+      mockDb.review.findUnique.mockResolvedValue({ ...baseReview, reply: { en: 'old' }, repliedAt: new Date() });
+      mockDb.review.update.mockResolvedValue({ ...baseReview, reply: null, repliedAt: null });
+      await service.adminUpdateReview('r1', 'customer', { reply: null });
+      expect(mockDb.review.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ repliedAt: null }) }),
+      );
+    });
+
     it('rider status 变化 -> 事务 update + recalc', async () => {
       mockDb.riderReview.findUnique.mockResolvedValue({ ...baseRiderReview, status: 'PENDING' });
       mockTx.riderReview.update.mockResolvedValue({ ...baseRiderReview, status: 'APPROVED' });

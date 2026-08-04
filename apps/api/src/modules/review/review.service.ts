@@ -349,9 +349,10 @@ export class ReviewService {
       }
       const data: Prisma.ReviewUpdateInput = {};
       if (input.status) data.status = input.status;
-      if (input.reply) {
-        data.reply = input.reply as Prisma.InputJsonValue;
-        data.repliedAt = new Date();
+      // P1-8：reply !== undefined 才更新；null = 清除（JsonNull + repliedAt null），对象 = 写入
+      if (input.reply !== undefined) {
+        data.reply = input.reply ? (input.reply as Prisma.InputJsonValue) : Prisma.JsonNull;
+        data.repliedAt = input.reply ? new Date() : null;
       }
       if (Object.keys(data).length === 0) return this.toReviewView(existing);
       const updated = await db.review.update({ where: { id }, data });

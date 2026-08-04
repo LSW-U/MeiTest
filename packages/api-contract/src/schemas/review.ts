@@ -87,6 +87,6 @@ export const AdminListReviewsQuery = z.object({
 export const AdminUpdateReviewRequest = z.object({
   /** 审核状态（骑手评价无 reply，仅用 status） */
   status: ReviewStatus.optional(),
-  /** 商家回复（多语言，仅客户评论有意义） */
-  reply: I18nText.optional(),
+  /** 商家回复（多语言，仅客户评论有意义；P1-8：null = 清除回复，undefined = 不改） */
+  reply: I18nText.nullable().optional(),
 });

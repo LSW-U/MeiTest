@@ -58,8 +58,8 @@ export interface CreateRiderReviewInput {
   comment?: Record<string, string>;
 }
 
-/** Admin 更新入参（审核 status + 商家回复 reply） */
+/** Admin 更新入参（审核 status + 商家回复 reply；P1-8：reply=null 清除，undefined 不改） */
 export interface AdminUpdateReviewInput {
   status?: ReviewStatusValue;
-  reply?: Record<string, string>;
+  reply?: Record<string, string> | null;
 }

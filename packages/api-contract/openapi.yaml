@@ -18262,6 +18262,7 @@ paths:
                   enum: *a20
                 reply:
                   type: object
+                  nullable: true
                   additionalProperties:
                     type: string
       responses:

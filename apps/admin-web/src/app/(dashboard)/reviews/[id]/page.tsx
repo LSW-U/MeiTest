@@ -6,7 +6,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -25,7 +25,7 @@ import {
   type ReviewStatus,
 } from '@/hooks/api/use-reviews';
 
-export default function ReviewDetailPage() {
+function ReviewDetailContent() {
   const t = useTranslations('common');
   const params = useParams();
   const searchParams = useSearchParams();
@@ -55,9 +55,10 @@ export default function ReviewDetailPage() {
       const reply: Record<string, string> = {};
       if (replyEn.trim()) reply.en = replyEn.trim();
       if (replyZh.trim()) reply.zh = replyZh.trim();
+      const hasReply = Object.keys(reply).length > 0;
       updateMutation.mutate({
         id,
-        input: { status, reply: Object.keys(reply).length > 0 ? reply : undefined },
+        input: { status, reply: hasReply ? reply : null }, // P1-8：null = 清除回复（undefined = 不改）
       });
     } else {
       updateMutation.mutate({ id, input: { status } });
@@ -208,5 +209,21 @@ export default function ReviewDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// P1-7：useSearchParams 必须包 Suspense（Next 14.2 build 要求），否则路由树 CSR 降级 + SSR 首屏 type 误判
+export default function ReviewDetailPage() {
+  const t = useTranslations('common');
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
+      }
+    >
+      <ReviewDetailContent />
+    </Suspense>
   );
 }

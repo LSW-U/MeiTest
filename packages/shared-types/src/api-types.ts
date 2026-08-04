@@ -10826,7 +10826,7 @@ export interface paths {
                         status?: "PENDING" | "APPROVED" | "REJECTED";
                         reply?: {
                             [key: string]: string;
-                        };
+                        } | null;
                     };
                 };
             };
