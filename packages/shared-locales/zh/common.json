@@ -111,6 +111,7 @@
       "statusActive": "上架",
       "statusInactive": "下架",
       "deleteBlockedChildren": "请先删除 {count} 个子分类",
+      "deleteBlockedProducts": "该分类下有 {count} 个在售商品，请先改绑或下架",
       "noCategory": "无分类"
     },
     "warehouses": {

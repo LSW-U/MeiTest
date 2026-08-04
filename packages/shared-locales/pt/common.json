@@ -111,6 +111,7 @@
       "statusActive": "Ativo",
       "statusInactive": "Inativo",
       "deleteBlockedChildren": "Exclua {count} subcategoria(s) primeiro",
+      "deleteBlockedProducts": "Esta categoria tem {count} produto(s) ativo(s). Recategorize ou desative primeiro",
       "noCategory": "Sem categoria"
     },
     "warehouses": {

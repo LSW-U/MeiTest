@@ -414,6 +414,7 @@ export default function CategoriesPage() {
               <DeleteCategoryDialog
                 category={row}
                 childrenCount={childrenCountMap.get(row.id) ?? 0}
+                productCount={row.productCount ?? 0}
                 pending={deleteMutation.isPending}
                 onConfirm={() => deleteMutation.mutateAsync(row.id)}
               />
@@ -643,18 +644,23 @@ function EditCategoryDialog({
 function DeleteCategoryDialog({
   category,
   childrenCount,
+  productCount,
   pending,
   onConfirm,
 }: {
   category: Category;
   childrenCount: number;
+  productCount: number;
   pending: boolean;
   onConfirm: () => Promise<unknown>;
 }) {
   const { toast } = useToast();
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
-  const blocked = childrenCount > 0;
+  // F2：双重前置拦截——有子分类优先提示（删子分类后再提示商品数），否则有在售商品也拦
+  const blockedByChildren = childrenCount > 0;
+  const blockedByProducts = !blockedByChildren && productCount > 0;
+  const blocked = blockedByChildren || blockedByProducts;
 
   const handleConfirm = async () => {
     if (blocked) return;
@@ -686,9 +692,11 @@ function DeleteCategoryDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{t('w.categories.deleteTitle')}</AlertDialogTitle>
           <AlertDialogDescription className={blocked ? 'text-destructive font-medium' : ''}>
-            {blocked
+            {blockedByChildren
               ? t('w.categories.deleteBlockedChildren', { count: childrenCount })
-              : t('w.categories.deleteDesc')}
+              : blockedByProducts
+                ? t('w.categories.deleteBlockedProducts', { count: productCount })
+                : t('w.categories.deleteDesc')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -111,6 +111,7 @@
       "statusActive": "Aktivu",
       "statusInactive": "Inativu",
       "deleteBlockedChildren": "Hapus {count} subkategoria uluk",
+      "deleteBlockedProducts": "Kategoria ne'e iha {count} produto selu. Muda ka taka sira uluk",
       "noCategory": "La iha kategoria"
     },
     "warehouses": {

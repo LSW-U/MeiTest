@@ -1551,6 +1551,8 @@ components:
           enum: &a10
             - ACTIVE
             - INACTIVE
+        productCount:
+          type: integer
         children:
           type: array
           items:
@@ -1579,6 +1581,8 @@ components:
               status:
                 type: string
                 enum: *a10
+              productCount:
+                type: integer
             required:
               - id
               - name
@@ -6382,6 +6386,8 @@ paths:
                     status:
                       type: string
                       enum: *a10
+                    productCount:
+                      type: integer
                     children:
                       type: array
                       items:
@@ -6410,6 +6416,8 @@ paths:
                           status:
                             type: string
                             enum: *a10
+                          productCount:
+                            type: integer
                         required:
                           - id
                           - name
@@ -6959,6 +6967,8 @@ paths:
                   status:
                     type: string
                     enum: *a10
+                  productCount:
+                    type: integer
                   children:
                     type: array
                     items:
@@ -6987,6 +6997,8 @@ paths:
                         status:
                           type: string
                           enum: *a10
+                        productCount:
+                          type: integer
                       required:
                         - id
                         - name

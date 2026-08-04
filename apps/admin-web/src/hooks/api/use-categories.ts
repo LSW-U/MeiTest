@@ -22,6 +22,8 @@ export interface Category {
   parentId?: string | null;
   sortOrder?: number;
   status?: 'ACTIVE' | 'INACTIVE';
+  /** 该分类下在售商品数（F2，仅 admin listCategoriesAdmin 返；删除 dialog 前置拦截用） */
+  productCount?: number;
 }
 
 export interface CreateCategoryInput {

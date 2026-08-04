@@ -121,6 +121,11 @@ const CategoryBase = z.object({
   sortOrder: z.number().int(),
   /** 上下架状态（admin 端可见；client 端 service 已过滤 ACTIVE，不返此字段） */
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+  /**
+   * 该分类下的在售商品数（F2，仅 admin listCategoriesAdmin 批量 attach；client 端不返）。
+   * 供 admin-web 删除 dialog 前置拦截用，与 deleteCategory E-CATALOG-015 同口径（status:ACTIVE）。
+   */
+  productCount: z.number().int().optional(),
 });
 /** 分类实体（支持两层：client 端 children 嵌套只含 ACTIVE，admin 端平铺带 parentId 含 INACTIVE） */
 export const Category = CategoryBase.extend({

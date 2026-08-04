@@ -2379,6 +2379,7 @@ export interface paths {
                             sortOrder: number;
                             /** @enum {string} */
                             status?: "ACTIVE" | "INACTIVE";
+                            productCount?: number;
                             children?: {
                                 /** Format: uuid */
                                 id: string;
@@ -2391,6 +2392,7 @@ export interface paths {
                                 sortOrder: number;
                                 /** @enum {string} */
                                 status?: "ACTIVE" | "INACTIVE";
+                                productCount?: number;
                             }[];
                         }[];
                     };
@@ -2847,6 +2849,7 @@ export interface paths {
                             sortOrder: number;
                             /** @enum {string} */
                             status?: "ACTIVE" | "INACTIVE";
+                            productCount?: number;
                             children?: {
                                 /** Format: uuid */
                                 id: string;
@@ -2859,6 +2862,7 @@ export interface paths {
                                 sortOrder: number;
                                 /** @enum {string} */
                                 status?: "ACTIVE" | "INACTIVE";
+                                productCount?: number;
                             }[];
                         };
                     };
@@ -11538,6 +11542,7 @@ export interface components {
             sortOrder: number;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE";
+            productCount?: number;
             children?: {
                 /** Format: uuid */
                 id: string;
@@ -11550,6 +11555,7 @@ export interface components {
                 sortOrder: number;
                 /** @enum {string} */
                 status?: "ACTIVE" | "INACTIVE";
+                productCount?: number;
             }[];
         };
         CreateCategoryRequest: {

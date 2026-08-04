@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   productUpdate: vi.fn(),
   productDelete: vi.fn(),
   productCount: vi.fn(),
+  productGroupBy: vi.fn(),
   skuFindMany: vi.fn(),
   skuFindUnique: vi.fn(),
   skuFindFirst: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock('../src/shared/db', () => ({
       update: m.productUpdate,
       delete: m.productDelete,
       count: m.productCount,
+      groupBy: m.productGroupBy,
     },
     sku: {
       findMany: m.skuFindMany,
@@ -345,17 +347,27 @@ describe('CatalogService', () => {
       ).rejects.toMatchObject({ response: { code: 'E-CATALOG-013' }, status: 400 });
     });
 
-    it('listCategoriesAdmin 返平铺含 INACTIVE（admin 不过滤 status）', async () => {
+    it('listCategoriesAdmin 返平铺含 INACTIVE + productCount（admin 不过滤 status）', async () => {
       m.categoryFindMany.mockResolvedValueOnce([
         { id: 'cat-1', name: { en: 'Drinks' }, iconUrl: 'i', parentId: null, sortOrder: 1, status: 'ACTIVE' },
         { id: 'cat-2', name: { en: 'Old' }, iconUrl: 'i', parentId: null, sortOrder: 2, status: 'INACTIVE' },
       ]);
+      // F2：groupBy 批量返 ACTIVE 商品数（cat-1 有 3 个，cat-2 无）
+      m.productGroupBy.mockResolvedValueOnce([
+        { categoryId: 'cat-1', _count: { _all: 3 } },
+      ]);
       const list = await service.listCategoriesAdmin();
       expect(list).toHaveLength(2);
       expect(list.map((c) => c.status)).toEqual(['ACTIVE', 'INACTIVE']);
-      // 关键：admin 看全部，where 不含 status 过滤
+      // F2：productCount 与 deleteCategory E-CATALOG-015 同口径（仅 ACTIVE）
+      expect(list[0].productCount).toBe(3);
+      expect(list[1].productCount).toBe(0);
+      // 关键：分类查询 where 不含 status 过滤（admin 看全部）
       const callArg = m.categoryFindMany.mock.calls[0][0];
       expect(callArg?.where?.status).toBeUndefined();
+      // 关键：商品计数按 categoryId groupBy，where 过滤 ACTIVE
+      const groupArg = m.productGroupBy.mock.calls[0][0];
+      expect(groupArg?.where).toEqual({ status: 'ACTIVE' });
     });
 
     it('listCategoryTree 过滤 ACTIVE（软删 INACTIVE 不出现在客户端树）', async () => {

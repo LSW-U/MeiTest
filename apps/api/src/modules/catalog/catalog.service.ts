@@ -407,6 +407,17 @@ export class CatalogService {
     const items = await db.category.findMany({
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     });
+    // F2：批量统计每个分类下的 ACTIVE 商品数（与 deleteCategory E-CATALOG-015 同口径）
+    // 供 admin-web 删除 dialog 前置拦截「该分类下有 N 个在售商品」用（groupBy 一次查询）
+    const productCounts = await db.product.groupBy({
+      by: ['categoryId'],
+      where: { status: 'ACTIVE' },
+      _count: { _all: true },
+    });
+    const productCountMap = new Map<string, number>();
+    for (const row of productCounts) {
+      if (row.categoryId) productCountMap.set(row.categoryId, row._count._all);
+    }
     return items.map((c) => ({
       id: c.id,
       name: c.name as Record<string, string>,
@@ -414,6 +425,7 @@ export class CatalogService {
       parentId: c.parentId,
       sortOrder: c.sortOrder,
       status: c.status as 'ACTIVE' | 'INACTIVE',
+      productCount: productCountMap.get(c.id) ?? 0,
     }));
   }
 

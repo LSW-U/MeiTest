@@ -111,6 +111,7 @@
       "statusActive": "Active",
       "statusInactive": "Inactive",
       "deleteBlockedChildren": "Please delete {count} subcategory(s) first",
+      "deleteBlockedProducts": "This category has {count} active product(s). Reassign or remove them first",
       "noCategory": "No category"
     },
     "warehouses": {

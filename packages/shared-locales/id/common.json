@@ -111,6 +111,7 @@
       "statusActive": "Aktif",
       "statusInactive": "Nonaktif",
       "deleteBlockedChildren": "Hapus {count} subkategori terlebih dahulu",
+      "deleteBlockedProducts": "Kategori ini memiliki {count} produk aktif. Ubah kategori atau nonaktifkan dulu",
       "noCategory": "Tanpa kategori"
     },
     "warehouses": {
