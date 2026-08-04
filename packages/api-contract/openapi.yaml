@@ -17667,6 +17667,45 @@ paths:
                   required:
                     - word
                     - searchCount
+  /api/v1/client/search/suggest:
+    get:
+      tags:
+        - search
+      description: 搜索建议 / 输入联想（C 方案词联想，@Public）。三源合并去重：HotSearchTerm
+        词库前缀匹配（PINNED/MANUAL）+ Redis ZSET 真实词前缀 + 商品名前缀兜底。返
+        HotSearchTermItem[]，word 是建议词非 i18n key。prefix < 1 字符返空数组。
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+          required: true
+          name: prefix
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: 建议词列表（词库 > ZSET > 商品名，BLOCKED 全链路剔除）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    word:
+                      type: string
+                    searchCount:
+                      type: integer
+                  required:
+                    - word
+                    - searchCount
   /api/v1/client/orders/{id}/review:
     post:
       tags:

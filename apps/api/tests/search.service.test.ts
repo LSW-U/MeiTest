@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
   hotSearchTermCreate: vi.fn(),
   hotSearchTermUpdate: vi.fn(),
   hotSearchTermDelete: vi.fn(),
+  queryRaw: vi.fn(),
   redisSet: vi.fn(),
   redisZincrby: vi.fn(),
   redisZrevrange: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('../src/shared/db', () => ({
       update: m.hotSearchTermUpdate,
       delete: m.hotSearchTermDelete,
     },
+    $queryRaw: m.queryRaw,
   },
 }));
 
@@ -151,6 +153,112 @@ describe('SearchService', () => {
       m.hotSearchTermFindMany.mockResolvedValue([]);
       m.redisZrevrange.mockResolvedValue([]);
       await service.listHot('fr', 6);
+      expect(m.redisZrevrange.mock.calls[0][0]).toBe('hotsearch:en');
+    });
+  });
+
+  describe('suggest', () => {
+    it('prefix < 1 字符 / 纯空格返空（不查 DB）', async () => {
+      expect(await service.suggest('', 'en', 8)).toEqual([]);
+      expect(await service.suggest('   ', 'en', 8)).toEqual([]);
+      expect(m.hotSearchTermFindMany).not.toHaveBeenCalled();
+    });
+
+    it('三源合并去重（词库 > ZSET > 商品名，searchCount 取 ZSET 真实值）', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([
+        { word: 'apple', type: 'PINNED', sortOrder: 1 },
+        { word: 'apple watch', type: 'MANUAL', sortOrder: 0 },
+      ]);
+      // ZSET：apple 已在词库（去重），application 新词
+      m.redisZrevrange.mockResolvedValue(['apple', '100', 'application', '30']);
+      // 商品名兜底（raw ILIKE 前缀匹配 ACTIVE 商品名）
+      m.queryRaw.mockResolvedValue([{ name: { en: 'Apple Fuji' } }]);
+
+      const result = await service.suggest('app', 'en', 8);
+      const words = result.map((r) => r.word);
+      // 顺序：词库 PINNED apple / 词库 MANUAL apple watch / ZSET application / 商品名 Apple Fuji
+      expect(words).toEqual(['apple', 'apple watch', 'application', 'Apple Fuji']);
+      const map = new Map(result.map((r) => [r.word, r.searchCount]));
+      expect(map.get('apple')).toBe(100); // 词库 + ZSET 真实值
+      expect(map.get('application')).toBe(30);
+      expect(map.get('Apple Fuji')).toBe(0); // 商品名兜底无热度
+    });
+
+    it('BLOCKED 词从 ZSET + 商品名全链路剔除（运营屏蔽意图）', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([
+        { word: 'badword', type: 'BLOCKED', sortOrder: 0 },
+        { word: 'badminton', type: 'PINNED', sortOrder: 0 },
+      ]);
+      // ZSET 含 badword（用户搜过但运营已屏蔽）+ badminton 合法
+      m.redisZrevrange.mockResolvedValue(['badword', '999', 'badminton', '50']);
+      // 商品名也含 'badword'（exact，key 命中 blocked set）+ Badminton Racket（合法）
+      m.queryRaw.mockResolvedValue([
+        { name: { en: 'badword' } },
+        { name: { en: 'Badminton Racket' } },
+      ]);
+
+      const result = await service.suggest('bad', 'en', 8);
+      const words = result.map((r) => r.word);
+      expect(words).not.toContain('badword'); // ZSET 999 分也被剔除
+      expect(words).not.toContain('badword'); // 商品名 exact badword 也被剔除
+      expect(words).toContain('badminton');
+      expect(words).toContain('Badminton Racket'); // 不同 key，保留
+    });
+
+    it('PINNED 优先于 MANUAL（同前缀 PINNED 排前）', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([
+        { word: 'apple manual', type: 'MANUAL', sortOrder: 0 },
+        { word: 'apple pinned', type: 'PINNED', sortOrder: 5 },
+      ]);
+      m.redisZrevrange.mockResolvedValue([]);
+      m.queryRaw.mockResolvedValue([]);
+
+      const result = await service.suggest('apple', 'en', 8);
+      // PINNED 优先（即使 sortOrder 5 > MANUAL 0）
+      expect(result.map((r) => r.word)).toEqual(['apple pinned', 'apple manual']);
+    });
+
+    it('limit 截断', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([]);
+      m.redisZrevrange.mockResolvedValue([
+        'a1', '1', 'a2', '2', 'a3', '3', 'a4', '4', 'a5', '5',
+      ]);
+      m.queryRaw.mockResolvedValue([]);
+      const result = await service.suggest('a', 'en', 3);
+      expect(result).toHaveLength(3);
+    });
+
+    it('limit 上限 20（超限 clamp，LIMIT 参数 = 20）', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([]);
+      m.redisZrevrange.mockResolvedValue([]);
+      m.queryRaw.mockResolvedValue([]);
+      await service.suggest('a', 'en', 999);
+      // $queryRaw tagged template: [strings, safeLang, pattern, pattern, safeLimit]
+      // safeLimit 是最后一个参数（SQL 末尾 LIMIT ${safeLimit}），Math.min(Math.max(999,1),20)=20
+      const args = m.queryRaw.mock.calls[0];
+      expect(args[args.length - 1]).toBe(20);
+    });
+
+    it('Redis 离线降级（zrevrange reject，词库 + 商品名仍工作）', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([
+        { word: 'apple', type: 'PINNED', sortOrder: 0 },
+      ]);
+      m.redisZrevrange.mockRejectedValue(new Error('ECONNREFUSED'));
+      m.queryRaw.mockResolvedValue([{ name: { en: 'Apple Fuji' } }]);
+
+      const result = await service.suggest('app', 'en', 8);
+      const words = result.map((r) => r.word);
+      expect(words).toContain('apple'); // 词库仍工作
+      expect(words).toContain('Apple Fuji'); // 商品名仍工作
+      const map = new Map(result.map((r) => [r.word, r.searchCount]));
+      expect(map.get('apple')).toBe(0); // ZSET 拿不到，词库 searchCount=0
+    });
+
+    it('不支持 lang fallback en', async () => {
+      m.hotSearchTermFindMany.mockResolvedValue([]);
+      m.redisZrevrange.mockResolvedValue([]);
+      m.queryRaw.mockResolvedValue([]);
+      await service.suggest('a', 'fr', 8);
       expect(m.redisZrevrange.mock.calls[0][0]).toBe('hotsearch:en');
     });
   });

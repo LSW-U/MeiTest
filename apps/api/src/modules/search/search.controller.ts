@@ -43,6 +43,19 @@ export class ClientSearchController {
     const data = await this.search.listHot(lang, lim);
     return { success: true, data };
   }
+
+  /** 搜索建议 / 输入联想（C 方案词联想，三源合并；prefix < 1 返空） */
+  @Get('suggest')
+  async suggest(
+    @Query('prefix') prefix?: string,
+    @Query('limit') limit?: string,
+    @Headers('accept-language') acceptLang?: string,
+  ) {
+    const lang = detectLanguage(acceptLang);
+    const lim = Math.min(Math.max(parseInt(limit ?? '8', 10) || 8, 1), 20);
+    const data = await this.search.suggest(prefix ?? '', lang, lim);
+    return { success: true, data };
+  }
 }
 
 @Controller('api/v1/admin/hot-search')

@@ -2606,6 +2606,27 @@ registry.registerPath({
   },
 });
 
+// 搜索建议 / 输入联想（C 方案词联想，2026-08-05）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/search/suggest',
+  tags: ['search'],
+  description:
+    '搜索建议 / 输入联想（C 方案词联想，@Public）。三源合并去重：HotSearchTerm 词库前缀匹配（PINNED/MANUAL）+ Redis ZSET 真实词前缀 + 商品名前缀兜底。返 HotSearchTermItem[]，word 是建议词非 i18n key。prefix < 1 字符返空数组。',
+  request: {
+    query: z.object({
+      prefix: z.string().min(1).max(50),
+      limit: z.number().int().min(1).max(20).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '建议词列表（词库 > ZSET > 商品名，BLOCKED 全链路剔除）',
+      content: { 'application/json': { schema: HotSearchTermItem.array() } },
+    },
+  },
+});
+
 // ===== 生成 =====
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);

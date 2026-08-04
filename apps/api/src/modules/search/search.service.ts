@@ -125,6 +125,113 @@ export class SearchService {
     return result;
   }
 
+  /**
+   * 搜索建议 / 输入联想（客户端 GET /client/search/suggest，C 方案词联想数据源）
+   *
+   * 三源合并去重（PINNED/MANUAL 词库 > Redis ZSET 真实词 > 商品名兜底），按 limit 截断。
+   * BLOCKED 词全链路剔除（词库查询已排除 + ZSET/商品名 push 时再过滤一次防漏）。
+   *
+   * Why 三源：
+   * - 词库前缀匹配：运营精选词（PINNED）+ 候选词（MANUAL），最相关
+   * - ZSET 真实词：用户实际搜的词（recordSearch 写入），热度真实
+   * - 商品名兜底：词库/ZSET 都没匹配时，从 ACTIVE 商品名派生词（命中率兜底）
+   *
+   * 降级：Redis 离线时 ZSET 取空（try/catch），词库 + 商品名仍工作（方案 §5.5）。
+   */
+  async suggest(
+    prefix: string,
+    lang: string,
+    limit: number,
+  ): Promise<{ word: string; searchCount: number }[]> {
+    const safeLang = SUPPORTED_LANGS.includes(lang) ? lang : 'en';
+    const safeLimit = Math.min(Math.max(limit, 1), 20);
+    const normalizedPrefix = prefix.trim().toLowerCase();
+    if (!normalizedPrefix) return [];
+
+    // 词库（status=ACTIVE，含 BLOCKED 用于过滤；JS 分类 PINNED/MANUAL 做前缀匹配）
+    const terms = await db.hotSearchTerm.findMany({
+      where: { lang: safeLang, status: 'ACTIVE' },
+    });
+    const blocked = new Set(
+      terms.filter((t) => t.type === 'BLOCKED').map((t) => t.word.toLowerCase()),
+    );
+    const prefixMatches = (t: { word: string }): boolean =>
+      t.word.toLowerCase().startsWith(normalizedPrefix);
+    const pinned = terms
+      .filter((t) => t.type === 'PINNED' && prefixMatches(t))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const manual = terms
+      .filter((t) => t.type === 'MANUAL' && prefixMatches(t))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    // ZSET 真实词 top 50（多取，JS 前缀过滤）；redis 离线降级为空（方案 §5.5）
+    const zsetScore = new Map<string, number>();
+    try {
+      const zsetRaw = (await redis.zrevrange(
+        HOT_KEY(safeLang),
+        0,
+        49,
+        'WITHSCORES',
+      )) as string[];
+      for (let i = 0; i < zsetRaw.length; i += 2) {
+        const w = String(zsetRaw[i]);
+        if (w.startsWith(normalizedPrefix)) {
+          zsetScore.set(w, Number(zsetRaw[i + 1]));
+        }
+      }
+    } catch (err) {
+      // Redis 离线：ZSET 降级为空，词库 + 商品名仍工作（不阻塞 suggest）
+      console.error('[suggest] redis zrevrange failed (non-fatal, ZSET degraded):', err);
+    }
+
+    // 商品名前缀匹配（raw ILIKE prefix%，当前 lang + en 兜底 — 前缀非包含）
+    // Why 只匹配 lang + en（非全 5 语言）：返回 word 取 lang name ?? en name，
+    //   若全 5 语言匹配会命中"pt=Arroz 但返 en=Rice"的词，用户看到非 prefix 开头的词困惑
+    //   en 兜底覆盖 zh/id/pt/tet 没翻译的商品（en 是主语言）
+    const pattern = `${normalizedPrefix}%`;
+    const productRows = await db.$queryRaw<{ name: unknown }[]>`
+      SELECT name FROM products
+      WHERE status = 'ACTIVE'
+        AND (name->>${safeLang} ILIKE ${pattern}
+          OR name->>'en' ILIKE ${pattern})
+      LIMIT ${safeLimit}
+    `;
+    const productNames = productRows
+      .map((r) => {
+        const name = r.name as Record<string, string> | null;
+        // 优先 lang name（且 prefix 开头）；否则 en name（且 prefix 开头）
+        // Why 二次过滤：SQL 匹配 lang OR en（en 兜底无翻译商品），但返回的 word 必须与 prefix 一致 —
+        //   否则 lang=pt prefix=a 时 Apple 的 en="Apple" 命中却返 pt="Maçã"（M 开头）让用户困惑
+        const langName = name?.[safeLang];
+        if (langName && langName.toLowerCase().startsWith(normalizedPrefix)) return langName;
+        const enName = name?.en;
+        if (enName && enName.toLowerCase().startsWith(normalizedPrefix)) return enName;
+        return null;
+      })
+      .filter((n): n is string => n !== null);
+
+    // 合并去重（key = word.toLowerCase()）：词库 > ZSET > 商品名
+    const seen = new Set<string>();
+    const result: { word: string; searchCount: number }[] = [];
+    const push = (word: string, count: number): void => {
+      const key = word.toLowerCase();
+      // BLOCKED 全链路过滤（ZSET/商品名也可能含敏感词，运营屏蔽意图）
+      if (blocked.has(key) || seen.has(key) || result.length >= safeLimit) return;
+      result.push({ word, searchCount: count });
+      seen.add(key);
+    };
+    // 词库（PINNED 优先 + MANUAL，searchCount 取 ZSET 真实值 ?? 0）
+    [...pinned, ...manual].forEach((t) =>
+      push(t.word, zsetScore.get(t.word.toLowerCase()) ?? 0),
+    );
+    // ZSET 真实词（按 score 降序）
+    [...zsetScore.entries()].sort((a, b) => b[1] - a[1]).forEach(([w, c]) => push(w, c));
+    // 商品名兜底（searchCount = 0，无热搜数据）
+    productNames.forEach((n) => push(n, 0));
+
+    return result;
+  }
+
   /** admin：ZSET top N（含 searchCount，运营看真实热度，可跨语言） */
   async adminListHot(
     lang: string | undefined,
