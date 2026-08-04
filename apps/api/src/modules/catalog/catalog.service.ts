@@ -15,6 +15,21 @@ import { Injectable, NotFoundException, BadRequestException, Inject } from '@nes
 import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
 import { SearchService } from '../search/search.service';
+import { ProductSortBy } from '@meimart/api-contract';
+
+/**
+ * 排序方式 → Prisma orderBy（P8 决策 2-B 后端排序）
+ * Why: 集中映射避免 controller/service 重复；all 沿用历史综合排序（热销+新到）保持默认行为
+ */
+const SORT_BY_ORDERBY: Record<
+  ProductSortBy,
+  Prisma.ProductOrderByWithRelationInput[]
+> = {
+  all: [{ salesCount: 'desc' }, { createdAt: 'desc' }],
+  bestSelling: [{ salesCount: 'desc' }],
+  priceAsc: [{ priceMin: 'asc' }],
+  newArrivals: [{ createdAt: 'desc' }],
+};
 
 @Injectable()
 export class CatalogService {
@@ -29,6 +44,8 @@ export class CatalogService {
     page?: number;
     pageSize?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+    /** 排序方式（P8 决策 2-B），默认 all 综合 */
+    sortBy?: ProductSortBy;
     /** 搜索记录用：语言（热搜 ZSET 分语言） */
     lang?: string;
     /** 搜索记录用：登录用户（@Public 端点为 null） */
@@ -79,7 +96,8 @@ export class CatalogService {
     const [items, total] = await Promise.all([
       db.product.findMany({
         where,
-        orderBy: [{ salesCount: 'desc' }, { createdAt: 'desc' }],
+        // Why: ?? all 兜底 - controller 用 as 断言透传，若客户端传非法值，Record 查不到回退综合排序
+        orderBy: SORT_BY_ORDERBY[opts.sortBy ?? 'all'] ?? SORT_BY_ORDERBY.all,
         skip,
         take: pageSize,
       }),

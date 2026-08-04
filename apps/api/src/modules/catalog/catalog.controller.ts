@@ -33,6 +33,7 @@ import {
   UpdateCategoryRequest,
   CreateBannerRequest,
   UpdateBannerRequest,
+  ProductSortBy,
 } from '@meimart/api-contract';
 import { CatalogService } from './catalog.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
@@ -55,6 +56,7 @@ export class ClientProductController {
     @Query('keyword') keyword?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('sortBy') sortBy?: string,
     @Headers('accept-language') acceptLang?: string,
     @Req() req?: any,
   ) {
@@ -68,6 +70,7 @@ export class ClientProductController {
       keyword,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
+      sortBy: sortBy as ProductSortBy | undefined,
       lang,
       userId: req?.user?.id ?? null,
       clientIp,
@@ -91,6 +94,7 @@ export class ClientProductController {
   async search(
     @Query('keyword') keyword?: string,
     @Query('page') page?: string,
+    @Query('sortBy') sortBy?: string,
     @Headers('accept-language') acceptLang?: string,
     @Req() req?: any,
   ) {
@@ -102,6 +106,7 @@ export class ClientProductController {
     const data = await this.catalog.listProducts({
       keyword,
       page: page ? Number(page) : undefined,
+      sortBy: sortBy as ProductSortBy | undefined,
       lang,
       userId: req?.user?.id ?? null,
       clientIp,

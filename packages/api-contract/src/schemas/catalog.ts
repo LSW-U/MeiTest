@@ -13,6 +13,16 @@ import { Id, IsoTimestamp, I18nText, Money } from './common';
 /** 商品状态 */
 export const ProductStatus = z.enum(['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK']);
 
+/**
+ * 商品排序方式（客户端列表/搜索，P8 决策 2-B 后端排序）
+ * - all：综合（热销优先 + 新到兜底，与 listProducts 历史默认一致）
+ * - bestSelling：按销量降序（salesCount desc）
+ * - priceAsc：按价格升序（priceMin asc，priceMin 由 SKU 聚合）
+ * - newArrivals：按上新降序（createdAt desc）
+ */
+export const ProductSortBy = z.enum(['all', 'bestSelling', 'priceAsc', 'newArrivals']);
+export type ProductSortBy = z.infer<typeof ProductSortBy>;
+
 /** SKU 状态 */
 export const SkuStatus = z.enum(['ACTIVE', 'INACTIVE']);
 
