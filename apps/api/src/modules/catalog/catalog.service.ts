@@ -444,7 +444,8 @@ export class CatalogService {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
-    status?: 'ACTIVE' | 'INACTIVE';
+    // 注：create 不接 status，永远默认 ACTIVE（契约 CreateCategoryRequest 不含 status，审查观察①）
+    // status toggle 走 updateCategory（PATCH /:id，UpdateCategoryRequest 含 status）
   }) {
     if (input.parentId) {
       const parent = await db.category.findUnique({ where: { id: input.parentId } });
@@ -458,7 +459,7 @@ export class CatalogService {
         iconUrl: input.iconUrl,
         parentId: input.parentId ?? null,
         sortOrder: input.sortOrder ?? 0,
-        status: (input.status ?? 'ACTIVE') as 'ACTIVE' | 'INACTIVE',
+        status: 'ACTIVE',
       },
     });
     return {
