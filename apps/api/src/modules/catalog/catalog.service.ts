@@ -15,6 +15,7 @@ import { Injectable, NotFoundException, BadRequestException, Inject } from '@nes
 import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
 import { SearchService } from '../search/search.service';
+import { redis, setWithTTL } from '../../shared/cache/redis';
 import { ProductSortBy } from '@meimart/api-contract';
 
 /**
@@ -101,7 +102,7 @@ export class CatalogService {
         skip,
         take: pageSize,
       }),
-      db.product.count({ where }),
+      this.getCachedCount(where, Boolean(kw)),
     ]);
 
     const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
@@ -258,6 +259,8 @@ export class CatalogService {
         priceMin: 0, // 没 SKU 前是 0
       },
     });
+    // count 缓存失效（新增商品改变 ACTIVE count）
+    void this.bumpCountVersion();
     return this.toProductDTO(created);
   }
 
@@ -285,6 +288,8 @@ export class CatalogService {
         ...(input.status !== undefined && { status: input.status as ProductStatus }),
       },
     });
+    // count 缓存失效（status/categoryId 改变影响 ACTIVE count）
+    void this.bumpCountVersion();
     return this.toProductDTO(updated);
   }
 
@@ -297,6 +302,8 @@ export class CatalogService {
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
     // 软删除：商品可能被 SKU / OrderItem / Favorite 引用，硬删会丢历史订单详情
     await db.product.update({ where: { id }, data: { status: 'INACTIVE' } });
+    // count 缓存失效（status→INACTIVE 影响 ACTIVE count）
+    void this.bumpCountVersion();
   }
 
   // ===== SKU =====
@@ -389,6 +396,77 @@ export class CatalogService {
       where: { id: productId },
       data: { priceMin: minSku?.price ?? 0 },
     });
+  }
+
+  // ===== 列表 count 缓存（P2-3 决策 2026-08-05）=====
+  //
+  // 仅缓存无 keyword 的 count（分类浏览/全量浏览，where 稳定、基数低）。
+  // keyword 搜索高基数（每词一个 key），命中率低，let-through。
+  //
+  // 失效：商品 CRUD（create/update/delete）INCR catalog:count:ver，版本号进 key，
+  //   旧 key 等 TTL 自然过期（120s 内最多留一点垃圾，可接受）。
+  // 降级：redis 故障时 try/catch 走 DB，不阻塞搜索。
+  /** count 缓存版本号 key（redis.ts Proxy 自动加 meimart: 前缀，避免双重） */
+  private static readonly COUNT_VER_KEY = 'catalog:count:ver';
+  /** count 缓存 TTL（秒）— 短，容忍 eventual consistency；商品 CRUD 主动 bump 兜底 */
+  private static readonly COUNT_TTL_SEC = 120;
+
+  /**
+   * 带 redis 缓存的 product.count（无 keyword 走缓存，有 keyword 直查 DB）
+   *
+   * Why: 翻页 total 每页都查 count，分类浏览 where 稳定场景纯浪费；keyword 高基数不缓存。
+   * 降级: redis get/set 任一步抛错都走 db.product.count，不阻塞搜索。
+   */
+  private async getCachedCount(
+    where: Prisma.ProductWhereInput,
+    hasKeyword: boolean,
+  ): Promise<number> {
+    // keyword 搜索高基数，let-through（P2-1 修完 ILIKE 索引后瓶颈不在 count）
+    if (hasKeyword) return db.product.count({ where });
+
+    // cache key: catalog:count:v{ver}:{status}:{catHash}
+    // catHash = categoryId in 数组排序 join（子分类适配下含 parent+children，set 稳定）
+    const status = (where.status as string | undefined) ?? 'ANY';
+    const categoryIdIn = (where.categoryId as { in?: string[] } | undefined)?.in;
+    const catHash =
+      categoryIdIn && categoryIdIn.length > 0
+        ? [...categoryIdIn].sort().join(',')
+        : '_all_';
+
+    try {
+      const ver = await this.getCountVersion();
+      const key = `catalog:count:v${ver}:${status}:${catHash}`;
+      const cached = await redis.get(key);
+      if (cached != null) return Number(cached);
+      const count = await db.product.count({ where });
+      await setWithTTL(key, String(count), CatalogService.COUNT_TTL_SEC);
+      return count;
+    } catch (err) {
+      // redis 故障降级：直接查 DB（不缓存），搜索不能因缓存挂了受影响
+      console.error('[getCachedCount] redis failed, fallback to DB (non-fatal):', err);
+      return db.product.count({ where });
+    }
+  }
+
+  /** 读 count 缓存版本号；redis 空时默认 0（首次访问的初始版本） */
+  private async getCountVersion(): Promise<number> {
+    const v = await redis.get(CatalogService.COUNT_VER_KEY);
+    return v ? Number(v) : 0;
+  }
+
+  /**
+   * bump count 缓存版本号（fire-and-forget 调用，失败必须吞掉）
+   *
+   * Why: 商品 CRUD 改变 count，bump 让旧版本 key 失效（旧 key 等 TTL 过期）。
+   *   INCR key 不存在时自动 0→1（首次 bump 让默认 v0 的旧 key 失效，新版本 v1）。
+   *   失败不影响主流程（旧 key 等 TTL 自然过期，最多 120s 滞后）。
+   */
+  private async bumpCountVersion(): Promise<void> {
+    try {
+      await redis.incr(CatalogService.COUNT_VER_KEY);
+    } catch (err) {
+      console.error('[bumpCountVersion] failed (non-fatal, stale cache up to TTL):', err);
+    }
   }
 
   // ===== Category =====

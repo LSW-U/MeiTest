@@ -36,6 +36,10 @@ const m = vi.hoisted(() => ({
   stockFindMany: vi.fn(),
   reviewGroupBy: vi.fn(),
   queryRaw: vi.fn(),
+  // P2-3：count 缓存 redis mock（redis 是 Proxy 单例，mock 整个模块导出）
+  redisGet: vi.fn(),
+  redisIncr: vi.fn(),
+  setWithTTL: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -80,6 +84,14 @@ vi.mock('../src/shared/db', () => ({
   },
 }));
 
+vi.mock('../src/shared/cache/redis', () => ({
+  redis: {
+    get: m.redisGet,
+    incr: m.redisIncr,
+  },
+  setWithTTL: m.setWithTTL,
+}));
+
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 
 describe('CatalogService', () => {
@@ -92,6 +104,10 @@ describe('CatalogService', () => {
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
     m.categoryFindMany.mockResolvedValue([]);
+    // P2-3：count 缓存 redis 默认 miss（ver=null→0，count key=null→回填），不阻塞现有用例
+    m.redisGet.mockResolvedValue(null);
+    m.redisIncr.mockResolvedValue(1);
+    m.setWithTTL.mockResolvedValue(undefined);
   });
 
   const mockProduct = {
@@ -440,6 +456,144 @@ describe('CatalogService', () => {
         linkType: 'NONE',
       });
       expect(result.id).toBe('b-new');
+    });
+  });
+
+  // ===== P2-3：count 缓存（无 keyword 走 redis 版本号 bump；有 keyword let-through）=====
+  describe('listProducts count 缓存（P2-3）', () => {
+    it('无 keyword + cache miss -> 查 DB + setWithTTL 回填', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(42);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+
+      expect(result.total).toBe(42);
+      expect(m.productCount).toHaveBeenCalledTimes(1);
+      // 回填 key：v0（默认版本，redis 空）+ ACTIVE + _all_（无 categoryId）
+      expect(m.setWithTTL).toHaveBeenCalledWith('catalog:count:v0:ACTIVE:_all_', '42', 120);
+    });
+
+    it('无 keyword + cache hit -> 不查 DB，直接返缓存值', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      // ver 默认 null→0（首次 get）；count key get 命中 99
+      m.redisGet.mockResolvedValueOnce(null).mockResolvedValueOnce('99');
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+
+      expect(result.total).toBe(99);
+      expect(m.productCount).not.toHaveBeenCalled();
+      expect(m.setWithTTL).not.toHaveBeenCalled();
+    });
+
+    it('cache key 含版本号（bump 后 ver 进 key）', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      // ver=5（getCountVersion 读到），count key miss
+      m.redisGet.mockResolvedValueOnce('5').mockResolvedValueOnce(null);
+
+      await service.listProducts({ page: 1, pageSize: 20 });
+
+      expect(m.setWithTTL).toHaveBeenCalledWith('catalog:count:v5:ACTIVE:_all_', '1', 120);
+    });
+
+    it('categoryId 进 cache key（子分类适配下 parent+children 排序后 join）', async () => {
+      // listProducts 拼 [parent, ...children] = ['cat-parent','cat-z','cat-a']
+      // getCachedCount 内 sort() 后 join：'cat-a,cat-parent,cat-z'
+      m.categoryFindMany.mockResolvedValueOnce([{ id: 'cat-z' }, { id: 'cat-a' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(3);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      await service.listProducts({ categoryId: 'cat-parent' });
+
+      expect(m.setWithTTL).toHaveBeenCalledWith(
+        'catalog:count:v0:ACTIVE:cat-a,cat-parent,cat-z',
+        '3',
+        120,
+      );
+    });
+
+    it('有 keyword -> let-through，不查缓存', async () => {
+      m.queryRaw.mockResolvedValueOnce([{ id: 'prod-1' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(5);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      await service.listProducts({ keyword: 'milk' });
+
+      // 关键：keyword 高基数，不走缓存（redis get/setWithTTL 都不调），直查 DB
+      expect(m.redisGet).not.toHaveBeenCalled();
+      expect(m.setWithTTL).not.toHaveBeenCalled();
+      expect(m.productCount).toHaveBeenCalledTimes(1);
+    });
+
+    it('redis 故障降级走 DB（不阻塞搜索）', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(7);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      m.redisGet.mockRejectedValueOnce(new Error('redis down'));
+
+      // 关键：redis 抛错被 try/catch 吞，降级走 DB count
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+      expect(result.total).toBe(7);
+      expect(m.productCount).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('商品 CRUD 触发 count 缓存 bump（P2-3）', () => {
+    it('createProduct 触发 INCR catalog:count:ver', async () => {
+      m.shopFindFirst.mockResolvedValueOnce({ id: 'shop-1' });
+      m.productCreate.mockResolvedValueOnce(mockProduct);
+
+      await service.createProduct({
+        name: { en: 'Milk' },
+        mainImage: 'milk.png',
+        unit: { en: 'bag' },
+      });
+
+      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+    });
+
+    it('updateProduct 触发 INCR catalog:count:ver（含 status 变化）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(mockProduct);
+      m.productUpdate.mockResolvedValueOnce({ ...mockProduct, mainImage: 'new.png' });
+
+      await service.updateProduct('prod-1', { mainImage: 'new.png' });
+
+      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+    });
+
+    it('deleteProduct 触发 INCR catalog:count:ver（软删 status→INACTIVE）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(mockProduct);
+      m.productUpdate.mockResolvedValueOnce({}); // 软删 update
+
+      await service.deleteProduct('prod-1');
+
+      expect(m.redisIncr).toHaveBeenCalledWith('catalog:count:ver');
+    });
+
+    it('createSku 不触发 bump（不影响 product count）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(mockProduct);
+      m.skuCreate.mockResolvedValueOnce({
+        id: 'sku-1',
+        productId: 'prod-1',
+        name: { en: '500g' },
+        attributes: {},
+        price: 1200,
+        imageUrl: null,
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      m.skuFindFirst.mockResolvedValueOnce({ price: 1200 });
+      m.productUpdate.mockResolvedValueOnce({}); // recomputeProductPriceMin
+
+      await service.createSku('prod-1', { name: { en: '500g' }, attributes: {}, price: 1200 });
+
+      expect(m.redisIncr).not.toHaveBeenCalled();
     });
   });
 });
