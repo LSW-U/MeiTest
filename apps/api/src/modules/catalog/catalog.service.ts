@@ -59,6 +59,8 @@ export class CatalogService {
     const skip = (page - 1) * pageSize;
 
     // 子分类适配：categoryId 是大类（有子分类）-> 返大类+所有子分类商品；叶子 -> 返自身
+    // 💭-1 已知优化点：children 查询每次列表请求一次（个位数子分类，加 parent_id 索引 <1ms）；
+    //   量级起来可 Redis 缓存 categoryId→后代 ids + 版本号 bump（仿 P2-3 count 缓存），MVP 不必
     let categoryIdFilter: { in: string[] } | undefined;
     if (opts.categoryId) {
       const children = await db.category.findMany({
