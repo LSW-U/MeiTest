@@ -81,6 +81,22 @@ export interface OrderWithRelations {
   deliveryAddress: unknown;
   remark: string | null;
   riderId: string | null;
+  /**
+   * 骑手详情嵌套（P10 订单详情骑手联系卡 / P11 物流追踪 CourierCard 数据源）。
+   * 仅详情接口（getOrderDetail / adminGetOrderDetail）include rider 时有值；
+   * 列表接口（listUserOrders / listAllOrders）未 include -> null。
+   * rating 为 Prisma Decimal(3,2) 序列化的 string，前端 parseFloat 后展示。
+   * avatarUrl 从 RiderProfile.user.avatarUrl 平铺（零迁移复用 User 关系）。
+   */
+  rider?: {
+    id: string;
+    riderName: string;
+    phone: string;
+    rating: string;
+    totalDeliveries: number;
+    vehicleType: string;
+    avatarUrl: string | null;
+  } | null;
   paymentMethod: PaymentMethodValue;
   paymentStatus: string;
   paidAt: string | null;
@@ -1025,6 +1041,18 @@ export class OrderService {
         items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
         orderPromotions: true,
+        // P10/P11：嵌骑手详情（含 user.avatarUrl 平铺到 rider.avatarUrl），零迁移
+        rider: {
+          select: {
+            id: true,
+            riderName: true,
+            phone: true,
+            rating: true,
+            totalDeliveries: true,
+            vehicleType: true,
+            user: { select: { avatarUrl: true } },
+          },
+        },
       },
     });
     if (!order || order.userId !== userId) {
@@ -1162,6 +1190,18 @@ export class OrderService {
         items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
         orderPromotions: true,
+        // P10/P11：嵌骑手详情（含 user.avatarUrl 平铺到 rider.avatarUrl），零迁移
+        rider: {
+          select: {
+            id: true,
+            riderName: true,
+            phone: true,
+            rating: true,
+            totalDeliveries: true,
+            vehicleType: true,
+            user: { select: { avatarUrl: true } },
+          },
+        },
       },
     });
     if (!order) {
@@ -1219,6 +1259,16 @@ export class OrderService {
       items: Array<Record<string, unknown>>;
       events: Array<Record<string, unknown>>;
       orderPromotions?: Array<Record<string, unknown>>;
+      // P10/P11：详情接口 include rider（列表接口无此字段，可选）
+      rider?: {
+        id: string;
+        riderName: string;
+        phone: string;
+        rating: Prisma.Decimal;
+        totalDeliveries: number;
+        vehicleType: string;
+        user: { avatarUrl: string | null } | null;
+      } | null;
     };
     const toIso = (d: Date | null) => (d ? d.toISOString() : null);
     return {
@@ -1234,6 +1284,19 @@ export class OrderService {
       deliveryAddress: o.deliveryAddress,
       remark: o.remark,
       riderId: o.riderId,
+      rider: o.rider
+        ? {
+            id: o.rider.id,
+            riderName: o.rider.riderName,
+            phone: o.rider.phone,
+            // Prisma Decimal(3,2) -> string（前端 parseFloat 展示；保留 2 位精度避免 number 丢精度）
+            rating: o.rider.rating.toString(),
+            totalDeliveries: o.rider.totalDeliveries,
+            vehicleType: o.rider.vehicleType,
+            // user.avatarUrl 平铺（详情接口已 nested include；列表接口无 rider 自然不到这）
+            avatarUrl: o.rider.user?.avatarUrl ?? null,
+          }
+        : null,
       paymentMethod: o.paymentMethod,
       paymentStatus: o.paymentStatus,
       paidAt: toIso(o.paidAt),

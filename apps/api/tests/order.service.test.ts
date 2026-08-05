@@ -18,6 +18,7 @@
  *       + orderNoService + paymentService + timeout queue
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Prisma } from '../src/prisma/client';
 
 const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart } = vi.hoisted(() => ({
   mockDb: {
@@ -660,6 +661,175 @@ describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {
     expect(txUpdate).toHaveBeenCalledWith({
       where: { id: 'order-1' },
       data: { remark: 'x'.repeat(200) },
+    });
+  });
+});
+
+/**
+ * OrderService.getOrderDetail / adminGetOrderDetail（P10/P11 项 1：骑手详情嵌套）
+ *
+ * 验证 toOrderWithRelations 转换器对 rider 的处理：
+ *   - 有 rider（详情接口 include）→ rider 嵌套对象，rating Decimal→string，avatarUrl 从 user 平铺
+ *   - 无 rider（列表接口未 include 或 riderId=null）→ rider: null
+ */
+describe('OrderService.getOrderDetail (P10/P11 rider 嵌套)', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    Object.values(mockDb).forEach((table) => {
+      Object.values(table).forEach((fn) => fn.mockReset());
+    });
+    service = new OrderService(
+      {} as never, // orderNoService（getOrderDetail 不用）
+      {} as never, // paymentService
+      {} as never, // timeoutQueue
+      null, // dispatchService
+      null, // cartService
+      {} as never, // promotionService
+      null, // realtime
+      null, // notifyFactory
+    );
+  });
+
+  it('有 riderId + include rider → rider 嵌套（rating Decimal→string, avatarUrl 从 user 平铺）', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      orderNo: 'MM20260625010000001',
+      userId: 'user-1',
+      warehouseId: 'wh-1',
+      status: 'DELIVERING',
+      totalAmount: 200,
+      deliveryFee: 0,
+      discountAmount: 0,
+      payableAmount: 200,
+      deliveryAddress: {},
+      remark: null,
+      riderId: 'rider-1',
+      paymentMethod: 'COD',
+      paymentStatus: 'PAID',
+      paidAt: new Date('2026-06-25T00:00:00.000Z'),
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      confirmedAt: null,
+      pickedAt: null,
+      deliveringAt: null,
+      deliveredAt: null,
+      completedAt: null,
+      cancelledAt: null,
+      cancelReason: null,
+      items: [],
+      events: [],
+      orderPromotions: [],
+      rider: {
+        id: 'rider-1',
+        riderName: 'João',
+        phone: '+67012345678',
+        rating: new Prisma.Decimal('4.50'),
+        totalDeliveries: 23,
+        vehicleType: 'MOTORCYCLE',
+        user: { avatarUrl: 'https://cdn.example.com/rider-1.png' },
+      },
+    });
+
+    const result = await service.getOrderDetail('order-1', 'user-1');
+
+    expect(result.riderId).toBe('rider-1');
+    expect(result.rider).toEqual({
+      id: 'rider-1',
+      riderName: 'João',
+      phone: '+67012345678',
+      rating: '4.5', // Decimal(3,2) → string（decimal.js normalize 去 0，前端 parseFloat 展示）
+      totalDeliveries: 23,
+      vehicleType: 'MOTORCYCLE',
+      avatarUrl: 'https://cdn.example.com/rider-1.png', // 从 user.avatarUrl 平铺
+    });
+  });
+
+  it('无 riderId（订单未分配骑手）→ rider: null', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-2',
+      orderNo: 'MM20260625010000002',
+      userId: 'user-1',
+      warehouseId: 'wh-1',
+      status: 'PENDING_CONFIRM',
+      totalAmount: 100,
+      deliveryFee: 0,
+      discountAmount: 0,
+      payableAmount: 100,
+      deliveryAddress: {},
+      remark: null,
+      riderId: null,
+      paymentMethod: 'COD',
+      paymentStatus: 'PENDING',
+      paidAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      confirmedAt: null,
+      pickedAt: null,
+      deliveringAt: null,
+      deliveredAt: null,
+      completedAt: null,
+      cancelledAt: null,
+      cancelReason: null,
+      items: [],
+      events: [],
+      orderPromotions: [],
+      // 列表接口未 include rider（无 rider 字段）— 验证转换器对 undefined 安全
+    });
+
+    const result = await service.getOrderDetail('order-2', 'user-1');
+
+    expect(result.riderId).toBeNull();
+    expect(result.rider).toBeNull();
+  });
+
+  it('有 riderId 但 rider.user 为 null（防御：骑手 User 删账户边界）→ avatarUrl: null', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-3',
+      orderNo: 'MM20260625010000003',
+      userId: 'user-1',
+      warehouseId: 'wh-1',
+      status: 'DELIVERING',
+      totalAmount: 200,
+      deliveryFee: 0,
+      discountAmount: 0,
+      payableAmount: 200,
+      deliveryAddress: {},
+      remark: null,
+      riderId: 'rider-3',
+      paymentMethod: 'COD',
+      paymentStatus: 'PAID',
+      paidAt: new Date('2026-06-25T00:00:00.000Z'),
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      confirmedAt: null,
+      pickedAt: null,
+      deliveringAt: null,
+      deliveredAt: null,
+      completedAt: null,
+      cancelledAt: null,
+      cancelReason: null,
+      items: [],
+      events: [],
+      orderPromotions: [],
+      rider: {
+        id: 'rider-3',
+        riderName: 'Bob',
+        phone: '+67099999999',
+        rating: new Prisma.Decimal('5.00'),
+        totalDeliveries: 0,
+        vehicleType: 'MOTORCYCLE',
+        user: null, // 防御性：理论不应发生（FK 约束），但转换器需安全
+      },
+    });
+
+    const result = await service.getOrderDetail('order-3', 'user-1');
+
+    expect(result.rider).toEqual({
+      id: 'rider-3',
+      riderName: 'Bob',
+      phone: '+67099999999',
+      rating: '5',
+      totalDeliveries: 0,
+      vehicleType: 'MOTORCYCLE',
+      avatarUrl: null, // user 为 null → 兜底 null
     });
   });
 });
