@@ -26,6 +26,7 @@ export class HomeService {
   /** source 默认 HOME_ENTRIES；传入自定义源可测过滤/排序逻辑 */
   async listEntries(source: HomeEntryData[] = HOME_ENTRIES): Promise<HomeEntryClient[]> {
     return source
+      // 💭-3: filter 已产生新数组，sort 原地排序不污染 source（HOME_ENTRIES 常量）
       .filter((e) => e.status === 'ACTIVE')
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((e) => ({

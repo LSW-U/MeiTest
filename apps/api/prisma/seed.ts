@@ -229,14 +229,17 @@ async function main() {
   }
   console.log(`  ✅ ${TOP_CATEGORIES.length} 顶级 + ${SUB_CATEGORIES_DEF.length} 子分类`);
 
-  // 4b. 创建商品 + SKU + stock
-  for (const [idx, p] of seedData.entries()) {
+  // 4b. 创建商品 + SKU + stock（💭-4: 用大类内 index 分配子分类，不依赖 seedData 按 category 分组连续）
+  const __categoryCounter = new Map<string, number>();
+  for (const p of seedData) {
+    const __withinCat = __categoryCounter.get(p.category) ?? 0;
+    __categoryCounter.set(p.category, __withinCat + 1);
     const product = await prisma.product.create({
       data: {
         shopId: shop.id,
         categoryId: (() => {
           const subs = subIdsByParent.get(p.category);
-          return subs && subs.length ? subs[idx % subs.length] : null;
+          return subs && subs.length ? subs[__withinCat % subs.length] : null;
         })(),
         name: p.name, // 4 语言简短商品名（apply-translations.mjs 填充）
         description: p.description,

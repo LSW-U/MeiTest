@@ -362,7 +362,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.sku.findUnique({ where: { id: skuId } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Sku not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-004', message: 'Sku not found' });
 
     const updated = await db.sku.update({
       where: { id: skuId },
@@ -382,7 +382,7 @@ export class CatalogService {
 
   async deleteSku(skuId: string) {
     const existing = await db.sku.findUnique({ where: { id: skuId } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Sku not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-004', message: 'Sku not found' });
     // 软删除：SKU 可能被 Stock / OrderItem 引用，硬删会丢历史订单详情
     await db.sku.update({ where: { id: skuId }, data: { status: 'INACTIVE' } });
     await this.recomputeProductPriceMin(existing.productId);
@@ -478,7 +478,7 @@ export class CatalogService {
   async listCategoryTree() {
     const items = await db.category.findMany({
       where: { status: 'ACTIVE' },
-      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
     return this.buildCategoryTree(items);
   }
@@ -486,7 +486,7 @@ export class CatalogService {
   /** admin：返平铺带 parentId（含 INACTIVE + status），前端组装树做 CRUD */
   async listCategoriesAdmin() {
     const items = await db.category.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
     // F2：批量统计每个分类下的 ACTIVE 商品数（与 deleteCategory E-CATALOG-015 同口径）
     // 供 admin-web 删除 dialog 前置拦截「该分类下有 N 个在售商品」用（groupBy 一次查询）
@@ -573,7 +573,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.category.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-003', message: 'Category not found' });
 
     if (input.parentId !== undefined && input.parentId !== null) {
       if (input.parentId === id) throw new BadRequestException({ code: 'E-CATALOG-012', message: 'Cannot set self as parent' });
@@ -607,7 +607,7 @@ export class CatalogService {
 
   async deleteCategory(id: string) {
     const existing = await db.category.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Category not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-003', message: 'Category not found' });
     // 子分类保护：有 ACTIVE 子分类时禁止删（先删子分类）
     const childCount = await db.category.count({ where: { parentId: id, status: 'ACTIVE' } });
     if (childCount > 0) throw new BadRequestException({ code: 'E-CATALOG-014', message: 'Please delete subcategories first' });
@@ -678,7 +678,7 @@ export class CatalogService {
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.banner.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Banner not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-005', message: 'Banner not found' });
 
     const updated = await db.banner.update({
       where: { id },
@@ -706,7 +706,7 @@ export class CatalogService {
 
   async deleteBanner(id: string) {
     const existing = await db.banner.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Banner not found' });
+    if (!existing) throw new NotFoundException({ code: 'E-CATALOG-005', message: 'Banner not found' });
     await db.banner.delete({ where: { id } });
   }
 
