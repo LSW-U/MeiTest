@@ -480,7 +480,7 @@ export class CatalogService {
   async listCategoryTree() {
     const items = await db.category.findMany({
       where: { status: 'ACTIVE' },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     });
     return this.buildCategoryTree(items);
   }
@@ -488,7 +488,7 @@ export class CatalogService {
   /** admin：返平铺带 parentId（含 INACTIVE + status），前端组装树做 CRUD */
   async listCategoriesAdmin() {
     const items = await db.category.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     });
     // F2：批量统计每个分类下的 ACTIVE 商品数（与 deleteCategory E-CATALOG-015 同口径）
     // 供 admin-web 删除 dialog 前置拦截「该分类下有 N 个在售商品」用（groupBy 一次查询）
