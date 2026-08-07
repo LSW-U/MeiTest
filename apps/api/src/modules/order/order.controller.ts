@@ -39,21 +39,34 @@ import { db } from '../../shared/db';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { CreateOrderInput, PaymentMethodValue, OrderStatusValue } from './order.types';
 
+// P12 B2: status 支持多值过滤（逗号分隔字符串或数组），兼容原单值传法
+//   ?status=PENDING_PAYMENT,CONFIRMED 或 ?status=PENDING_PAYMENT&status=CONFIRMED
+const OrderStatusEnum = z.enum([
+  'PENDING_PAYMENT',
+  'PENDING_CONFIRM',
+  'CONFIRMED',
+  'PICKED',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED_PAID',
+  'DELIVERED_UNPAID',
+  'DELIVERED',
+  'COMPLETED',
+  'CANCELLED',
+]);
+
 const ListOrdersQuery = z.object({
-  status: z
-    .enum([
-      'PENDING_PAYMENT',
-      'PENDING_CONFIRM',
-      'CONFIRMED',
-      'PICKED',
-      'OUT_FOR_DELIVERY',
-      'DELIVERED_PAID',
-      'DELIVERED_UNPAID',
-      'DELIVERED',
-      'COMPLETED',
-      'CANCELLED',
-    ])
-    .optional(),
+  status: z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      if (Array.isArray(v)) return v.length > 0 ? v : undefined;
+      if (typeof v === 'string') {
+        const arr = v.split(',').filter(Boolean);
+        return arr.length > 0 ? arr : undefined;
+      }
+      return v;
+    },
+    z.array(OrderStatusEnum).optional(),
+  ),
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
@@ -140,7 +153,7 @@ export class OrderController {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
     const result = await this.orderService.listUserOrders(user.sub, {
-      status: query.status as OrderStatusValue | undefined,
+      status: query.status as OrderStatusValue[] | undefined,
       cursor: query.cursor,
       limit: query.limit,
     });

@@ -1070,12 +1070,12 @@ export class OrderService {
    */
   async listUserOrders(
     userId: string,
-    options: { status?: OrderStatusValue; cursor?: string; limit?: number },
+    options: { status?: OrderStatusValue[]; cursor?: string; limit?: number },
   ): Promise<{ items: OrderWithRelations[]; nextCursor: string | null; hasMore: boolean }> {
     const limit = Math.min(options.limit ?? 20, 50);
     const where: Record<string, unknown> = { userId };
-    if (options.status) {
-      where.status = options.status;
+    if (options.status && options.status.length > 0) {
+      where.status = { in: options.status };
     }
 
     const orders = await db.order.findMany({
