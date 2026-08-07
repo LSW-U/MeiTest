@@ -17,6 +17,7 @@ import { ModuleRef } from '@nestjs/core';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderService } from '../order/order.service';
+import { Prisma } from '../../prisma/client';
 
 /** 接单前可自动通过的状态 */
 const AUTO_APPROVE_STATUSES = ['PENDING_PAYMENT', 'PENDING_CONFIRM'];
@@ -26,6 +27,20 @@ export interface CreateRefundInput {
   userId: string;
   reason: string;
   reasonDetail?: string;
+  /** 部分退款商品列表（不传 = 整单全额退款，向后兼容） */
+  items?: { orderItemId: string; refundQty: number }[];
+}
+
+/** 退款商品子表项视图（P13 部分退款，2026-08-08） */
+export interface RefundItemView {
+  id: string;
+  refundId: string;
+  orderItemId: string;
+  skuId: string;
+  productName: Record<string, string>;
+  unitPrice: number;
+  refundQty: number;
+  subtotal: number;
 }
 
 export interface RefundView {
@@ -44,6 +59,8 @@ export interface RefundView {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 退款商品列表（整单退款时为空数组） */
+  items: RefundItemView[];
 }
 
 @Injectable()
@@ -66,7 +83,7 @@ export class RefundService {
     });
     if (!order) {
       throw new NotFoundException({
-        code: 'E-ORDER-004',
+        code: 'E-REFUND-005',
         message: `Order not found: ${input.orderId}`,
       });
     }
@@ -82,7 +99,7 @@ export class RefundService {
     // 校验订单状态（已取消/已完成不可退）
     if (order.status === 'CANCELLED') {
       throw new ConflictException({
-        code: 'E-ORDER-003',
+        code: 'E-REFUND-001',
         message: 'Cannot refund a cancelled order',
       });
     }
@@ -96,7 +113,7 @@ export class RefundService {
     });
     if (existing) {
       throw new ConflictException({
-        code: 'E-ORDER-003',
+        code: 'E-REFUND-002',
         message: `Refund already in progress (status: ${existing.status})`,
       });
     }
@@ -110,11 +127,53 @@ export class RefundService {
     // 判断是否自动通过
     const autoApprove = AUTO_APPROVE_STATUSES.includes(order.status);
 
+    // P13 金额分叉：有 items 按选中商品算部分退款 / 无 items 整单全额（向后兼容）
+    let amount: number;
+    let refundItemsData: { orderItemId: string; refundQty: number; subtotal: number }[] = [];
+
+    if (input.items && input.items.length > 0) {
+      amount = 0;
+      for (const ri of input.items) {
+        const oi = order.items.find((x) => x.id === ri.orderItemId);
+        if (!oi) {
+          throw new ConflictException({
+            code: 'E-REFUND-008',
+            message: `OrderItem not found in this order: ${ri.orderItemId}`,
+          });
+        }
+        if (ri.refundQty > oi.quantity) {
+          throw new ConflictException({
+            code: 'E-REFUND-009',
+            message: `refundQty (${ri.refundQty}) exceeds item quantity (${oi.quantity})`,
+          });
+        }
+        const subtotal = oi.unitPrice * ri.refundQty;
+        amount += subtotal;
+        refundItemsData.push({ orderItemId: ri.orderItemId, refundQty: ri.refundQty, subtotal });
+      }
+    } else {
+      amount = order.payableAmount;
+    }
+
+    // 金额边界校验
+    if (amount <= 0) {
+      throw new ConflictException({
+        code: 'E-REFUND-006',
+        message: 'Refund amount must be > 0',
+      });
+    }
+    if (amount > order.payableAmount) {
+      throw new ConflictException({
+        code: 'E-REFUND-010',
+        message: `Refund amount ${amount} exceeds order payable ${order.payableAmount}`,
+      });
+    }
+
     const refund = await db.refund.create({
       data: {
         orderId: input.orderId,
         userId: input.userId,
-        amount: order.payableAmount,
+        amount,
         reason: input.reason,
         reasonDetail: input.reasonDetail ?? null,
         status: autoApprove ? 'COMPLETED' : 'PENDING',
@@ -122,7 +181,24 @@ export class RefundService {
         transactionId: autoApprove ? this.generateMockTransactionId() : null,
         reviewedBy: autoApprove ? null : null,
         completedAt: autoApprove ? new Date() : null,
+        items:
+          input.items && input.items.length > 0
+            ? {
+                create: refundItemsData.map((ri) => {
+                  const oi = order.items.find((x) => x.id === ri.orderItemId)!;
+                  return {
+                    orderItemId: ri.orderItemId,
+                    skuId: oi.skuId,
+                    productName: oi.productName as Prisma.InputJsonValue,
+                    unitPrice: oi.unitPrice,
+                    refundQty: ri.refundQty,
+                    subtotal: ri.subtotal,
+                  };
+                }),
+              }
+            : undefined,
       },
+      include: { items: true },
     });
 
     // 自动通过时同步取消订单 + 释放库存
@@ -153,7 +229,7 @@ export class RefundService {
           msg: 'REFUND_AUTO_COMPLETED_WITH_ORDER_CANCEL',
           refundId: refund.id,
           orderId: input.orderId,
-          amount: order.payableAmount,
+          amount,
           reason: 'order not yet confirmed, stock released',
         });
       } catch (err) {
@@ -172,7 +248,7 @@ export class RefundService {
         msg: 'REFUND_CREATED',
         refundId: refund.id,
         orderId: input.orderId,
-        amount: order.payableAmount,
+        amount,
         status: 'PENDING',
       });
     }
@@ -192,14 +268,14 @@ export class RefundService {
     const refund = await db.refund.findUnique({ where: { id: refundId } });
     if (!refund) {
       throw new NotFoundException({
-        code: 'E-ORDER-004',
+        code: 'E-REFUND-003',
         message: `Refund not found: ${refundId}`,
       });
     }
 
     if (refund.status !== 'PENDING') {
       throw new ConflictException({
-        code: 'E-ORDER-003',
+        code: 'E-REFUND-004',
         message: `Refund status ${refund.status} cannot be reviewed`,
       });
     }
@@ -222,7 +298,7 @@ export class RefundService {
       if (!order) {
         // 订单被删（极少见，外键约束应防住）— 阻断审核
         throw new NotFoundException({
-          code: 'E-ORDER-004',
+          code: 'E-REFUND-005',
           message: `Order not found for refund: ${refund.orderId}`,
         });
       }
@@ -235,13 +311,15 @@ export class RefundService {
           reviewerId,
         });
         throw new ConflictException({
-          code: 'E-ORDER-007',
+          code: 'E-REFUND-006',
           message: `Refund amount invalid (amount=${refund.amount}), expected > 0`,
         });
       }
-      if (refund.amount !== order.payableAmount) {
+      // P13：放宽强制全额校验（部分退款上线后 amount 可 < payableAmount）
+      // 二次防御：只校验 amount > payableAmount（createRefund 入口已校验，此处防 DB 直改）
+      if (refund.amount > order.payableAmount) {
         logger.error({
-          msg: 'REFUND_AMOUNT_MISMATCH_ORDER_PAYABLE',
+          msg: 'REFUND_AMOUNT_EXCEEDS_ORDER_PAYABLE',
           refundId,
           orderId: refund.orderId,
           refundAmount: refund.amount,
@@ -249,8 +327,8 @@ export class RefundService {
           reviewerId,
         });
         throw new ConflictException({
-          code: 'E-ORDER-007',
-          message: `Refund amount ${refund.amount} does not match order payable ${order.payableAmount}`,
+          code: 'E-REFUND-010',
+          message: `Refund amount ${refund.amount} exceeds order payable ${order.payableAmount}`,
         });
       }
 
@@ -265,6 +343,7 @@ export class RefundService {
           transactionId: this.generateMockTransactionId(),
           completedAt: new Date(),
         },
+        include: { items: true },
       });
 
       logger.info({
@@ -286,6 +365,7 @@ export class RefundService {
           reviewedAt: new Date(),
           reviewNote: reviewNote!,
         },
+        include: { items: true },
       });
 
       logger.info({
@@ -307,7 +387,7 @@ export class RefundService {
     const refund = await db.refund.findUnique({ where: { id: refundId } });
     if (!refund) {
       throw new NotFoundException({
-        code: 'E-ORDER-004',
+        code: 'E-REFUND-003',
         message: `Refund not found: ${refundId}`,
       });
     }
@@ -321,7 +401,7 @@ export class RefundService {
 
     if (refund.status !== 'PENDING') {
       throw new ConflictException({
-        code: 'E-ORDER-003',
+        code: 'E-REFUND-004',
         message: `Refund status ${refund.status} cannot be cancelled`,
       });
     }
@@ -329,6 +409,7 @@ export class RefundService {
     const updated = await db.refund.update({
       where: { id: refundId },
       data: { status: 'CANCELLED' },
+      include: { items: true },
     });
 
     return this.toView(updated);
@@ -341,6 +422,7 @@ export class RefundService {
     const refunds = await db.refund.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      include: { items: true },
     });
     return refunds.map((r) => this.toView(r));
   }
@@ -349,10 +431,13 @@ export class RefundService {
    * 查询退款详情
    */
   async getRefundDetail(refundId: string): Promise<RefundView> {
-    const refund = await db.refund.findUnique({ where: { id: refundId } });
+    const refund = await db.refund.findUnique({
+      where: { id: refundId },
+      include: { items: true },
+    });
     if (!refund) {
       throw new NotFoundException({
-        code: 'E-ORDER-004',
+        code: 'E-REFUND-003',
         message: `Refund not found: ${refundId}`,
       });
     }
@@ -367,6 +452,7 @@ export class RefundService {
       where: status ? { status } : {},
       orderBy: { createdAt: 'desc' },
       take: 100,
+      include: { items: true },
     });
     return refunds.map((r) => this.toView(r));
   }
@@ -393,6 +479,16 @@ export class RefundService {
     completedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    items?: {
+      id: string;
+      refundId: string;
+      orderItemId: string;
+      skuId: string;
+      productName: unknown;
+      unitPrice: number;
+      refundQty: number;
+      subtotal: number;
+    }[];
   }): RefundView {
     return {
       id: r.id,
@@ -410,6 +506,16 @@ export class RefundService {
       completedAt: r.completedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
+      items: (r.items ?? []).map((it) => ({
+        id: it.id,
+        refundId: it.refundId,
+        orderItemId: it.orderItemId,
+        skuId: it.skuId,
+        productName: (it.productName ?? {}) as Record<string, string>,
+        unitPrice: it.unitPrice,
+        refundQty: it.refundQty,
+        subtotal: it.subtotal,
+      })),
     };
   }
 }

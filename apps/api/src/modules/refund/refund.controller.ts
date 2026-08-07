@@ -40,13 +40,24 @@ const CreateRefundRequest = z.object({
   orderId: z.string().uuid(),
   reason: z.enum([
     'OUT_OF_STOCK',
+    'EXPIRED',
     'QUALITY_ISSUE',
     'WRONG_ITEM',
+    'SHORTAGE',
     'DELIVERY_TOO_SLOW',
     'CUSTOMER_CHANGE_MIND',
     'OTHER',
   ]),
   reasonDetail: z.string().max(500).optional(),
+  /** 部分退款商品列表（不传 = 整单全额退款，向后兼容） */
+  items: z
+    .array(
+      z.object({
+        orderItemId: z.string().uuid(),
+        refundQty: z.number().int().min(1),
+      }),
+    )
+    .optional(),
 });
 
 const ReviewRefundRequest = z.object({
@@ -78,6 +89,7 @@ export class ClientRefundController {
       userId: req.user.sub,
       reason: body.reason,
       reasonDetail: body.reasonDetail,
+      items: body.items,
     });
     return { success: true as const, data: refund };
   }

@@ -15689,12 +15689,7 @@ paths:
           application/json:
             schema:
               type: object
-              properties:
-                taskId:
-                  type: string
-                  format: uuid
-              required:
-                - taskId
+              properties: {}
       responses:
         "200":
           description: 接单成功
@@ -15827,14 +15822,9 @@ paths:
             schema:
               type: object
               properties:
-                taskId:
-                  type: string
-                  format: uuid
                 note:
                   type: string
                   maxLength: 200
-              required:
-                - taskId
       responses:
         "200":
           description: 取货成功
@@ -15967,9 +15957,6 @@ paths:
             schema:
               type: object
               properties:
-                taskId:
-                  type: string
-                  format: uuid
                 collectedAmount:
                   type: integer
                   minimum: 0
@@ -15977,8 +15964,6 @@ paths:
                 note:
                   type: string
                   maxLength: 200
-              required:
-                - taskId
       responses:
         "200":
           description: 送达成功
@@ -16111,9 +16096,6 @@ paths:
             schema:
               type: object
               properties:
-                taskId:
-                  type: string
-                  format: uuid
                 reason:
                   type: string
                   enum:
@@ -16126,7 +16108,6 @@ paths:
                   type: string
                   maxLength: 500
               required:
-                - taskId
                 - reason
       responses:
         "200":
@@ -16438,14 +16419,30 @@ paths:
                   type: string
                   enum: &a52
                     - OUT_OF_STOCK
+                    - EXPIRED
                     - QUALITY_ISSUE
                     - WRONG_ITEM
+                    - SHORTAGE
                     - DELIVERY_TOO_SLOW
                     - CUSTOMER_CHANGE_MIND
                     - OTHER
                 reasonDetail:
                   type: string
                   maxLength: 500
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      orderItemId:
+                        type: string
+                        format: uuid
+                      refundQty:
+                        type: integer
+                        minimum: 1
+                    required:
+                      - orderItemId
+                      - refundQty
               required:
                 - orderId
                 - reason
@@ -16519,6 +16516,47 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
                     required:
                       - id
                       - orderId
@@ -16535,6 +16573,7 @@ paths:
                       - completedAt
                       - createdAt
                       - updatedAt
+                      - items
                 required:
                   - success
                   - data
@@ -16637,6 +16676,47 @@ paths:
                         updatedAt:
                           type: string
                           format: date-time
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                              refundId:
+                                type: string
+                                format: uuid
+                              orderItemId:
+                                type: string
+                                format: uuid
+                              skuId:
+                                type: string
+                                format: uuid
+                              productName:
+                                type: object
+                                additionalProperties:
+                                  type: string
+                              unitPrice:
+                                type: integer
+                                minimum: 0
+                                maximum: 999999
+                              refundQty:
+                                type: integer
+                                minimum: 1
+                              subtotal:
+                                type: integer
+                                minimum: 0
+                                maximum: 999999
+                            required:
+                              - id
+                              - refundId
+                              - orderItemId
+                              - skuId
+                              - productName
+                              - unitPrice
+                              - refundQty
+                              - subtotal
                       required:
                         - id
                         - orderId
@@ -16653,6 +16733,7 @@ paths:
                         - completedAt
                         - createdAt
                         - updatedAt
+                        - items
                 required:
                   - success
                   - data
@@ -16732,6 +16813,47 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
                     required:
                       - id
                       - orderId
@@ -16748,6 +16870,7 @@ paths:
                       - completedAt
                       - createdAt
                       - updatedAt
+                      - items
                 required:
                   - success
                   - data
@@ -16856,6 +16979,47 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
                     required:
                       - id
                       - orderId
@@ -16872,6 +17036,7 @@ paths:
                       - completedAt
                       - createdAt
                       - updatedAt
+                      - items
                 required:
                   - success
                   - data
@@ -16952,6 +17117,47 @@ paths:
                         updatedAt:
                           type: string
                           format: date-time
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                              refundId:
+                                type: string
+                                format: uuid
+                              orderItemId:
+                                type: string
+                                format: uuid
+                              skuId:
+                                type: string
+                                format: uuid
+                              productName:
+                                type: object
+                                additionalProperties:
+                                  type: string
+                              unitPrice:
+                                type: integer
+                                minimum: 0
+                                maximum: 999999
+                              refundQty:
+                                type: integer
+                                minimum: 1
+                              subtotal:
+                                type: integer
+                                minimum: 0
+                                maximum: 999999
+                            required:
+                              - id
+                              - refundId
+                              - orderItemId
+                              - skuId
+                              - productName
+                              - unitPrice
+                              - refundQty
+                              - subtotal
                       required:
                         - id
                         - orderId
@@ -16968,6 +17174,7 @@ paths:
                         - completedAt
                         - createdAt
                         - updatedAt
+                        - items
                 required:
                   - success
                   - data
@@ -17047,6 +17254,47 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
                     required:
                       - id
                       - orderId
@@ -17063,6 +17311,7 @@ paths:
                       - completedAt
                       - createdAt
                       - updatedAt
+                      - items
                 required:
                   - success
                   - data
@@ -17191,6 +17440,47 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
                     required:
                       - id
                       - orderId
@@ -17207,6 +17497,7 @@ paths:
                       - completedAt
                       - createdAt
                       - updatedAt
+                      - items
                 required:
                   - success
                   - data

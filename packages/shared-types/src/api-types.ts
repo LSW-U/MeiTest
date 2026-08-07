@@ -8872,10 +8872,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        taskId: string;
-                    };
+                    "application/json": Record<string, never>;
                 };
             };
             responses: {
@@ -8969,8 +8966,6 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** Format: uuid */
-                        taskId: string;
                         note?: string;
                     };
                 };
@@ -9066,8 +9061,6 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** Format: uuid */
-                        taskId: string;
                         collectedAmount?: number;
                         note?: string;
                     };
@@ -9164,8 +9157,6 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** Format: uuid */
-                        taskId: string;
                         /** @enum {string} */
                         reason: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER";
                         note?: string;
@@ -9416,7 +9407,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9433,6 +9424,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             }[];
                         };
                     };
@@ -9454,8 +9461,13 @@ export interface paths {
                         /** Format: uuid */
                         orderId: string;
                         /** @enum {string} */
-                        reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                        reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                         reasonDetail?: string;
+                        items?: {
+                            /** Format: uuid */
+                            orderItemId: string;
+                            refundQty: number;
+                        }[];
                     };
                 };
             };
@@ -9478,7 +9490,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9495,6 +9507,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             };
                         };
                     };
@@ -9563,7 +9591,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9580,6 +9608,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             };
                         };
                     };
@@ -9652,7 +9696,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9669,6 +9713,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             };
                         };
                     };
@@ -9718,7 +9778,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9735,6 +9795,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             }[];
                         };
                     };
@@ -9786,7 +9862,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9803,6 +9879,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             };
                         };
                     };
@@ -9885,7 +9977,7 @@ export interface paths {
                                 userId: string;
                                 amount: number;
                                 /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "QUALITY_ISSUE" | "WRONG_ITEM" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
                                 reasonDetail: string | null;
                                 /** @enum {string} */
                                 status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -9902,6 +9994,22 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
                             };
                         };
                     };
@@ -10312,6 +10420,48 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description 热搜列表（PINNED 前置 + BLOCKED 剔除 + ZSET 真实 + MANUAL 兜底） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            word: string;
+                            searchCount: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/search/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 搜索建议 / 输入联想（C 方案词联想，@Public）。三源合并去重：HotSearchTerm 词库前缀匹配（PINNED/MANUAL）+ Redis ZSET 真实词前缀 + 商品名前缀兜底。返 HotSearchTermItem[]，word 是建议词非 i18n key。prefix < 1 字符返空数组。 */
+        get: {
+            parameters: {
+                query: {
+                    prefix: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 建议词列表（词库 > ZSET > 商品名，BLOCKED 全链路剔除） */
                 200: {
                     headers: {
                         [name: string]: unknown;

@@ -1025,8 +1025,8 @@ model Refund {
   id             String        @id @default(uuid())
   orderId        String        @map("order_id")
   userId         String        @map("user_id")
-  amount         Int           // 退款金额（分），= Order.payableAmount
-  reason         String        // OUT_OF_STOCK / QUALITY_ISSUE / WRONG_ITEM / DELIVERY_TOO_SLOW / CUSTOMER_CHANGE_MIND / OTHER
+  amount         Int           // 退款金额（分），= sum(RefundItem.subtotal) 部分退款 或 Order.payableAmount 整单退款
+  reason         String        // OUT_OF_STOCK / EXPIRED / QUALITY_ISSUE / WRONG_ITEM / SHORTAGE / DELIVERY_TOO_SLOW / CUSTOMER_CHANGE_MIND / OTHER
   reasonDetail   String?       @map("reason_detail")
   status         String        @default("PENDING") // PENDING / APPROVED / REJECTED / COMPLETED / FAILED / CANCELLED
   transactionId  String?       @map("transaction_id") // 退款流水号（mock 标 MOCK_ 前缀）
@@ -1040,11 +1040,36 @@ model Refund {
 
   order Order @relation(fields: [orderId], references: [id])
   user  User  @relation(fields: [userId], references: [id])
+  items RefundItem[]
 
   @@index([orderId])
   @@index([userId, status])
   @@index([status, createdAt])
   @@map("refunds")
+}
+
+/// 退款商品子表（P13 部分退款，2026-08-08）
+///     存「本次退款退了哪些 OrderItem 的多少数量」；整单退款不建子表（items 为空数组）
+///     subtotal = unitPrice × refundQty，冗余存下单时价格快照（与 OrderItem.unitPrice 一致）
+model RefundItem {
+  id           String @id @default(uuid())
+  refundId     String @map("refund_id")
+  orderItemId  String @map("order_item_id")
+  skuId        String @map("sku_id")
+  /// 多语言商品名快照（同 OrderItem.productName，{zh,en,id,pt}）
+  productName  Json   @map("product_name")
+  /// 下单时单价快照（分，同 OrderItem.unitPrice）
+  unitPrice    Int    @map("unit_price")
+  /// 本单退款数量（≤ OrderItem.quantity）
+  refundQty    Int    @map("refund_qty")
+  /// = unitPrice × refundQty（分）
+  subtotal     Int
+
+  refund Refund @relation(fields: [refundId], references: [id], onDelete: Cascade)
+
+  @@index([refundId])
+  @@index([orderItemId])
+  @@map("refund_items")
 }
 
 // ============================================================================

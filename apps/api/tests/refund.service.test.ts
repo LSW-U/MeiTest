@@ -6,11 +6,11 @@
  *   - createRefund 接单后 → PENDING
  *   - createRefund 订单不存在 / 不归属 / 已 CANCELLED / 已有进行中退款
  *   - reviewRefund APPROVE 正常路径（金额一致）
- *   - reviewRefund APPROVE 金额 = 0 → E-ORDER-007（P2 新增）
- *   - reviewRefund APPROVE 金额 ≠ payable → E-ORDER-007（P2 新增）
- *   - reviewRefund APPROVE 订单不存在 → E-ORDER-004
+ *   - reviewRefund APPROVE 金额 = 0 → E-REFUND-006（P2 新增，P13 改码）
+ *   - reviewRefund APPROVE 金额 > payable → E-REFUND-010（P13：放宽部分退款，仅超额报错）
+ *   - reviewRefund APPROVE 订单不存在 → E-REFUND-005
  *   - reviewRefund REJECT 正常 + 无 reviewNote
- *   - reviewRefund 状态非 PENDING → E-ORDER-003
+ *   - reviewRefund 状态非 PENDING → E-REFUND-004
  *   - cancelRefund 正常 / 不归属 / 非 PENDING
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -149,7 +149,7 @@ describe('RefundService', () => {
       );
     });
 
-    it('订单不存在 → E-ORDER-004', async () => {
+    it('订单不存在 → E-REFUND-005', async () => {
       mockDb.order.findUnique.mockResolvedValue(null);
       await expect(
         service.createRefund({ orderId: 'nope', userId: 'u1', reason: 'X' }),
@@ -163,19 +163,94 @@ describe('RefundService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('订单已 CANCELLED → E-ORDER-003', async () => {
+    it('订单已 CANCELLED → E-REFUND-001', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'CANCELLED' });
       await expect(
         service.createRefund({ orderId: 'order-1', userId: 'user-1', reason: 'X' }),
       ).rejects.toThrow(ConflictException);
     });
 
-    it('已有进行中退款 → E-ORDER-003', async () => {
+    it('已有进行中退款 → E-REFUND-002', async () => {
       mockDb.order.findUnique.mockResolvedValue(baseOrder);
       mockDb.refund.findFirst.mockResolvedValue({ id: 'old-refund', status: 'PENDING' });
       await expect(
         service.createRefund({ orderId: 'order-1', userId: 'user-1', reason: 'X' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('部分退款（items[]）→ amount = sum(unitPrice × refundQty) + 建 RefundItem（P13）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({
+        ...baseOrder,
+        items: [
+          { id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 3, subtotal: 1500 },
+          { id: 'oi-2', skuId: 'sku-2', productName: { en: 'Milk' }, unitPrice: 800, quantity: 2, subtotal: 1600 },
+        ],
+      });
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, amount: 1300, items: [] });
+
+      await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        items: [
+          { orderItemId: 'oi-1', refundQty: 1 }, // 500 × 1 = 500
+          { orderItemId: 'oi-2', refundQty: 1 }, // 800 × 1 = 800
+        ],
+      });
+
+      // amount = 500 + 800 = 1300（非整单 10000）
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            amount: 1300,
+            items: {
+              create: expect.arrayContaining([
+                expect.objectContaining({ orderItemId: 'oi-1', refundQty: 1, subtotal: 500, skuId: 'sku-1' }),
+                expect.objectContaining({ orderItemId: 'oi-2', refundQty: 1, subtotal: 800, skuId: 'sku-2' }),
+              ]),
+            },
+          }),
+          include: { items: true },
+        }),
+      );
+    });
+
+    it('部分退款：refundQty > quantity → E-REFUND-009（P13）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({
+        ...baseOrder,
+        items: [{ id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 2, subtotal: 1000 }],
+      });
+      mockDb.refund.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+          items: [{ orderItemId: 'oi-1', refundQty: 5 }], // 5 > 2
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('部分退款：orderItemId 不属于该 order → E-REFUND-008（P13）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({
+        ...baseOrder,
+        items: [{ id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 2, subtotal: 1000 }],
+      });
+      mockDb.refund.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+          items: [{ orderItemId: 'oi-not-exist', refundQty: 1 }],
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
     });
   });
 
@@ -202,7 +277,7 @@ describe('RefundService', () => {
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
-    it('金额 = 0 → E-ORDER-007（防 0 元退款）', async () => {
+    it('金额 = 0 → E-REFUND-006（防 0 元退款）', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, amount: 0 });
       mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
 
@@ -219,8 +294,8 @@ describe('RefundService', () => {
       expect(mockDb.refund.update).not.toHaveBeenCalled();
     });
 
-    it('金额 ≠ order.payableAmount → E-ORDER-007（防超额/不足）', async () => {
-      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, amount: 9999 });
+    it('金额 > order.payableAmount → E-REFUND-010（防超额；P13 放宽：部分退款 amount < payable 合法）', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, amount: 10001 });
       mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
 
       await expect(
@@ -229,15 +304,15 @@ describe('RefundService', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          msg: 'REFUND_AMOUNT_MISMATCH_ORDER_PAYABLE',
-          refundAmount: 9999,
+          msg: 'REFUND_AMOUNT_EXCEEDS_ORDER_PAYABLE',
+          refundAmount: 10001,
           orderPayableAmount: 10000,
         }),
       );
       expect(mockDb.refund.update).not.toHaveBeenCalled();
     });
 
-    it('订单不存在 → E-ORDER-004（外键理论防住，此为防御）', async () => {
+    it('订单不存在 → E-REFUND-005（外键理论防住，此为防御）', async () => {
       mockDb.refund.findUnique.mockResolvedValue(baseRefund);
       mockDb.order.findUnique.mockResolvedValue(null);
 
@@ -277,14 +352,14 @@ describe('RefundService', () => {
   });
 
   describe('reviewRefund - 状态校验', () => {
-    it('refund 不存在 → E-ORDER-004', async () => {
+    it('refund 不存在 → E-REFUND-003', async () => {
       mockDb.refund.findUnique.mockResolvedValue(null);
       await expect(
         service.reviewRefund('nope', 'admin-1', 'APPROVE'),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('refund 非 PENDING → E-ORDER-003', async () => {
+    it('refund 非 PENDING → E-REFUND-004', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, status: 'COMPLETED' });
       await expect(
         service.reviewRefund('refund-1', 'admin-1', 'APPROVE'),
@@ -306,7 +381,7 @@ describe('RefundService', () => {
       await expect(service.cancelRefund('refund-1', 'user-1')).rejects.toThrow(ForbiddenException);
     });
 
-    it('非 PENDING → E-ORDER-003', async () => {
+    it('非 PENDING → E-REFUND-004', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, status: 'COMPLETED' });
       await expect(service.cancelRefund('refund-1', 'user-1')).rejects.toThrow(ConflictException);
     });
