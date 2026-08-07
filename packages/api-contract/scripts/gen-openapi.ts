@@ -2232,6 +2232,27 @@ registry.registerPath({
   },
 });
 
+// ---- 我的任务（骑手视角：已接单/取货/配送中） ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/dispatch/my-tasks',
+  tags: ['dispatch'],
+  description: '获取当前骑手已接单/取货/配送中的任务列表（status in ASSIGNED/PICKED_UP/DELIVERING）',
+  responses: {
+    200: {
+      description: '我的任务列表',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ items: z.array(DeliveryTask) }),
+          }),
+        },
+      },
+    },
+  },
+});
+
 // ---- 接单 ----
 registry.registerPath({
   method: 'post',

@@ -41,20 +41,20 @@ export const DeliveryTask = z.object({
   updatedAt: IsoTimestamp,
 });
 
-/** 抢单请求（骑手 App 调） */
-export const AcceptTaskRequest = z.object({
-  taskId: Id,
-});
+// Why: taskId 走 URL path param（:id），body 不重复携带。
+// 4 个 dispatch action 的 body 都不含 taskId；controller 用 @Param('id') 读取。
+// 修复历史契约 bug：原 schema 要求 body.taskId 但 controller 不读，前端发 {note} 被 400。
+
+/** 抢单请求（骑手 App 调）— 无 body，taskId 走 URL */
+export const AcceptTaskRequest = z.object({});
 
 /** 骑手上报取货 */
 export const PickupTaskRequest = z.object({
-  taskId: Id,
   note: z.string().max(200).optional(),
 });
 
 /** 骑手上报送达 */
 export const DeliverTaskRequest = z.object({
-  taskId: Id,
   /** COD 场景下：实收金额（小于应付金额时标 SHORT，等于/大于标 PAID） */
   collectedAmount: Money.optional(),
   note: z.string().max(200).optional(),
@@ -62,7 +62,6 @@ export const DeliverTaskRequest = z.object({
 
 /** 异常上报 */
 export const ReportIssueRequest = z.object({
-  taskId: Id,
   reason: z.enum([
     'CUSTOMER_UNREACHABLE',
     'CUSTOMER_REJECTED',

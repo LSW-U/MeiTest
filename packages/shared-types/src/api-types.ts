@@ -8851,6 +8851,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rider/dispatch/my-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 获取当前骑手已接单/取货/配送中的任务列表（status in ASSIGNED/PICKED_UP/DELIVERING） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 我的任务列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    orderId: string;
+                                    /** Format: uuid */
+                                    riderId: string | null;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    /** @enum {string} */
+                                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    pickupAddress: string;
+                                    pickupLat: number;
+                                    pickupLng: number;
+                                    dropoffAddress: string;
+                                    dropoffLat: number;
+                                    dropoffLng: number;
+                                    /** Format: date-time */
+                                    assignedAt: string | null;
+                                    /** Format: date-time */
+                                    pickedUpAt: string | null;
+                                    /** Format: date-time */
+                                    deliveredAt: string | null;
+                                    note: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rider/dispatch/tasks/{id}/accept": {
         parameters: {
             query?: never;

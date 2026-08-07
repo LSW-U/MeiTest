@@ -142,6 +142,43 @@ describe('DispatchService', () => {
     });
   });
 
+  describe('listMyTasks', () => {
+    it('resolveRiderProfileId 转 RiderProfile.id + status in 进行中', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask({ status: 'ASSIGNED' })]);
+      const result = await service.listMyTasks({ riderId: 'r1' });
+      expect(result.items).toHaveLength(1);
+      // resolveRiderProfileId：User.id 'r1' → RiderProfile.id 'r1'（mock 返回）
+      expect(mockDb.riderProfile.findUnique).toHaveBeenCalled();
+      expect(mockDb.deliveryTask.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            riderId: 'r1',
+            status: { in: ['ASSIGNED', 'PICKED_UP', 'DELIVERING'] },
+          }),
+        }),
+      );
+    });
+
+    it('include order + warehouse（前端 pickups/deliveries tab 必需字段）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask()]);
+      await service.listMyTasks({ riderId: 'r1' });
+      expect(mockDb.deliveryTask.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            order: expect.objectContaining({ select: expect.objectContaining({ orderNo: true }) }),
+            warehouse: expect.objectContaining({ select: expect.objectContaining({ code: true }) }),
+          }),
+        }),
+      );
+    });
+
+    it('无进行中任务 → 空数组', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([]);
+      const result = await service.listMyTasks({ riderId: 'r1' });
+      expect(result.items).toEqual([]);
+    });
+  });
+
   describe('acceptTask', () => {
     it('task 不存在 → E-DISPATCH-001', async () => {
       mockDb.deliveryTask.findUnique.mockResolvedValue(null);

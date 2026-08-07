@@ -5,6 +5,7 @@
  *
  * 端点：
  *   GET    /tasks              抢单大厅（待派送订单池，可选 warehouseId 过滤）
+ *   GET    /my-tasks           我的任务（已接单/取货/配送中，骑手视角）
  *   POST   /tasks/:id/accept   抢单（乐观锁防重复抢）
  *   POST   /tasks/:id/pickup   上报取货（ASSIGNED → PICKED_UP）
  *   POST   /tasks/:id/deliver  上报送达（PICKED_UP → DELIVERED + COD 收款记录）
@@ -69,6 +70,17 @@ export class DispatchController {
       warehouseId: query.warehouseId,
       limit: query.limit,
     });
+    return { success: true as const, data: result };
+  }
+
+  /** 我的任务（已接单/取货/配送中，骑手视角） */
+  @Get('my-tasks')
+  async listMyTasks(@Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const result = await this.dispatchService.listMyTasks({ riderId: user.sub });
     return { success: true as const, data: result };
   }
 

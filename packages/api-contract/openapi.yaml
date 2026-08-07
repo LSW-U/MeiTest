@@ -15672,6 +15672,103 @@ paths:
                 required:
                   - success
                   - data
+  /api/v1/rider/dispatch/my-tasks:
+    get:
+      tags:
+        - dispatch
+      description: 获取当前骑手已接单/取货/配送中的任务列表（status in ASSIGNED/PICKED_UP/DELIVERING）
+      responses:
+        "200":
+          description: 我的任务列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            orderId:
+                              type: string
+                              format: uuid
+                            riderId:
+                              type: string
+                              nullable: true
+                              format: uuid
+                            warehouseId:
+                              type: string
+                              format: uuid
+                            status:
+                              type: string
+                              enum: *a51
+                            pickupAddress:
+                              type: string
+                            pickupLat:
+                              type: number
+                            pickupLng:
+                              type: number
+                            dropoffAddress:
+                              type: string
+                            dropoffLat:
+                              type: number
+                            dropoffLng:
+                              type: number
+                            assignedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            pickedUpAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            deliveredAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            note:
+                              type: string
+                              nullable: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - orderId
+                            - riderId
+                            - warehouseId
+                            - status
+                            - pickupAddress
+                            - pickupLat
+                            - pickupLng
+                            - dropoffAddress
+                            - dropoffLat
+                            - dropoffLng
+                            - assignedAt
+                            - pickedUpAt
+                            - deliveredAt
+                            - note
+                            - createdAt
+                            - updatedAt
+                    required:
+                      - items
+                required:
+                  - success
+                  - data
   /api/v1/rider/dispatch/tasks/{id}/accept:
     post:
       tags:
