@@ -208,6 +208,7 @@ export class OrderController {
         riderId: true,
         pickedUpAt: true,
         deliveredAt: true,
+        estimatedArrival: true, // P11 ETA：dispatch createTaskForOrder 写入
       },
     });
 
@@ -227,7 +228,7 @@ export class OrderController {
               deliveredAt: task.deliveredAt,
               // 位置数据 W5 补（当前 rider_locations 已删）
               riderLocation: null,
-              estimatedArrival: null,
+              estimatedArrival: task.estimatedArrival?.toISOString() ?? null,
             }
           : null,
       },

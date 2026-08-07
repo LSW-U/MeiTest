@@ -721,6 +721,8 @@ model DeliveryTask {
   assignedAt     DateTime?          @map("assigned_at")
   pickedUpAt     DateTime?          @map("picked_up_at")
   deliveredAt    DateTime?          @map("delivered_at")
+  // P11 ETA：创建任务时算 now + DEFAULT_ETA_MINUTES（dispatch.config.ts）写入；旧任务 null（前端降级 etaPlaceholder）
+  estimatedArrival DateTime?       @map("estimated_arrival")
   note           String?
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")

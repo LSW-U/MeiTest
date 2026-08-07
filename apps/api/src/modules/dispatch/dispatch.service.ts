@@ -24,6 +24,7 @@ import { db, withTransaction } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -118,6 +119,29 @@ export class DispatchService {
     return {
       items: tasks.map((t) => this.toView(t)),
     };
+  }
+
+  /**
+   * 查询我的任务（当前骑手已接单/取货/配送中）
+   *
+   * Why: 前端 tasks 页 pickups/deliveries tab 需要骑手自己的任务，
+   *   listPendingTasks 只返回 PENDING_ASSIGN（抢单大厅）无法覆盖。
+   *   riderId 为 User.id（JWT sub），需 resolveRiderProfileId 转 RiderProfile.id 与 rider_id 字段对齐。
+   */
+  async listMyTasks(options: { riderId: string }): Promise<{ items: DeliveryTaskView[] }> {
+    const riderId = await this.resolveRiderProfileId(options.riderId);
+    const tasks = await db.deliveryTask.findMany({
+      where: {
+        riderId,
+        status: { in: ['ASSIGNED', 'PICKED_UP', 'DELIVERING'] },
+      },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        warehouse: { select: { code: true } },
+      },
+    });
+    return { items: tasks.map((t) => this.toView(t)) };
   }
 
   /**
@@ -560,6 +584,8 @@ export class DispatchService {
         dropoffAddress,
         dropoffLat,
         dropoffLng,
+        // P11 ETA：创建任务时算 now + DEFAULT_ETA_MINUTES（dispatch.config.ts），写 estimated_arrival
+        estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
         order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
