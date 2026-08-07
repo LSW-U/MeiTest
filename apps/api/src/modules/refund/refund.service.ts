@@ -132,6 +132,20 @@ export class RefundService {
     let refundItemsData: { orderItemId: string; refundQty: number; subtotal: number }[] = [];
 
     if (input.items && input.items.length > 0) {
+      // P1 累计校验（审查报告 B.7，金额安全）：existing 只防 PENDING/APPROVED 的进行中退款，
+      // 不防已 COMPLETED 的历史部分退款 -> 查累计 refundQty，防同一 OrderItem 超额退款
+      const previousItems = await db.refundItem.findMany({
+        where: {
+          orderItemId: { in: input.items.map((i) => i.orderItemId) },
+          refund: { orderId: input.orderId, status: 'COMPLETED' },
+        },
+        select: { orderItemId: true, refundQty: true },
+      });
+      const refundedMap = new Map<string, number>();
+      for (const pi of previousItems) {
+        refundedMap.set(pi.orderItemId, (refundedMap.get(pi.orderItemId) ?? 0) + pi.refundQty);
+      }
+
       amount = 0;
       for (const ri of input.items) {
         const oi = order.items.find((x) => x.id === ri.orderItemId);
@@ -141,10 +155,15 @@ export class RefundService {
             message: `OrderItem not found in this order: ${ri.orderItemId}`,
           });
         }
-        if (ri.refundQty > oi.quantity) {
+        const alreadyRefunded = refundedMap.get(ri.orderItemId) ?? 0;
+        const remaining = oi.quantity - alreadyRefunded;
+        if (ri.refundQty > remaining) {
           throw new ConflictException({
             code: 'E-REFUND-009',
-            message: `refundQty (${ri.refundQty}) exceeds item quantity (${oi.quantity})`,
+            message:
+              alreadyRefunded > 0
+                ? `refundQty (${ri.refundQty}) exceeds remaining refundable quantity (${remaining}, after ${alreadyRefunded} already refunded of ${oi.quantity})`
+                : `refundQty (${ri.refundQty}) exceeds item quantity (${oi.quantity})`,
           });
         }
         const subtotal = oi.unitPrice * ri.refundQty;

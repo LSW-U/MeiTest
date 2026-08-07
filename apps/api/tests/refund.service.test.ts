@@ -28,6 +28,9 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService } = vi.hoisted(() =>
       update: vi.fn(),
       findMany: vi.fn(),
     },
+    refundItem: {
+      findMany: vi.fn(),
+    },
     paymentIntent: {
       findUnique: vi.fn(),
     },
@@ -89,6 +92,7 @@ describe('RefundService', () => {
     service = new RefundService(mockModuleRef as never);
     Object.values(mockDb.order).forEach((fn) => fn.mockReset());
     Object.values(mockDb.refund).forEach((fn) => fn.mockReset());
+    Object.values(mockDb.refundItem).forEach((fn) => fn.mockReset());
     Object.values(mockDb.paymentIntent).forEach((fn) => fn.mockReset());
     Object.values(mockLogger).forEach((fn) => fn.mockReset());
     Object.values(mockOrderService).forEach((fn) => fn.mockReset());
@@ -187,6 +191,7 @@ describe('RefundService', () => {
         ],
       });
       mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.refundItem.findMany.mockResolvedValue([]);
       mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
       mockDb.refund.create.mockResolvedValue({ ...baseRefund, amount: 1300, items: [] });
 
@@ -223,6 +228,7 @@ describe('RefundService', () => {
         items: [{ id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 2, subtotal: 1000 }],
       });
       mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.refundItem.findMany.mockResolvedValue([]);
 
       await expect(
         service.createRefund({
@@ -235,12 +241,33 @@ describe('RefundService', () => {
       expect(mockDb.refund.create).not.toHaveBeenCalled();
     });
 
+    it('部分退款：COMPLETED 后累计超额 → E-REFUND-009（P1 累计校验，审查 B.7）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({
+        ...baseOrder,
+        items: [{ id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 10, subtotal: 5000 }],
+      });
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      // 前次 COMPLETED 退款已退 6 件（remaining = 10 - 6 = 4）
+      mockDb.refundItem.findMany.mockResolvedValue([{ orderItemId: 'oi-1', refundQty: 6 }]);
+
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+          items: [{ orderItemId: 'oi-1', refundQty: 5 }], // 6 + 5 = 11 > 10 超额
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
+    });
+
     it('部分退款：orderItemId 不属于该 order → E-REFUND-008（P13）', async () => {
       mockDb.order.findUnique.mockResolvedValue({
         ...baseOrder,
         items: [{ id: 'oi-1', skuId: 'sku-1', productName: { en: 'Apple' }, unitPrice: 500, quantity: 2, subtotal: 1000 }],
       });
       mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.refundItem.findMany.mockResolvedValue([]);
 
       await expect(
         service.createRefund({
