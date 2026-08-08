@@ -10,7 +10,7 @@
  * - 错误码段：E-SETTLE-*（W2-COLLABORATION.md §3.4）
  */
 import { z } from 'zod';
-import { Money, IsoTimestamp, Id, ApiResponse, PaginatedResponse } from './common';
+import { Money, IsoTimestamp, Id, ApiResponse, OffsetPaginatedResponse } from './common';
 
 // ============================================================================
 // Settlement（结算单）
@@ -150,9 +150,11 @@ export type WithdrawalQueryType = z.infer<typeof WithdrawalQuery>;
 // ApiResponse 包装（OpenAPI 注册用）
 // ============================================================================
 
-export const SettlementListResponse = PaginatedResponse(SettlementSchema);
+// settlement/withdrawal list 实际返 offset（page/pageSize/total），用 OffsetPaginatedResponse
+//（PaginatedResponse 是 cursor 风格 nextCursor/hasMore，给 audit 等游标模块用）
+export const SettlementListResponse = OffsetPaginatedResponse(SettlementSchema);
 export const SettlementDetailResponse = ApiResponse(SettlementSchema);
-export const WithdrawalListResponse = PaginatedResponse(WithdrawalRequestSchema);
+export const WithdrawalListResponse = OffsetPaginatedResponse(WithdrawalRequestSchema);
 export const WithdrawalDetailResponse = ApiResponse(WithdrawalRequestSchema);
 
 // ============================================================================

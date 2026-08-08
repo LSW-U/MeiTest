@@ -126,6 +126,19 @@ import {
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
   ReviewRefundRequest as ReviewRefundRequestSchema,
+  // settle（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册）
+  SettlementSchema,
+  SettlementQuery,
+  SettlementRunInput,
+  SettlementListResponse,
+  SettlementDetailResponse,
+  WithdrawalRequestSchema,
+  WithdrawalCreateInput,
+  WithdrawalQuery,
+  WithdrawalReviewInput,
+  WithdrawalMarkPaidInput,
+  WithdrawalListResponse,
+  WithdrawalDetailResponse,
   // promotion（W7-ext-G）
   Promotion as PromotionSchema,
   CreatePromotionRequest as CreatePromotionRequestSchema,
@@ -2761,6 +2774,131 @@ registry.registerPath({
   responses: {
     200: { description: '删除成功' },
     404: { description: 'E-REVIEW-001', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// settle 端点（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册，之前零注册）
+// ============================================================================
+
+// ---- 结算单 settlement ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/settle/settlements',
+  tags: ['settle'],
+  description: '结算单列表（offset 分页 page/pageSize/total）。Role: super_admin。',
+  request: { query: SettlementQuery },
+  responses: {
+    200: { description: '结算单列表', content: { 'application/json': { schema: SettlementListResponse } } },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/settle/settlements/{id}',
+  tags: ['settle'],
+  description: '结算单详情',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '详情', content: { 'application/json': { schema: SettlementDetailResponse } } },
+    404: { description: 'E-SETTLE-004', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/settle/settlements/{id}/confirm',
+  tags: ['settle'],
+  description: '确认结算单（PENDING → CONFIRMED，乐观锁 updateMany 防双过）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '确认成功', content: { 'application/json': { schema: SettlementDetailResponse } } },
+    404: { description: 'E-SETTLE-004 not found', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-SETTLE-003 状态不对/race', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/settle/settlements/run',
+  tags: ['settle'],
+  description: '手动触发结算（T+1 兜底/调试；幂等：同 periodDate+subject 唯一，重复返已有）',
+  request: { body: { content: { 'application/json': { schema: SettlementRunInput } } } },
+  responses: {
+    200: { description: '触发成功（新建或返回已有）', content: { 'application/json': { schema: SettlementDetailResponse } } },
+    409: { description: 'E-SETTLE-003 race', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 提现申请 withdrawal ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/settle/withdrawals',
+  tags: ['settle'],
+  description: '创建提现申请（super_admin 代录；金额超可用余额抛 E-SETTLE-001）',
+  request: { body: { content: { 'application/json': { schema: WithdrawalCreateInput } } } },
+  responses: {
+    200: { description: '创建成功', content: { 'application/json': { schema: WithdrawalDetailResponse } } },
+    400: { description: 'E-SETTLE-001 余额不足', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/settle/withdrawals',
+  tags: ['settle'],
+  description: '提现申请列表（offset 分页）。super_admin 写权限；warehouse_staff/customer_service 只读。',
+  request: { query: WithdrawalQuery },
+  responses: {
+    200: { description: '提现列表', content: { 'application/json': { schema: WithdrawalListResponse } } },
+    401: { description: 'UNAUTHORIZED', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'FORBIDDEN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/settle/withdrawals/{id}',
+  tags: ['settle'],
+  description: '提现申请详情',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '详情', content: { 'application/json': { schema: WithdrawalDetailResponse } } },
+    404: { description: 'E-SETTLE-002', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/settle/withdrawals/{id}/review',
+  tags: ['settle'],
+  description: '审核提现（APPROVE/REJECT，REJECT 必填 rejectReason）。仅 super_admin。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: WithdrawalReviewInput } } },
+  },
+  responses: {
+    200: { description: '审核成功', content: { 'application/json': { schema: WithdrawalDetailResponse } } },
+    404: { description: 'E-SETTLE-002', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-SETTLE-003 状态不对/race', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/settle/withdrawals/{id}/mark-paid',
+  tags: ['settle'],
+  description: '标记线下打款完成（必填 payoutReference，APPROVED → PAID）。仅 super_admin。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: WithdrawalMarkPaidInput } } },
+  },
+  responses: {
+    200: { description: '标记成功', content: { 'application/json': { schema: WithdrawalDetailResponse } } },
+    404: { description: 'E-SETTLE-002', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-SETTLE-003 非 APPROVED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

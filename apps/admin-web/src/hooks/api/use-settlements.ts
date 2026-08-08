@@ -46,7 +46,9 @@ export interface Settlement {
   updatedAt: string;
 }
 
-/** 列表返回（settlement.service.ts 实际返回结构） */
+/** 列表返回（与 contract SettlementListResponse = OffsetPaginatedResponse 对齐；openapi 已注册端点）
+ *  注：admin-web 不依赖 api-contract（只依赖 shared-types），类型手写与 contract SettlementSchema
+ *  15 字段逐一对应。审查 P0-1 修复后契约对齐 offset（service 实际返 page/pageSize/total）。 */
 export interface SettlementListResult {
   items: Settlement[];
   total: number;

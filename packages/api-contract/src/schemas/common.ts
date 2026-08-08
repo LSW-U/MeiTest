@@ -45,6 +45,20 @@ export function PaginatedResponse<T extends z.ZodTypeAny>(item: T) {
   });
 }
 
+/** 列表 + offset 分页响应（page/pageSize/total；与 PaginatedResponse 的 cursor 风格并列）
+ *  settlement/withdrawal 等后台 offset 分页模块用 */
+export function OffsetPaginatedResponse<T extends z.ZodTypeAny>(item: T) {
+  return z.object({
+    success: z.literal(true),
+    data: z.object({
+      items: z.array(item),
+      total: z.number().int(),
+      page: z.number().int(),
+      pageSize: z.number().int(),
+    }),
+  });
+}
+
 /** 错误响应：{ success: false, error: { code, message, details? } } */
 export const ErrorResponse = z.object({
   success: z.literal(false),

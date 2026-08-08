@@ -18840,3 +18840,1477 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/settle/settlements:
+    get:
+      tags:
+        - settle
+      description: "结算单列表（offset 分页 page/pageSize/total）。Role: super_admin。"
+      parameters:
+        - schema:
+            type: string
+            enum: &a59
+              - MERCHANT
+              - RIDER
+          required: false
+          name: subjectType
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: subjectId
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: periodFrom
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: periodTo
+          in: query
+        - schema:
+            type: string
+            enum: &a60
+              - PENDING
+              - CONFIRMED
+              - PAID
+              - DISPUTED
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            default: 1
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 100
+            default: 20
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: 结算单列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            periodDate:
+                              type: string
+                            subjectType:
+                              type: string
+                              enum: *a59
+                            subjectId:
+                              type: string
+                            warehouseId:
+                              type: string
+                              nullable: true
+                            orderCount:
+                              type: integer
+                              minimum: 0
+                            grossAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            commission:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            netAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            status:
+                              type: string
+                              enum: *a60
+                            confirmedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            paidAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - periodDate
+                            - subjectType
+                            - subjectId
+                            - warehouseId
+                            - orderCount
+                            - grossAmount
+                            - commission
+                            - refundAmount
+                            - netAmount
+                            - status
+                            - confirmedAt
+                            - paidAt
+                            - createdAt
+                            - updatedAt
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                    required:
+                      - items
+                      - total
+                      - page
+                      - pageSize
+                required:
+                  - success
+                  - data
+        "401":
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/settlements/{id}:
+    get:
+      tags:
+        - settle
+      description: 结算单详情
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      periodDate:
+                        type: string
+                      subjectType:
+                        type: string
+                        enum: *a59
+                      subjectId:
+                        type: string
+                      warehouseId:
+                        type: string
+                        nullable: true
+                      orderCount:
+                        type: integer
+                        minimum: 0
+                      grossAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      commission:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      refundAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      netAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a60
+                      confirmedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - periodDate
+                      - subjectType
+                      - subjectId
+                      - warehouseId
+                      - orderCount
+                      - grossAmount
+                      - commission
+                      - refundAmount
+                      - netAmount
+                      - status
+                      - confirmedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-SETTLE-004
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/settlements/{id}/confirm:
+    post:
+      tags:
+        - settle
+      description: 确认结算单（PENDING → CONFIRMED，乐观锁 updateMany 防双过）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      periodDate:
+                        type: string
+                      subjectType:
+                        type: string
+                        enum: *a59
+                      subjectId:
+                        type: string
+                      warehouseId:
+                        type: string
+                        nullable: true
+                      orderCount:
+                        type: integer
+                        minimum: 0
+                      grossAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      commission:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      refundAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      netAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a60
+                      confirmedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - periodDate
+                      - subjectType
+                      - subjectId
+                      - warehouseId
+                      - orderCount
+                      - grossAmount
+                      - commission
+                      - refundAmount
+                      - netAmount
+                      - status
+                      - confirmedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-SETTLE-004 not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-SETTLE-003 状态不对/race
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/settlements/run:
+    post:
+      tags:
+        - settle
+      description: 手动触发结算（T+1 兜底/调试；幂等：同 periodDate+subject 唯一，重复返已有）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                periodDate:
+                  type: string
+                subjectType:
+                  type: string
+                  enum: *a59
+                subjectId:
+                  type: string
+              required:
+                - subjectType
+                - subjectId
+      responses:
+        "200":
+          description: 触发成功（新建或返回已有）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      periodDate:
+                        type: string
+                      subjectType:
+                        type: string
+                        enum: *a59
+                      subjectId:
+                        type: string
+                      warehouseId:
+                        type: string
+                        nullable: true
+                      orderCount:
+                        type: integer
+                        minimum: 0
+                      grossAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      commission:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      refundAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      netAmount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a60
+                      confirmedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - periodDate
+                      - subjectType
+                      - subjectId
+                      - warehouseId
+                      - orderCount
+                      - grossAmount
+                      - commission
+                      - refundAmount
+                      - netAmount
+                      - status
+                      - confirmedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "409":
+          description: E-SETTLE-003 race
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/withdrawals:
+    post:
+      tags:
+        - settle
+      description: 创建提现申请（super_admin 代录；金额超可用余额抛 E-SETTLE-001）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requesterType:
+                  type: string
+                  enum: &a61
+                    - MERCHANT
+                    - RIDER
+                requesterId:
+                  type: string
+                amount:
+                  type: integer
+                  minimum: 0
+                  maximum: 999999
+                payoutAccount:
+                  type: object
+                  properties:
+                    channel:
+                      type: string
+                      enum: &a62
+                        - BANK_TRANSFER
+                        - WECHAT
+                        - ALIPAY
+                        - PAYPAL
+                    account:
+                      type: string
+                    holderName:
+                      type: string
+                    bankName:
+                      type: string
+                    branchName:
+                      type: string
+                  required:
+                    - channel
+                    - account
+              required:
+                - requesterType
+                - requesterId
+                - amount
+                - payoutAccount
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      requesterType:
+                        type: string
+                        enum: *a61
+                      requesterId:
+                        type: string
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: &a63
+                          - PENDING
+                          - APPROVED
+                          - REJECTED
+                          - PAID
+                          - FAILED
+                      payoutAccount:
+                        type: object
+                        properties:
+                          channel:
+                            type: string
+                            enum: *a62
+                          account:
+                            type: string
+                          holderName:
+                            type: string
+                          bankName:
+                            type: string
+                          branchName:
+                            type: string
+                        required:
+                          - channel
+                          - account
+                      rejectReason:
+                        type: string
+                        nullable: true
+                      payoutReference:
+                        type: string
+                        nullable: true
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - requesterType
+                      - requesterId
+                      - amount
+                      - status
+                      - payoutAccount
+                      - rejectReason
+                      - payoutReference
+                      - reviewedBy
+                      - reviewedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-SETTLE-001 余额不足
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    get:
+      tags:
+        - settle
+      description: 提现申请列表（offset 分页）。super_admin 写权限；warehouse_staff/customer_service 只读。
+      parameters:
+        - schema:
+            type: string
+            enum: *a61
+          required: false
+          name: requesterType
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: requesterId
+          in: query
+        - schema:
+            type: string
+            enum: *a63
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            default: 1
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 100
+            default: 20
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: 提现列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            requesterType:
+                              type: string
+                              enum: *a61
+                            requesterId:
+                              type: string
+                            amount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            status:
+                              type: string
+                              enum: *a63
+                            payoutAccount:
+                              type: object
+                              properties:
+                                channel:
+                                  type: string
+                                  enum: *a62
+                                account:
+                                  type: string
+                                holderName:
+                                  type: string
+                                bankName:
+                                  type: string
+                                branchName:
+                                  type: string
+                              required:
+                                - channel
+                                - account
+                            rejectReason:
+                              type: string
+                              nullable: true
+                            payoutReference:
+                              type: string
+                              nullable: true
+                            reviewedBy:
+                              type: string
+                              nullable: true
+                            reviewedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            paidAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - requesterType
+                            - requesterId
+                            - amount
+                            - status
+                            - payoutAccount
+                            - rejectReason
+                            - payoutReference
+                            - reviewedBy
+                            - reviewedAt
+                            - paidAt
+                            - createdAt
+                            - updatedAt
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                    required:
+                      - items
+                      - total
+                      - page
+                      - pageSize
+                required:
+                  - success
+                  - data
+        "401":
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/withdrawals/{id}:
+    get:
+      tags:
+        - settle
+      description: 提现申请详情
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      requesterType:
+                        type: string
+                        enum: *a61
+                      requesterId:
+                        type: string
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a63
+                      payoutAccount:
+                        type: object
+                        properties:
+                          channel:
+                            type: string
+                            enum: *a62
+                          account:
+                            type: string
+                          holderName:
+                            type: string
+                          bankName:
+                            type: string
+                          branchName:
+                            type: string
+                        required:
+                          - channel
+                          - account
+                      rejectReason:
+                        type: string
+                        nullable: true
+                      payoutReference:
+                        type: string
+                        nullable: true
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - requesterType
+                      - requesterId
+                      - amount
+                      - status
+                      - payoutAccount
+                      - rejectReason
+                      - payoutReference
+                      - reviewedBy
+                      - reviewedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-SETTLE-002
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/withdrawals/{id}/review:
+    post:
+      tags:
+        - settle
+      description: 审核提现（APPROVE/REJECT，REJECT 必填 rejectReason）。仅 super_admin。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - APPROVE
+                    - REJECT
+                rejectReason:
+                  type: string
+              required:
+                - action
+      responses:
+        "200":
+          description: 审核成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      requesterType:
+                        type: string
+                        enum: *a61
+                      requesterId:
+                        type: string
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a63
+                      payoutAccount:
+                        type: object
+                        properties:
+                          channel:
+                            type: string
+                            enum: *a62
+                          account:
+                            type: string
+                          holderName:
+                            type: string
+                          bankName:
+                            type: string
+                          branchName:
+                            type: string
+                        required:
+                          - channel
+                          - account
+                      rejectReason:
+                        type: string
+                        nullable: true
+                      payoutReference:
+                        type: string
+                        nullable: true
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - requesterType
+                      - requesterId
+                      - amount
+                      - status
+                      - payoutAccount
+                      - rejectReason
+                      - payoutReference
+                      - reviewedBy
+                      - reviewedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-SETTLE-002
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-SETTLE-003 状态不对/race
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/settle/withdrawals/{id}/mark-paid:
+    post:
+      tags:
+        - settle
+      description: 标记线下打款完成（必填 payoutReference，APPROVED → PAID）。仅 super_admin。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payoutReference:
+                  type: string
+                  minLength: 1
+              required:
+                - payoutReference
+      responses:
+        "200":
+          description: 标记成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      requesterType:
+                        type: string
+                        enum: *a61
+                      requesterId:
+                        type: string
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: *a63
+                      payoutAccount:
+                        type: object
+                        properties:
+                          channel:
+                            type: string
+                            enum: *a62
+                          account:
+                            type: string
+                          holderName:
+                            type: string
+                          bankName:
+                            type: string
+                          branchName:
+                            type: string
+                        required:
+                          - channel
+                          - account
+                      rejectReason:
+                        type: string
+                        nullable: true
+                      payoutReference:
+                        type: string
+                        nullable: true
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - requesterType
+                      - requesterId
+                      - amount
+                      - status
+                      - payoutAccount
+                      - rejectReason
+                      - payoutReference
+                      - reviewedBy
+                      - reviewedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-SETTLE-002
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-SETTLE-003 非 APPROVED
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error

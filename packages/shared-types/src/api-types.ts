@@ -11114,6 +11114,929 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/admin/settle/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 结算单列表（offset 分页 page/pageSize/total）。Role: super_admin。 */
+        get: {
+            parameters: {
+                query?: {
+                    subjectType?: "MERCHANT" | "RIDER";
+                    subjectId?: string;
+                    periodFrom?: string;
+                    periodTo?: string;
+                    status?: "PENDING" | "CONFIRMED" | "PAID" | "DISPUTED";
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 结算单列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    periodDate: string;
+                                    /** @enum {string} */
+                                    subjectType: "MERCHANT" | "RIDER";
+                                    subjectId: string;
+                                    warehouseId: string | null;
+                                    orderCount: number;
+                                    grossAmount: number;
+                                    commission: number;
+                                    refundAmount: number;
+                                    netAmount: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "CONFIRMED" | "PAID" | "DISPUTED";
+                                    /** Format: date-time */
+                                    confirmedAt: string | null;
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/settlements/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 结算单详情 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                periodDate: string;
+                                /** @enum {string} */
+                                subjectType: "MERCHANT" | "RIDER";
+                                subjectId: string;
+                                warehouseId: string | null;
+                                orderCount: number;
+                                grossAmount: number;
+                                commission: number;
+                                refundAmount: number;
+                                netAmount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "PAID" | "DISPUTED";
+                                /** Format: date-time */
+                                confirmedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-004 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/settlements/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 确认结算单（PENDING → CONFIRMED，乐观锁 updateMany 防双过） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 确认成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                periodDate: string;
+                                /** @enum {string} */
+                                subjectType: "MERCHANT" | "RIDER";
+                                subjectId: string;
+                                warehouseId: string | null;
+                                orderCount: number;
+                                grossAmount: number;
+                                commission: number;
+                                refundAmount: number;
+                                netAmount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "PAID" | "DISPUTED";
+                                /** Format: date-time */
+                                confirmedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-004 not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-SETTLE-003 状态不对/race */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/settlements/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 手动触发结算（T+1 兜底/调试；幂等：同 periodDate+subject 唯一，重复返已有） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        periodDate?: string;
+                        /** @enum {string} */
+                        subjectType: "MERCHANT" | "RIDER";
+                        subjectId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 触发成功（新建或返回已有） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                periodDate: string;
+                                /** @enum {string} */
+                                subjectType: "MERCHANT" | "RIDER";
+                                subjectId: string;
+                                warehouseId: string | null;
+                                orderCount: number;
+                                grossAmount: number;
+                                commission: number;
+                                refundAmount: number;
+                                netAmount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "CONFIRMED" | "PAID" | "DISPUTED";
+                                /** Format: date-time */
+                                confirmedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-003 race */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 提现申请列表（offset 分页）。super_admin 写权限；warehouse_staff/customer_service 只读。 */
+        get: {
+            parameters: {
+                query?: {
+                    requesterType?: "MERCHANT" | "RIDER";
+                    requesterId?: string;
+                    status?: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 提现列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** @enum {string} */
+                                    requesterType: "MERCHANT" | "RIDER";
+                                    requesterId: string;
+                                    amount: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                    payoutAccount: {
+                                        /** @enum {string} */
+                                        channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                        account: string;
+                                        holderName?: string;
+                                        bankName?: string;
+                                        branchName?: string;
+                                    };
+                                    rejectReason: string | null;
+                                    payoutReference: string | null;
+                                    reviewedBy: string | null;
+                                    /** Format: date-time */
+                                    reviewedAt: string | null;
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+                /** @description UNAUTHORIZED */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description FORBIDDEN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 创建提现申请（super_admin 代录；金额超可用余额抛 E-SETTLE-001） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        requesterType: "MERCHANT" | "RIDER";
+                        requesterId: string;
+                        amount: number;
+                        payoutAccount: {
+                            /** @enum {string} */
+                            channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                            account: string;
+                            holderName?: string;
+                            bankName?: string;
+                            branchName?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 创建成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                requesterType: "MERCHANT" | "RIDER";
+                                requesterId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                payoutAccount: {
+                                    /** @enum {string} */
+                                    channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                    account: string;
+                                    holderName?: string;
+                                    bankName?: string;
+                                    branchName?: string;
+                                };
+                                rejectReason: string | null;
+                                payoutReference: string | null;
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-001 余额不足 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/withdrawals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 提现申请详情 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                requesterType: "MERCHANT" | "RIDER";
+                                requesterId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                payoutAccount: {
+                                    /** @enum {string} */
+                                    channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                    account: string;
+                                    holderName?: string;
+                                    bankName?: string;
+                                    branchName?: string;
+                                };
+                                rejectReason: string | null;
+                                payoutReference: string | null;
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-002 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/withdrawals/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 审核提现（APPROVE/REJECT，REJECT 必填 rejectReason）。仅 super_admin。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "APPROVE" | "REJECT";
+                        rejectReason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 审核成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                requesterType: "MERCHANT" | "RIDER";
+                                requesterId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                payoutAccount: {
+                                    /** @enum {string} */
+                                    channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                    account: string;
+                                    holderName?: string;
+                                    bankName?: string;
+                                    branchName?: string;
+                                };
+                                rejectReason: string | null;
+                                payoutReference: string | null;
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-002 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-SETTLE-003 状态不对/race */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/settle/withdrawals/{id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 标记线下打款完成（必填 payoutReference，APPROVED → PAID）。仅 super_admin。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        payoutReference: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 标记成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                requesterType: "MERCHANT" | "RIDER";
+                                requesterId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                payoutAccount: {
+                                    /** @enum {string} */
+                                    channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                    account: string;
+                                    holderName?: string;
+                                    bankName?: string;
+                                    branchName?: string;
+                                };
+                                rejectReason: string | null;
+                                payoutReference: string | null;
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-002 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-SETTLE-003 非 APPROVED */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

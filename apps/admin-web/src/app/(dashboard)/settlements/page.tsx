@@ -102,21 +102,16 @@ export default function SettlementsListPage() {
   const total = data?.total ?? 0;
   const hasMore = page * PAGE_SIZE < total;
 
-  function handleConfirmSubmit() {
+  async function handleConfirmSubmit() {
     if (!confirmTarget) return;
-    confirmMutation.mutate(
-      { id: confirmTarget.id },
-      {
-        onSuccess: () => {
-          toast({ title: t('admin.settlements.toastConfirmed') });
-          setConfirmTarget(null);
-        },
-        onError: (err) => {
-          const message = err instanceof ApiError ? err.message : t('admin.settlements.toastFailed');
-          toast({ title: t('admin.settlements.toastFailed'), description: message, variant: 'destructive' });
-        },
-      },
-    );
+    try {
+      await confirmMutation.mutateAsync({ id: confirmTarget.id });
+      toast({ title: t('admin.settlements.toastConfirmed') });
+      setConfirmTarget(null);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t('admin.settlements.toastFailed');
+      toast({ title: t('admin.settlements.toastFailed'), description: message, variant: 'destructive' });
+    }
   }
 
   async function handleRunSubmit() {
