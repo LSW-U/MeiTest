@@ -35,6 +35,7 @@ import {
   Settings,
   Image,
   Flame,
+  Wallet,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -123,6 +124,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.statistics',
     href: '/statistics',
     icon: BarChart3,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.settle',
+    href: '/settlements',
+    icon: Wallet,
     perspectives: ['platform'],
   },
   {

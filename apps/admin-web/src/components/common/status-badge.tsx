@@ -40,6 +40,8 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   // 骑手入驻
   APPROVED: 'success',
   REJECTED: 'destructive',
+  // 结算（settlement；PENDING/CONFIRMED/PAID 已由通用映射覆盖，仅补 DISPUTED）
+  DISPUTED: 'destructive',
 };
 
 interface StatusBadgeProps {
