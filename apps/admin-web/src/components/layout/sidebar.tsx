@@ -37,6 +37,7 @@ import {
   Flame,
   Wallet,
   Banknote,
+  ScrollText,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -137,6 +138,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.withdrawals',
     href: '/withdrawals',
     icon: Banknote,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.auditLogs',
+    href: '/audit-logs',
+    icon: ScrollText,
     perspectives: ['platform'],
   },
   {

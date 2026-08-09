@@ -18,7 +18,7 @@ import type { Locale } from '@meimart/shared-locales';
 /** 5 视角（与 zustand perspective state 对应） */
 export type Perspective = 'platform' | 'merchant' | 'warehouse' | 'support' | 'rider-mgmt';
 
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/api/v1';
 
 /** 非敏感登录标志 key（仅前端路由判断，真实鉴权靠 httpOnly cookie） */
