@@ -100,8 +100,9 @@ export class AdminPaymentController {
     return { success: true as const, data: result };
   }
 
-  /** 对账汇总（放 :id 前避路由匹配冲突） */
+  /** 对账汇总（放 :id 前避路由匹配冲突；@Audit 留痕——金额对账属敏感操作） */
   @Get('reconciliation')
+  @Audit({ resource: 'PaymentIntent' })
   async reconciliation() {
     const result = await this.paymentService.getReconciliation();
     return { success: true as const, data: result };
