@@ -48,6 +48,35 @@
     "warehouseName": "Warehouse",
     "abnormalCount": "Abnormal",
     "description": "Real-time business KPIs + trend analysis",
+    "quickActions": "Quick Actions",
+    "merchant": {
+      "title": "Merchant Overview",
+      "description": "Products, orders and refunds at a glance",
+      "actionProducts": "Products",
+      "actionOrders": "Orders",
+      "actionRefunds": "Refunds",
+      "actionPromotions": "Promotions"
+    },
+    "warehouse": {
+      "title": "Warehouse Overview",
+      "description": "Today's orders and alerts",
+      "actionOrders": "Orders",
+      "actionWarehouses": "Warehouses",
+      "actionProducts": "Products"
+    },
+    "support": {
+      "title": "Customer Service Overview",
+      "description": "Pending refunds and reviews",
+      "actionRefunds": "Refunds",
+      "actionReviews": "Reviews",
+      "actionCustomers": "Customers"
+    },
+    "riderMgmt": {
+      "title": "Rider Management Overview",
+      "description": "Online riders and active tasks",
+      "actionRiders": "Riders",
+      "actionOrders": "Orders"
+    },
     "fallback": "Current perspective {name} doesn't have a dedicated dashboard. Switch to platform perspective for full KPIs (GMV / Orders / Online Riders / Abnormal Orders).",
     "noTrendData": "No trend data",
     "noWarehouseData": "No warehouse data",

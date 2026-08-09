@@ -48,6 +48,35 @@
     "warehouseName": "Armazéng",
     "abnormalCount": "Anormal",
     "description": "KPI bisnis real-time + analize trend",
+    "quickActions": "Quick Actions",
+    "merchant": {
+      "title": "Merchant Overview",
+      "description": "Products, orders and refunds at a glance",
+      "actionProducts": "Products",
+      "actionOrders": "Orders",
+      "actionRefunds": "Refunds",
+      "actionPromotions": "Promotions"
+    },
+    "warehouse": {
+      "title": "Warehouse Overview",
+      "description": "Today's orders and alerts",
+      "actionOrders": "Orders",
+      "actionWarehouses": "Warehouses",
+      "actionProducts": "Products"
+    },
+    "support": {
+      "title": "Customer Service Overview",
+      "description": "Pending refunds and reviews",
+      "actionRefunds": "Refunds",
+      "actionReviews": "Reviews",
+      "actionCustomers": "Customers"
+    },
+    "riderMgmt": {
+      "title": "Rider Management Overview",
+      "description": "Online riders and active tasks",
+      "actionRiders": "Riders",
+      "actionOrders": "Orders"
+    },
     "fallback": "Perspektiva {name} atual la iha dashboard ekskluzivu. Troka ba perspektiva platform ba KPI kompleto (GMV / Order / Rider Online / Order Abnormal).",
     "noTrendData": "La iha data trend",
     "noWarehouseData": "La iha data armazén",

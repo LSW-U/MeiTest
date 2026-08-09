@@ -48,6 +48,35 @@
     "warehouseName": "仓库",
     "abnormalCount": "异常数",
     "description": "实时业务 KPI + 趋势分析",
+    "quickActions": "快捷入口",
+    "merchant": {
+      "title": "商家概览",
+      "description": "商品、订单、退款一目了然",
+      "actionProducts": "商品管理",
+      "actionOrders": "订单管理",
+      "actionRefunds": "退款处理",
+      "actionPromotions": "促销活动"
+    },
+    "warehouse": {
+      "title": "仓库概览",
+      "description": "今日订单与异常提醒",
+      "actionOrders": "订单管理",
+      "actionWarehouses": "仓库信息",
+      "actionProducts": "商品库存"
+    },
+    "support": {
+      "title": "客服概览",
+      "description": "待处理退款与评价",
+      "actionRefunds": "退款处理",
+      "actionReviews": "评价管理",
+      "actionCustomers": "客户管理"
+    },
+    "riderMgmt": {
+      "title": "骑手管理概览",
+      "description": "在线骑手与任务状态",
+      "actionRiders": "骑手管理",
+      "actionOrders": "订单管理"
+    },
     "fallback": "当前视角 {name} 暂未提供专属仪表盘。切到 platform 视角查看完整 KPI（GMV / 订单 / 在线骑手 / 异常订单）。",
     "noTrendData": "暂无趋势数据",
     "noWarehouseData": "暂无仓库数据",

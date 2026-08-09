@@ -48,6 +48,35 @@
     "warehouseName": "Armazém",
     "abnormalCount": "Anormal",
     "description": "KPIs de negócios em tempo real + análise de tendências",
+    "quickActions": "Ações Rápidas",
+    "merchant": {
+      "title": "Visão Geral do Merchant",
+      "description": "Produtos, pedidos e reembolsos",
+      "actionProducts": "Produtos",
+      "actionOrders": "Pedidos",
+      "actionRefunds": "Reembolsos",
+      "actionPromotions": "Promoções"
+    },
+    "warehouse": {
+      "title": "Visão Geral do Armazém",
+      "description": "Pedidos de hoje e alertas",
+      "actionOrders": "Pedidos",
+      "actionWarehouses": "Armazéns",
+      "actionProducts": "Produtos"
+    },
+    "support": {
+      "title": "Visão Geral do Atendimento",
+      "description": "Reembolsos e avaliações pendentes",
+      "actionRefunds": "Reembolsos",
+      "actionReviews": "Avaliações",
+      "actionCustomers": "Clientes"
+    },
+    "riderMgmt": {
+      "title": "Visão Geral de Gestão de Riders",
+      "description": "Riders online e tarefas ativas",
+      "actionRiders": "Riders",
+      "actionOrders": "Pedidos"
+    },
     "fallback": "A perspectiva {name} atual não tem um painel dedicado. Mude para a perspectiva de plataforma para KPIs completos (GMV / Pedidos / Riders Online / Pedidos Anormais).",
     "noTrendData": "Sem dados de tendência",
     "noWarehouseData": "Sem dados de armazém",

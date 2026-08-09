@@ -48,6 +48,35 @@
     "warehouseName": "Gudang",
     "abnormalCount": "Abnormal",
     "description": "KPI bisnis real-time + analisis tren",
+    "quickActions": "Aksi Cepat",
+    "merchant": {
+      "title": "Ikhtisar Merchant",
+      "description": "Produk, pesanan, dan pengembalian dana",
+      "actionProducts": "Produk",
+      "actionOrders": "Pesanan",
+      "actionRefunds": "Pengembalian",
+      "actionPromotions": "Promosi"
+    },
+    "warehouse": {
+      "title": "Ikhtisar Gudang",
+      "description": "Pesanan hari ini dan peringatan",
+      "actionOrders": "Pesanan",
+      "actionWarehouses": "Gudang",
+      "actionProducts": "Produk"
+    },
+    "support": {
+      "title": "Ikhtisar Layanan Pelanggan",
+      "description": "Pengembalian dan ulasan tertunda",
+      "actionRefunds": "Pengembalian",
+      "actionReviews": "Ulasan",
+      "actionCustomers": "Pelanggan"
+    },
+    "riderMgmt": {
+      "title": "Ikhtisar Manajemen Rider",
+      "description": "Rider online dan tugas aktif",
+      "actionRiders": "Rider",
+      "actionOrders": "Pesanan"
+    },
     "fallback": "Perspektif {name} saat ini tidak memiliki dasbor khusus. Beralih ke perspektif platform untuk KPI lengkap (GMV / Pesanan / Rider Online / Pesanan Abnormal).",
     "noTrendData": "Tidak ada data tren",
     "noWarehouseData": "Tidak ada data gudang",
