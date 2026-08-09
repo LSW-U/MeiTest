@@ -5240,6 +5240,405 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 支付列表（admin，游标分页 + join order，可按 status/method/orderNo/mockFlag 筛选；批次 3） */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "UNPAID" | "PAID" | "REFUNDED";
+                    method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                    orderId?: string;
+                    orderNo?: string;
+                    mockFlag?: "true" | "false";
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 支付列表（游标分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    orderId: string;
+                                    /** @enum {string} */
+                                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                    /** @enum {string} */
+                                    status: "UNPAID" | "PAID" | "REFUNDED";
+                                    amount: number;
+                                    transactionId: string | null;
+                                    clientSecret: string | null;
+                                    /** Format: uri */
+                                    receiptUrl: string | null;
+                                    mockFlag: boolean;
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                    orderNo: string;
+                                    /** Format: uuid */
+                                    userId: string;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payments/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 对账汇总（group by status + method，运营对账用；批次 3） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 对账汇总 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** @enum {string} */
+                                status: "UNPAID" | "PAID" | "REFUNDED";
+                                /** @enum {string} */
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                count: number;
+                                totalAmount: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 支付详情（含 order + order.refunds；批次 3） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 支付详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** @enum {string} */
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                /** @enum {string} */
+                                status: "UNPAID" | "PAID" | "REFUNDED";
+                                amount: number;
+                                transactionId: string | null;
+                                clientSecret: string | null;
+                                /** Format: uri */
+                                receiptUrl: string | null;
+                                mockFlag: boolean;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                orderNo: string;
+                                /** Format: uuid */
+                                userId: string;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                order: {
+                                    orderNo: string;
+                                    /** Format: uuid */
+                                    userId: string;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    status: string;
+                                    refunds: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        amount: number;
+                                        /** @enum {string} */
+                                        status?: "UNPAID" | "PAID" | "REFUNDED";
+                                        reason: string;
+                                    }[];
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PAYMENT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payments/{orderId}/confirm-receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 确认收款（admin 审核银行转账凭证 → PAID + Order CONFIRMED，同事务编排；批次 3） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 确认成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** @enum {string} */
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                /** @enum {string} */
+                                status: "UNPAID" | "PAID" | "REFUNDED";
+                                amount: number;
+                                transactionId: string | null;
+                                clientSecret: string | null;
+                                /** Format: uri */
+                                receiptUrl: string | null;
+                                mockFlag: boolean;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PAYMENT_STATUS_CONFLICT / ORDER_STATUS_CONFLICT */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payments/{orderId}/mark-failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 标 PaymentIntent FAILED（手动，不自动取消订单；批次 3） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 标失败成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** @enum {string} */
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                /** @enum {string} */
+                                status: "UNPAID" | "PAID" | "REFUNDED";
+                                amount: number;
+                                transactionId: string | null;
+                                clientSecret: string | null;
+                                /** Format: uri */
+                                receiptUrl: string | null;
+                                mockFlag: boolean;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description PAYMENT_STATUS_CONFLICT */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/im/signature": {
         parameters: {
             query?: never;
@@ -13100,6 +13499,136 @@ export interface components {
                 enabled: boolean;
                 mockFlag: boolean;
             }[];
+        };
+        PaymentIntentAdminView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** @enum {string} */
+            status: "UNPAID" | "PAID" | "REFUNDED";
+            amount: number;
+            transactionId: string | null;
+            clientSecret: string | null;
+            /** Format: uri */
+            receiptUrl: string | null;
+            mockFlag: boolean;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            orderNo: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            warehouseId: string;
+        };
+        PaymentIntentAdminDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** @enum {string} */
+            status: "UNPAID" | "PAID" | "REFUNDED";
+            amount: number;
+            transactionId: string | null;
+            clientSecret: string | null;
+            /** Format: uri */
+            receiptUrl: string | null;
+            mockFlag: boolean;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            orderNo: string;
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            warehouseId: string;
+            order: {
+                orderNo: string;
+                /** Format: uuid */
+                userId: string;
+                /** Format: uuid */
+                warehouseId: string;
+                status: string;
+                refunds: {
+                    /** Format: uuid */
+                    id: string;
+                    amount: number;
+                    /** @enum {string} */
+                    status?: "UNPAID" | "PAID" | "REFUNDED";
+                    reason: string;
+                }[];
+            };
+        };
+        ListPaymentIntentsQuery: {
+            /** @enum {string} */
+            status?: "UNPAID" | "PAID" | "REFUNDED";
+            /** @enum {string} */
+            method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            /** Format: uuid */
+            orderId?: string;
+            orderNo?: string;
+            /** @enum {string} */
+            mockFlag?: "true" | "false";
+            cursor?: string;
+            limit?: number;
+        };
+        PaymentIntentListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    orderId: string;
+                    /** @enum {string} */
+                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                    /** @enum {string} */
+                    status: "UNPAID" | "PAID" | "REFUNDED";
+                    amount: number;
+                    transactionId: string | null;
+                    clientSecret: string | null;
+                    /** Format: uri */
+                    receiptUrl: string | null;
+                    mockFlag: boolean;
+                    /** Format: date-time */
+                    paidAt: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                    /** Format: date-time */
+                    updatedAt: string;
+                    orderNo: string;
+                    /** Format: uuid */
+                    userId: string;
+                    /** Format: uuid */
+                    warehouseId: string;
+                }[];
+                nextCursor: string | null;
+                hasMore: boolean;
+                total?: number;
+            };
+        };
+        MarkFailedRequest: {
+            reason: string;
+        };
+        ReconciliationItem: {
+            /** @enum {string} */
+            status: "UNPAID" | "PAID" | "REFUNDED";
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            count: number;
+            totalAmount: number;
         };
         DashboardSummary: {
             /** @enum {string} */

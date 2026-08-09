@@ -18,6 +18,8 @@
  */
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { db } from '../../shared/db';
+import { type Tx } from '../../shared/db/transaction';
+import { Prisma } from '../../prisma/client';
 import { logger } from '../../shared/logger/logger';
 import {
   getPaymentStrategy,
@@ -57,6 +59,48 @@ export interface PaymentIntentView {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** PaymentIntent admin 视图（扩展 + orderNo/userId/warehouseId，join order 取） */
+export interface PaymentIntentAdminView extends PaymentIntentView {
+  orderNo: string;
+  userId: string;
+  warehouseId: string;
+}
+
+/** PaymentIntent admin 详情（含 order.refunds，批次 3） */
+export interface PaymentIntentAdminDetail extends PaymentIntentAdminView {
+  order: {
+    orderNo: string;
+    userId: string;
+    warehouseId: string;
+    status: string;
+    refunds: Array<{
+      id: string;
+      amount: number;
+      status: string;
+      reason: string;
+    }>;
+  };
+}
+
+/** admin 列表查询入参（批次 3） */
+export interface ListPaymentIntentsParams {
+  status?: 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+  method?: PaymentMethodValue;
+  orderId?: string;
+  orderNo?: string;
+  mockFlag?: boolean;
+  cursor?: string;
+  limit?: number;
+}
+
+/** 对账汇总项（group by status + method） */
+export interface ReconciliationItem {
+  status: string;
+  method: string;
+  count: number;
+  totalAmount: number;
 }
 
 /** 支付方式列表项（W7 P1-1） */
@@ -312,6 +356,220 @@ export class PaymentService {
   }
 
   /**
+   * markPaidByAdmin 事务版（供 admin-payment controller confirm-receipt 编排，批次 3）
+   *
+   * 用 tx.paymentIntent 替代 db.paymentIntent，与 orderService.markPaidTx 同事务
+   * （本文件原 262-278 注释警告的一致性兜底方案）。
+   *
+   * 幂等：intent 已 PAID 直接 return view
+   * 状态机：PENDING/PROCESSING → PAID（FAILED/CANCELLED/REFUNDED 不可逆，抛 E-PAYMENT-001）
+   *
+   * @internal 仅供 admin-payment.controller 编排，不对外暴露
+   */
+  async markPaidByAdminTx(
+    tx: Tx,
+    orderId: string,
+    adminUserId: string,
+  ): Promise<PaymentIntentView> {
+    const intent = await tx.paymentIntent.findUnique({ where: { orderId } });
+    if (!intent) {
+      throw new NotFoundException({
+        code: 'E-PAYMENT-005',
+        message: 'Payment intent not found',
+      });
+    }
+    if (intent.status === 'PAID') {
+      return this.toView(intent);
+    }
+    if (
+      intent.status === 'FAILED' ||
+      intent.status === 'CANCELLED' ||
+      intent.status === 'REFUNDED'
+    ) {
+      throw new ConflictException({
+        code: 'E-PAYMENT-001',
+        message: `Payment intent status ${intent.status} cannot be confirmed`,
+      });
+    }
+
+    const updated = await tx.paymentIntent.update({
+      where: { id: intent.id },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+        providerPayload: {
+          ...(intent.providerPayload as object | null),
+          confirmedByAdmin: adminUserId,
+          confirmedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    logger.info({
+      msg: 'PAYMENT_ADMIN_CONFIRMED_TX',
+      intentId: intent.id,
+      orderId,
+      adminUserId,
+    });
+
+    return this.toView(updated);
+  }
+
+  /**
+   * admin 列表（游标分页 + join order 取 orderNo/userId/warehouseId，批次 3）
+   *
+   * 游标 = 上一页最后一条 intent.id；take: limit+1 探测 hasMore。
+   * orderNo 搜索走 order 关系过滤（contains insensitive）。
+   */
+  async listAllIntents(
+    params: ListPaymentIntentsParams,
+  ): Promise<{
+    items: PaymentIntentAdminView[];
+    nextCursor: string | null;
+    hasMore: boolean;
+  }> {
+    const limit = Math.min(params.limit ?? 50, 100);
+    const where: Prisma.PaymentIntentWhereInput = {};
+    if (params.status) where.status = params.status;
+    if (params.method) where.method = params.method;
+    if (params.orderId) where.orderId = params.orderId;
+    if (params.mockFlag !== undefined) where.mockFlag = params.mockFlag;
+    if (params.orderNo) {
+      where.order = { orderNo: { contains: params.orderNo, mode: 'insensitive' } };
+    }
+
+    const intents = await db.paymentIntent.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
+      include: {
+        order: { select: { orderNo: true, userId: true, warehouseId: true } },
+      },
+    });
+
+    const hasMore = intents.length > limit;
+    const items = hasMore ? intents.slice(0, limit) : intents;
+    return {
+      items: items.map((i) => this.toAdminView(i)),
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore,
+    };
+  }
+
+  /** admin 详情（include order + order.refunds，批次 3） */
+  async getAdminDetail(intentId: string): Promise<PaymentIntentAdminDetail> {
+    const intent = await db.paymentIntent.findUnique({
+      where: { id: intentId },
+      include: {
+        order: {
+          select: {
+            orderNo: true,
+            userId: true,
+            warehouseId: true,
+            status: true,
+            refunds: {
+              select: { id: true, amount: true, status: true, reason: true },
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
+    });
+    if (!intent) {
+      throw new NotFoundException({
+        code: 'E-PAYMENT-003',
+        message: `Payment intent not found: ${intentId}`,
+      });
+    }
+    const { order, ...base } = intent;
+    return {
+      ...this.toAdminView({
+        ...base,
+        order: {
+          orderNo: order.orderNo,
+          userId: order.userId,
+          warehouseId: order.warehouseId,
+        },
+      }),
+      order,
+    };
+  }
+
+  /**
+   * admin 标 PaymentIntent FAILED（手动，批次 3）
+   *
+   * 状态机：PENDING/PROCESSING → FAILED（PAID/CANCELLED/REFUNDED 不可逆，抛 E-PAYMENT-002）
+   * 不自动取消订单（admin 看到后手动走 admin-order cancel，避免误操作）
+   */
+  async markFailedByAdmin(
+    orderId: string,
+    adminUserId: string,
+    reason: string,
+  ): Promise<PaymentIntentView> {
+    const intent = await db.paymentIntent.findUnique({ where: { orderId } });
+    if (!intent) {
+      throw new NotFoundException({
+        code: 'E-PAYMENT-005',
+        message: 'Payment intent not found',
+      });
+    }
+    if (intent.status === 'FAILED') {
+      return this.toView(intent);
+    }
+    if (
+      intent.status === 'PAID' ||
+      intent.status === 'CANCELLED' ||
+      intent.status === 'REFUNDED'
+    ) {
+      throw new ConflictException({
+        code: 'E-PAYMENT-002',
+        message: `Payment intent status ${intent.status} cannot be marked as failed`,
+      });
+    }
+
+    const updated = await db.paymentIntent.update({
+      where: { id: intent.id },
+      data: {
+        status: 'FAILED',
+        providerPayload: {
+          ...(intent.providerPayload as object | null),
+          failedByAdmin: adminUserId,
+          failedAt: new Date().toISOString(),
+          failReason: reason,
+        },
+      },
+    });
+
+    logger.info({
+      msg: 'PAYMENT_ADMIN_FAILED',
+      intentId: intent.id,
+      orderId,
+      adminUserId,
+      reason,
+    });
+
+    return this.toView(updated);
+  }
+
+  /**
+   * 对账汇总（group by status + method，运营对账用，批次 3）
+   */
+  async getReconciliation(): Promise<ReconciliationItem[]> {
+    const rows = await db.paymentIntent.groupBy({
+      by: ['status', 'method'],
+      _count: { _all: true },
+      _sum: { amount: true },
+    });
+    return rows.map((r) => ({
+      status: r.status as string,
+      method: r.method as string,
+      count: r._count._all,
+      totalAmount: r._sum.amount ?? 0,
+    }));
+  }
+
+  /**
    * 列出可用支付方式（W7 P1-1）
    *
    * 返回 5 种方式的多语言 name/subtitle + icon + isDefault + enabled + mockFlag。
@@ -364,6 +622,29 @@ export class PaymentService {
       paidAt: intent.paidAt ? intent.paidAt.toISOString() : null,
       createdAt: intent.createdAt.toISOString(),
       updatedAt: intent.updatedAt.toISOString(),
+    };
+  }
+
+  /** DB PaymentIntent（含 order 摘要）→ admin view（批次 3） */
+  private toAdminView(intent: {
+    id: string;
+    orderId: string;
+    method: PaymentMethodValue;
+    status: 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+    amount: number;
+    transactionId: string | null;
+    mockFlag: boolean;
+    receiptUrl: string | null;
+    paidAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    order: { orderNo: string; userId: string; warehouseId: string };
+  }): PaymentIntentAdminView {
+    return {
+      ...this.toView(intent),
+      orderNo: intent.order.orderNo,
+      userId: intent.order.userId,
+      warehouseId: intent.order.warehouseId,
     };
   }
 }

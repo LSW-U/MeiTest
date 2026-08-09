@@ -100,6 +100,12 @@ import {
   PaymentIntent,
   UploadReceiptRequest,
   PaymentMethodItem,
+  PaymentIntentAdminView,
+  PaymentIntentAdminDetail,
+  ListPaymentIntentsQuery,
+  PaymentIntentListResponse,
+  MarkFailedRequest,
+  ReconciliationItem,
   PaymentMethodListResponseData,
   // platform
   DashboardSummary,
@@ -275,6 +281,13 @@ registry.register('PaymentIntent', PaymentIntent);
 registry.register('UploadReceiptRequest', UploadReceiptRequest);
 registry.register('PaymentMethodItem', PaymentMethodItem);
 registry.register('PaymentMethodListResponseData', PaymentMethodListResponseData);
+// 批次 3 admin payment
+registry.register('PaymentIntentAdminView', PaymentIntentAdminView);
+registry.register('PaymentIntentAdminDetail', PaymentIntentAdminDetail);
+registry.register('ListPaymentIntentsQuery', ListPaymentIntentsQuery);
+registry.register('PaymentIntentListResponse', PaymentIntentListResponse);
+registry.register('MarkFailedRequest', MarkFailedRequest);
+registry.register('ReconciliationItem', ReconciliationItem);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
@@ -1372,6 +1385,86 @@ registry.registerPath({
   responses: {
     200: { description: '订单已确认' },
     409: { description: 'PAYMENT_NOT_PAID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// Admin Payment（批次 3：admin payment 透视）
+// ============================================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/payments',
+  tags: ['payment'],
+  description: '支付列表（admin，游标分页 + join order，可按 status/method/orderNo/mockFlag 筛选；批次 3）',
+  request: { query: ListPaymentIntentsQuery },
+  responses: {
+    200: { description: '支付列表（游标分页）', content: { 'application/json': { schema: PaymentIntentListResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/payments/reconciliation',
+  tags: ['payment'],
+  description: '对账汇总（group by status + method，运营对账用；批次 3）',
+  responses: {
+    200: {
+      description: '对账汇总',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: z.array(ReconciliationItem) }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/payments/{id}',
+  tags: ['payment'],
+  description: '支付详情（含 order + order.refunds；批次 3）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '支付详情',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: PaymentIntentAdminDetail }) } },
+    },
+    404: { description: 'PAYMENT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/payments/{orderId}/confirm-receipt',
+  tags: ['payment'],
+  description: '确认收款（admin 审核银行转账凭证 → PAID + Order CONFIRMED，同事务编排；批次 3）',
+  request: { params: z.object({ orderId: Id }) },
+  responses: {
+    200: {
+      description: '确认成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: PaymentIntent }) } },
+    },
+    409: { description: 'PAYMENT_STATUS_CONFLICT / ORDER_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/payments/{orderId}/mark-failed',
+  tags: ['payment'],
+  description: '标 PaymentIntent FAILED（手动，不自动取消订单；批次 3）',
+  request: {
+    params: z.object({ orderId: Id }),
+    body: { content: { 'application/json': { schema: MarkFailedRequest } } },
+  },
+  responses: {
+    200: {
+      description: '标失败成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: PaymentIntent }) } },
+    },
+    409: { description: 'PAYMENT_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

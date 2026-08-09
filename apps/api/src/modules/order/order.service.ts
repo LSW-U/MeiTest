@@ -697,57 +697,92 @@ export class OrderService {
     });
 
     await withTransaction(async (tx: Tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order) {
-        // P1-3 修复：raw Error → 业务错误码
-        throw new NotFoundException({
-          code: 'E-ORDER-004',
-          message: `Order not found: ${orderId}`,
-        });
-      }
-      // 已付幂等（重复回调直接 return）
-      if (order.paymentStatus === 'PAID') {
-        return;
-      }
-      // 状态机校验：仅 PENDING_PAYMENT 可走支付成功路径
-      if (order.status !== 'PENDING_PAYMENT') {
-        throw new ConflictException({
-          code: 'E-ORDER-003',
-          message: `Order status ${order.status} cannot be marked as paid`,
-        });
-      }
-
-      assertCanTransition(order.status, 'CONFIRMED');
-
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'CONFIRMED',
-          confirmedAt: new Date(),
-          paymentStatus: 'PAID',
-          paidAt: new Date(),
-        },
-      });
-
-      await tx.orderEvent.create({
-        data: {
-          orderId,
-          eventType: 'PAYMENT_SUCCESS',
-          fromStatus: order.status,
-          toStatus: 'CONFIRMED',
-          operatorId: eventCtx.operatorId ?? null,
-          deviceType: toPrismaDeviceType(eventCtx.deviceType),
-          perspective: eventCtx.perspective ?? null,
-          metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
-        },
-      });
+      // 核心逻辑抽到 markPaidTx（供 admin-payment confirm-receipt 编排复用，避嵌套事务）
+      await this.markPaidTx(tx, orderId, eventCtx);
     });
 
+    // 事务后副作用（抽到 postMarkPaidEffects，供 admin-payment 编排复用）
+    await this.postMarkPaidEffects(orderId, eventCtx, orderForNotify);
+  }
+
+  /**
+   * markPaid 事务内核心（抽出来供 admin payment confirm-receipt 编排复用，避嵌套事务）
+   *
+   * 做的事：order update CONFIRMED + orderEvent PAYMENT_SUCCESS
+   * 不做的事：事务后副作用（cancelTimeout / createTask / broadcast / notify）→ postMarkPaidEffects
+   *
+   * 一致性陷阱：payment.service.ts:262-278 注释警告，markPaidByAdmin 必须与 markPaid 同事务，
+   * 否则留下 PaymentIntent=PAID / Order=PENDING_PAYMENT 不一致。controller 用 withTransaction
+   * 包 markPaidByAdminTx + 本方法，事务提交后再调 postMarkPaidEffects。
+   *
+   * @internal 仅供 markPaid + admin-payment.controller 编排，不对外暴露
+   */
+  async markPaidTx(tx: Tx, orderId: string, eventCtx: OrderEventContext): Promise<void> {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      // P1-3 修复：raw Error → 业务错误码
+      throw new NotFoundException({
+        code: 'E-ORDER-004',
+        message: `Order not found: ${orderId}`,
+      });
+    }
+    // 已付幂等（重复回调直接 return）
+    if (order.paymentStatus === 'PAID') {
+      return;
+    }
+    // 状态机校验：仅 PENDING_PAYMENT 可走支付成功路径
+    if (order.status !== 'PENDING_PAYMENT') {
+      throw new ConflictException({
+        code: 'E-ORDER-003',
+        message: `Order status ${order.status} cannot be marked as paid`,
+      });
+    }
+
+    assertCanTransition(order.status, 'CONFIRMED');
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CONFIRMED',
+        confirmedAt: new Date(),
+        paymentStatus: 'PAID',
+        paidAt: new Date(),
+      },
+    });
+
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        eventType: 'PAYMENT_SUCCESS',
+        fromStatus: order.status,
+        toStatus: 'CONFIRMED',
+        operatorId: eventCtx.operatorId ?? null,
+        deviceType: toPrismaDeviceType(eventCtx.deviceType),
+        perspective: eventCtx.perspective ?? null,
+        metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
+      },
+    });
+  }
+
+  /**
+   * markPaid 事务后副作用（cancelTimeout / createTask / broadcast / notify）
+   * 失败容忍：任一失败不阻塞主流程（admin 可手动补 task / 重发通知）。
+   * 抽出来供 admin payment confirm-receipt 编排后复用（事务提交后调）。
+   */
+  async postMarkPaidEffects(
+    orderId: string,
+    eventCtx: OrderEventContext,
+    orderForNotify: {
+      userId: string;
+      orderNo: string;
+      status: string;
+      paymentStatus: string;
+    } | null,
+  ): Promise<void> {
     // 事务后取消超时 job（避免 job 触发时再尝试取消已 CONFIRMED 的订单）
     await cancelOrderTimeout(this.timeoutQueue, orderId);
 
-    // 订单 CONFIRMED → 自动创建 DeliveryTask（骑手可抢单）
-    // 失败容忍：dispatch 创建失败不阻塞 markPaid（admin 可手动补 task）
+    // 订单 CONFIRMED → 自动创建 DeliveryTask（失败容忍）
     if (this.dispatchService) {
       try {
         await this.dispatchService.createTaskForOrder(orderId);
@@ -760,8 +795,7 @@ export class OrderService {
       }
     }
 
-    // W4-REVIEW P0-3 修复：串接 RealtimeGateway 业务事件 + NotifyFactory 通知
-    // 失败容忍：WS/通知失败不阻塞订单流程
+    // WS 广播（失败容忍）
     try {
       this.realtime?.broadcastOrderStatusChange(orderId, {
         fromStatus: 'PENDING_PAYMENT',
@@ -777,6 +811,7 @@ export class OrderService {
       });
     }
 
+    // 通知（失败容忍）
     if (this.notifyFactory && orderForNotify) {
       try {
         await this.notifyFactory.sendMulti(

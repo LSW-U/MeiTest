@@ -728,7 +728,7 @@ components:
           maxLength: 100
         role:
           type: string
-          enum: &a45
+          enum: &a46
             - SUPER_ADMIN
             - CUSTOMER
             - RIDER
@@ -2594,6 +2594,322 @@ components:
               - mockFlag
       required:
         - items
+    PaymentIntentAdminView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        method:
+          type: string
+          enum: *a13
+        status:
+          type: string
+          enum: *a16
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        transactionId:
+          type: string
+          nullable: true
+        clientSecret:
+          type: string
+          nullable: true
+        receiptUrl:
+          type: string
+          nullable: true
+          format: uri
+        mockFlag:
+          type: boolean
+        paidAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        orderNo:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+      required:
+        - id
+        - orderId
+        - method
+        - status
+        - amount
+        - transactionId
+        - clientSecret
+        - receiptUrl
+        - mockFlag
+        - paidAt
+        - createdAt
+        - updatedAt
+        - orderNo
+        - userId
+        - warehouseId
+    PaymentIntentAdminDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        method:
+          type: string
+          enum: *a13
+        status:
+          type: string
+          enum: *a16
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        transactionId:
+          type: string
+          nullable: true
+        clientSecret:
+          type: string
+          nullable: true
+        receiptUrl:
+          type: string
+          nullable: true
+          format: uri
+        mockFlag:
+          type: boolean
+        paidAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        orderNo:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        order:
+          type: object
+          properties:
+            orderNo:
+              type: string
+            userId:
+              type: string
+              format: uuid
+            warehouseId:
+              type: string
+              format: uuid
+            status:
+              type: string
+            refunds:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  amount:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  status:
+                    type: string
+                    enum: *a16
+                  reason:
+                    type: string
+                required:
+                  - id
+                  - amount
+                  - reason
+          required:
+            - orderNo
+            - userId
+            - warehouseId
+            - status
+            - refunds
+      required:
+        - id
+        - orderId
+        - method
+        - status
+        - amount
+        - transactionId
+        - clientSecret
+        - receiptUrl
+        - mockFlag
+        - paidAt
+        - createdAt
+        - updatedAt
+        - orderNo
+        - userId
+        - warehouseId
+        - order
+    ListPaymentIntentsQuery:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: *a16
+        method:
+          type: string
+          enum: *a13
+        orderId:
+          type: string
+          format: uuid
+        orderNo:
+          type: string
+        mockFlag:
+          type: string
+          enum: &a42
+            - "true"
+            - "false"
+        cursor:
+          type: string
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+    PaymentIntentListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  orderId:
+                    type: string
+                    format: uuid
+                  method:
+                    type: string
+                    enum: *a13
+                  status:
+                    type: string
+                    enum: *a16
+                  amount:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  transactionId:
+                    type: string
+                    nullable: true
+                  clientSecret:
+                    type: string
+                    nullable: true
+                  receiptUrl:
+                    type: string
+                    nullable: true
+                    format: uri
+                  mockFlag:
+                    type: boolean
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  orderNo:
+                    type: string
+                  userId:
+                    type: string
+                    format: uuid
+                  warehouseId:
+                    type: string
+                    format: uuid
+                required:
+                  - id
+                  - orderId
+                  - method
+                  - status
+                  - amount
+                  - transactionId
+                  - clientSecret
+                  - receiptUrl
+                  - mockFlag
+                  - paidAt
+                  - createdAt
+                  - updatedAt
+                  - orderNo
+                  - userId
+                  - warehouseId
+            nextCursor:
+              type: string
+              nullable: true
+            hasMore:
+              type: boolean
+            total:
+              type: integer
+          required:
+            - items
+            - nextCursor
+            - hasMore
+      required:
+        - success
+        - data
+    MarkFailedRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - reason
+    ReconciliationItem:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: *a16
+        method:
+          type: string
+          enum: *a13
+        count:
+          type: integer
+        totalAmount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+      required:
+        - status
+        - method
+        - count
+        - totalAmount
     DashboardSummary:
       type: object
       properties:
@@ -2861,20 +3177,20 @@ components:
           minLength: 1
         transport:
           type: string
-          enum: &a42
+          enum: &a43
             - websocket
             - polling
           default: websocket
         authScheme:
           type: string
-          enum: &a43
+          enum: &a44
             - bearer
         userId:
           type: string
           minLength: 1
         role:
           type: string
-          enum: &a44
+          enum: &a45
             - CUSTOMER
             - RIDER
             - SUPER_ADMIN
@@ -3004,7 +3320,7 @@ components:
       properties:
         vehicleType:
           type: string
-          enum: &a48
+          enum: &a49
             - MOTORCYCLE
             - BICYCLE
             - CAR
@@ -3070,7 +3386,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: &a49
+          enum: &a50
             - ACTIVE
             - PAUSED
             - DELETED
@@ -3219,7 +3535,7 @@ components:
       properties:
         action:
           type: string
-          enum: &a50
+          enum: &a51
             - LOGIN
             - REGISTER
             - BLOCKED
@@ -3323,7 +3639,7 @@ components:
           maximum: 180
         source:
           type: string
-          enum: &a54
+          enum: &a55
             - nominatim
             - fallback
         formattedAddress:
@@ -3489,7 +3805,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a57 []
+          default: &a58 []
         category:
           type: string
           enum: *a21
@@ -3513,7 +3829,7 @@ components:
             type: string
             enum: *a22
           maxItems: 4
-          default: &a58 []
+          default: &a59 []
         comment:
           type: object
           additionalProperties:
@@ -3531,7 +3847,7 @@ components:
           type: string
         theme:
           type: string
-          enum: &a55
+          enum: &a56
             - deals
             - coupons
             - delivery
@@ -3542,7 +3858,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a56
+          enum: &a57
             - ACTIVE
             - INACTIVE
       required:
@@ -10086,6 +10402,585 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/payments:
+    get:
+      tags:
+        - payment
+      description: 支付列表（admin，游标分页 + join order，可按 status/method/orderNo/mockFlag 筛选；批次 3）
+      parameters:
+        - schema:
+            type: string
+            enum: *a16
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum: *a13
+          required: false
+          name: method
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: orderId
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: orderNo
+          in: query
+        - schema:
+            type: string
+            enum: *a42
+          required: false
+          name: mockFlag
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: 支付列表（游标分页）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            orderId:
+                              type: string
+                              format: uuid
+                            method:
+                              type: string
+                              enum: *a13
+                            status:
+                              type: string
+                              enum: *a16
+                            amount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            transactionId:
+                              type: string
+                              nullable: true
+                            clientSecret:
+                              type: string
+                              nullable: true
+                            receiptUrl:
+                              type: string
+                              nullable: true
+                              format: uri
+                            mockFlag:
+                              type: boolean
+                            paidAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            orderNo:
+                              type: string
+                            userId:
+                              type: string
+                              format: uuid
+                            warehouseId:
+                              type: string
+                              format: uuid
+                          required:
+                            - id
+                            - orderId
+                            - method
+                            - status
+                            - amount
+                            - transactionId
+                            - clientSecret
+                            - receiptUrl
+                            - mockFlag
+                            - paidAt
+                            - createdAt
+                            - updatedAt
+                            - orderNo
+                            - userId
+                            - warehouseId
+                      nextCursor:
+                        type: string
+                        nullable: true
+                      hasMore:
+                        type: boolean
+                      total:
+                        type: integer
+                    required:
+                      - items
+                      - nextCursor
+                      - hasMore
+                required:
+                  - success
+                  - data
+  /api/v1/admin/payments/reconciliation:
+    get:
+      tags:
+        - payment
+      description: 对账汇总（group by status + method，运营对账用；批次 3）
+      responses:
+        "200":
+          description: 对账汇总
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                          enum: *a16
+                        method:
+                          type: string
+                          enum: *a13
+                        count:
+                          type: integer
+                        totalAmount:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                      required:
+                        - status
+                        - method
+                        - count
+                        - totalAmount
+                required:
+                  - success
+                  - data
+  /api/v1/admin/payments/{id}:
+    get:
+      tags:
+        - payment
+      description: 支付详情（含 order + order.refunds；批次 3）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 支付详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      method:
+                        type: string
+                        enum: *a13
+                      status:
+                        type: string
+                        enum: *a16
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      transactionId:
+                        type: string
+                        nullable: true
+                      clientSecret:
+                        type: string
+                        nullable: true
+                      receiptUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      mockFlag:
+                        type: boolean
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      orderNo:
+                        type: string
+                      userId:
+                        type: string
+                        format: uuid
+                      warehouseId:
+                        type: string
+                        format: uuid
+                      order:
+                        type: object
+                        properties:
+                          orderNo:
+                            type: string
+                          userId:
+                            type: string
+                            format: uuid
+                          warehouseId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                          refunds:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  format: uuid
+                                amount:
+                                  type: integer
+                                  minimum: 0
+                                  maximum: 999999
+                                status:
+                                  type: string
+                                  enum: *a16
+                                reason:
+                                  type: string
+                              required:
+                                - id
+                                - amount
+                                - reason
+                        required:
+                          - orderNo
+                          - userId
+                          - warehouseId
+                          - status
+                          - refunds
+                    required:
+                      - id
+                      - orderId
+                      - method
+                      - status
+                      - amount
+                      - transactionId
+                      - clientSecret
+                      - receiptUrl
+                      - mockFlag
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                      - orderNo
+                      - userId
+                      - warehouseId
+                      - order
+                required:
+                  - success
+                  - data
+        "404":
+          description: PAYMENT_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/payments/{orderId}/confirm-receipt:
+    post:
+      tags:
+        - payment
+      description: 确认收款（admin 审核银行转账凭证 → PAID + Order CONFIRMED，同事务编排；批次 3）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: orderId
+          in: path
+      responses:
+        "200":
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      method:
+                        type: string
+                        enum: *a13
+                      status:
+                        type: string
+                        enum: *a16
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      transactionId:
+                        type: string
+                        nullable: true
+                      clientSecret:
+                        type: string
+                        nullable: true
+                      receiptUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      mockFlag:
+                        type: boolean
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - method
+                      - status
+                      - amount
+                      - transactionId
+                      - clientSecret
+                      - receiptUrl
+                      - mockFlag
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "409":
+          description: PAYMENT_STATUS_CONFLICT / ORDER_STATUS_CONFLICT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/payments/{orderId}/mark-failed:
+    post:
+      tags:
+        - payment
+      description: 标 PaymentIntent FAILED（手动，不自动取消订单；批次 3）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: orderId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+              required:
+                - reason
+      responses:
+        "200":
+          description: 标失败成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      method:
+                        type: string
+                        enum: *a13
+                      status:
+                        type: string
+                        enum: *a16
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      transactionId:
+                        type: string
+                        nullable: true
+                      clientSecret:
+                        type: string
+                        nullable: true
+                      receiptUrl:
+                        type: string
+                        nullable: true
+                        format: uri
+                      mockFlag:
+                        type: boolean
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - method
+                      - status
+                      - amount
+                      - transactionId
+                      - clientSecret
+                      - receiptUrl
+                      - mockFlag
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "409":
+          description: PAYMENT_STATUS_CONFLICT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/im/signature:
     get:
       tags:
@@ -10108,17 +11003,17 @@ paths:
                     minLength: 1
                   transport:
                     type: string
-                    enum: *a42
+                    enum: *a43
                     default: websocket
                   authScheme:
                     type: string
-                    enum: *a43
+                    enum: *a44
                   userId:
                     type: string
                     minLength: 1
                   role:
                     type: string
-                    enum: *a44
+                    enum: *a45
                   serverEvents:
                     type: array
                     items:
@@ -10240,7 +11135,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a45
+            enum: *a46
           required: false
           name: role
           in: query
@@ -12666,7 +13561,7 @@ paths:
                               type: string
                             vehicleType:
                               type: string
-                              enum: &a46
+                              enum: &a47
                                 - MOTORCYCLE
                                 - BICYCLE
                                 - CAR
@@ -12675,7 +13570,7 @@ paths:
                               nullable: true
                             status:
                               type: string
-                              enum: &a47
+                              enum: &a48
                                 - OFFLINE
                                 - ONLINE
                                 - BUSY
@@ -12822,13 +13717,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -12988,13 +13883,13 @@ paths:
                           type: string
                         vehicleType:
                           type: string
-                          enum: *a46
+                          enum: *a47
                         vehiclePlate:
                           type: string
                           nullable: true
                         status:
                           type: string
-                          enum: *a47
+                          enum: *a48
                         totalDeliveries:
                           type: integer
                           minimum: 0
@@ -13120,13 +14015,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -13203,7 +14098,7 @@ paths:
               properties:
                 vehicleType:
                   type: string
-                  enum: *a48
+                  enum: *a49
                 vehiclePlate:
                   type: string
                   nullable: true
@@ -13240,13 +14135,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -13704,7 +14599,7 @@ paths:
                           format: date-time
                         status:
                           type: string
-                          enum: *a49
+                          enum: *a50
                         createdBy:
                           type: string
                         createdAt:
@@ -13906,7 +14801,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       createdBy:
                         type: string
                       createdAt:
@@ -14064,7 +14959,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       createdBy:
                         type: string
                       createdAt:
@@ -14231,7 +15126,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       createdBy:
                         type: string
                       createdAt:
@@ -14389,7 +15284,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       createdBy:
                         type: string
                       createdAt:
@@ -14547,7 +15442,7 @@ paths:
                         format: date-time
                       status:
                         type: string
-                        enum: *a49
+                        enum: *a50
                       createdBy:
                         type: string
                       createdAt:
@@ -14963,7 +15858,7 @@ paths:
                     properties:
                       action:
                         type: string
-                        enum: *a50
+                        enum: *a51
                       accessToken:
                         type: string
                       refreshToken:
@@ -15270,13 +16165,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -15366,13 +16261,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -15443,7 +16338,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: *a47
+                  enum: *a48
                 acceptMode:
                   type: string
                   enum:
@@ -15478,13 +16373,13 @@ paths:
                         type: string
                       vehicleType:
                         type: string
-                        enum: *a46
+                        enum: *a47
                       vehiclePlate:
                         type: string
                         nullable: true
                       status:
                         type: string
-                        enum: *a47
+                        enum: *a48
                       totalDeliveries:
                         type: integer
                         minimum: 0
@@ -15609,7 +16504,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: &a51
+                              enum: &a52
                                 - PENDING_ASSIGN
                                 - ASSIGNED
                                 - PICKED_UP
@@ -15712,7 +16607,7 @@ paths:
                               format: uuid
                             status:
                               type: string
-                              enum: *a51
+                              enum: *a52
                             pickupAddress:
                               type: string
                             pickupLat:
@@ -15817,7 +16712,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a51
+                        enum: *a52
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -15952,7 +16847,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a51
+                        enum: *a52
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -16091,7 +16986,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a51
+                        enum: *a52
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -16236,7 +17131,7 @@ paths:
                         format: uuid
                       status:
                         type: string
-                        enum: *a51
+                        enum: *a52
                       pickupAddress:
                         type: string
                       pickupLat:
@@ -16514,7 +17409,7 @@ paths:
                   format: uuid
                 reason:
                   type: string
-                  enum: &a52
+                  enum: &a53
                     - OUT_OF_STOCK
                     - EXPIRED
                     - QUALITY_ISSUE
@@ -16573,14 +17468,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a52
+                        enum: *a53
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: &a53
+                        enum: &a54
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -16739,14 +17634,14 @@ paths:
                           maximum: 999999
                         reason:
                           type: string
-                          enum: *a52
+                          enum: *a53
                         reasonDetail:
                           type: string
                           nullable: true
                           maxLength: 500
                         status:
                           type: string
-                          enum: *a53
+                          enum: *a54
                         transactionId:
                           type: string
                           nullable: true
@@ -16876,14 +17771,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a52
+                        enum: *a53
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a53
+                        enum: *a54
                       transactionId:
                         type: string
                         nullable: true
@@ -17042,14 +17937,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a52
+                        enum: *a53
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a53
+                        enum: *a54
                       transactionId:
                         type: string
                         nullable: true
@@ -17145,7 +18040,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a53
+            enum: *a54
           required: false
           name: status
           in: query
@@ -17196,14 +18091,14 @@ paths:
                               maximum: 999999
                             reason:
                               type: string
-                              enum: *a52
+                              enum: *a53
                             reasonDetail:
                               type: string
                               nullable: true
                               maxLength: 500
                             status:
                               type: string
-                              enum: *a53
+                              enum: *a54
                             transactionId:
                               type: string
                               nullable: true
@@ -17344,14 +18239,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a52
+                        enum: *a53
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a53
+                        enum: *a54
                       transactionId:
                         type: string
                         nullable: true
@@ -17530,14 +18425,14 @@ paths:
                         maximum: 999999
                       reason:
                         type: string
-                        enum: *a52
+                        enum: *a53
                       reasonDetail:
                         type: string
                         nullable: true
                         maxLength: 500
                       status:
                         type: string
-                        enum: *a53
+                        enum: *a54
                       transactionId:
                         type: string
                         nullable: true
@@ -17822,7 +18717,7 @@ paths:
                     maximum: 180
                   source:
                     type: string
-                    enum: *a54
+                    enum: *a55
                   formattedAddress:
                     type: string
                     nullable: true
@@ -18025,14 +18920,14 @@ paths:
                       type: string
                     theme:
                       type: string
-                      enum: *a55
+                      enum: *a56
                     link:
                       type: string
                     sortOrder:
                       type: integer
                     status:
                       type: string
-                      enum: *a56
+                      enum: *a57
                   required:
                     - id
                     - titleKey
@@ -18147,7 +19042,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a57
+                  default: *a58
                 category:
                   type: string
                   enum: *a21
@@ -18308,7 +19203,7 @@ paths:
                     type: string
                     enum: *a22
                   maxItems: 4
-                  default: *a58
+                  default: *a59
                 comment:
                   type: object
                   additionalProperties:
@@ -18875,7 +19770,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: &a59
+            enum: &a60
               - MERCHANT
               - RIDER
           required: false
@@ -18898,7 +19793,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a60
+            enum: &a61
               - PENDING
               - CONFIRMED
               - PAID
@@ -18950,7 +19845,7 @@ paths:
                               type: string
                             subjectType:
                               type: string
-                              enum: *a59
+                              enum: *a60
                             subjectId:
                               type: string
                             warehouseId:
@@ -18977,7 +19872,7 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a60
+                              enum: *a61
                             confirmedAt:
                               type: string
                               nullable: true
@@ -19114,7 +20009,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a59
+                        enum: *a60
                       subjectId:
                         type: string
                       warehouseId:
@@ -19141,7 +20036,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a60
+                        enum: *a61
                       confirmedAt:
                         type: string
                         nullable: true
@@ -19240,7 +20135,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a59
+                        enum: *a60
                       subjectId:
                         type: string
                       warehouseId:
@@ -19267,7 +20162,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a60
+                        enum: *a61
                       confirmedAt:
                         type: string
                         nullable: true
@@ -19376,7 +20271,7 @@ paths:
                   type: string
                 subjectType:
                   type: string
-                  enum: *a59
+                  enum: *a60
                 subjectId:
                   type: string
               required:
@@ -19404,7 +20299,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a59
+                        enum: *a60
                       subjectId:
                         type: string
                       warehouseId:
@@ -19431,7 +20326,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a60
+                        enum: *a61
                       confirmedAt:
                         type: string
                         nullable: true
@@ -19509,7 +20404,7 @@ paths:
               properties:
                 requesterType:
                   type: string
-                  enum: &a61
+                  enum: &a62
                     - MERCHANT
                     - RIDER
                 requesterId:
@@ -19523,7 +20418,7 @@ paths:
                   properties:
                     channel:
                       type: string
-                      enum: &a62
+                      enum: &a63
                         - BANK_TRANSFER
                         - WECHAT
                         - ALIPAY
@@ -19564,7 +20459,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       requesterId:
                         type: string
                       amount:
@@ -19573,7 +20468,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: &a63
+                        enum: &a64
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -19584,7 +20479,7 @@ paths:
                         properties:
                           channel:
                             type: string
-                            enum: *a62
+                            enum: *a63
                           account:
                             type: string
                           holderName:
@@ -19674,7 +20569,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a61
+            enum: *a62
           required: false
           name: requesterType
           in: query
@@ -19685,7 +20580,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a63
+            enum: *a64
           required: false
           name: status
           in: query
@@ -19731,7 +20626,7 @@ paths:
                               format: uuid
                             requesterType:
                               type: string
-                              enum: *a61
+                              enum: *a62
                             requesterId:
                               type: string
                             amount:
@@ -19740,13 +20635,13 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a63
+                              enum: *a64
                             payoutAccount:
                               type: object
                               properties:
                                 channel:
                                   type: string
-                                  enum: *a62
+                                  enum: *a63
                                 account:
                                   type: string
                                 holderName:
@@ -19899,7 +20794,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       requesterId:
                         type: string
                       amount:
@@ -19908,13 +20803,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a62
+                            enum: *a63
                           account:
                             type: string
                           holderName:
@@ -20044,7 +20939,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       requesterId:
                         type: string
                       amount:
@@ -20053,13 +20948,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a62
+                            enum: *a63
                           account:
                             type: string
                           holderName:
@@ -20214,7 +21109,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       requesterId:
                         type: string
                       amount:
@@ -20223,13 +21118,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a62
+                            enum: *a63
                           account:
                             type: string
                           holderName:

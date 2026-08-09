@@ -9,7 +9,7 @@
  * W2 流程 C 独占：与 order 配套
  */
 import { z } from 'zod';
-import { Id, Money, IsoTimestamp } from './common';
+import { Id, Money, IsoTimestamp, PaginatedResponse } from './common';
 import { PaymentMethod, PaymentStatus } from './order';
 
 /** 重导出（与 order schema 共用，避免 import 跨模块） */
@@ -57,4 +57,62 @@ export const PaymentMethodItem = z.object({
 /** 支付方式列表响应 */
 export const PaymentMethodListResponseData = z.object({
   items: z.array(PaymentMethodItem),
+});
+
+// ============================================================================
+// Admin（批次 3：admin payment 透视）
+// ============================================================================
+
+/** PaymentIntent admin 视图（扩展 + orderNo/userId/warehouseId，join order 取） */
+export const PaymentIntentAdminView = PaymentIntent.extend({
+  orderNo: z.string(),
+  userId: Id,
+  warehouseId: Id,
+});
+
+/** 退款摘要（admin payment 详情内嵌） */
+export const RefundSummary = z.object({
+  id: Id,
+  amount: Money,
+  status: PaymentStatus.optional(), // refund status 实际是 RefundStatus enum，此处宽松
+  reason: z.string(),
+});
+
+/** PaymentIntent admin 详情（含 order + order.refunds） */
+export const PaymentIntentAdminDetail = PaymentIntentAdminView.extend({
+  order: z.object({
+    orderNo: z.string(),
+    userId: Id,
+    warehouseId: Id,
+    status: z.string(),
+    refunds: z.array(RefundSummary),
+  }),
+});
+
+/** admin 列表查询（游标分页 + filter） */
+export const ListPaymentIntentsQuery = z.object({
+  status: PaymentStatus.optional(),
+  method: PaymentMethod.optional(),
+  orderId: Id.optional(),
+  orderNo: z.string().optional(),
+  /** query string 传 'true'/'false'，controller 转 boolean */
+  mockFlag: z.enum(['true', 'false']).optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+/** admin 列表响应（游标分页） */
+export const PaymentIntentListResponse = PaginatedResponse(PaymentIntentAdminView);
+
+/** 标失败请求（手动标 PaymentIntent FAILED） */
+export const MarkFailedRequest = z.object({
+  reason: z.string().min(1).max(500),
+});
+
+/** 对账汇总项（group by status + method） */
+export const ReconciliationItem = z.object({
+  status: PaymentStatus,
+  method: PaymentMethod,
+  count: z.number().int(),
+  totalAmount: Money,
 });

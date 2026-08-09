@@ -10,12 +10,13 @@
  */
 import { Module, forwardRef } from '@nestjs/common';
 import { PaymentController } from './payment.controller';
+import { AdminPaymentController } from './admin-payment.controller';
 import { PaymentService, PAYMENT_SERVICE_TOKEN } from './payment.service';
 import { OrderModule } from '../order/order.module';
 
 @Module({
   imports: [forwardRef(() => OrderModule)],
-  controllers: [PaymentController],
+  controllers: [PaymentController, AdminPaymentController],
   providers: [
     PaymentService,
     { provide: PAYMENT_SERVICE_TOKEN, useExisting: PaymentService },
