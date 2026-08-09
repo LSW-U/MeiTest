@@ -11,6 +11,7 @@
   "menu": {
     "dashboard": "数据看板",
     "auditLogs": "审计日志",
+    "payments": "支付管理",
     "systemConfig": "系统配置",
     "im": "消息",
     "settle": "结算",

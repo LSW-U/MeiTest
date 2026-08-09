@@ -11,6 +11,7 @@
   "menu": {
     "dashboard": "Painel",
     "auditLogs": "Registos de Auditoria",
+    "payments": "Pagamentos",
     "systemConfig": "Configuração do Sistema",
     "im": "Mensagens",
     "settle": "Liquidação",

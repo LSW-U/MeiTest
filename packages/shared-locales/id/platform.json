@@ -11,6 +11,7 @@
   "menu": {
     "dashboard": "Dasbor",
     "auditLogs": "Log Audit",
+    "payments": "Pembayaran",
     "systemConfig": "Konfigurasi Sistem",
     "im": "Pesan",
     "settle": "Penyelesaian",

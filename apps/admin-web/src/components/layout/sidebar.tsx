@@ -38,6 +38,7 @@ import {
   Wallet,
   Banknote,
   ScrollText,
+  CreditCard,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -144,6 +145,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.auditLogs',
     href: '/audit-logs',
     icon: ScrollText,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.payments',
+    href: '/payments',
+    icon: CreditCard,
     perspectives: ['platform'],
   },
   {

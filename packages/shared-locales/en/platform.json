@@ -11,6 +11,7 @@
   "menu": {
     "dashboard": "Dashboard",
     "auditLogs": "Audit Logs",
+    "payments": "Payments",
     "systemConfig": "System Config",
     "im": "Messages",
     "settle": "Settlement",

@@ -11,6 +11,7 @@
   "menu": {
     "dashboard": "Dashboard",
     "auditLogs": "Log Auditoria",
+    "payments": "Payments",
     "systemConfig": "Konfigurasaun Sistema",
     "im": "Mensajen",
     "settle": "Settlement",
