@@ -464,16 +464,32 @@ export class RefundService {
   }
 
   /**
-   * admin 查询退款列表（可按 status 筛选）
+   * admin 查询退款列表（可按 status 筛选 + 游标分页）
+   *
+   * 游标 = 上一页最后一条 refund.id；take: limit+1 探测 hasMore。
+   * 与 order.service.ts listAllOrders 同一游标模式（批次 2.1 改造）。
    */
-  async listAllRefunds(status?: string): Promise<RefundView[]> {
+  async listAllRefunds(options: {
+    status?: string;
+    cursor?: string;
+    limit?: number;
+  }): Promise<{ items: RefundView[]; nextCursor: string | null; hasMore: boolean }> {
+    const limit = Math.min(options.limit ?? 50, 100);
+    const where: Prisma.RefundWhereInput = options.status ? { status: options.status } : {};
     const refunds = await db.refund.findMany({
-      where: status ? { status } : {},
+      where,
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
       include: { items: true },
     });
-    return refunds.map((r) => this.toView(r));
+    const hasMore = refunds.length > limit;
+    const items = hasMore ? refunds.slice(0, limit) : refunds;
+    return {
+      items: items.map((r) => this.toView(r)),
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore,
+    };
   }
 
   // === private ===

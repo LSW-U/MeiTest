@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2 } from 'lucide-react';
 import {
   useRefunds,
   useReviewRefund,
@@ -65,12 +66,21 @@ export default function RefundsListPage() {
   const [rejectNote, setRejectNote] = useState('');
   const [approveTarget, setApproveTarget] = useState<Refund | null>(null);
 
-  const { data, isLoading, error, refetch } = useRefunds(
-    statusFilter === 'ALL' ? undefined : statusFilter,
-  );
+  const {
+    data,
+    isPending,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useRefunds({
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    limit: 50,
+  });
   const reviewMutation = useReviewRefund();
 
-  const items: Refund[] = data ?? [];
+  const items: Refund[] = data?.pages.flatMap((p) => p.items) ?? [];
 
   function handleApproveSubmit() {
     if (!approveTarget) return;
@@ -194,7 +204,7 @@ export default function RefundsListPage() {
 
       {error ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : isLoading ? (
+      ) : isPending ? (
         <div className="rounded-md border p-8 text-center text-muted-foreground">
           {t('loading')}
         </div>
@@ -210,7 +220,33 @@ export default function RefundsListPage() {
           description={t('admin.refunds.emptyDescription')}
         />
       ) : (
-        <DataTable data={items} columns={columns} />
+        <>
+          <DataTable data={items} columns={columns} />
+          {items.length > 0 && (
+            <div className="flex items-center justify-center">
+              {hasNextPage ? (
+                <Button
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('admin.refunds.loadingMore')}
+                    </>
+                  ) : (
+                    t('admin.refunds.loadMoreButton')
+                  )}
+                </Button>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.refunds.noMore', { count: items.length })}
+                </span>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* 通过确认 */}

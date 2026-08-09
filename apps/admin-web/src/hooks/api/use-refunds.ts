@@ -6,7 +6,7 @@
  *   - GET    /admin/refunds/:id            详情
  *   - POST   /admin/refunds/:id/review     审核（APPROVE / REJECT）
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { apiFetch, type ApiSuccess } from '@/lib/api';
 
 export type RefundStatus =
@@ -40,13 +40,47 @@ export interface ReviewRefundInput {
   reviewNote?: string;
 }
 
-/** 列表（admin，可按 status 筛选） */
-export function useRefunds(status?: RefundStatus) {
-  const query = status ? `?status=${status}` : '';
-  return useQuery<Refund[]>({
-    queryKey: ['refunds', status],
-    queryFn: () =>
-      apiFetch<ApiSuccess<Refund[]>>(`/admin/refunds${query}`).then((res) => res.data),
+/** 列表返回（游标分页：items + nextCursor + hasMore，批次 2.1 改造） */
+export interface RefundListResult {
+  items: Refund[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ListRefundsParams {
+  status?: RefundStatus;
+  limit?: number;
+}
+
+/** 构建退款列表 query string（不含 cursor，首屏 + 加载更多复用） */
+function buildRefundQuerySp(params: ListRefundsParams): URLSearchParams {
+  const sp = new URLSearchParams();
+  if (params.status) sp.set('status', params.status);
+  if (params.limit) sp.set('limit', String(params.limit));
+  return sp;
+}
+
+/**
+ * 列表（admin，游标分页 + 加载更多）
+ *
+ * 后端 GET /admin/refunds 已支持 cursor query（refund.service.ts listAllRefunds），
+ * 前端用 useInfiniteQuery + fetchNextPage + data.pages.flatMap 累积 items，
+ * 不再返回扁平 Refund[]（批次 2.1 改造，与 admin orders 一致）。
+ */
+export function useRefunds(params: ListRefundsParams = {}) {
+  return useInfiniteQuery({
+    queryKey: ['refunds', params],
+    queryFn: async ({ pageParam }) => {
+      const sp = buildRefundQuerySp(params);
+      if (pageParam) sp.set('cursor', pageParam);
+      const query = sp.toString();
+      const res = await apiFetch<ApiSuccess<RefundListResult>>(
+        `/admin/refunds${query ? `?${query}` : ''}`,
+      );
+      return res.data;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 }
 

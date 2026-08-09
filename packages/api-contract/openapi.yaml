@@ -17141,16 +17141,29 @@ paths:
     get:
       tags:
         - refund
-      description: 退款列表（admin 可按 status 筛选）
+      description: 退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造）
       parameters:
         - schema:
             type: string
+            enum: *a53
           required: false
           name: status
           in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
       responses:
         "200":
-          description: 退款列表
+          description: 退款列表（游标分页 items + nextCursor + hasMore）
           content:
             application/json:
               schema:
@@ -17161,117 +17174,131 @@ paths:
                     enum:
                       - true
                   data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                        orderId:
-                          type: string
-                          format: uuid
-                        userId:
-                          type: string
-                          format: uuid
-                        amount:
-                          type: integer
-                          minimum: 0
-                          maximum: 999999
-                        reason:
-                          type: string
-                          enum: *a52
-                        reasonDetail:
-                          type: string
-                          nullable: true
-                          maxLength: 500
-                        status:
-                          type: string
-                          enum: *a53
-                        transactionId:
-                          type: string
-                          nullable: true
-                        refundMethod:
-                          type: string
-                        reviewedBy:
-                          type: string
-                          nullable: true
-                          format: uuid
-                        reviewedAt:
-                          type: string
-                          nullable: true
-                          format: date-time
-                        reviewNote:
-                          type: string
-                          nullable: true
-                        completedAt:
-                          type: string
-                          nullable: true
-                          format: date-time
-                        createdAt:
-                          type: string
-                          format: date-time
-                        updatedAt:
-                          type: string
-                          format: date-time
+                    type: object
+                    properties:
+                      items:
+                        type: array
                         items:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                format: uuid
-                              refundId:
-                                type: string
-                                format: uuid
-                              orderItemId:
-                                type: string
-                                format: uuid
-                              skuId:
-                                type: string
-                                format: uuid
-                              productName:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            orderId:
+                              type: string
+                              format: uuid
+                            userId:
+                              type: string
+                              format: uuid
+                            amount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            reason:
+                              type: string
+                              enum: *a52
+                            reasonDetail:
+                              type: string
+                              nullable: true
+                              maxLength: 500
+                            status:
+                              type: string
+                              enum: *a53
+                            transactionId:
+                              type: string
+                              nullable: true
+                            refundMethod:
+                              type: string
+                            reviewedBy:
+                              type: string
+                              nullable: true
+                              format: uuid
+                            reviewedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            reviewNote:
+                              type: string
+                              nullable: true
+                            completedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            items:
+                              type: array
+                              items:
                                 type: object
-                                additionalProperties:
-                                  type: string
-                              unitPrice:
-                                type: integer
-                                minimum: 0
-                                maximum: 999999
-                              refundQty:
-                                type: integer
-                                minimum: 1
-                              subtotal:
-                                type: integer
-                                minimum: 0
-                                maximum: 999999
-                            required:
-                              - id
-                              - refundId
-                              - orderItemId
-                              - skuId
-                              - productName
-                              - unitPrice
-                              - refundQty
-                              - subtotal
-                      required:
-                        - id
-                        - orderId
-                        - userId
-                        - amount
-                        - reason
-                        - reasonDetail
-                        - status
-                        - transactionId
-                        - refundMethod
-                        - reviewedBy
-                        - reviewedAt
-                        - reviewNote
-                        - completedAt
-                        - createdAt
-                        - updatedAt
-                        - items
+                                properties:
+                                  id:
+                                    type: string
+                                    format: uuid
+                                  refundId:
+                                    type: string
+                                    format: uuid
+                                  orderItemId:
+                                    type: string
+                                    format: uuid
+                                  skuId:
+                                    type: string
+                                    format: uuid
+                                  productName:
+                                    type: object
+                                    additionalProperties:
+                                      type: string
+                                  unitPrice:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 999999
+                                  refundQty:
+                                    type: integer
+                                    minimum: 1
+                                  subtotal:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 999999
+                                required:
+                                  - id
+                                  - refundId
+                                  - orderItemId
+                                  - skuId
+                                  - productName
+                                  - unitPrice
+                                  - refundQty
+                                  - subtotal
+                          required:
+                            - id
+                            - orderId
+                            - userId
+                            - amount
+                            - reason
+                            - reasonDetail
+                            - status
+                            - transactionId
+                            - refundMethod
+                            - reviewedBy
+                            - reviewedAt
+                            - reviewNote
+                            - completedAt
+                            - createdAt
+                            - updatedAt
+                            - items
+                      nextCursor:
+                        type: string
+                        nullable: true
+                      hasMore:
+                        type: boolean
+                      total:
+                        type: integer
+                    required:
+                      - items
+                      - nextCursor
+                      - hasMore
                 required:
                   - success
                   - data

@@ -126,6 +126,8 @@ import {
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
   ReviewRefundRequest as ReviewRefundRequestSchema,
+  ListRefundsQuery as ListRefundsQuerySchema,
+  RefundListResponse as RefundListResponseSchema,
   // settle（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册）
   SettlementSchema,
   SettlementQuery,
@@ -2482,9 +2484,9 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/refunds',
   tags: ['refund'],
-  description: '退款列表（admin 可按 status 筛选）',
-  request: { query: z.object({ status: z.string().optional() }) },
-  responses: { 200: { description: '退款列表', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RefundSchema) }) } } } },
+  description: '退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造）',
+  request: { query: ListRefundsQuerySchema },
+  responses: { 200: { description: '退款列表（游标分页 items + nextCursor + hasMore）', content: { 'application/json': { schema: RefundListResponseSchema } } } },
 });
 
 registry.registerPath({

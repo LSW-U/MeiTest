@@ -16,8 +16,10 @@ import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2 } from 'lucide-react';
 import {
   useOrders,
   type OrderListItem,
@@ -41,13 +43,21 @@ export default function OrdersListPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
 
-  const { data, isLoading, error, refetch } = useOrders({
+  const {
+    data,
+    isPending,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useOrders({
     status: statusFilter === 'ALL' ? undefined : statusFilter,
     orderNo: orderNoSearch || undefined,
     limit: 20,
   });
 
-  const items: OrderListItem[] = data?.items ?? [];
+  const items: OrderListItem[] = data?.pages.flatMap((p) => p.items) ?? [];
 
   const columns: Column<OrderListItem>[] = [
     {
@@ -124,7 +134,7 @@ export default function OrdersListPage() {
 
       {error ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : isLoading ? (
+      ) : isPending ? (
         <div className="rounded-md border p-8 text-center text-muted-foreground">{t('loading')}</div>
       ) : items.length === 0 ? (
         <EmptyState
@@ -134,9 +144,28 @@ export default function OrdersListPage() {
       ) : (
         <>
           <DataTable data={items} columns={columns} />
-          {data?.hasMore && (
-            <div className="text-center text-xs text-muted-foreground">
-              {t('admin.orders.loadMoreHint', { count: items.length })}
+          {items.length > 0 && (
+            <div className="flex items-center justify-center">
+              {hasNextPage ? (
+                <Button
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('admin.orders.loadingMore')}
+                    </>
+                  ) : (
+                    t('admin.orders.loadMoreButton')
+                  )}
+                </Button>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.orders.noMore', { count: items.length })}
+                </span>
+              )}
             </div>
           )}
         </>

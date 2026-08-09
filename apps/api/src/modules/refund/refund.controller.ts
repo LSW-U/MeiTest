@@ -65,6 +65,13 @@ const ReviewRefundRequest = z.object({
   reviewNote: z.string().max(500).optional(),
 });
 
+/** admin 退款列表查询（游标分页，批次 2.1） */
+const ListRefundsQuery = z.object({
+  status: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 // ============================================================================
 // 客户端（customer 视角）
 // ============================================================================
@@ -132,11 +139,21 @@ export class ClientRefundController {
 export class AdminRefundController {
   constructor(@Inject(RefundService) private readonly refundService: RefundService) {}
 
-  /** 退款列表 */
+  /**
+   * 退款列表（游标分页，可按 status 筛选）
+   * 返回 { items, nextCursor, hasMore }（批次 2.1 改造，与 admin orders 一致）
+   */
   @Get()
-  async list(@Query('status') status?: string) {
-    const refunds = await this.refundService.listAllRefunds(status);
-    return { success: true as const, data: refunds };
+  async list(
+    @Query(new ZodValidationPipe(ListRefundsQuery))
+    query: { status?: string; cursor?: string; limit?: number },
+  ) {
+    const result = await this.refundService.listAllRefunds({
+      status: query.status,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return { success: true as const, data: result };
   }
 
   /** 退款详情 */

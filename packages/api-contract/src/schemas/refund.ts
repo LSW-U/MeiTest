@@ -9,7 +9,7 @@
  * W2 阶段：schema 提前定义，service 实现放 W5
  */
 import { z } from 'zod';
-import { Id, Money, IsoTimestamp, I18nText } from './common';
+import { Id, Money, IsoTimestamp, I18nText, PaginatedResponse } from './common';
 
 /** 退款状态 */
 export const RefundStatus = z.enum([
@@ -99,3 +99,16 @@ export const ReviewRefundRequest = z.object({
   action: z.enum(['APPROVE', 'REJECT']),
   reviewNote: z.string().max(500).optional(),
 });
+
+/**
+ * admin 退款列表查询（游标分页，批次 2.1 改造）
+ * 与 admin orders 列表一致：cursor / limit + status 过滤
+ */
+export const ListRefundsQuery = z.object({
+  status: RefundStatus.optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+/** admin 退款列表响应（游标分页：items + nextCursor + hasMore） */
+export const RefundListResponse = PaginatedResponse(Refund);

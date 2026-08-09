@@ -10,7 +10,7 @@
  *   - GET    /admin/orders/:id          详情（含 items + events）
  *   - POST   /admin/orders/:id/cancel   admin 取消
  */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { apiFetch, type ApiSuccess } from '@/lib/api';
 import type { I18nText } from './use-products';
 
@@ -82,7 +82,6 @@ export interface ListOrdersParams {
   warehouseId?: string;
   orderNo?: string;
   limit?: number;
-  cursor?: string;
 }
 
 export interface OrderListResult {
@@ -91,22 +90,38 @@ export interface OrderListResult {
   hasMore: boolean;
 }
 
-/** 列表（W4 后端已实现） */
+/** 构建订单列表 query string（不含 cursor，首屏 + 加载更多复用） */
+function buildOrderQuerySp(params: ListOrdersParams): URLSearchParams {
+  const sp = new URLSearchParams();
+  if (params.status) sp.set('status', params.status);
+  if (params.userId) sp.set('userId', params.userId);
+  if (params.warehouseId) sp.set('warehouseId', params.warehouseId);
+  if (params.orderNo) sp.set('orderNo', params.orderNo);
+  if (params.limit) sp.set('limit', String(params.limit));
+  return sp;
+}
+
+/**
+ * 列表（游标分页 + 加载更多）
+ *
+ * 后端 GET /admin/orders 已支持 cursor query（order.service.ts listAllOrders），
+ * 前端用 useInfiniteQuery + fetchNextPage + data.pages.flatMap 累积 items，
+ * 不再用单页 useQuery（W5 之前只取第一页 + hasMore 占位文案）。
+ */
 export function useOrders(params: ListOrdersParams = {}) {
-  const searchParams = new URLSearchParams();
-  if (params.status) searchParams.set('status', params.status);
-  if (params.userId) searchParams.set('userId', params.userId);
-  if (params.warehouseId) searchParams.set('warehouseId', params.warehouseId);
-  if (params.orderNo) searchParams.set('orderNo', params.orderNo);
-  if (params.limit) searchParams.set('limit', String(params.limit));
-  if (params.cursor) searchParams.set('cursor', params.cursor);
-  const query = searchParams.toString();
-  return useQuery<OrderListResult>({
+  return useInfiniteQuery({
     queryKey: ['orders', params],
-    queryFn: () =>
-      apiFetch<ApiSuccess<OrderListResult>>(
+    queryFn: async ({ pageParam }) => {
+      const sp = buildOrderQuerySp(params);
+      if (pageParam) sp.set('cursor', pageParam);
+      const query = sp.toString();
+      const res = await apiFetch<ApiSuccess<OrderListResult>>(
         `/admin/orders${query ? `?${query}` : ''}`,
-      ).then((res) => res.data),
+      );
+      return res.data;
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 }
 

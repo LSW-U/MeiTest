@@ -9818,11 +9818,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 退款列表（admin 可按 status 筛选） */
+        /** @description 退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造） */
         get: {
             parameters: {
                 query?: {
-                    status?: string;
+                    status?: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                    cursor?: string;
+                    limit?: number;
                 };
                 header?: never;
                 path?: never;
@@ -9830,7 +9832,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 退款列表 */
+                /** @description 退款列表（游标分页 items + nextCursor + hasMore） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -9840,48 +9842,53 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                userId: string;
-                                amount: number;
-                                /** @enum {string} */
-                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
-                                reasonDetail: string | null;
-                                /** @enum {string} */
-                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
-                                transactionId: string | null;
-                                refundMethod: string;
-                                /** Format: uuid */
-                                reviewedBy: string | null;
-                                /** Format: date-time */
-                                reviewedAt: string | null;
-                                reviewNote: string | null;
-                                /** Format: date-time */
-                                completedAt: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
                                 items: {
                                     /** Format: uuid */
                                     id: string;
                                     /** Format: uuid */
-                                    refundId: string;
+                                    orderId: string;
                                     /** Format: uuid */
-                                    orderItemId: string;
+                                    userId: string;
+                                    amount: number;
+                                    /** @enum {string} */
+                                    reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                    reasonDetail: string | null;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                    transactionId: string | null;
+                                    refundMethod: string;
                                     /** Format: uuid */
-                                    skuId: string;
-                                    productName: {
-                                        [key: string]: string;
-                                    };
-                                    unitPrice: number;
-                                    refundQty: number;
-                                    subtotal: number;
+                                    reviewedBy: string | null;
+                                    /** Format: date-time */
+                                    reviewedAt: string | null;
+                                    reviewNote: string | null;
+                                    /** Format: date-time */
+                                    completedAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                    items: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        /** Format: uuid */
+                                        refundId: string;
+                                        /** Format: uuid */
+                                        orderItemId: string;
+                                        /** Format: uuid */
+                                        skuId: string;
+                                        productName: {
+                                            [key: string]: string;
+                                        };
+                                        unitPrice: number;
+                                        refundQty: number;
+                                        subtotal: number;
+                                    }[];
                                 }[];
-                            }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
                         };
                     };
                 };
