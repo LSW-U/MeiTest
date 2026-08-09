@@ -36,6 +36,7 @@ import {
   Image,
   Flame,
   Wallet,
+  Banknote,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -130,6 +131,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.settle',
     href: '/settlements',
     icon: Wallet,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.withdrawals',
+    href: '/withdrawals',
+    icon: Banknote,
     perspectives: ['platform'],
   },
   {
