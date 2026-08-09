@@ -12,6 +12,7 @@
     "dashboard": "Dashboard",
     "auditLogs": "Audit Logs",
     "payments": "Payments",
+    "dispatch": "Dispatch",
     "systemConfig": "System Config",
     "im": "Messages",
     "settle": "Settlement",

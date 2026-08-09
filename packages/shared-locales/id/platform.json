@@ -12,6 +12,7 @@
     "dashboard": "Dasbor",
     "auditLogs": "Log Audit",
     "payments": "Pembayaran",
+    "dispatch": "Pengiriman",
     "systemConfig": "Konfigurasi Sistem",
     "im": "Pesan",
     "settle": "Penyelesaian",

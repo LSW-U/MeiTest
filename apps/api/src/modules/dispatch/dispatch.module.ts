@@ -9,6 +9,7 @@
  */
 import { Module } from '@nestjs/common';
 import { DispatchController } from './dispatch.controller';
+import { AdminDispatchController } from './admin-dispatch.controller';
 import { DispatchService } from './dispatch.service';
 import { RealtimeModule } from '../realtime/realtime.module';
 
@@ -17,7 +18,7 @@ export const DISPATCH_SERVICE_TOKEN = Symbol('DISPATCH_SERVICE_TOKEN');
 
 @Module({
   imports: [RealtimeModule],
-  controllers: [DispatchController],
+  controllers: [DispatchController, AdminDispatchController],
   providers: [
     DispatchService,
     { provide: DISPATCH_SERVICE_TOKEN, useExisting: DispatchService },

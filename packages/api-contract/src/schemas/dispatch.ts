@@ -8,7 +8,7 @@
  * W3 任务：抢单大厅 + 系统派单 + 骑手取货送达
  */
 import { z } from 'zod';
-import { Id, Money, IsoTimestamp } from './common';
+import { Id, Money, IsoTimestamp, PaginatedResponse } from './common';
 
 /** 配送任务状态（与 schema.prisma DeliveryTaskStatus 同步） */
 export const DeliveryTaskStatus = z.enum([
@@ -70,4 +70,66 @@ export const ReportIssueRequest = z.object({
     'OTHER',
   ]),
   note: z.string().max(500).optional(),
+});
+
+// ============================================================================
+// Admin 视角（批次 4：admin dispatch 看板）
+// ============================================================================
+
+/** admin 任务列表查询（游标分页 + filter） */
+export const ListAllTasksQuery = z.object({
+  status: DeliveryTaskStatus.optional(),
+  warehouseId: Id.optional(),
+  riderId: Id.optional(),
+  orderNo: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+/** admin 视角骑手摘要（改派/详情用） */
+export const TaskRiderSummary = z.object({
+  id: Id,
+  riderName: z.string(),
+  phone: z.string(),
+});
+
+/** admin 视角订单摘要（详情用） */
+export const TaskOrderSummary = z.object({
+  orderNo: z.string(),
+  status: z.string(),
+  payableAmount: Money.nullable(),
+  paymentMethod: z.string(),
+});
+
+/** admin 视角任务（含 order + rider + warehouseCode + ETA） */
+export const AdminDeliveryTaskView = DeliveryTask.extend({
+  estimatedArrival: IsoTimestamp.nullable(),
+  warehouseCode: z.string(),
+  order: TaskOrderSummary,
+  rider: TaskRiderSummary.nullable(),
+});
+
+/** admin 任务列表响应（游标分页） */
+export const AdminTaskListResponse = PaginatedResponse(AdminDeliveryTaskView);
+
+/** 改派请求（第一期只支持 ASSIGNED 状态） */
+export const ReassignTaskRequest = z.object({
+  newRiderId: Id,
+  reason: z.string().max(500).optional(),
+});
+
+/** 取消请求（PENDING_ASSIGN / ASSIGNED） */
+export const CancelTaskRequest = z.object({
+  reason: z.string().max(500).optional(),
+});
+
+/** 可派骑手（APPROVED + Redis 在线标记） */
+export const AvailableRider = z.object({
+  id: Id,
+  riderName: z.string(),
+  phone: z.string(),
+  vehicleType: z.enum(['BICYCLE', 'MOTORCYCLE', 'CAR']),
+  isOnline: z.boolean(),
+  totalDeliveries: z.number().int(),
+  rating: z.number(),
 });

@@ -12,6 +12,7 @@
     "dashboard": "Painel",
     "auditLogs": "Registos de Auditoria",
     "payments": "Pagamentos",
+    "dispatch": "Entregas",
     "systemConfig": "Configuração do Sistema",
     "im": "Mensagens",
     "settle": "Liquidação",

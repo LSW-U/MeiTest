@@ -25,6 +25,7 @@ import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
+import { redis } from '../../shared/cache';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -85,6 +86,56 @@ export interface ReportIssueInput {
   taskId: string;
   reason: 'CUSTOMER_UNREACHABLE' | 'CUSTOMER_REJECTED' | 'ADDRESS_NOT_FOUND' | 'TRAFFIC_ACCIDENT' | 'OTHER';
   note?: string;
+}
+
+// ============================================================================
+// Admin 视角（批次 4：admin dispatch 看板）
+// ============================================================================
+
+/** admin 任务列表查询输入 */
+export interface ListAllTasksInput {
+  status?: 'PENDING_ASSIGN' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
+  warehouseId?: string;
+  riderId?: string;
+  orderNo?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+/** admin 视角任务（含 order + rider 关联） */
+export interface AdminDeliveryTaskView {
+  id: string;
+  orderId: string;
+  riderId: string | null;
+  warehouseId: string;
+  status: 'PENDING_ASSIGN' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
+  pickupAddress: string;
+  pickupLat: number;
+  pickupLng: number;
+  dropoffAddress: string;
+  dropoffLat: number;
+  dropoffLng: number;
+  assignedAt: string | null;
+  pickedUpAt: string | null;
+  deliveredAt: string | null;
+  estimatedArrival: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  warehouseCode: string;
+  order: { orderNo: string; status: string; payableAmount: number | null; paymentMethod: string };
+  rider: { id: string; riderName: string; phone: string } | null;
+}
+
+/** 可派骑手（APPROVED + Redis 在线标记） */
+export interface AvailableRider {
+  id: string;
+  riderName: string;
+  phone: string;
+  vehicleType: 'BICYCLE' | 'MOTORCYCLE' | 'CAR';
+  isOnline: boolean;
+  totalDeliveries: number;
+  rating: number;
 }
 
 @Injectable()
@@ -622,6 +673,288 @@ export class DispatchService {
     });
 
     return this.toView(task);
+  }
+
+  // ==========================================================================
+  // Admin 视角（批次 4：admin dispatch 看板）
+  // ==========================================================================
+
+  /** admin 任务监控列表（游标分页 + filter） */
+  async listAllTasks(options: ListAllTasksInput): Promise<{
+    items: AdminDeliveryTaskView[];
+    nextCursor: string | null;
+    hasMore: boolean;
+  }> {
+    const limit = Math.min(options.limit ?? 50, 100);
+    const where: Prisma.DeliveryTaskWhereInput = {};
+    if (options.status) where.status = options.status;
+    if (options.warehouseId) where.warehouseId = options.warehouseId;
+    if (options.riderId) where.riderId = options.riderId;
+    if (options.orderNo) {
+      where.order = { orderNo: { contains: options.orderNo, mode: 'insensitive' } };
+    }
+
+    const tasks = await db.deliveryTask.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+      include: {
+        order: { select: { orderNo: true, status: true, payableAmount: true, paymentMethod: true } },
+        rider: { select: { id: true, riderName: true, phone: true } },
+        warehouse: { select: { code: true } },
+      },
+    });
+    const hasMore = tasks.length > limit;
+    const items = hasMore ? tasks.slice(0, limit) : tasks;
+    return {
+      items: items.map((t) => this.toAdminView(t)),
+      nextCursor: hasMore ? items[items.length - 1]!.id : null,
+      hasMore,
+    };
+  }
+
+  /** admin 任务详情（含 order + rider） */
+  async getAdminDetail(taskId: string): Promise<AdminDeliveryTaskView> {
+    const task = await db.deliveryTask.findUnique({
+      where: { id: taskId },
+      include: {
+        order: { select: { orderNo: true, status: true, payableAmount: true, paymentMethod: true } },
+        rider: { select: { id: true, riderName: true, phone: true } },
+        warehouse: { select: { code: true } },
+      },
+    });
+    if (!task) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
+    }
+    return this.toAdminView(task);
+  }
+
+  /**
+   * 改派骑手（事务双写，第一期只支持 ASSIGNED）
+   *
+   * 事务编排（复用 acceptTask 乐观锁模式）：
+   *   - 事务外查 task（status 校验 + orderId + 旧 riderId + note）
+   *   - 校验新骑手 APPROVED
+   *   - 事务内：乐观锁 UPDATE delivery_tasks WHERE status='ASSIGNED' + order.riderId 同步
+   *   - note 追加改派记录（保留原 note，审计连续性）
+   *   - 不写 OrderEvent（reassign 不改订单状态，靠 @Audit + note 留痕）
+   */
+  async reassignTask(input: {
+    taskId: string;
+    newRiderId: string;
+    adminUserId: string;
+    reason?: string;
+  }): Promise<AdminDeliveryTaskView> {
+    const now = new Date();
+
+    const taskBefore = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      select: { orderId: true, status: true, riderId: true, note: true },
+    });
+    if (!taskBefore) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
+    }
+    if (taskBefore.status !== 'ASSIGNED') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-006',
+        message: `Reassign requires ASSIGNED status (current: ${taskBefore.status}; PICKED_UP+ 需先 cancel 再 recreate)`,
+      });
+    }
+
+    const newRider = await db.riderProfile.findUnique({
+      where: { id: input.newRiderId },
+      select: { id: true, applicationStatus: true, riderName: true },
+    });
+    if (!newRider || newRider.applicationStatus !== 'APPROVED') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-008',
+        message: 'New rider invalid (not found or not APPROVED)',
+      });
+    }
+
+    const noteText = `[reassign] ${taskBefore.riderId ?? 'null'} → ${newRider.riderName}(${input.newRiderId}) by ${input.adminUserId}${input.reason ? ` | ${input.reason}` : ''}`;
+    const newNote = taskBefore.note ? `${taskBefore.note}\n${noteText}` : noteText;
+
+    const result = await withTransaction(async (tx: Tx) => {
+      const updated = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET rider_id = ${input.newRiderId},
+            assigned_at = ${now},
+            updated_at = ${now},
+            note = ${newNote}
+        WHERE id = ${input.taskId} AND status = 'ASSIGNED'
+      `;
+      if (updated === 0) return { ok: false as const };
+      await tx.order.update({
+        where: { id: taskBefore.orderId },
+        data: { riderId: input.newRiderId },
+      });
+      return { ok: true as const };
+    });
+
+    if (!result.ok) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-006',
+        message: 'Reassign failed (task status changed concurrently)',
+      });
+    }
+
+    logger.info({
+      msg: 'DISPATCH_TASK_REASSIGNED',
+      taskId: input.taskId,
+      oldRiderId: taskBefore.riderId,
+      newRiderId: input.newRiderId,
+      adminUserId: input.adminUserId,
+    });
+
+    return this.getAdminDetail(input.taskId);
+  }
+
+  /**
+   * 取消配送任务（事务双写，PENDING_ASSIGN / ASSIGNED）
+   *
+   * task FAILED + order.riderId=null（不取消订单，等 recreate 或 admin-order cancel）
+   * 不写 OrderEvent（不改订单状态，靠 @Audit + note 留痕）
+   */
+  async cancelTask(input: {
+    taskId: string;
+    adminUserId: string;
+    reason?: string;
+  }): Promise<AdminDeliveryTaskView> {
+    const now = new Date();
+
+    const taskBefore = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      select: { orderId: true, status: true, riderId: true, note: true },
+    });
+    if (!taskBefore) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
+    }
+    if (taskBefore.status !== 'PENDING_ASSIGN' && taskBefore.status !== 'ASSIGNED') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-007',
+        message: `Cancel requires PENDING_ASSIGN or ASSIGNED (current: ${taskBefore.status}; 已取货/配送中走 reportIssue)`,
+      });
+    }
+
+    const noteText = `[cancel] by ${input.adminUserId}${input.reason ? ` | ${input.reason}` : ''}`;
+    const newNote = taskBefore.note ? `${taskBefore.note}\n${noteText}` : noteText;
+
+    const result = await withTransaction(async (tx: Tx) => {
+      const updated = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET status = 'FAILED',
+            rider_id = NULL,
+            updated_at = ${now},
+            note = ${newNote}
+        WHERE id = ${input.taskId} AND status IN ('PENDING_ASSIGN', 'ASSIGNED')
+      `;
+      if (updated === 0) return { ok: false as const };
+      await tx.order.update({
+        where: { id: taskBefore.orderId },
+        data: { riderId: null },
+      });
+      return { ok: true as const };
+    });
+
+    if (!result.ok) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-007',
+        message: 'Cancel failed (task status changed concurrently)',
+      });
+    }
+
+    logger.info({
+      msg: 'DISPATCH_TASK_CANCELLED',
+      taskId: input.taskId,
+      orderId: taskBefore.orderId,
+      adminUserId: input.adminUserId,
+    });
+
+    return this.getAdminDetail(input.taskId);
+  }
+
+  /**
+   * 可派骑手列表（APPROVED + Redis isOnline 标记，在线优先 + 熟手优先排序）
+   *
+   * Redis key：rider:online:{userId}（rider.service heartbeat 维护，SETEX 60s）
+   */
+  async listAvailableRiders(): Promise<AvailableRider[]> {
+    const profiles = await db.riderProfile.findMany({
+      where: { applicationStatus: 'APPROVED' },
+      select: {
+        id: true,
+        userId: true,
+        riderName: true,
+        phone: true,
+        vehicleType: true,
+        totalDeliveries: true,
+        rating: true,
+      },
+    });
+
+    const withOnline = await Promise.all(
+      profiles.map(async (p) => ({
+        id: p.id,
+        riderName: p.riderName,
+        phone: p.phone,
+        vehicleType: p.vehicleType,
+        isOnline: await this.checkRiderOnline(p.userId),
+        totalDeliveries: p.totalDeliveries,
+        rating: Number(p.rating),
+      })),
+    );
+
+    // 在线优先，其次按接单数（熟手优先）
+    return withOnline.sort((a, b) => {
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      return b.totalDeliveries - a.totalDeliveries;
+    });
+  }
+
+  /** admin 视图转换（含 order + rider 关联） */
+  private toAdminView(t: any): AdminDeliveryTaskView {
+    return {
+      id: t.id,
+      orderId: t.orderId,
+      riderId: t.riderId,
+      warehouseId: t.warehouseId,
+      status: t.status,
+      pickupAddress: t.pickupAddress,
+      pickupLat: Number(t.pickupLat),
+      pickupLng: Number(t.pickupLng),
+      dropoffAddress: t.dropoffAddress,
+      dropoffLat: Number(t.dropoffLat),
+      dropoffLng: Number(t.dropoffLng),
+      assignedAt: t.assignedAt?.toISOString() ?? null,
+      pickedUpAt: t.pickedUpAt?.toISOString() ?? null,
+      deliveredAt: t.deliveredAt?.toISOString() ?? null,
+      estimatedArrival: t.estimatedArrival?.toISOString() ?? null,
+      note: t.note,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+      warehouseCode: t.warehouse?.code ?? '',
+      order: {
+        orderNo: t.order?.orderNo ?? '',
+        status: t.order?.status ?? '',
+        payableAmount: t.order?.payableAmount != null ? Number(t.order.payableAmount) : null,
+        paymentMethod: t.order?.paymentMethod ?? '',
+      },
+      rider: t.rider
+        ? { id: t.rider.id, riderName: t.rider.riderName, phone: t.rider.phone }
+        : null,
+    };
+  }
+
+  /** 查骑手在线状态（Redis rider:online:{userId}） */
+  private async checkRiderOnline(userId: string): Promise<boolean> {
+    try {
+      const exists = await redis.exists(`rider:online:${userId}`);
+      return exists > 0;
+    } catch {
+      return false;
+    }
   }
 
   /**

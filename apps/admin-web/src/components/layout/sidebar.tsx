@@ -39,6 +39,7 @@ import {
   Banknote,
   ScrollText,
   CreditCard,
+  Truck,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -104,6 +105,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/riders',
     icon: Bike,
     perspectives: ['platform', 'rider-mgmt'],
+  },
+  {
+    labelKey: 'menu.dispatch',
+    href: '/dispatch',
+    icon: Truck,
+    perspectives: ['platform'],
   },
   {
     labelKey: 'menu.customers',

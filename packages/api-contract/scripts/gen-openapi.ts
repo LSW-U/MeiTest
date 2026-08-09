@@ -128,6 +128,13 @@ import {
   PickupTaskRequest,
   DeliverTaskRequest,
   ReportIssueRequest,
+  // 批次 4 admin dispatch
+  ListAllTasksQuery,
+  AdminDeliveryTaskView,
+  AdminTaskListResponse,
+  ReassignTaskRequest,
+  CancelTaskRequest,
+  AvailableRider,
   // refund（W5 流程 C）
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
@@ -288,6 +295,14 @@ registry.register('ListPaymentIntentsQuery', ListPaymentIntentsQuery);
 registry.register('PaymentIntentListResponse', PaymentIntentListResponse);
 registry.register('MarkFailedRequest', MarkFailedRequest);
 registry.register('ReconciliationItem', ReconciliationItem);
+
+// 批次 4 admin dispatch
+registry.register('AdminDeliveryTaskView', AdminDeliveryTaskView);
+registry.register('AdminTaskListResponse', AdminTaskListResponse);
+registry.register('ListAllTasksQuery', ListAllTasksQuery);
+registry.register('ReassignTaskRequest', ReassignTaskRequest);
+registry.register('CancelTaskRequest', CancelTaskRequest);
+registry.register('AvailableRider', AvailableRider);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
@@ -1465,6 +1480,85 @@ registry.registerPath({
       content: { 'application/json': { schema: z.object({ success: z.literal(true), data: PaymentIntent }) } },
     },
     409: { description: 'PAYMENT_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// Admin Dispatch（批次 4：admin dispatch 看板）
+// ============================================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/tasks',
+  tags: ['dispatch'],
+  description: '任务监控列表（admin，游标分页 + filter status/warehouseId/riderId/orderNo；批次 4）',
+  request: { query: ListAllTasksQuery },
+  responses: {
+    200: { description: '任务列表（游标分页）', content: { 'application/json': { schema: AdminTaskListResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/tasks/{id}',
+  tags: ['dispatch'],
+  description: '任务详情（含 order + rider；批次 4）',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '任务详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    404: { description: 'DISPATCH_TASK_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/dispatch/tasks/{id}/reassign',
+  tags: ['dispatch'],
+  description: '改派骑手（仅 SUPER_ADMIN；第一期 ASSIGNED only；事务双写 delivery_tasks + order.riderId；批次 4）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: ReassignTaskRequest } } },
+  },
+  responses: {
+    200: { description: '改派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    409: { description: 'DISPATCH_REASSIGN_STATUS_CONFLICT / RIDER_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/dispatch/tasks/{id}/cancel',
+  tags: ['dispatch'],
+  description: '取消任务（仅 SUPER_ADMIN；PENDING_ASSIGN/ASSIGNED；事务双写 task FAILED + order.riderId=null；批次 4）',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: CancelTaskRequest } } },
+  },
+  responses: {
+    200: { description: '取消成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    409: { description: 'DISPATCH_CANCEL_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/riders/available',
+  tags: ['dispatch'],
+  description: '可派骑手列表（APPROVED + Redis isOnline 标记，在线优先；批次 4）',
+  responses: {
+    200: { description: '可派骑手', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(AvailableRider) }) } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/dispatch/orders/{orderId}/recreate',
+  tags: ['dispatch'],
+  description: '补建任务（仅 SUPER_ADMIN；复用 createTaskForOrder，幂等；批次 4）',
+  request: { params: z.object({ orderId: Id }) },
+  responses: {
+    200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -2696,6 +2790,33 @@ registry.registerPath({
     413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
     500: {
       description: 'E-UPLOAD-002 存储失败（MinIO 故障）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+// ===== Client Upload（P13 售后凭证上传，2026-08-10）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/uploads/refund-evidence',
+  tags: ['upload'],
+  description:
+    '退款凭证上传（P13 售后图片 2026-08-10）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，售后凭证任意比例），服务端校验 magic bytes（防 mime 伪造）。',
+  // multipart/form-data 不在 zod 注册，request body 用 OpenAPI 原生描述
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/refunds 的 photos[]）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 跨端调用或 E-AUTH-012 非本人', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
       content: { 'application/json': { schema: ErrorResponse } },
     },
   },
