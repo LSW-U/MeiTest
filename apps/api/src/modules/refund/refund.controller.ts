@@ -131,7 +131,7 @@ export class ClientRefundController {
 }
 
 // ============================================================================
-// Admin（super_admin / warehouse_staff 视角）
+// Admin（super_admin 写 / warehouse_staff + customer_service 只读）
 // ============================================================================
 
 @Controller('api/v1/admin/refunds')
@@ -163,8 +163,17 @@ export class AdminRefundController {
     return { success: true as const, data: refund };
   }
 
-  /** 审核退款 */
+  /**
+   * 审核退款（仅 super_admin）
+   *
+   * 权限收紧（对齐 settlement/withdrawal/payment 写操作 SUPER_ADMIN only）：
+   *   - refund APPROVE 触发系统实际退款（同 withdraw APPROVE 触发打款），属财务合规范畴
+   *   - 原 class 级三角色让 warehouse_staff/customer_service 可单方面放款，
+   *     与 withdraw.controller「review2 安全建议」同款漏洞，已方法级收紧
+   *   - 列表/详情仍开放三角色只读（运营查进度）
+   */
   @Post(':id/review')
+  @Roles('SUPER_ADMIN')
   @Audit({ resource: 'Refund', resourceIdParam: 'id' })
   async review(
     @Param('id') id: string,

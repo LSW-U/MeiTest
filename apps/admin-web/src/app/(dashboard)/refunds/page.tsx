@@ -2,7 +2,7 @@
  * 退款管理页 — /refunds
  *
  * 后端：GET /admin/refunds + POST /admin/refunds/:id/review
- * 视角：platform（super_admin / warehouse_staff / customer_service）
+ * 视角：platform（super_admin 写；warehouse_staff/customer_service 只读，admin-web 不做 role 隐藏，后端 RBAC 兜底）
  */
 'use client';
 
