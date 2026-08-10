@@ -37,6 +37,12 @@ export interface Refund {
   items: RefundItem[];
   /** 凭证照片 URL 数组（P13 售后图片 2026-08-10） */
   photos: string[];
+  /** 售后类型：REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款（P14-defer 2026-08-10） */
+  refundType: 'REFUND_ONLY' | 'RETURN_REFUND';
+  /** 骑手接单取件时间（dispatch 集成 defer，当前 null） */
+  pickupAt: string | null;
+  /** 骑手取件完成时间（dispatch 集成 defer，当前 null） */
+  pickedAt: string | null;
 }
 
 /** 退款商品子表项（P13 部分退款） */

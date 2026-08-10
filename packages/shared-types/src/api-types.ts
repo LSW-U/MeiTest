@@ -10813,6 +10813,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             }[];
                         };
                     };
@@ -10843,6 +10849,11 @@ export interface paths {
                         }[];
                         /** @default [] */
                         photos?: string[];
+                        /**
+                         * @default REFUND_ONLY
+                         * @enum {string}
+                         */
+                        refundType?: "REFUND_ONLY" | "RETURN_REFUND";
                     };
                 };
             };
@@ -10899,6 +10910,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             };
                         };
                     };
@@ -11001,6 +11018,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             };
                         };
                     };
@@ -11107,6 +11130,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             };
                         };
                     };
@@ -11193,6 +11222,12 @@ export interface paths {
                                         subtotal: number;
                                     }[];
                                     photos: string[];
+                                    /** @enum {string} */
+                                    refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                    /** Format: date-time */
+                                    pickupAt: string | null;
+                                    /** Format: date-time */
+                                    pickedAt: string | null;
                                 }[];
                                 nextCursor: string | null;
                                 hasMore: boolean;
@@ -11282,6 +11317,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             };
                         };
                     };
@@ -11398,6 +11439,12 @@ export interface paths {
                                     subtotal: number;
                                 }[];
                                 photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
                             };
                         };
                     };

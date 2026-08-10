@@ -95,6 +95,10 @@ const baseRefund = {
   completedAt: null,
   createdAt: new Date('2026-07-05T00:00:00Z'),
   updatedAt: new Date('2026-07-05T00:00:00Z'),
+  photos: [],
+  refundType: 'REFUND_ONLY',
+  pickupAt: null,
+  pickedAt: null,
 };
 
 describe('RefundService', () => {
@@ -189,6 +193,69 @@ describe('RefundService', () => {
         }),
       );
     });
+
+    it('createRefund 传 refundType=RETURN_REFUND -> db.refund.create data 含 refundType + toView 返（P14-defer）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND' });
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'WRONG_ITEM',
+        refundType: 'RETURN_REFUND',
+      });
+
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            refundType: 'RETURN_REFUND',
+          }),
+        }),
+      );
+      expect(result.refundType).toBe('RETURN_REFUND');
+    });
+
+    it('createRefund 不传 refundType -> db.refund.create data 含 refundType: REFUND_ONLY（默认，向后兼容，P14-defer）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, refundType: 'REFUND_ONLY' });
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        // 不传 refundType
+      });
+
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            refundType: 'REFUND_ONLY',
+          }),
+        }),
+      );
+      expect(result.refundType).toBe('REFUND_ONLY');
+    });
+
+    it('toView 返 pickupAt/pickedAt 为 null（dispatch 集成 defer，当前永远 null，P14-defer）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, pickupAt: null, pickedAt: null });
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+      });
+
+      expect(result.pickupAt).toBeNull();
+      expect(result.pickedAt).toBeNull();
+    });
+
 
     it('photos 含非本服务 URL → E-REFUND-011（P13 审查 P1 修复：防 SSRF/追踪/钓鱼）', async () => {
       mockDb.order.findUnique.mockResolvedValue(baseOrder);

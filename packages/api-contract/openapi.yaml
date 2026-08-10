@@ -4162,7 +4162,7 @@ components:
           maximum: 180
         source:
           type: string
-          enum: &a56
+          enum: &a57
             - nominatim
             - fallback
         formattedAddress:
@@ -4328,7 +4328,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a59 []
+          default: &a60 []
         category:
           type: string
           enum: *a22
@@ -4352,7 +4352,7 @@ components:
             type: string
             enum: *a23
           maxItems: 4
-          default: &a60 []
+          default: &a61 []
         comment:
           type: object
           additionalProperties:
@@ -4370,7 +4370,7 @@ components:
           type: string
         theme:
           type: string
-          enum: &a57
+          enum: &a58
             - deals
             - coupons
             - delivery
@@ -4381,7 +4381,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a58
+          enum: &a59
             - ACTIVE
             - INACTIVE
       required:
@@ -19288,6 +19288,12 @@ paths:
                     format: uri
                   maxItems: 9
                   default: []
+                refundType:
+                  type: string
+                  enum:
+                    - REFUND_ONLY
+                    - RETURN_REFUND
+                  default: REFUND_ONLY
               required:
                 - orderId
                 - reason
@@ -19407,6 +19413,19 @@ paths:
                         items:
                           type: string
                           format: uri
+                      refundType:
+                        type: string
+                        enum: &a56
+                          - REFUND_ONLY
+                          - RETURN_REFUND
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                     required:
                       - id
                       - orderId
@@ -19425,6 +19444,9 @@ paths:
                       - updatedAt
                       - items
                       - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
                 required:
                   - success
                   - data
@@ -19573,6 +19595,17 @@ paths:
                           items:
                             type: string
                             format: uri
+                        refundType:
+                          type: string
+                          enum: *a56
+                        pickupAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        pickedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                       required:
                         - id
                         - orderId
@@ -19591,6 +19624,9 @@ paths:
                         - updatedAt
                         - items
                         - photos
+                        - refundType
+                        - pickupAt
+                        - pickedAt
                 required:
                   - success
                   - data
@@ -19716,6 +19752,17 @@ paths:
                         items:
                           type: string
                           format: uri
+                      refundType:
+                        type: string
+                        enum: *a56
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                     required:
                       - id
                       - orderId
@@ -19734,6 +19781,9 @@ paths:
                       - updatedAt
                       - items
                       - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
                 required:
                   - success
                   - data
@@ -19888,6 +19938,17 @@ paths:
                         items:
                           type: string
                           format: uri
+                      refundType:
+                        type: string
+                        enum: *a56
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                     required:
                       - id
                       - orderId
@@ -19906,6 +19967,9 @@ paths:
                       - updatedAt
                       - items
                       - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
                 required:
                   - success
                   - data
@@ -20048,6 +20112,17 @@ paths:
                               items:
                                 type: string
                                 format: uri
+                            refundType:
+                              type: string
+                              enum: *a56
+                            pickupAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            pickedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
                           required:
                             - id
                             - orderId
@@ -20066,6 +20141,9 @@ paths:
                             - updatedAt
                             - items
                             - photos
+                            - refundType
+                            - pickupAt
+                            - pickedAt
                       nextCursor:
                         type: string
                         nullable: true
@@ -20202,6 +20280,17 @@ paths:
                         items:
                           type: string
                           format: uri
+                      refundType:
+                        type: string
+                        enum: *a56
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                     required:
                       - id
                       - orderId
@@ -20220,6 +20309,9 @@ paths:
                       - updatedAt
                       - items
                       - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
                 required:
                   - success
                   - data
@@ -20394,6 +20486,17 @@ paths:
                         items:
                           type: string
                           format: uri
+                      refundType:
+                        type: string
+                        enum: *a56
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                     required:
                       - id
                       - orderId
@@ -20412,6 +20515,9 @@ paths:
                       - updatedAt
                       - items
                       - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
                 required:
                   - success
                   - data
@@ -20612,7 +20718,7 @@ paths:
                     maximum: 180
                   source:
                     type: string
-                    enum: *a56
+                    enum: *a57
                   formattedAddress:
                     type: string
                     nullable: true
@@ -20989,14 +21095,14 @@ paths:
                       type: string
                     theme:
                       type: string
-                      enum: *a57
+                      enum: *a58
                     link:
                       type: string
                     sortOrder:
                       type: integer
                     status:
                       type: string
-                      enum: *a58
+                      enum: *a59
                   required:
                     - id
                     - titleKey
@@ -21111,7 +21217,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a59
+                  default: *a60
                 category:
                   type: string
                   enum: *a22
@@ -21272,7 +21378,7 @@ paths:
                     type: string
                     enum: *a23
                   maxItems: 4
-                  default: *a60
+                  default: *a61
                 comment:
                   type: object
                   additionalProperties:
@@ -21839,7 +21945,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: &a61
+            enum: &a62
               - MERCHANT
               - RIDER
           required: false
@@ -21862,7 +21968,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a62
+            enum: &a63
               - PENDING
               - CONFIRMED
               - PAID
@@ -21914,7 +22020,7 @@ paths:
                               type: string
                             subjectType:
                               type: string
-                              enum: *a61
+                              enum: *a62
                             subjectId:
                               type: string
                             warehouseId:
@@ -21941,7 +22047,7 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a62
+                              enum: *a63
                             confirmedAt:
                               type: string
                               nullable: true
@@ -22078,7 +22184,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       subjectId:
                         type: string
                       warehouseId:
@@ -22105,7 +22211,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a62
+                        enum: *a63
                       confirmedAt:
                         type: string
                         nullable: true
@@ -22204,7 +22310,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       subjectId:
                         type: string
                       warehouseId:
@@ -22231,7 +22337,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a62
+                        enum: *a63
                       confirmedAt:
                         type: string
                         nullable: true
@@ -22340,7 +22446,7 @@ paths:
                   type: string
                 subjectType:
                   type: string
-                  enum: *a61
+                  enum: *a62
                 subjectId:
                   type: string
               required:
@@ -22368,7 +22474,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a61
+                        enum: *a62
                       subjectId:
                         type: string
                       warehouseId:
@@ -22395,7 +22501,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a62
+                        enum: *a63
                       confirmedAt:
                         type: string
                         nullable: true
@@ -22473,7 +22579,7 @@ paths:
               properties:
                 requesterType:
                   type: string
-                  enum: &a63
+                  enum: &a64
                     - MERCHANT
                     - RIDER
                 requesterId:
@@ -22487,7 +22593,7 @@ paths:
                   properties:
                     channel:
                       type: string
-                      enum: &a64
+                      enum: &a65
                         - BANK_TRANSFER
                         - WECHAT
                         - ALIPAY
@@ -22528,7 +22634,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       requesterId:
                         type: string
                       amount:
@@ -22537,7 +22643,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: &a65
+                        enum: &a66
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -22548,7 +22654,7 @@ paths:
                         properties:
                           channel:
                             type: string
-                            enum: *a64
+                            enum: *a65
                           account:
                             type: string
                           holderName:
@@ -22638,7 +22744,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a63
+            enum: *a64
           required: false
           name: requesterType
           in: query
@@ -22649,7 +22755,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a65
+            enum: *a66
           required: false
           name: status
           in: query
@@ -22695,7 +22801,7 @@ paths:
                               format: uuid
                             requesterType:
                               type: string
-                              enum: *a63
+                              enum: *a64
                             requesterId:
                               type: string
                             amount:
@@ -22704,13 +22810,13 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a65
+                              enum: *a66
                             payoutAccount:
                               type: object
                               properties:
                                 channel:
                                   type: string
-                                  enum: *a64
+                                  enum: *a65
                                 account:
                                   type: string
                                 holderName:
@@ -22863,7 +22969,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       requesterId:
                         type: string
                       amount:
@@ -22872,13 +22978,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a65
+                        enum: *a66
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a64
+                            enum: *a65
                           account:
                             type: string
                           holderName:
@@ -23008,7 +23114,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       requesterId:
                         type: string
                       amount:
@@ -23017,13 +23123,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a65
+                        enum: *a66
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a64
+                            enum: *a65
                           account:
                             type: string
                           holderName:
@@ -23178,7 +23284,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a63
+                        enum: *a64
                       requesterId:
                         type: string
                       amount:
@@ -23187,13 +23293,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a65
+                        enum: *a66
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a64
+                            enum: *a65
                           account:
                             type: string
                           holderName:

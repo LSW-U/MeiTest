@@ -1039,6 +1039,13 @@ model Refund {
   updatedAt      DateTime      @updatedAt        @map("updated_at")
   /// 凭证照片 URL 数组（MinIO 完整 URL，同 Review.images 模式；P13 售后图片 2026-08-10）
   photos         String[]      @default([])
+  /// 售后类型：仅退款 / 退货退款（P13 提交传，P14 详情展示真实类型，替代 reason 启发式；P14-defer 2026-08-10）
+  /// REFUND_ONLY：仅退款 / RETURN_REFUND：退货退款（骑手上门收回）
+  refundType     String        @default("REFUND_ONLY") @map("refund_type")
+  /// 骑手接单取件时间（dispatch PICKED_UP 时写，P14 时间轴 pickupArranging 步骤展示；dispatch 集成 defer 到独立 ticket，当前 null）
+  pickupAt       DateTime?     @map("pickup_at")
+  /// 骑手取件完成时间（dispatch PICKED_UP->DELIVERING 时写，P14 时间轴 picked 步骤展示；dispatch 集成 defer 到独立 ticket，当前 null）
+  pickedAt       DateTime?     @map("picked_at")
 
   order Order @relation(fields: [orderId], references: [id])
   user  User  @relation(fields: [userId], references: [id])

@@ -60,6 +60,8 @@ const CreateRefundRequest = z.object({
     .optional(),
   /** 凭证照片 URL 数组（前端先调 /client/uploads/refund-evidence 拿 URL 再提交；max 9 后端宽松，前端 P13 限 3 张；P13 售后图片 2026-08-10） */
   photos: z.array(z.string().url()).max(9).default([]),
+  /** 售后类型：REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款（P14-defer 2026-08-10；不传默认 REFUND_ONLY 向后兼容） */
+  refundType: z.enum(['REFUND_ONLY', 'RETURN_REFUND']).default('REFUND_ONLY'),
 });
 
 const ReviewRefundRequest = z.object({
@@ -100,6 +102,7 @@ export class ClientRefundController {
       reasonDetail: body.reasonDetail,
       items: body.items,
       photos: body.photos,
+      refundType: body.refundType,
     });
     return { success: true as const, data: refund };
   }

@@ -32,6 +32,8 @@ export interface CreateRefundInput {
   items?: { orderItemId: string; refundQty: number }[];
   /** 凭证照片 URL 数组（前端先调 /client/uploads/refund-evidence 拿 URL 再提交；P13 售后图片 2026-08-10） */
   photos?: string[];
+  /** 售后类型：REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款（P14-defer 2026-08-10；不传默认 REFUND_ONLY 向后兼容） */
+  refundType?: 'REFUND_ONLY' | 'RETURN_REFUND';
 }
 
 /** 退款商品子表项视图（P13 部分退款，2026-08-08） */
@@ -66,6 +68,12 @@ export interface RefundView {
   items: RefundItemView[];
   /** 凭证照片 URL 数组（P13 售后图片 2026-08-10） */
   photos: string[];
+  /** 售后类型：REFUND_ONLY 仅退款 / RETURN_REFUND 退货退款（P14-defer 2026-08-10，替代 reason 启发式） */
+  refundType: string;
+  /** 骑手接单取件时间（dispatch 集成 defer，当前 null；P14 时间轴 pickupArranging 步骤展示） */
+  pickupAt: string | null;
+  /** 骑手取件完成时间（dispatch 集成 defer，当前 null；P14 时间轴 picked 步骤展示） */
+  pickedAt: string | null;
 }
 
 @Injectable()
@@ -216,6 +224,7 @@ export class RefundService {
         reason: input.reason,
         reasonDetail: input.reasonDetail ?? null,
         photos: input.photos ?? [],
+        refundType: input.refundType ?? 'REFUND_ONLY',
         status: autoApprove ? 'COMPLETED' : 'PENDING',
         refundMethod,
         transactionId: autoApprove ? this.generateMockTransactionId() : null,
@@ -536,6 +545,9 @@ export class RefundService {
     createdAt: Date;
     updatedAt: Date;
     photos: string[];
+    refundType: string;
+    pickupAt: Date | null;
+    pickedAt: Date | null;
     items?: {
       id: string;
       refundId: string;
@@ -564,6 +576,9 @@ export class RefundService {
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
       photos: r.photos ?? [],
+      refundType: r.refundType ?? 'REFUND_ONLY',
+      pickupAt: r.pickupAt?.toISOString() ?? null,
+      pickedAt: r.pickedAt?.toISOString() ?? null,
       items: (r.items ?? []).map((it) => ({
         id: it.id,
         refundId: it.refundId,
