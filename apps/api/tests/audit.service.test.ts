@@ -163,6 +163,32 @@ describe('AuditService', () => {
       expect(csv).toContain('"key,with,commas"');
     });
 
+    it(`CSV injection 防护：= + - @ 开头字段前缀单引号（总审查报告 P2-1）`, async () => {
+      dbMock.auditLog.findMany.mockResolvedValue([
+        {
+          // beforeData/afterData JSON 序列化后含公式注入 payload（review content/refund reasonDetail 等用户输入）
+          id: 'log-1',
+          createdAt: new Date('2026-08-10T00:00:00Z'),
+          userId: 'attacker',
+          action: `=cmd|'/c calc'!A1`, // = 开头 RCE payload
+          resourceType: '@SUM(A1:A2)', // @ 开头
+          resourceId: '+1+1', // + 开头
+          perspective: '-1-1', // - 开头
+          deviceType: 'ADMIN_WEB',
+          ip: '1.1.1.1',
+          traceId: 'trace-1',
+        },
+      ]);
+
+      const csv = await service.exportCsv({ limit: 100 } as never);
+
+      // = + - @ 开头单元格必须前缀单引号（Excel/WPS 当文本，防公式执行 RCE/HYPERLINK）
+      expect(csv).toContain(`'=cmd|'/c calc'!A1`);
+      expect(csv).toContain("'@SUM(A1:A2)");
+      expect(csv).toContain("'+1+1");
+      expect(csv).toContain("'-1-1");
+    });
+
     it(`take = MAX_EXPORT_ROWS = ${10000}`, async () => {
       dbMock.auditLog.findMany.mockResolvedValue([]);
 

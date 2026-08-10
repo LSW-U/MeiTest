@@ -92,7 +92,12 @@ export class AuditService {
     ];
     const escape = (v: unknown): string => {
       if (v === null || v === undefined) return '';
-      const s = String(v);
+      // CSV injection 防护（总审查报告 P2-1）：= + - @ 开头单元格前缀单引号
+      // Excel/WPS 当文本，防公式执行（RCE / HYPERLINK 数据外泄）
+      // beforeData/afterData 含用户输入（review content/refund reasonDetail 等）属高危字段
+      let s = String(v);
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      // 标准字段转义（引号/逗号/换行）
       if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
       return s;
     };
