@@ -5639,6 +5639,909 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/dispatch/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 任务监控列表（admin，游标分页 + filter status/warehouseId/riderId/orderNo；批次 4） */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                    warehouseId?: string;
+                    riderId?: string;
+                    orderNo?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 任务列表（游标分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    orderId: string;
+                                    /** Format: uuid */
+                                    riderId: string | null;
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    /** @enum {string} */
+                                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    pickupAddress: string;
+                                    pickupLat: number;
+                                    pickupLng: number;
+                                    dropoffAddress: string;
+                                    dropoffLat: number;
+                                    dropoffLng: number;
+                                    /** Format: date-time */
+                                    assignedAt: string | null;
+                                    /** Format: date-time */
+                                    pickedUpAt: string | null;
+                                    /** Format: date-time */
+                                    deliveredAt: string | null;
+                                    note: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                    /** Format: date-time */
+                                    estimatedArrival: string | null;
+                                    warehouseCode: string;
+                                    order: {
+                                        orderNo: string;
+                                        status: string;
+                                        payableAmount: number | null;
+                                        paymentMethod: string;
+                                    };
+                                    rider: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        riderName: string;
+                                        phone: string;
+                                    } | null;
+                                }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dispatch/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 任务详情（含 order + rider；批次 4） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 任务详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: date-time */
+                                estimatedArrival: string | null;
+                                warehouseCode: string;
+                                order: {
+                                    orderNo: string;
+                                    status: string;
+                                    payableAmount: number | null;
+                                    paymentMethod: string;
+                                };
+                                rider: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    riderName: string;
+                                    phone: string;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+                /** @description DISPATCH_TASK_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dispatch/tasks/{id}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 改派骑手（仅 SUPER_ADMIN；第一期 ASSIGNED only；事务双写 delivery_tasks + order.riderId；批次 4） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        newRiderId: string;
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 改派成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: date-time */
+                                estimatedArrival: string | null;
+                                warehouseCode: string;
+                                order: {
+                                    orderNo: string;
+                                    status: string;
+                                    payableAmount: number | null;
+                                    paymentMethod: string;
+                                };
+                                rider: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    riderName: string;
+                                    phone: string;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+                /** @description DISPATCH_REASSIGN_STATUS_CONFLICT / RIDER_INVALID */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dispatch/tasks/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 取消任务（仅 SUPER_ADMIN；PENDING_ASSIGN/ASSIGNED；事务双写 task FAILED + order.riderId=null；批次 4） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 取消成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: date-time */
+                                estimatedArrival: string | null;
+                                warehouseCode: string;
+                                order: {
+                                    orderNo: string;
+                                    status: string;
+                                    payableAmount: number | null;
+                                    paymentMethod: string;
+                                };
+                                rider: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    riderName: string;
+                                    phone: string;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+                /** @description DISPATCH_CANCEL_STATUS_CONFLICT */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dispatch/riders/available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 可派骑手列表（APPROVED + Redis isOnline 标记，在线优先；批次 4） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 可派骑手 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "BICYCLE" | "MOTORCYCLE" | "CAR";
+                                isOnline: boolean;
+                                totalDeliveries: number;
+                                rating: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dispatch/orders/{orderId}/recreate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 补建任务（仅 SUPER_ADMIN；复用 createTaskForOrder，幂等；批次 4） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 补建成功（已存在则返回现有 task） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                /** Format: date-time */
+                                estimatedArrival: string | null;
+                                warehouseCode: string;
+                                order: {
+                                    orderNo: string;
+                                    status: string;
+                                    payableAmount: number | null;
+                                    paymentMethod: string;
+                                };
+                                rider: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    riderName: string;
+                                    phone: string;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/stocks/batch-adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量调整库存（全事务，上限 100，一条失败全部回滚；批次 5） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            warehouseId: string;
+                            /** Format: uuid */
+                            skuId: string;
+                            deltaQty: number;
+                            reason?: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 批量调整成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    warehouseId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    deltaQty: number;
+                                    afterQty: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description E-INVENTORY-008 超上限 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 仓库间调拨（双仓原子：源 deductStock + 目标 create/update，referenceType=TRANSFER + referenceId 串联两条 StockLog；批次 5） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        fromWarehouseId: string;
+                        /** Format: uuid */
+                        toWarehouseId: string;
+                        items: {
+                            /** Format: uuid */
+                            skuId: string;
+                            quantity: number;
+                        }[];
+                        reason?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 调拨成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                referenceId: string;
+                                /** Format: uuid */
+                                fromWarehouseId: string;
+                                /** Format: uuid */
+                                toWarehouseId: string;
+                                items: {
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    quantity: number;
+                                    fromAfterQty: number;
+                                    toAfterQty: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description E-INVENTORY-001 源不足 / 005 同仓 / 006 空 / 007 超上限 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 调拨记录列表（查 StockLog referenceType=TRANSFER，按 referenceId 聚合；批次 5） */
+        get: {
+            parameters: {
+                query?: {
+                    fromWarehouseId?: string;
+                    toWarehouseId?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 调拨记录 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                referenceId: string;
+                                /** Format: uuid */
+                                fromWarehouseId: string;
+                                /** Format: uuid */
+                                toWarehouseId: string;
+                                items: {
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    quantity: number;
+                                }[];
+                                reason: string | null;
+                                /** Format: uuid */
+                                operatorId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/stocks/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 导出库存快照 CSV（warehouseId,warehouseCode,skuId,quantity,safetyStock,status；批次 5） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 文件（text/csv; charset=utf-8） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/inventory/stocks/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 导入批量调整 CSV（multipart field=file，逐行部分成功返 failedRows；表头 warehouseId,skuId,deltaQty,reason?；批次 5） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 导入结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                successCount: number;
+                                failedRows: {
+                                    row: number;
+                                    error: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description E-INVENTORY-009 CSV 格式错 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/im/signature": {
         parameters: {
             query?: never;
@@ -9909,6 +10812,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             }[];
                         };
                     };
@@ -9937,6 +10841,8 @@ export interface paths {
                             orderItemId: string;
                             refundQty: number;
                         }[];
+                        /** @default [] */
+                        photos?: string[];
                     };
                 };
             };
@@ -9992,6 +10898,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             };
                         };
                     };
@@ -10093,6 +11000,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             };
                         };
                     };
@@ -10198,6 +11106,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             };
                         };
                     };
@@ -10283,6 +11192,7 @@ export interface paths {
                                         refundQty: number;
                                         subtotal: number;
                                     }[];
+                                    photos: string[];
                                 }[];
                                 nextCursor: string | null;
                                 hasMore: boolean;
@@ -10371,6 +11281,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             };
                         };
                     };
@@ -10486,6 +11397,7 @@ export interface paths {
                                     refundQty: number;
                                     subtotal: number;
                                 }[];
+                                photos: string[];
                             };
                         };
                     };
@@ -10803,6 +11715,142 @@ export interface paths {
                     };
                 };
                 /** @description E-UPLOAD-002 存储失败（MinIO 故障） */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/uploads/refund-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 退款凭证上传（P13 售后图片 2026-08-10）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，售后凭证任意比例），服务端校验 magic bytes（防 mime 伪造）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/refunds 的 photos[]） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-001 跨端调用或 E-AUTH-012 非本人 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
                 500: {
                     headers: {
                         [name: string]: unknown;
@@ -13629,6 +14677,211 @@ export interface components {
             method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
             count: number;
             totalAmount: number;
+        };
+        AdminDeliveryTaskView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            riderId: string | null;
+            /** Format: uuid */
+            warehouseId: string;
+            /** @enum {string} */
+            status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+            pickupAddress: string;
+            pickupLat: number;
+            pickupLng: number;
+            dropoffAddress: string;
+            dropoffLat: number;
+            dropoffLng: number;
+            /** Format: date-time */
+            assignedAt: string | null;
+            /** Format: date-time */
+            pickedUpAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            estimatedArrival: string | null;
+            warehouseCode: string;
+            order: {
+                orderNo: string;
+                status: string;
+                payableAmount: number | null;
+                paymentMethod: string;
+            };
+            rider: {
+                /** Format: uuid */
+                id: string;
+                riderName: string;
+                phone: string;
+            } | null;
+        };
+        AdminTaskListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    orderId: string;
+                    /** Format: uuid */
+                    riderId: string | null;
+                    /** Format: uuid */
+                    warehouseId: string;
+                    /** @enum {string} */
+                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                    pickupAddress: string;
+                    pickupLat: number;
+                    pickupLng: number;
+                    dropoffAddress: string;
+                    dropoffLat: number;
+                    dropoffLng: number;
+                    /** Format: date-time */
+                    assignedAt: string | null;
+                    /** Format: date-time */
+                    pickedUpAt: string | null;
+                    /** Format: date-time */
+                    deliveredAt: string | null;
+                    note: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                    /** Format: date-time */
+                    updatedAt: string;
+                    /** Format: date-time */
+                    estimatedArrival: string | null;
+                    warehouseCode: string;
+                    order: {
+                        orderNo: string;
+                        status: string;
+                        payableAmount: number | null;
+                        paymentMethod: string;
+                    };
+                    rider: {
+                        /** Format: uuid */
+                        id: string;
+                        riderName: string;
+                        phone: string;
+                    } | null;
+                }[];
+                nextCursor: string | null;
+                hasMore: boolean;
+                total?: number;
+            };
+        };
+        ListAllTasksQuery: {
+            /** @enum {string} */
+            status?: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+            /** Format: uuid */
+            warehouseId?: string;
+            /** Format: uuid */
+            riderId?: string;
+            orderNo?: string;
+            cursor?: string;
+            limit?: number;
+        };
+        ReassignTaskRequest: {
+            /** Format: uuid */
+            newRiderId: string;
+            reason?: string;
+        };
+        CancelTaskRequest: {
+            reason?: string;
+        };
+        AvailableRider: {
+            /** Format: uuid */
+            id: string;
+            riderName: string;
+            phone: string;
+            /** @enum {string} */
+            vehicleType: "BICYCLE" | "MOTORCYCLE" | "CAR";
+            isOnline: boolean;
+            totalDeliveries: number;
+            rating: number;
+        };
+        BatchAdjustRequest: {
+            items: {
+                /** Format: uuid */
+                warehouseId: string;
+                /** Format: uuid */
+                skuId: string;
+                deltaQty: number;
+                reason?: string;
+            }[];
+        };
+        BatchAdjustResult: {
+            items: {
+                /** Format: uuid */
+                warehouseId: string;
+                /** Format: uuid */
+                skuId: string;
+                deltaQty: number;
+                afterQty: number;
+            }[];
+        };
+        TransferRequest: {
+            /** Format: uuid */
+            fromWarehouseId: string;
+            /** Format: uuid */
+            toWarehouseId: string;
+            items: {
+                /** Format: uuid */
+                skuId: string;
+                quantity: number;
+            }[];
+            reason?: string;
+        };
+        TransferResult: {
+            /** Format: uuid */
+            referenceId: string;
+            /** Format: uuid */
+            fromWarehouseId: string;
+            /** Format: uuid */
+            toWarehouseId: string;
+            items: {
+                /** Format: uuid */
+                skuId: string;
+                quantity: number;
+                fromAfterQty: number;
+                toAfterQty: number;
+            }[];
+        };
+        TransferRecord: {
+            /** Format: uuid */
+            referenceId: string;
+            /** Format: uuid */
+            fromWarehouseId: string;
+            /** Format: uuid */
+            toWarehouseId: string;
+            items: {
+                /** Format: uuid */
+                skuId: string;
+                quantity: number;
+            }[];
+            reason: string | null;
+            /** Format: uuid */
+            operatorId: string | null;
+            createdAt: string;
+        };
+        ListTransfersQuery: {
+            /** Format: uuid */
+            fromWarehouseId?: string;
+            /** Format: uuid */
+            toWarehouseId?: string;
+            limit?: number;
+        };
+        ImportResult: {
+            successCount: number;
+            failedRows: {
+                row: number;
+                error: string;
+            }[];
         };
         DashboardSummary: {
             /** @enum {string} */
