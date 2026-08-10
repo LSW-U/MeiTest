@@ -504,16 +504,26 @@ export class InventoryService {
         warehouse: { select: { code: true } },
       },
     });
+    // CSV escape（总审查报告 P2-3，对齐 audit.service escape 模式 + =+-@ 公式注入防护）
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return '';
+      let s = String(v);
+      // CSV injection 防护：= + - @ 开头前缀单引号（Excel/WPS 当文本，防公式执行）
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      // 标准字段转义（引号/逗号/换行）
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
     const header = 'warehouseId,warehouseCode,skuId,quantity,safetyStock,status';
     const rows = stocks.map((s) => {
       const status = s.quantity <= s.safetyStock ? 'LOW' : 'OK';
       return [
-        s.warehouseId,
-        s.warehouse.code,
-        s.skuId,
-        s.quantity,
-        s.safetyStock,
-        status,
+        escape(s.warehouseId),
+        escape(s.warehouse.code),
+        escape(s.skuId),
+        escape(s.quantity),
+        escape(s.safetyStock),
+        escape(status),
       ].join(',');
     });
     return [header, ...rows].join('\n');
@@ -538,6 +548,16 @@ export class InventoryService {
       throw new BadRequestException({
         code: 'E-INVENTORY-009',
         message: 'CSV is empty',
+      });
+    }
+    // 行数上限（总审查报告 P2-1，DoS 防护：避免超大 CSV 循环 N 次 adjustStock）
+    // multer fileSize 5MB 是字节上限，行数是双保险（防短行高行数攻击）
+    const MAX_IMPORT_ROWS = 1000;
+    if (lines.length > MAX_IMPORT_ROWS + 1) {
+      // +1 表头
+      throw new BadRequestException({
+        code: 'E-INVENTORY-009',
+        message: `CSV exceeds max rows (max ${MAX_IMPORT_ROWS} data rows, got ${lines.length - 1})`,
       });
     }
 
@@ -569,6 +589,17 @@ export class InventoryService {
           row,
           error: 'missing required field (warehouseId/skuId/deltaQty)',
         });
+        continue;
+      }
+      // uuid 格式校验（总审查报告 P2-4，清晰错误 + 防无效 ID 注入到 Prisma findUnique）
+      const UUID_RE =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!UUID_RE.test(warehouseId)) {
+        failedRows.push({ row, error: `warehouseId not uuid: ${warehouseId}` });
+        continue;
+      }
+      if (!UUID_RE.test(skuId)) {
+        failedRows.push({ row, error: `skuId not uuid: ${skuId}` });
         continue;
       }
       const deltaQty = Number(deltaQtyStr);

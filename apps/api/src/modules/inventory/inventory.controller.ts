@@ -24,7 +24,7 @@ import {
 import { z } from 'zod';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { Response } from 'express';
+import type { Response } from 'express';
 import {
   BatchAdjustRequest,
   TransferRequest,

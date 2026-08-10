@@ -318,17 +318,76 @@ describe('InventoryService', () => {
     });
 
     it('逐行解析：deltaQty=0 进 failedRows，合法行调 adjustStock 成功', async () => {
+      const wh = '11111111-1111-1111-1111-111111111111';
+      const sku1 = '22222222-2222-2222-2222-222222222222';
+      const sku2 = '33333333-3333-3333-3333-333333333333';
       const csv = Buffer.from(
-        'warehouseId,skuId,deltaQty,reason\nwh-1,sku-1,0,zero\nwh-1,sku-2,5,ok',
+        `warehouseId,skuId,deltaQty,reason\n${wh},${sku1},0,zero\n${wh},${sku2},5,ok`,
       );
-      m.stockFindUnique.mockResolvedValue({ warehouseId: 'wh-1', skuId: 'sku-2', quantity: 10 });
+      m.stockFindUnique.mockResolvedValue({ warehouseId: wh, skuId: sku2, quantity: 10 });
       m.releaseStock.mockResolvedValue(undefined);
 
       const result = await service.importStocksCsv(csv);
 
       expect(result.failedRows).toHaveLength(1);
-      expect(result.failedRows[0].row).toBe(2); // sku-1 行（deltaQty=0）
-      expect(result.successCount).toBe(1); // sku-2 成功
+      expect(result.failedRows[0].row).toBe(2); // sku1 行（deltaQty=0）
+      expect(result.successCount).toBe(1); // sku2 成功
+    });
+
+    it('行数超 1000 → E-INVENTORY-009（DoS 防护，P2-1）', async () => {
+      const uuid = '11111111-1111-1111-1111-111111111111';
+      const lines = ['warehouseId,skuId,deltaQty'];
+      for (let i = 0; i < 1001; i++) lines.push(`${uuid},${uuid},1`);
+      const csv = Buffer.from(lines.join('\n'));
+      await expect(service.importStocksCsv(csv)).rejects.toMatchObject({
+        response: { code: 'E-INVENTORY-009' },
+      });
+    });
+
+    it('warehouseId/skuId 非 uuid → failedRows（清晰错误，P2-4）', async () => {
+      const csv = Buffer.from('warehouseId,skuId,deltaQty\nnot-uuid,also-bad,5');
+      const result = await service.importStocksCsv(csv);
+      expect(result.failedRows).toHaveLength(1);
+      expect(result.failedRows[0].row).toBe(2);
+      expect(result.failedRows[0].error).toContain('not uuid');
+      expect(result.successCount).toBe(0);
+    });
+  });
+
+  describe('exportStocksCsv（P2-3 escape 缺失修复）', () => {
+    it('字段含逗号/引号 → 标准 CSV 转义（P2-3）', async () => {
+      m.stockFindMany.mockResolvedValue([
+        {
+          id: 'stk-1',
+          warehouseId: 'wh-1',
+          skuId: 'sku,with,commas',
+          quantity: 5,
+          safetyStock: 10,
+          updatedAt: new Date(),
+          warehouse: { code: 'W,01' },
+        },
+      ]);
+      const csv = await service.exportStocksCsv();
+      expect(csv).toContain('"sku,with,commas"');
+      expect(csv).toContain('"W,01"');
+    });
+
+    it('CSV injection 防护：= + - @ 开头前缀单引号（P2-3）', async () => {
+      m.stockFindMany.mockResolvedValue([
+        {
+          id: 'stk-1',
+          warehouseId: '=evil',
+          skuId: '@SUM',
+          quantity: 5,
+          safetyStock: 10,
+          updatedAt: new Date(),
+          warehouse: { code: '+1' },
+        },
+      ]);
+      const csv = await service.exportStocksCsv();
+      expect(csv).toContain("'=evil");
+      expect(csv).toContain("'@SUM");
+      expect(csv).toContain("'+1");
     });
   });
 });
