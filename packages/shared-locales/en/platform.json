@@ -13,6 +13,7 @@
     "auditLogs": "Audit Logs",
     "payments": "Payments",
     "dispatch": "Dispatch",
+    "inventory": "Inventory",
     "systemConfig": "System Config",
     "im": "Messages",
     "settle": "Settlement",

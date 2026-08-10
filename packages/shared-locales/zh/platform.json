@@ -13,6 +13,7 @@
     "auditLogs": "审计日志",
     "payments": "支付管理",
     "dispatch": "配送调度",
+    "inventory": "库存管理",
     "systemConfig": "系统配置",
     "im": "消息",
     "settle": "结算",

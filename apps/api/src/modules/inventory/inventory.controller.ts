@@ -17,8 +17,19 @@ import {
   HttpStatus,
   BadRequestException,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  Res,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { Response } from 'express';
+import {
+  BatchAdjustRequest,
+  TransferRequest,
+  ListTransfersQuery,
+} from '@meimart/api-contract';
 import { InventoryService } from './inventory.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -131,5 +142,100 @@ export class AdminInventoryController {
       operatorId: req?.user?.sub,
     });
     return { success: true, data };
+  }
+
+  // ===== 批次 5：批量调整 + 调拨 + CSV 导入导出 =====
+
+  /** 批量调整（全事务，上限 100） */
+  @Post('stocks/batch-adjust')
+  @Audit({ resource: 'Stock' })
+  async batchAdjustStock(
+    @Body(new ZodValidationPipe(BatchAdjustRequest)) body: z.infer<typeof BatchAdjustRequest>,
+    @Request() req?: { user: RequestUser },
+  ) {
+    const data = await this.inventory.batchAdjustStock(
+      body.items.map((i) => ({
+        warehouseId: i.warehouseId,
+        skuId: i.skuId,
+        deltaQty: i.deltaQty,
+        reason: i.reason,
+        operatorId: req?.user?.sub,
+      })),
+    );
+    return { success: true as const, data };
+  }
+
+  /** 仓库间调拨（双仓原子） */
+  @Post('transfer')
+  @Audit({ resource: 'Stock' })
+  async transferStock(
+    @Body(new ZodValidationPipe(TransferRequest)) body: z.infer<typeof TransferRequest>,
+    @Request() req?: { user: RequestUser },
+  ) {
+    const data = await this.inventory.transferStock({
+      fromWarehouseId: body.fromWarehouseId,
+      toWarehouseId: body.toWarehouseId,
+      items: body.items,
+      reason: body.reason,
+      operatorId: req?.user?.sub,
+    });
+    return { success: true as const, data };
+  }
+
+  /** 调拨记录列表（按 referenceId 聚合 StockLog） */
+  @Get('transfers')
+  async listTransfers(
+    @Query(new ZodValidationPipe(ListTransfersQuery)) query: z.infer<typeof ListTransfersQuery>,
+  ) {
+    const data = await this.inventory.listTransfers({
+      fromWarehouseId: query.fromWarehouseId,
+      toWarehouseId: query.toWarehouseId,
+      limit: query.limit,
+    });
+    return { success: true as const, data };
+  }
+
+  /** 导出库存快照 CSV（warehouseId,warehouseCode,skuId,quantity,safetyStock,status） */
+  @Get('stocks/export')
+  async exportStocksCsv(
+    @Query('warehouseId') warehouseId: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const csv = await this.inventory.exportStocksCsv(warehouseId ? { warehouseId } : {});
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="stocks-${new Date().toISOString().slice(0, 10)}.csv"`,
+    );
+    return csv;
+  }
+
+  /** 导入批量调整 CSV（multipart，field name="file"，逐行部分成功） */
+  @Post('stocks/import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 上限
+      fileFilter: (_req, file, cb) => {
+        const isCsv =
+          file.mimetype.includes('csv') || file.originalname.toLowerCase().endsWith('.csv');
+        if (!isCsv) {
+          cb(new BadRequestException('仅支持 CSV 文件'), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Stock' })
+  async importStocksCsv(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Request() req?: { user: RequestUser },
+  ) {
+    if (!file) {
+      throw new BadRequestException('未收到文件（field name 必须为 "file"）');
+    }
+    const data = await this.inventory.importStocksCsv(file.buffer, req?.user?.sub);
+    return { success: true as const, data };
   }
 }

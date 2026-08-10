@@ -40,6 +40,7 @@ import {
   ScrollText,
   CreditCard,
   Truck,
+  Boxes,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -111,6 +112,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dispatch',
     icon: Truck,
     perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.inventory',
+    href: '/inventory',
+    icon: Boxes,
+    perspectives: ['platform', 'warehouse'],
   },
   {
     labelKey: 'menu.customers',

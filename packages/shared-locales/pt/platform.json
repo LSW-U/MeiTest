@@ -13,6 +13,7 @@
     "auditLogs": "Registos de Auditoria",
     "payments": "Pagamentos",
     "dispatch": "Entregas",
+    "inventory": "Estoque",
     "systemConfig": "Configuração do Sistema",
     "im": "Mensagens",
     "settle": "Liquidação",

@@ -3237,6 +3237,202 @@ components:
         - isOnline
         - totalDeliveries
         - rating
+    BatchAdjustRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              warehouseId:
+                type: string
+                format: uuid
+              skuId:
+                type: string
+                format: uuid
+              deltaQty:
+                type: integer
+              reason:
+                type: string
+                maxLength: 200
+            required:
+              - warehouseId
+              - skuId
+              - deltaQty
+          minItems: 1
+          maxItems: 100
+      required:
+        - items
+    BatchAdjustResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              warehouseId:
+                type: string
+                format: uuid
+              skuId:
+                type: string
+                format: uuid
+              deltaQty:
+                type: integer
+              afterQty:
+                type: integer
+            required:
+              - warehouseId
+              - skuId
+              - deltaQty
+              - afterQty
+      required:
+        - items
+    TransferRequest:
+      type: object
+      properties:
+        fromWarehouseId:
+          type: string
+          format: uuid
+        toWarehouseId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 0
+                exclusiveMinimum: true
+            required:
+              - skuId
+              - quantity
+          minItems: 1
+          maxItems: 50
+        reason:
+          type: string
+          maxLength: 200
+      required:
+        - fromWarehouseId
+        - toWarehouseId
+        - items
+    TransferResult:
+      type: object
+      properties:
+        referenceId:
+          type: string
+          format: uuid
+        fromWarehouseId:
+          type: string
+          format: uuid
+        toWarehouseId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              fromAfterQty:
+                type: integer
+              toAfterQty:
+                type: integer
+            required:
+              - skuId
+              - quantity
+              - fromAfterQty
+              - toAfterQty
+      required:
+        - referenceId
+        - fromWarehouseId
+        - toWarehouseId
+        - items
+    TransferRecord:
+      type: object
+      properties:
+        referenceId:
+          type: string
+          format: uuid
+        fromWarehouseId:
+          type: string
+          format: uuid
+        toWarehouseId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              skuId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+            required:
+              - skuId
+              - quantity
+        reason:
+          type: string
+          nullable: true
+        operatorId:
+          type: string
+          nullable: true
+          format: uuid
+        createdAt:
+          type: string
+      required:
+        - referenceId
+        - fromWarehouseId
+        - toWarehouseId
+        - items
+        - reason
+        - operatorId
+        - createdAt
+    ListTransfersQuery:
+      type: object
+      properties:
+        fromWarehouseId:
+          type: string
+          format: uuid
+        toWarehouseId:
+          type: string
+          format: uuid
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+    ImportResult:
+      type: object
+      properties:
+        successCount:
+          type: integer
+        failedRows:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              error:
+                type: string
+            required:
+              - row
+              - error
+      required:
+        - successCount
+        - failedRows
     DashboardSummary:
       type: object
       properties:
@@ -12221,6 +12417,395 @@ paths:
                   - data
         "404":
           description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/inventory/stocks/batch-adjust:
+    post:
+      tags:
+        - inventory
+      description: 批量调整库存（全事务，上限 100，一条失败全部回滚；批次 5）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      warehouseId:
+                        type: string
+                        format: uuid
+                      skuId:
+                        type: string
+                        format: uuid
+                      deltaQty:
+                        type: integer
+                      reason:
+                        type: string
+                        maxLength: 200
+                    required:
+                      - warehouseId
+                      - skuId
+                      - deltaQty
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - items
+      responses:
+        "200":
+          description: 批量调整成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            warehouseId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            deltaQty:
+                              type: integer
+                            afterQty:
+                              type: integer
+                          required:
+                            - warehouseId
+                            - skuId
+                            - deltaQty
+                            - afterQty
+                    required:
+                      - items
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-INVENTORY-008 超上限
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/inventory/transfer:
+    post:
+      tags:
+        - inventory
+      description: 仓库间调拨（双仓原子：源 deductStock + 目标 create/update，referenceType=TRANSFER
+        + referenceId 串联两条 StockLog；批次 5）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fromWarehouseId:
+                  type: string
+                  format: uuid
+                toWarehouseId:
+                  type: string
+                  format: uuid
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      skuId:
+                        type: string
+                        format: uuid
+                      quantity:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                    required:
+                      - skuId
+                      - quantity
+                  minItems: 1
+                  maxItems: 50
+                reason:
+                  type: string
+                  maxLength: 200
+              required:
+                - fromWarehouseId
+                - toWarehouseId
+                - items
+      responses:
+        "200":
+          description: 调拨成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      referenceId:
+                        type: string
+                        format: uuid
+                      fromWarehouseId:
+                        type: string
+                        format: uuid
+                      toWarehouseId:
+                        type: string
+                        format: uuid
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            skuId:
+                              type: string
+                              format: uuid
+                            quantity:
+                              type: integer
+                            fromAfterQty:
+                              type: integer
+                            toAfterQty:
+                              type: integer
+                          required:
+                            - skuId
+                            - quantity
+                            - fromAfterQty
+                            - toAfterQty
+                    required:
+                      - referenceId
+                      - fromWarehouseId
+                      - toWarehouseId
+                      - items
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-INVENTORY-001 源不足 / 005 同仓 / 006 空 / 007 超上限
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/inventory/transfers:
+    get:
+      tags:
+        - inventory
+      description: 调拨记录列表（查 StockLog referenceType=TRANSFER，按 referenceId 聚合；批次 5）
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: fromWarehouseId
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: toWarehouseId
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: 调拨记录
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        referenceId:
+                          type: string
+                          format: uuid
+                        fromWarehouseId:
+                          type: string
+                          format: uuid
+                        toWarehouseId:
+                          type: string
+                          format: uuid
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              skuId:
+                                type: string
+                                format: uuid
+                              quantity:
+                                type: integer
+                            required:
+                              - skuId
+                              - quantity
+                        reason:
+                          type: string
+                          nullable: true
+                        operatorId:
+                          type: string
+                          nullable: true
+                          format: uuid
+                        createdAt:
+                          type: string
+                      required:
+                        - referenceId
+                        - fromWarehouseId
+                        - toWarehouseId
+                        - items
+                        - reason
+                        - operatorId
+                        - createdAt
+                required:
+                  - success
+                  - data
+  /api/v1/admin/inventory/stocks/export:
+    get:
+      tags:
+        - inventory
+      description: 导出库存快照
+        CSV（warehouseId,warehouseCode,skuId,quantity,safetyStock,status；批次 5）
+      responses:
+        "200":
+          description: CSV 文件（text/csv; charset=utf-8）
+  /api/v1/admin/inventory/stocks/import:
+    post:
+      tags:
+        - inventory
+      description: 导入批量调整 CSV（multipart field=file，逐行部分成功返 failedRows；表头
+        warehouseId,skuId,deltaQty,reason?；批次 5）
+      responses:
+        "200":
+          description: 导入结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      successCount:
+                        type: integer
+                      failedRows:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            row:
+                              type: integer
+                            error:
+                              type: string
+                          required:
+                            - row
+                            - error
+                    required:
+                      - successCount
+                      - failedRows
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-INVENTORY-009 CSV 格式错
           content:
             application/json:
               schema:

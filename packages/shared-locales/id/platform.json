@@ -13,6 +13,7 @@
     "auditLogs": "Log Audit",
     "payments": "Pembayaran",
     "dispatch": "Pengiriman",
+    "inventory": "Inventaris",
     "systemConfig": "Konfigurasi Sistem",
     "im": "Pesan",
     "settle": "Penyelesaian",

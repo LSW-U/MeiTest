@@ -14,6 +14,7 @@ export * from './schemas/dispatch';
 export * from './schemas/geo';
 export * from './schemas/home';
 export * from './schemas/im';
+export * from './schemas/inventory';
 export * from './schemas/order';
 export * from './schemas/payment';
 export * from './schemas/platform';

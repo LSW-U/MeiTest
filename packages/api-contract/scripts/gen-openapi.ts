@@ -135,6 +135,14 @@ import {
   ReassignTaskRequest,
   CancelTaskRequest,
   AvailableRider,
+  // 批次 5 admin inventory
+  BatchAdjustRequest,
+  BatchAdjustResult,
+  TransferRequest,
+  TransferResult,
+  TransferRecord,
+  ListTransfersQuery,
+  ImportResult,
   // refund（W5 流程 C）
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
@@ -303,6 +311,15 @@ registry.register('ListAllTasksQuery', ListAllTasksQuery);
 registry.register('ReassignTaskRequest', ReassignTaskRequest);
 registry.register('CancelTaskRequest', CancelTaskRequest);
 registry.register('AvailableRider', AvailableRider);
+
+// 批次 5 admin inventory
+registry.register('BatchAdjustRequest', BatchAdjustRequest);
+registry.register('BatchAdjustResult', BatchAdjustResult);
+registry.register('TransferRequest', TransferRequest);
+registry.register('TransferResult', TransferResult);
+registry.register('TransferRecord', TransferRecord);
+registry.register('ListTransfersQuery', ListTransfersQuery);
+registry.register('ImportResult', ImportResult);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
@@ -1559,6 +1576,66 @@ registry.registerPath({
   responses: {
     200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
     404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// Admin Inventory（批次 5：批量调整 + 调拨 + CSV 导入导出）
+// ============================================================================
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/inventory/stocks/batch-adjust',
+  tags: ['inventory'],
+  description: '批量调整库存（全事务，上限 100，一条失败全部回滚；批次 5）',
+  request: { body: { content: { 'application/json': { schema: BatchAdjustRequest } } } },
+  responses: {
+    200: { description: '批量调整成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: BatchAdjustResult }) } } },
+    400: { description: 'E-INVENTORY-008 超上限', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/inventory/transfer',
+  tags: ['inventory'],
+  description: '仓库间调拨（双仓原子：源 deductStock + 目标 create/update，referenceType=TRANSFER + referenceId 串联两条 StockLog；批次 5）',
+  request: { body: { content: { 'application/json': { schema: TransferRequest } } } },
+  responses: {
+    200: { description: '调拨成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: TransferResult }) } } },
+    400: { description: 'E-INVENTORY-001 源不足 / 005 同仓 / 006 空 / 007 超上限', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/inventory/transfers',
+  tags: ['inventory'],
+  description: '调拨记录列表（查 StockLog referenceType=TRANSFER，按 referenceId 聚合；批次 5）',
+  request: { query: ListTransfersQuery },
+  responses: {
+    200: { description: '调拨记录', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(TransferRecord) }) } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/inventory/stocks/export',
+  tags: ['inventory'],
+  description: '导出库存快照 CSV（warehouseId,warehouseCode,skuId,quantity,safetyStock,status；批次 5）',
+  responses: {
+    200: { description: 'CSV 文件（text/csv; charset=utf-8）' },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/inventory/stocks/import',
+  tags: ['inventory'],
+  description: '导入批量调整 CSV（multipart field=file，逐行部分成功返 failedRows；表头 warehouseId,skuId,deltaQty,reason?；批次 5）',
+  responses: {
+    200: { description: '导入结果', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: ImportResult }) } } },
+    400: { description: 'E-INVENTORY-009 CSV 格式错', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
