@@ -169,4 +169,19 @@ export class StorageService implements OnModuleInit {
     // 实际 key 由服务端生成（products/main-{ts}-{rand8}.{ext}），字符集安全，
     // encodeURIComponent 兜底是防御性的，未来若 key 含中文也不会断 URL
   }
+
+  /**
+   * 校验 URL 是否由本服务 getPublicUrl 生成（防 SSRF/追踪/钓鱼，P13 审查 P1 修复 2026-08-10）
+   *
+   * 用途：photos/images 等用户提交的 URL 字段必须以此返 true，
+   * 防止用户绕过 client upload 端点直接调资源端点传 evil.com URL → admin 详情页 <img> 渲染
+   * → SSRF 内网探测 / 追踪 admin 行为 / 钓鱼伪装
+   *
+   * 实现：URL 必须以 `${endpoint}/${bucket}/` 开头（与 getPublicUrl 同款拼接）
+   */
+  isOwnUrl(url: string): boolean {
+    if (!this.endpoint || !this.bucket) return false; // env 不全 → 拒所有（不应发生）
+    const base = this.endpoint.replace(/\/$/, '');
+    return url.startsWith(`${base}/${this.bucket}/`);
+  }
 }

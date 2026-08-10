@@ -1037,6 +1037,8 @@ model Refund {
   completedAt    DateTime?     @map("completed_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt        @map("updated_at")
+  /// 凭证照片 URL 数组（MinIO 完整 URL，同 Review.images 模式；P13 售后图片 2026-08-10）
+  photos         String[]      @default([])
 
   order Order @relation(fields: [orderId], references: [id])
   user  User  @relation(fields: [userId], references: [id])

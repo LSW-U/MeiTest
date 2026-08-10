@@ -58,6 +58,8 @@ const CreateRefundRequest = z.object({
       }),
     )
     .optional(),
+  /** 凭证照片 URL 数组（前端先调 /client/uploads/refund-evidence 拿 URL 再提交；max 9 后端宽松，前端 P13 限 3 张；P13 售后图片 2026-08-10） */
+  photos: z.array(z.string().url()).max(9).default([]),
 });
 
 const ReviewRefundRequest = z.object({
@@ -97,6 +99,7 @@ export class ClientRefundController {
       reason: body.reason,
       reasonDetail: body.reasonDetail,
       items: body.items,
+      photos: body.photos,
     });
     return { success: true as const, data: refund };
   }

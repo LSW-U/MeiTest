@@ -33,6 +33,26 @@ export interface Refund {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 退款商品列表（P13 部分退款；整单退款时为空数组） */
+  items: RefundItem[];
+  /** 凭证照片 URL 数组（P13 售后图片 2026-08-10） */
+  photos: string[];
+}
+
+/** 退款商品子表项（P13 部分退款） */
+export interface RefundItem {
+  id: string;
+  refundId: string;
+  orderItemId: string;
+  skuId: string;
+  /** 多语言商品名快照（同 OrderItem.productName） */
+  productName: Record<string, string>;
+  /** 下单时单价快照（分） */
+  unitPrice: number;
+  /** 本单退款数量 */
+  refundQty: number;
+  /** = unitPrice × refundQty（分） */
+  subtotal: number;
 }
 
 export interface ReviewRefundInput {

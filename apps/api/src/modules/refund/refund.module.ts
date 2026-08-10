@@ -8,14 +8,16 @@
  *
  * 依赖：
  *   - OrderModule（forwardRef 解决循环依赖，用于接单前退款自动取消订单）
+ *   - StorageModule（P13 审查 P1 修复：photos URL host 白名单校验，防 SSRF/追踪/钓鱼）
  */
 import { Module, forwardRef } from '@nestjs/common';
 import { RefundService } from './refund.service';
 import { ClientRefundController, AdminRefundController } from './refund.controller';
 import { OrderModule } from '../order/order.module';
+import { StorageModule } from '../../shared/storage/storage.module';
 
 @Module({
-  imports: [forwardRef(() => OrderModule)],
+  imports: [forwardRef(() => OrderModule), StorageModule],
   controllers: [ClientRefundController, AdminRefundController],
   providers: [RefundService],
   exports: [RefundService],

@@ -17,6 +17,7 @@ import { ModuleRef } from '@nestjs/core';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderService } from '../order/order.service';
+import { StorageService } from '../../shared/storage/storage.service';
 import { Prisma } from '../../prisma/client';
 
 /** 接单前可自动通过的状态 */
@@ -29,6 +30,8 @@ export interface CreateRefundInput {
   reasonDetail?: string;
   /** 部分退款商品列表（不传 = 整单全额退款，向后兼容） */
   items?: { orderItemId: string; refundQty: number }[];
+  /** 凭证照片 URL 数组（前端先调 /client/uploads/refund-evidence 拿 URL 再提交；P13 售后图片 2026-08-10） */
+  photos?: string[];
 }
 
 /** 退款商品子表项视图（P13 部分退款，2026-08-08） */
@@ -61,11 +64,16 @@ export interface RefundView {
   updatedAt: string;
   /** 退款商品列表（整单退款时为空数组） */
   items: RefundItemView[];
+  /** 凭证照片 URL 数组（P13 售后图片 2026-08-10） */
+  photos: string[];
 }
 
 @Injectable()
 export class RefundService {
-  constructor(@Inject(ModuleRef) private readonly moduleRef: ModuleRef) {}
+  constructor(
+    @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
+    @Inject(StorageService) private readonly storage: StorageService,
+  ) {}
 
   /**
    * 客户申请退款
@@ -174,6 +182,18 @@ export class RefundService {
       amount = order.payableAmount;
     }
 
+    // P13 审查 P1 修复：photos URL 必须由本服务 client upload 端点生成（防 SSRF/追踪/钓鱼）
+    if (input.photos && input.photos.length > 0) {
+      for (const photoUrl of input.photos) {
+        if (!this.storage.isOwnUrl(photoUrl)) {
+          throw new ConflictException({
+            code: 'E-REFUND-011',
+            message: `Photo URL must be from our upload service: ${photoUrl}`,
+          });
+        }
+      }
+    }
+
     // 金额边界校验
     if (amount <= 0) {
       throw new ConflictException({
@@ -195,6 +215,7 @@ export class RefundService {
         amount,
         reason: input.reason,
         reasonDetail: input.reasonDetail ?? null,
+        photos: input.photos ?? [],
         status: autoApprove ? 'COMPLETED' : 'PENDING',
         refundMethod,
         transactionId: autoApprove ? this.generateMockTransactionId() : null,
@@ -514,6 +535,7 @@ export class RefundService {
     completedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    photos: string[];
     items?: {
       id: string;
       refundId: string;
@@ -541,6 +563,7 @@ export class RefundService {
       completedAt: r.completedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
+      photos: r.photos ?? [],
       items: (r.items ?? []).map((it) => ({
         id: it.id,
         refundId: it.refundId,

@@ -79,6 +79,12 @@
   "E-REFUND-008": "O item selecionado não pertence a esta encomenda",
   "E-REFUND-009": "A quantidade de reembolso excede a quantidade comprada",
   "E-REFUND-010": "O valor do reembolso excede o valor a pagar da encomenda",
+  "E-REFUND-011": "URL da foto deve ser do nosso serviço de upload",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order",
   "E-RIDER-001": "Perfil do rider não encontrado (por favor, registre-se primeiro)",
   "E-RIDER-002": "Perfil do rider já existe (não pode se registrar duas vezes)",
   "E-RIDER-003": "idCardNumber obrigatório (mínimo 6 caracteres)",
@@ -91,6 +97,8 @@
   "E-SETTLE-004": "Settlement não encontrado",
   "E-SETTLE-005": "Frequência de settlement inválida (deve ser day/week/month)",
   "E-SHOP-001": "Loja não inicializada ou fechada",
+  "E-UPLOAD-001": "Falha no upload (erro do serviço de armazenamento)",
+  "E-UPLOAD-002": "Falha no upload, tente novamente mais tarde",
   "E-USER-001": "Número de telefone não registado",
   "E-USER-002": "Palavra-passe incorreta",
   "E-USER-003": "Código de verificação SMS inválido ou expirado",
@@ -100,10 +108,5 @@
   "E-USER-007": "Recurso não encontrado",
   "E-WAREHOUSE-001": "Código de armazém já existe",
   "E-WAREHOUSE-002": "Fora da área de entrega",
-  "E-WAREHOUSE-003": "Armazém não encontrado",
-  "E-REVIEW-001": "Review not found",
-  "E-REVIEW-002": "Order not delivered yet, cannot review",
-  "E-REVIEW-003": "This order has already been reviewed",
-  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
-  "E-REVIEW-005": "You do not have permission to review this order"
+  "E-WAREHOUSE-003": "Armazém não encontrado"
 }

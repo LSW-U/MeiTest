@@ -1,23 +1,24 @@
 /**
- * Upload Controller — 图片上传 endpoint
+ * Client Upload Controller — 客户端图片上传 endpoint（P13 售后图片 2026-08-10）
  *
  * 端点：
- *   POST /api/v1/admin/uploads/product-image
+ *   POST /api/v1/client/uploads/refund-evidence
  *     - multipart/form-data, field name="file"
+ *     - CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType
  *     - 验 size > 0 + magic bytes（防 mime 欺骗）+ mime ∈ {jpg/png/webp} + size ≤ 5MB
- *     - 写 MinIO bucket `meimart/products/main-{ts}-{rand8}.{ext}`
+ *     - 最小尺寸 100×100（防空图/图标滥用），无最大尺寸 + 无 1:1 约束（售后凭证任意比例）
+ *     - 写 MinIO bucket `meimart/refunds/evidence-{ts}-{rand8}.{ext}`
  *     - 返回 { success: true, data: { url, key, size } }
  *
- * 安全：
- *   - @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF') — 后台权限
- *   - DeviceTypeGuard 自动校验 admin_web deviceType（admin 前缀路由默认）
- *   - 服务端生成 key，不信任客户端文件名
- *   - magic bytes 校验：不依赖客户端 Content-Type，读前 16 字节判断真实文件类型
- *     防 EXE/SVG/HTML 伪装成 jpg 上传引发存储型 XSS / 钓鱼
+ * 与 admin 商品图端点（upload.controller.ts）的差异：
+ *   - 权限：CUSTOMER（admin 端点是 SUPER_ADMIN/WAREHOUSE_STAFF）
+ *   - 尺寸：最小 100×100，无上限 + 无 1:1（admin 端点 200-2000px + 1:1 正方形）
+ *   - 路径：refunds/evidence-* （admin 端点 products/main-*）
+ *   - 共用：MAX_FILE_SIZE / MIN_FILE_SIZE / ALLOWED_MIME / detectImageFormat（upload.helpers.ts）
  *
- * MVP 权衡：
- *   - 用 memoryStorage（file.buffer 全内存），5MB × 50 并发 ≈ 250MB Node heap
- *     MVP 流量低可接受；未来切 diskStorage + 流式上传更稳（见 W8 收尾）
+ * 安全：
+ *   - 服务端生成 key，不信任客户端文件名
+ *   - magic bytes 校验（不依赖客户端 Content-Type，防 EXE/SVG/HTML 伪装）
  */
 import {
   Controller,
@@ -43,20 +44,17 @@ import {
   detectImageFormat,
 } from './upload.helpers';
 
-/** 图片尺寸约束（防客户端卡片变形 + 防超大图拖慢渲染）— admin 商品图端点专用 */
-const MIN_DIMENSION = 200; // 最小 200x200，低于此说明图被强行压缩过，质量差
-const MAX_DIMENSION = 2000; // 最大 2000x2000，超过此值客户端渲染慢 + 浪费带宽
-const RECOMMENDED_DIMENSION = 600; // 推荐 600x600（1:1 正方形）
-const ASPECT_RATIO_TOLERANCE = 0.05; // 1:1 容差 5%（防 599x600 等微差）
+/** 售后凭证最小尺寸（宽于商品图 200，凭证不要求质量，100×100 防空图/图标滥用） */
+const MIN_DIMENSION = 100;
 
-@Controller('api/v1/admin/uploads')
-@Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
-export class UploadController {
-  private readonly logger = new Logger(UploadController.name);
+@Controller('api/v1/client/uploads')
+@Roles('CUSTOMER')
+export class ClientUploadController {
+  private readonly logger = new Logger(ClientUploadController.name);
 
   constructor(@Inject(StorageService) private readonly storage: StorageService) {}
 
-  @Post('product-image')
+  @Post('refund-evidence')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -76,17 +74,17 @@ export class UploadController {
     }),
   )
   @Audit({ resource: 'Upload' })
-  async uploadProductImage(
+  async uploadRefundEvidence(
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<{ success: true; data: { url: string; key: string; size: number } }> {
     if (!file) {
       throw new BadRequestException('未收到文件（field name 必须为 "file"）');
     }
-    // #2 空文件校验
+    // 空文件校验
     if (!file.buffer || file.buffer.length < MIN_FILE_SIZE) {
       throw new BadRequestException('文件为空');
     }
-    // #1 magic bytes 校验（防 mime 欺骗）
+    // magic bytes 校验（防 mime 欺骗）
     const detected = detectImageFormat(file.buffer);
     if (!detected) {
       throw new BadRequestException(
@@ -99,42 +97,26 @@ export class UploadController {
         `文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`,
       );
     }
-    // #图片尺寸校验（W7-fix：防客户端卡片变形）
-    // 1:1 正方形（容差 5%），200-2000 像素，推荐 600x600
-    let dims: { width: number; height: number };
+    // 最小尺寸校验（仅最小，无上限 + 无 1:1 约束，售后凭证任意比例）
     try {
       const r = imageSize(file.buffer);
       if (!r.width || !r.height) {
         throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
       }
-      dims = { width: r.width, height: r.height };
+      if (r.width < MIN_DIMENSION || r.height < MIN_DIMENSION) {
+        throw new BadRequestException(
+          `图片尺寸 ${r.width}x${r.height} 过小，售后凭证最小 ${MIN_DIMENSION}x${MIN_DIMENSION}`,
+        );
+      }
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
       throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
     }
-    if (dims.width < MIN_DIMENSION || dims.height < MIN_DIMENSION) {
-      throw new BadRequestException(
-        `图片尺寸 ${dims.width}x${dims.height} 过小，最小 ${MIN_DIMENSION}x${MIN_DIMENSION}（推荐 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION}）`,
-      );
-    }
-    if (dims.width > MAX_DIMENSION || dims.height > MAX_DIMENSION) {
-      throw new BadRequestException(
-        `图片尺寸 ${dims.width}x${dims.height} 过大，最大 ${MAX_DIMENSION}x${MAX_DIMENSION}（推荐 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION}）`,
-      );
-    }
-    // 1:1 比例校验（容差 5%，防 599x600 微差）
-    const ratio = dims.width / dims.height;
-    if (Math.abs(ratio - 1) > ASPECT_RATIO_TOLERANCE) {
-      throw new BadRequestException(
-        `图片比例 ${dims.width}:${dims.height} 不是 1:1 正方形，会导致客户端商品卡片变形（请用 ${RECOMMENDED_DIMENSION}x${RECOMMENDED_DIMENSION} 正方形图）`,
-      );
-    }
     const ext = detected;
-    // #7 用 crypto.randomBytes 替代 Math.random（密码学安全）
-    // key 用 timestamp + 8 字节 hex 随机，不绑 productId（前端先上传拿 URL，再提交 product 表单）
+    // key 用 timestamp + 8 字节 hex 随机，不信任客户端文件名
     const rand = randomBytes(4).toString('hex');
-    const key = `products/main-${Date.now()}-${rand}.${ext}`;
-    // #4 try/catch MinIO 故障，转 InternalServerErrorException + 日志
+    const key = `refunds/evidence-${Date.now()}-${rand}.${ext}`;
+    // MinIO 故障转 InternalServerErrorException + 日志
     let result;
     try {
       result = await this.storage.uploadFile({
@@ -144,7 +126,7 @@ export class UploadController {
       });
     } catch (err) {
       this.logger.error({
-        msg: 'product_image_upload_failed',
+        msg: 'refund_evidence_upload_failed',
         key,
         size: file.buffer.length,
         mime: file.mimetype,
@@ -162,7 +144,7 @@ export class UploadController {
       });
     }
     this.logger.log({
-      msg: 'product_image_uploaded',
+      msg: 'refund_evidence_uploaded',
       key: result.key,
       size: result.size,
       mime: file.mimetype,

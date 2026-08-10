@@ -73,6 +73,8 @@ export const Refund = z.object({
   updatedAt: IsoTimestamp,
   /** 退款商品列表（P13 部分退款；整单退款时为空数组） */
   items: z.array(RefundItem),
+  /** 凭证照片 URL 数组（MinIO 完整 URL，P13 售后图片 2026-08-10） */
+  photos: z.array(z.string().url()),
 });
 
 /** 创建退款请求 */
@@ -91,6 +93,10 @@ export const CreateRefundRequest = z.object({
       }),
     )
     .optional(),
+  /** 凭证照片 URL 数组（前端先调 /client/uploads/refund-evidence 拿 URL 再提交；max 9 后端宽松，前端 P13 限 3 张）
+   *  P13 售后图片 2026-08-10
+   */
+  photos: z.array(z.string().url()).max(9).default([]),
 });
 
 /** 商家审核退款请求 */

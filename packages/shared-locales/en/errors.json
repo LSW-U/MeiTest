@@ -79,6 +79,12 @@
   "E-REFUND-008": "Selected item does not belong to this order",
   "E-REFUND-009": "Refund quantity exceeds the purchased quantity",
   "E-REFUND-010": "Refund amount exceeds the order payable amount",
+  "E-REFUND-011": "Photo URL must be from our upload service",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order",
   "E-RIDER-001": "Rider profile not found (please apply first)",
   "E-RIDER-002": "Rider profile already exists (cannot apply twice)",
   "E-RIDER-003": "idCardNumber required (min 6 chars)",
@@ -91,6 +97,8 @@
   "E-SETTLE-004": "Settlement not found",
   "E-SETTLE-005": "Invalid settlement frequency (must be day/week/month)",
   "E-SHOP-001": "Shop not initialized or closed",
+  "E-UPLOAD-001": "Upload failed (storage service error)",
+  "E-UPLOAD-002": "Upload failed, please try again later",
   "E-USER-001": "Phone number is not registered",
   "E-USER-002": "Wrong password",
   "E-USER-003": "SMS verification code is invalid or expired",
@@ -100,10 +108,5 @@
   "E-USER-007": "Resource not found",
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
-  "E-WAREHOUSE-003": "Warehouse not found",
-  "E-REVIEW-001": "Review not found",
-  "E-REVIEW-002": "Order not delivered yet, cannot review",
-  "E-REVIEW-003": "This order has already been reviewed",
-  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
-  "E-REVIEW-005": "You do not have permission to review this order"
+  "E-WAREHOUSE-003": "Warehouse not found"
 }

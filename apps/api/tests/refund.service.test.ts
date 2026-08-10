@@ -16,7 +16,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 
-const { mockDb, mockLogger, mockModuleRef, mockOrderService } = vi.hoisted(() => ({
+const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage } = vi.hoisted(() => ({
   mockDb: {
     order: {
       findUnique: vi.fn(),
@@ -47,6 +47,13 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService } = vi.hoisted(() =>
   mockOrderService: {
     cancelOrderInternal: vi.fn(),
   },
+  // P13 审查 P1 修复：mockStorage.isOwnUrl 用真实前缀逻辑（URL 必须以 MinIO base 开头才 true）
+  // 现有 photos 测试用 http://localhost:9000/meimart/... → 通过；P1 测试用 evil URL → 抛 E-REFUND-011
+  mockStorage: {
+    isOwnUrl: vi.fn(
+      (url: string) => typeof url === 'string' && url.startsWith('http://localhost:9000/meimart/'),
+    ),
+  },
 }));
 
 vi.mock('../src/shared/db', () => ({ db: mockDb }));
@@ -54,6 +61,11 @@ vi.mock('../src/shared/logger/logger', () => ({ logger: mockLogger }));
 vi.mock('../src/modules/order/order.service', () => ({
   OrderService: class {
     cancelOrderInternal = mockOrderService.cancelOrderInternal;
+  },
+}));
+vi.mock('../src/shared/storage/storage.service', () => ({
+  StorageService: class {
+    isOwnUrl = mockStorage.isOwnUrl;
   },
 }));
 
@@ -89,7 +101,7 @@ describe('RefundService', () => {
   let service: RefundService;
 
   beforeEach(() => {
-    service = new RefundService(mockModuleRef as never);
+    service = new RefundService(mockModuleRef as never, mockStorage as never);
     Object.values(mockDb.order).forEach((fn) => fn.mockReset());
     Object.values(mockDb.refund).forEach((fn) => fn.mockReset());
     Object.values(mockDb.refundItem).forEach((fn) => fn.mockReset());
@@ -124,6 +136,98 @@ describe('RefundService', () => {
         }),
       );
       expect(mockOrderService.cancelOrderInternal).not.toHaveBeenCalled();
+    });
+
+    it('createRefund 传 photos → db.refund.create data 含 photos + toView 返 photos（P13 售后图片）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({
+        ...baseRefund,
+        photos: ['http://localhost:9000/meimart/refunds/evidence-1.jpg', 'http://localhost:9000/meimart/refunds/evidence-2.jpg'],
+      });
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        reasonDetail: 'item damaged',
+        photos: ['http://localhost:9000/meimart/refunds/evidence-1.jpg', 'http://localhost:9000/meimart/refunds/evidence-2.jpg'],
+      });
+
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            photos: ['http://localhost:9000/meimart/refunds/evidence-1.jpg', 'http://localhost:9000/meimart/refunds/evidence-2.jpg'],
+          }),
+        }),
+      );
+      expect(result.photos).toEqual([
+        'http://localhost:9000/meimart/refunds/evidence-1.jpg',
+        'http://localhost:9000/meimart/refunds/evidence-2.jpg',
+      ]);
+    });
+
+    it('createRefund 不传 photos → db.refund.create data 含 photos: []（向后兼容，P13）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, photos: [] });
+
+      await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        // 不传 photos
+      });
+
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            photos: [],
+          }),
+        }),
+      );
+    });
+
+    it('photos 含非本服务 URL → E-REFUND-011（P13 审查 P1 修复：防 SSRF/追踪/钓鱼）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+
+      // evil URL 不在 MinIO base → mockStorage.isOwnUrl 返 false → 抛 E-REFUND-011
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+          photos: ['https://evil.com/tracker.jpg'],
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      // 不应写入 DB
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('photos 全是本服务 URL → 通过（P1 校验不误伤合法上传）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({
+        ...baseRefund,
+        photos: ['http://localhost:9000/meimart/refunds/evidence-1.jpg'],
+      });
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        photos: ['http://localhost:9000/meimart/refunds/evidence-1.jpg'],
+      });
+
+      expect(result.photos).toEqual([
+        'http://localhost:9000/meimart/refunds/evidence-1.jpg',
+      ]);
     });
 
     it('接单前（PENDING_CONFIRM）→ 自动 COMPLETED + 调 cancelOrderInternal', async () => {

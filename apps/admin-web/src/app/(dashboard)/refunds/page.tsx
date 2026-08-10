@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -25,7 +26,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye } from 'lucide-react';
 import {
   useRefunds,
   useReviewRefund,
@@ -153,32 +154,36 @@ export default function RefundsListPage() {
     {
       key: 'actions',
       header: '',
-      render: (row) =>
-        row.status === 'PENDING' ? (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => setApproveTarget(row)}
-              disabled={reviewMutation.isPending}
-            >
-              {t('admin.refunds.approveButton')}
+      render: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          {row.status === 'PENDING' && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => setApproveTarget(row)}
+                disabled={reviewMutation.isPending}
+              >
+                {t('admin.refunds.approveButton')}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  setRejectTarget(row);
+                  setRejectNote('');
+                }}
+              >
+                {t('admin.refunds.rejectButton')}
+              </Button>
+            </>
+          )}
+          <Link href={`/refunds/${row.id}`}>
+            <Button size="sm" variant="outline" className="gap-1">
+              <Eye className="h-3 w-3" /> {t('admin.refunds.viewDetail')}
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => {
-                setRejectTarget(row);
-                setRejectNote('');
-              }}
-            >
-              {t('admin.refunds.rejectButton')}
-            </Button>
-          </div>
-        ) : row.transactionId ? (
-          <span className="font-mono text-xs text-muted-foreground">
-            {row.transactionId.slice(0, 20)}...
-          </span>
-        ) : null,
+          </Link>
+        </div>
+      ),
     },
   ];
 

@@ -79,6 +79,12 @@
   "E-REFUND-008": "Item yang dipilih tidak termasuk dalam pesanan ini",
   "E-REFUND-009": "Jumlah pengembalian melebihi kuantitas item yang dibeli",
   "E-REFUND-010": "Jumlah pengembalian dana melebihi jumlah tagihan pesanan",
+  "E-REFUND-011": "URL foto harus dari layanan upload kami",
+  "E-REVIEW-001": "Review not found",
+  "E-REVIEW-002": "Order not delivered yet, cannot review",
+  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
+  "E-REVIEW-005": "You do not have permission to review this order",
   "E-RIDER-001": "Profil rider tidak ditemukan (silakan daftar dulu)",
   "E-RIDER-002": "Profil rider sudah ada (tidak bisa mendaftar dua kali)",
   "E-RIDER-003": "idCardNumber wajib (minimal 6 karakter)",
@@ -91,6 +97,8 @@
   "E-SETTLE-004": "Settlement tidak ditemukan",
   "E-SETTLE-005": "Frekuensi settlement tidak valid (harus day/week/month)",
   "E-SHOP-001": "Toko belum diinisialisasi atau ditutup",
+  "E-UPLOAD-001": "Unggah gagal (kesalahan layanan penyimpanan)",
+  "E-UPLOAD-002": "Unggah gagal, silakan coba lagi nanti",
   "E-USER-001": "Nomor telepon belum terdaftar",
   "E-USER-002": "Kata sandi salah",
   "E-USER-003": "Kode verifikasi SMS tidak valid atau kedaluwarsa",
@@ -100,10 +108,5 @@
   "E-USER-007": "Sumber daya tidak ditemukan",
   "E-WAREHOUSE-001": "Kode gudang sudah ada",
   "E-WAREHOUSE-002": "Di luar jangkauan pengiriman",
-  "E-WAREHOUSE-003": "Gudang tidak ditemukan",
-  "E-REVIEW-001": "Review not found",
-  "E-REVIEW-002": "Order not delivered yet, cannot review",
-  "E-REVIEW-003": "This order has already been reviewed",
-  "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
-  "E-REVIEW-005": "You do not have permission to review this order"
+  "E-WAREHOUSE-003": "Gudang tidak ditemukan"
 }
