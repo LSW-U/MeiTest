@@ -894,17 +894,29 @@ export class DispatchService {
       },
     });
 
-    const withOnline = await Promise.all(
-      profiles.map(async (p) => ({
-        id: p.id,
-        riderName: p.riderName,
-        phone: p.phone,
-        vehicleType: p.vehicleType,
-        isOnline: await this.checkRiderOnline(p.userId),
-        totalDeliveries: p.totalDeliveries,
-        rating: Number(p.rating),
-      })),
-    );
+    if (profiles.length === 0) return [];
+
+    // pipeline 批量 EXISTS（1 次 round-trip；审查 P3-1：避免 N 次串行 round-trip 开销）
+    let onlineFlags: boolean[];
+    try {
+      const pipeline = redis.pipeline();
+      profiles.forEach((p) => pipeline.exists(`rider:online:${p.userId}`));
+      const results = await pipeline.exec();
+      onlineFlags = (results ?? []).map((r) => (r[1] as number) > 0);
+    } catch {
+      // Redis 故障降级：全离线（不阻塞 admin 查询）
+      onlineFlags = profiles.map(() => false);
+    }
+
+    const withOnline: AvailableRider[] = profiles.map((p, i) => ({
+      id: p.id,
+      riderName: p.riderName,
+      phone: p.phone,
+      vehicleType: p.vehicleType,
+      isOnline: onlineFlags[i] ?? false,
+      totalDeliveries: p.totalDeliveries,
+      rating: Number(p.rating),
+    }));
 
     // 在线优先，其次按接单数（熟手优先）
     return withOnline.sort((a, b) => {
@@ -945,16 +957,6 @@ export class DispatchService {
         ? { id: t.rider.id, riderName: t.rider.riderName, phone: t.rider.phone }
         : null,
     };
-  }
-
-  /** 查骑手在线状态（Redis rider:online:{userId}） */
-  private async checkRiderOnline(userId: string): Promise<boolean> {
-    try {
-      const exists = await redis.exists(`rider:online:${userId}`);
-      return exists > 0;
-    } catch {
-      return false;
-    }
   }
 
   /**

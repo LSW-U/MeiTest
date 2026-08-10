@@ -16,23 +16,29 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockWithTransaction, mockTx } = vi.hoisted(() => ({
+const { mockDb, mockWithTransaction, mockTx, mockRedis } = vi.hoisted(() => ({
   mockDb: {
     deliveryTask: { findUnique: vi.fn() },
-    riderProfile: { findUnique: vi.fn() },
+    riderProfile: { findUnique: vi.fn(), findMany: vi.fn() },
   },
   mockWithTransaction: vi.fn(),
   mockTx: {
     $executeRaw: vi.fn(),
     order: { update: vi.fn() },
   } as unknown as import('../src/shared/db').Tx,
+  mockRedis: {
+    pipeline: vi.fn().mockReturnValue({
+      exists: vi.fn().mockReturnThis(),
+      exec: vi.fn().mockResolvedValue([]),
+    }),
+  },
 }));
 
 vi.mock('../src/shared/db', () => ({
   db: mockDb,
   withTransaction: mockWithTransaction,
 }));
-vi.mock('../src/shared/cache', () => ({ redis: { exists: vi.fn().mockResolvedValue(0) } }));
+vi.mock('../src/shared/cache', () => ({ redis: mockRedis }));
 vi.mock('../src/modules/realtime/realtime.gateway', () => ({
   RealtimeGateway: class {
     server = { to: () => ({ emit: vi.fn() }) };
@@ -216,5 +222,51 @@ describe('DispatchService.reassignTask + cancelTask（批次 4 事务编排）',
 
     expect(mockWithTransaction).not.toHaveBeenCalled();
     expect(mockTx.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('listAvailableRiders：pipeline 批量 EXISTS（1 次 round-trip）+ 在线优先排序', async () => {
+    mockDb.riderProfile.findMany.mockResolvedValue([
+      {
+        id: 'r-1',
+        userId: 'u-1',
+        riderName: 'A',
+        phone: '1',
+        vehicleType: 'BICYCLE',
+        totalDeliveries: 10,
+        rating: 4.5,
+      },
+      {
+        id: 'r-2',
+        userId: 'u-2',
+        riderName: 'B',
+        phone: '2',
+        vehicleType: 'MOTORCYCLE',
+        totalDeliveries: 20,
+        rating: 5.0,
+      },
+    ]);
+    const mockPipeline = {
+      exists: vi.fn().mockReturnThis(),
+      // r-1 offline (0), r-2 online (1)
+      exec: vi.fn().mockResolvedValue([
+        [null, 0],
+        [null, 1],
+      ]),
+    };
+    mockRedis.pipeline.mockReturnValue(mockPipeline);
+
+    const result = await service.listAvailableRiders();
+
+    // pipeline 批量 EXISTS（1 次 round-trip，审查 P3-1 修复）
+    expect(mockRedis.pipeline).toHaveBeenCalledTimes(1);
+    expect(mockPipeline.exists).toHaveBeenCalledTimes(2);
+    expect(mockPipeline.exists).toHaveBeenCalledWith('rider:online:u-1');
+    expect(mockPipeline.exists).toHaveBeenCalledWith('rider:online:u-2');
+    // 在线优先排序：r-2 (online) 排前，r-1 (offline) 排后
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe('r-2');
+    expect(result[0].isOnline).toBe(true);
+    expect(result[1].id).toBe('r-1');
+    expect(result[1].isOnline).toBe(false);
   });
 });
