@@ -34,6 +34,7 @@ import {
   PickupTaskRequest,
   DeliverTaskRequest,
   ReportIssueRequest,
+  StartDeliveringRequest,
 } from '@meimart/api-contract';
 import { DispatchService } from './dispatch.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
@@ -159,6 +160,32 @@ export class DispatchController {
       riderId: user.sub,
       taskId: id,
       reason: body.reason,
+      note: body.note,
+    });
+    return { success: true as const, data: task };
+  }
+
+  /**
+   * P14 ④：开始配送（PICKED_UP → DELIVERING）
+   *
+   * 决策 1 选 A：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本端点负责第一步）；
+   * delivery 任务保持两步（走 deliver 端点跳过 DELIVERING）。
+   * 仅 taskType=return 可调，打通原 DELIVERING 死状态。
+   */
+  @Post('tasks/:id/start-delivering')
+  @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
+  async startDelivering(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(StartDeliveringRequest)) body: z.infer<typeof StartDeliveringRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const task = await this.dispatchService.startDelivering({
+      riderId: user.sub,
+      taskId: id,
       note: body.note,
     });
     return { success: true as const, data: task };

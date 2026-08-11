@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreateRefundRequest } from '@meimart/api-contract';
 
-const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage } = vi.hoisted(() => ({
+const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDispatchService } = vi.hoisted(() => ({
   mockDb: {
     order: {
       findUnique: vi.fn(),
@@ -55,6 +55,10 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage } = vi.
       (url: string) => typeof url === 'string' && url.startsWith('http://localhost:9000/meimart/'),
     ),
   },
+  // P14 ④：reviewRefund APPROVE + RETURN_REFUND 触发 createTaskForReturn
+  mockDispatchService: {
+    createTaskForReturn: vi.fn(),
+  },
 }));
 
 vi.mock('../src/shared/db', () => ({ db: mockDb }));
@@ -69,8 +73,16 @@ vi.mock('../src/shared/storage/storage.service', () => ({
     isOwnUrl = mockStorage.isOwnUrl;
   },
 }));
+// P14 ④：mock DispatchService（reviewRefund APPROVE + RETURN_REFUND 触发）
+vi.mock('../src/modules/dispatch/dispatch.service', () => ({
+  DispatchService: class {
+    createTaskForReturn = mockDispatchService.createTaskForReturn;
+  },
+}));
 
 import { RefundService } from '../src/modules/refund/refund.service';
+// P14 ④：token 用于 moduleRef.get(DispatchService) mock 区分
+import { DispatchService } from '../src/modules/dispatch/dispatch.service';
 
 const baseOrder = {
   id: 'order-1',
@@ -114,6 +126,8 @@ describe('RefundService', () => {
     Object.values(mockLogger).forEach((fn) => fn.mockReset());
     Object.values(mockOrderService).forEach((fn) => fn.mockReset());
     mockModuleRef.get.mockReset();
+    // P14 ④：reset DispatchService mock
+    mockDispatchService.createTaskForReturn.mockReset();
   });
 
   describe('createRefund', () => {
@@ -547,6 +561,58 @@ describe('RefundService', () => {
       await expect(
         service.reviewRefund('refund-1', 'admin-1', 'REJECT'),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('reviewRefund - P14 ④ RETURN_REFUND 触发 createTaskForReturn', () => {
+    beforeEach(() => {
+      // 区分 token：DispatchService 返 mockDispatchService，其他（OrderService）返 mockOrderService
+      mockModuleRef.get.mockImplementation((token: unknown) =>
+        token === DispatchService ? mockDispatchService : mockOrderService,
+      );
+    });
+
+    it('APPROVE + RETURN_REFUND → 触发 createTaskForReturn(refundId)', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND' });
+      mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
+      mockDb.refund.update.mockResolvedValue({
+        ...baseRefund,
+        refundType: 'RETURN_REFUND',
+        status: 'COMPLETED',
+      });
+      mockDispatchService.createTaskForReturn.mockResolvedValue({} as never);
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockDispatchService.createTaskForReturn).toHaveBeenCalledWith('refund-1');
+    });
+
+    it('APPROVE + REFUND_ONLY → 不触发 createTaskForReturn（向后兼容）', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'REFUND_ONLY' });
+      mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
+      mockDb.refund.update.mockResolvedValue({
+        ...baseRefund,
+        refundType: 'REFUND_ONLY',
+        status: 'COMPLETED',
+      });
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockDispatchService.createTaskForReturn).not.toHaveBeenCalled();
+    });
+
+    it('REJECT + RETURN_REFUND → 不触发（仅 APPROVE 才建 return task）', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND' });
+      mockDb.refund.update.mockResolvedValue({
+        ...baseRefund,
+        refundType: 'RETURN_REFUND',
+        status: 'REJECTED',
+        reviewNote: 'invalid',
+      });
+
+      await service.reviewRefund('refund-1', 'admin-1', 'REJECT', 'invalid');
+
+      expect(mockDispatchService.createTaskForReturn).not.toHaveBeenCalled();
     });
   });
 

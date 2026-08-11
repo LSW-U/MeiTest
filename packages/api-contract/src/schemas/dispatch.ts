@@ -27,6 +27,10 @@ export const DeliveryTask = z.object({
   riderId: Id.nullable(),
   warehouseId: Id,
   status: DeliveryTaskStatus,
+  /** P14 ④：任务类型（delivery 配送 / return 退货取件，默认 delivery 向后兼容） */
+  taskType: z.enum(['delivery', 'return']).default('delivery'),
+  /** P14 ④：return 任务关联的 refund（仅 taskType=return 时填；delivery 为 null） */
+  refundId: Id.nullable(),
   pickupAddress: z.string(),
   pickupLat: z.number(),
   pickupLng: z.number(),
@@ -70,6 +74,17 @@ export const ReportIssueRequest = z.object({
     'OTHER',
   ]),
   note: z.string().max(500).optional(),
+});
+
+/**
+ * P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）
+ *
+ * 决策 1 选 A（2026-08-11）：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本端点负责第一步）；
+ * delivery 任务保持两步 PICKED_UP->DELIVERED（跳过 DELIVERING，走 deliver）。
+ * 本端点仅 taskType=return 可调，打通原 DELIVERING 死状态。
+ */
+export const StartDeliveringRequest = z.object({
+  note: z.string().max(200).optional(),
 });
 
 // ============================================================================

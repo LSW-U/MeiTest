@@ -128,6 +128,7 @@ import {
   PickupTaskRequest,
   DeliverTaskRequest,
   ReportIssueRequest,
+  StartDeliveringRequest,
   // 批次 4 admin dispatch
   ListAllTasksQuery,
   AdminDeliveryTaskView,
@@ -2602,6 +2603,27 @@ registry.registerPath({
   responses: {
     200: {
       description: '异常上报成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
+  },
+});
+
+// P14 ④：return 任务开始配送（PICKED_UP -> DELIVERING），打通原 DELIVERING 死状态
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/start-delivering',
+  tags: ['dispatch'],
+  description:
+    'P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）。仅 taskType=return 任务可调，' +
+    '打通原 DELIVERING 死状态（return 三步 PICKED_UP->DELIVERING->DELIVERED；delivery 两步跳过 DELIVERING 走 deliver）。' +
+    '事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（前端 P14 时间轴 picked 步骤展示）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: StartDeliveringRequest } } },
+  },
+  responses: {
+    200: {
+      description: '开始配送成功（task 进入 DELIVERING；return 任务同时写 refund.pickedAt）',
       content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
     },
   },

@@ -17,6 +17,8 @@ import { ModuleRef } from '@nestjs/core';
 import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderService } from '../order/order.service';
+// P14 ④：refund APPROVE + RETURN_REFUND 触发建 return task（DispatchService via ModuleRef，避免循环依赖）
+import { DispatchService } from '../dispatch/dispatch.service';
 import { StorageService } from '../../shared/storage/storage.service';
 import { Prisma } from '../../prisma/client';
 
@@ -402,6 +404,35 @@ export class RefundService {
         amount: refund.amount,
         reviewerId,
       });
+
+      // P14 ④：RETURN_REFUND 触发建 return task（决策 2 选 A 同步触发，决策 3 复用抢单大厅）
+      if (refund.refundType === 'RETURN_REFUND') {
+        try {
+          const dispatchService = this.moduleRef.get(DispatchService, { strict: false });
+          if (dispatchService) {
+            await dispatchService.createTaskForReturn(refundId);
+            logger.info({
+              msg: 'REFUND_RETURN_TASK_TRIGGERED',
+              refundId,
+              orderId: refund.orderId,
+            });
+          } else {
+            logger.error({
+              msg: 'REFUND_DISPATCH_SERVICE_NULL',
+              refundId,
+              orderId: refund.orderId,
+            });
+          }
+        } catch (e) {
+          // 不阻塞 refund 返回（return task 创建失败需人工介入，refund 已 COMPLETED）
+          logger.error({
+            msg: 'REFUND_RETURN_TASK_TRIGGER_FAILED',
+            refundId,
+            orderId: refund.orderId,
+            error: (e as Error).message,
+          });
+        }
+      }
 
       return this.toView(updated);
     } else {

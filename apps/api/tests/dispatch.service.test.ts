@@ -22,6 +22,7 @@ const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
     mockDb: {
       deliveryTask: {
         findMany: vi.fn(),
+        findFirst: vi.fn(),
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
@@ -35,6 +36,12 @@ const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
       },
       cashCollection: {
         create: vi.fn(),
+      },
+      // P14 ④：createTaskForReturn 查 refund，pickupTask/startDelivering 写 refund
+      refund: {
+        findUnique: vi.fn(),
+        findFirst: vi.fn(),
+        update: vi.fn(),
       },
       riderProfile: {
         findUnique: vi.fn().mockResolvedValue({ id: 'rider-profile-1' }),
@@ -73,6 +80,8 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     riderId: null,
     warehouseId: 'wh-1',
     status: 'PENDING_ASSIGN',
+    taskType: 'delivery',
+    refundId: null,
     pickupAddress: 'Warehouse 1',
     pickupLat: { toNumber: () => -8.5 },
     pickupLng: { toNumber: () => 125.5 },
@@ -267,23 +276,32 @@ describe('DispatchService', () => {
     });
 
     it('Happy path：状态机推进 + WS 广播 order:status', async () => {
-      mockDb.deliveryTask.findUnique.mockResolvedValue(
-        buildTask({ riderId: 'r1', status: 'ASSIGNED', orderId: 'order-1' }),
+      // P14 ④：pickupTask 重构走 withTransaction（taskType=return 时事务内写 refund.pickupAt）
+      const txDeliveryTaskUpdate = vi.fn().mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery' }),
       );
-      mockDb.deliveryTask.update.mockResolvedValue(
-        buildTask({ riderId: 'r1', status: 'PICKED_UP' }),
+      const txOrderUpdate = vi.fn().mockResolvedValue({});
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'ASSIGNED', taskType: 'delivery', orderId: 'order-1' }),
+      );
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: { update: txDeliveryTaskUpdate },
+          order: { update: txOrderUpdate },
+          refund: { update: vi.fn() },
+        }),
       );
 
       const result = await service.pickupTask({ riderId: 'r1', taskId: 'task-1' });
       expect(result.status).toBe('PICKED_UP');
-      // Order 状态机推进
-      expect(mockDb.order.update).toHaveBeenCalledWith(
+      // Order 状态机推进（事务内）
+      expect(txOrderUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'order-1' },
           data: expect.objectContaining({ status: 'PICKED' }),
         }),
       );
-      // WS 推 order:status
+      // WS 推 order:status（事务外）
       expect(mockServer.to).toHaveBeenCalledWith('order:order-1');
       expect(mockServer.emit).toHaveBeenCalledWith(
         'order:status',
@@ -452,7 +470,7 @@ describe('DispatchService', () => {
   describe('createTaskForOrder - 幂等', () => {
     it('已存在 task → 直接返回，不重建', async () => {
       const existing = buildTask({ orderId: 'order-1' });
-      mockDb.deliveryTask.findUnique.mockResolvedValue(existing);
+      mockDb.deliveryTask.findFirst.mockResolvedValue(existing);
 
       const result = await service.createTaskForOrder('order-1');
 
@@ -461,12 +479,229 @@ describe('DispatchService', () => {
     });
 
     it('Order 不存在 → 抛 ORDER_NOT_FOUND', async () => {
-      mockDb.deliveryTask.findUnique.mockResolvedValue(null);
+      mockDb.deliveryTask.findFirst.mockResolvedValue(null);
       mockDb.order.findUnique.mockResolvedValue(null);
 
       await expect(service.createTaskForOrder('order-x')).rejects.toThrow(
         /ORDER_NOT_FOUND/,
       );
+    });
+  });
+
+  // ==========================================================================
+  // P14 ④ dispatch 集成：createTaskForReturn + pickupTask return 扩展 + startDelivering
+  // 决策（2026-08-11 用户拍板 spec §七）：
+  //   1. 新增 startDelivering（return 三步 PICKED_UP->DELIVERING->DELIVERED；delivery 两步跳过 DELIVERING）
+  //   2. refund APPROVE 同步触发 createTaskForReturn（forwardRef 防循环）
+  //   3. 复用抢单大厅（建任务 PENDING_ASSIGN + WS dispatch:new-task，骑手 acceptTask 抢）
+  // ==========================================================================
+
+  describe('createTaskForReturn - P14 ④ 退货取件任务创建', () => {
+    // createTaskForReturn 用 refund.findUnique include order（含 warehouse），不调 db.order.findUnique
+    const mockReturnRefund = {
+      id: 'refund-1',
+      orderId: 'order-1',
+      userId: 'user-1',
+      refundType: 'RETURN_REFUND',
+      status: 'COMPLETED',
+      amount: 10000,
+      order: {
+        id: 'order-1',
+        orderNo: 'MM1',
+        warehouseId: 'wh-1',
+        deliveryAddress: { detail: 'Customer addr', lat: -8.55, lng: 125.55 },
+        payableAmount: 10000,
+        paymentMethod: 'COD',
+        warehouse: {
+          id: 'wh-1',
+          code: 'W01',
+          address: 'Wh 1 addr',
+          centerLat: { toNumber: () => -8.5 },
+          centerLng: { toNumber: () => 125.5 },
+        },
+      },
+    };
+
+    it('refund RETURN_REFUND + COMPLETED → 建 return task + WS 推 dispatch:new-task', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(mockReturnRefund);
+      mockDb.deliveryTask.findFirst.mockResolvedValue(null);
+      mockDb.deliveryTask.create.mockResolvedValue(
+        buildTask({
+          taskType: 'return',
+          refundId: 'refund-1',
+          status: 'PENDING_ASSIGN',
+          pickupAddress: 'Customer addr',
+          dropoffAddress: 'Wh 1 addr',
+        }),
+      );
+
+      const result = await service.createTaskForReturn('refund-1');
+
+      expect(result.taskType).toBe('return');
+      expect(result.refundId).toBe('refund-1');
+      expect(mockDb.deliveryTask.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            taskType: 'return',
+            refundId: 'refund-1',
+            orderId: 'order-1',
+            status: 'PENDING_ASSIGN',
+          }),
+        }),
+      );
+      // WS 推 riders room（复用抢单大厅，决策 3）
+      expect(mockServer.to).toHaveBeenCalledWith('riders');
+      expect(mockServer.emit).toHaveBeenCalledWith(
+        'dispatch:new-task',
+        expect.objectContaining({ taskId: 'task-1' }),
+      );
+    });
+
+    it('refund 不存在 → E-REFUND-003 Refund not found', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(null);
+      await expect(service.createTaskForReturn('refund-x')).rejects.toThrow(
+        /Refund not found/,
+      );
+    });
+
+    it('refund.refundType=REFUND_ONLY → E-DISPATCH-022 not RETURN_REFUND', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({
+        ...mockReturnRefund,
+        refundType: 'REFUND_ONLY',
+      });
+      await expect(service.createTaskForReturn('refund-1')).rejects.toThrow(
+        /not RETURN_REFUND/,
+      );
+    });
+
+    it('已有 return task → E-DISPATCH-021 already has return task', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(mockReturnRefund);
+      mockDb.deliveryTask.findFirst.mockResolvedValue(
+        buildTask({ taskType: 'return', refundId: 'refund-1' }),
+      );
+      await expect(service.createTaskForReturn('refund-1')).rejects.toThrow(
+        /already has return task/,
+      );
+    });
+  });
+
+  describe('pickupTask - P14 ④ taskType=return 写 refund.pickupAt（事务内）', () => {
+    it('taskType=return → withTransaction 内额外写 refund.pickupAt', async () => {
+      const txRefundUpdate = vi.fn().mockResolvedValue({});
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'ASSIGNED',
+          taskType: 'return',
+          refundId: 'refund-1',
+          orderId: 'order-1',
+        }),
+      );
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: {
+            update: vi
+              .fn()
+              .mockResolvedValue(
+                buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'return', refundId: 'refund-1' }),
+              ),
+          },
+          order: { update: vi.fn().mockResolvedValue({}) },
+          refund: { update: txRefundUpdate },
+        }),
+      );
+
+      await service.pickupTask({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(txRefundUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'refund-1' },
+          data: expect.objectContaining({ pickupAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('taskType=delivery → 不写 refund（负向，向后兼容）', async () => {
+      const txRefundUpdate = vi.fn().mockResolvedValue({});
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'ASSIGNED',
+          taskType: 'delivery',
+          refundId: null,
+          orderId: 'order-1',
+        }),
+      );
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: {
+            update: vi
+              .fn()
+              .mockResolvedValue(buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery' })),
+          },
+          order: { update: vi.fn().mockResolvedValue({}) },
+          refund: { update: txRefundUpdate },
+        }),
+      );
+
+      await service.pickupTask({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(txRefundUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('startDelivering - P14 ④ 打通 DELIVERING 死状态', () => {
+    it('taskType=return + PICKED_UP → DELIVERING + 写 refund.pickedAt', async () => {
+      const txRefundUpdate = vi.fn().mockResolvedValue({});
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'PICKED_UP',
+          taskType: 'return',
+          refundId: 'refund-1',
+          orderId: 'order-1',
+        }),
+      );
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: {
+            update: vi
+              .fn()
+              .mockResolvedValue(
+                buildTask({ riderId: 'r1', status: 'DELIVERING', taskType: 'return', refundId: 'refund-1' }),
+              ),
+          },
+          refund: { update: txRefundUpdate },
+        }),
+      );
+
+      const result = await service.startDelivering({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(result.status).toBe('DELIVERING');
+      expect(txRefundUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'refund-1' },
+          data: expect.objectContaining({ pickedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('taskType=delivery → 拒绝 E-DISPATCH-020（delivery 走 deliverTask 不走 startDelivering）', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery', refundId: null }),
+      );
+      await expect(
+        service.startDelivering({ riderId: 'r1', taskId: 'task-1' }),
+      ).rejects.toThrow(/delivery task|invalid taskType/i);
+    });
+
+    it('状态非 PICKED_UP → E-DISPATCH-004 cannot start delivering', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'ASSIGNED', taskType: 'return', refundId: 'refund-1' }),
+      );
+      await expect(
+        service.startDelivering({ riderId: 'r1', taskId: 'task-1' }),
+      ).rejects.toThrow(/cannot start delivering|E-DISPATCH-004/i);
     });
   });
 });

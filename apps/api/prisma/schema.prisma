@@ -511,7 +511,8 @@ model Order {
   items          OrderItem[]
   events         OrderEvent[]
   rider          RiderProfile?   @relation(fields: [riderId], references: [id])
-  deliveryTask   DeliveryTask?
+  // P14 ④：1:1 -> 1:N（同 order 可有 delivery + return 各一个 task），改 deliveryTasks 数组
+  deliveryTasks  DeliveryTask[]
   paymentIntent  PaymentIntent?
   review         Review?
   riderReview    RiderReview? // reviews-1：骑手评价反向
@@ -708,7 +709,8 @@ model RiderProfile {
 
 model DeliveryTask {
   id             String             @id @default(uuid())
-  orderId        String             @unique @map("order_id") // 1:1 订单
+  // P14 ④：去 @unique（原 1:1），改下方 @@unique([orderId, taskType]) —— 允许同 order 同时有 delivery + return 各一个任务
+  orderId        String             @map("order_id")
   riderId        String?            @map("rider_id")
   warehouseId    String             @map("warehouse_id") // 取货仓库
   status         DeliveryTaskStatus @default(PENDING_ASSIGN)
@@ -723,6 +725,12 @@ model DeliveryTask {
   deliveredAt    DateTime?          @map("delivered_at")
   // P11 ETA：创建任务时算 now + DEFAULT_ETA_MINUTES（dispatch.config.ts）写入；旧任务 null（前端降级 etaPlaceholder）
   estimatedArrival DateTime?       @map("estimated_arrival")
+  /// 任务类型：delivery 配送（仓 -> 客户）/ return 取件退货（客户 -> 仓）
+  /// P14 ④ dispatch 集成（2026-08-11）—— return 任务由 refund APPROVE + refundType=RETURN_REFUND 触发创建
+  taskType         String          @default("delivery") @map("task_type")
+  /// return 任务关联的 refund（仅 taskType=return 时填；delivery 任务为 null）
+  /// P14 ④ refundId @unique 兜底防重（一个 refund 只能建一个 return task）
+  refundId         String?         @unique @map("refund_id")
   note           String?
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
@@ -730,9 +738,12 @@ model DeliveryTask {
   order     Order         @relation(fields: [orderId], references: [id])
   rider     RiderProfile? @relation(fields: [riderId], references: [id])
   warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  /// 反向：return 任务关联的 refund（1:1 optional；onDelete SetNull —— refund 极少删，删时 task 保留历史）
+  refund    Refund?       @relation(fields: [refundId], references: [id], onDelete: SetNull)
 
   @@index([riderId, status])
   @@index([warehouseId, status])
+  @@unique([orderId, taskType])
   @@map("delivery_tasks")
 }
 
@@ -1050,6 +1061,9 @@ model Refund {
   order Order @relation(fields: [orderId], references: [id])
   user  User  @relation(fields: [userId], references: [id])
   items RefundItem[]
+  /// 反向 relation：return 任务（taskType=return 的 DeliveryTask，1:1 optional）
+  /// P14 ④ dispatch 集成（2026-08-11）—— refund APPROVE + RETURN_REFUND 触发建 return task
+  returnTask DeliveryTask?
 
   @@index([orderId])
   @@index([userId, status])

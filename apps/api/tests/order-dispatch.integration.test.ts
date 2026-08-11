@@ -84,6 +84,16 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
           }
           return null;
         }),
+        // P14 ④：createTaskForOrder 改用 findFirst（orderId + taskType 复合查询，去 @unique 后）
+        findFirst: vi.fn(({ where }: { where: { id?: string; orderId?: string; taskType?: string; refundId?: string } }) => {
+          for (const t of tables.deliveryTasks.values()) {
+            const matchOrderId = !where.orderId || t.orderId === where.orderId;
+            const matchTaskType = !where.taskType || t.taskType === where.taskType;
+            const matchRefundId = !where.refundId || t.refundId === where.refundId;
+            if (matchOrderId && matchTaskType && matchRefundId) return t;
+          }
+          return null;
+        }),
         create: vi.fn(({ data }: { data: any }) => {
           const id = `task-${tables.deliveryTasks.size + 1}`;
           const created = {
@@ -327,11 +337,12 @@ describe('Order → Dispatch 全链路集成测试', () => {
 
     // === 4. 手动调 dispatch.createTaskForOrder（模拟 markPaid 内部调用）===
     // 准备 task 数据
-    mockDb.deliveryTask.findUnique.mockImplementation(async ({ where }: { where: any }) => {
+    // P14 ④：createTaskForOrder 改 findFirst（orderId + taskType=delivery 复合查询）
+    mockDb.deliveryTask.findFirst.mockImplementation(async ({ where }: { where: any }) => {
       if (where.orderId) {
-        // 查现有 task（幂等）
+        // 查现有 delivery task（幂等）
         for (const t of mockDb._tables.deliveryTasks.values()) {
-          if (t.orderId === where.orderId) return t;
+          if (t.orderId === where.orderId && (!where.taskType || t.taskType === where.taskType)) return t;
         }
         return null;
       }

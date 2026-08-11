@@ -34,6 +34,10 @@ export interface DeliveryTaskView {
   riderId: string | null;
   warehouseId: string;
   status: 'PENDING_ASSIGN' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
+  /** P14 ④：任务类型（delivery 配送 / return 退货取件） */
+  taskType: 'delivery' | 'return';
+  /** P14 ④：return 任务关联的 refund（delivery 为 null） */
+  refundId: string | null;
   pickupAddress: string;
   pickupLat: number;
   pickupLng: number;
@@ -88,6 +92,24 @@ export interface ReportIssueInput {
   note?: string;
 }
 
+/**
+ * P14 ④：开始配送（PICKED_UP → DELIVERING）
+ *
+ * 决策 1 选 A（2026-08-11）：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本方法负责第一步）；
+ * delivery 任务保持两步 PICKED_UP->DELIVERED（跳过 DELIVERING，走 deliverTask）。
+ * 本方法仅 taskType=return 可调，打通原 DELIVERING 死状态。
+ */
+export interface StartDeliveringInput {
+  riderId: string;
+  taskId: string;
+  note?: string;
+}
+
+/** P14 ④：建 return 任务的入参（refundId 单参数，内含 full relation 查询） */
+export interface CreateReturnTaskInput {
+  refundId: string;
+}
+
 // ============================================================================
 // Admin 视角（批次 4：admin dispatch 看板）
 // ============================================================================
@@ -109,6 +131,10 @@ export interface AdminDeliveryTaskView {
   riderId: string | null;
   warehouseId: string;
   status: 'PENDING_ASSIGN' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERING' | 'DELIVERED' | 'FAILED';
+  /** P14 ④：任务类型（delivery / return），admin 看板区分显示 */
+  taskType: 'delivery' | 'return';
+  /** P14 ④：return 任务关联的 refund（delivery 为 null） */
+  refundId: string | null;
   pickupAddress: string;
   pickupLat: number;
   pickupLng: number;
@@ -311,23 +337,36 @@ export class DispatchService {
       });
     }
 
-    const updated = await db.deliveryTask.update({
-      where: { id: input.taskId },
-      data: {
-        status: 'PICKED_UP',
-        pickedUpAt: new Date(),
-        note: input.note ?? task.note,
-      },
-      include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
-        warehouse: { select: { code: true } },
-      },
-    });
+    // P14 ④：走 withTransaction，taskType=return 时事务内额外写 refund.pickupAt
+    const { updated } = await withTransaction(async (tx: Tx) => {
+      const t = await tx.deliveryTask.update({
+        where: { id: input.taskId },
+        data: {
+          status: 'PICKED_UP',
+          pickedUpAt: new Date(),
+          note: input.note ?? task.note,
+        },
+        include: {
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          warehouse: { select: { code: true } },
+        },
+      });
 
-    // 同步 Order 状态机：CONFIRMED → PICKED
-    await db.order.update({
-      where: { id: task.orderId },
-      data: { status: 'PICKED', pickedAt: new Date() },
+      // 同步 Order 状态机：CONFIRMED → PICKED
+      await tx.order.update({
+        where: { id: task.orderId },
+        data: { status: 'PICKED', pickedAt: new Date() },
+      });
+
+      // P14 ④：return 任务写 refund.pickupAt（前端 P14 时间轴 pickupArranging 步骤展示）
+      if (task.taskType === 'return' && task.refundId) {
+        await tx.refund.update({
+          where: { id: task.refundId },
+          data: { pickupAt: new Date() },
+        });
+      }
+
+      return { updated: t };
     });
 
     try {
@@ -461,6 +500,83 @@ export class DispatchService {
   }
 
   /**
+   * P14 ④：开始配送（PICKED_UP -> DELIVERING）
+   *
+   * 决策 1 选 A（2026-08-11）：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本方法负责第一步）；
+   * delivery 任务保持两步 PICKED_UP->DELIVERED（跳过 DELIVERING，走 deliverTask）。
+   * 本方法仅 taskType=return 可调，打通原 DELIVERING 死状态（enum 有值无写入点）。
+   *
+   * 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（return 任务）
+   */
+  async startDelivering(input: StartDeliveringInput): Promise<DeliveryTaskView> {
+    const riderId = await this.resolveRiderProfileId(input.riderId);
+    const task = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      include: {
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        warehouse: { select: { code: true } },
+      },
+    });
+    if (!task) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
+    }
+    if (task.riderId !== riderId) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-003',
+        message: 'Task not assigned to this rider',
+      });
+    }
+    // P14 ④：仅 return 任务可调（delivery 走 deliverTask 跳过 DELIVERING）
+    if (task.taskType !== 'return') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-020',
+        message: `Task ${input.taskId} invalid taskType ${task.taskType} (startDelivering only for return task)`,
+      });
+    }
+    if (task.status !== 'PICKED_UP') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-004',
+        message: `Task status ${task.status} cannot start delivering`,
+      });
+    }
+
+    // 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)
+    const { updated } = await withTransaction(async (tx: Tx) => {
+      const t = await tx.deliveryTask.update({
+        where: { id: input.taskId },
+        data: {
+          status: 'DELIVERING',
+          note: input.note ?? task.note,
+        },
+        include: {
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          warehouse: { select: { code: true } },
+        },
+      });
+
+      // P14 ④：return 任务写 refund.pickedAt（前端 P14 时间轴 picked 步骤展示）
+      if (task.refundId) {
+        await tx.refund.update({
+          where: { id: task.refundId },
+          data: { pickedAt: new Date() },
+        });
+      }
+
+      return { updated: t };
+    });
+
+    logger.info({
+      msg: 'DISPATCH_TASK_DELIVERING',
+      taskId: input.taskId,
+      riderId,
+      orderId: task.orderId,
+      refundId: task.refundId,
+    });
+
+    return this.toView(updated);
+  }
+
+  /**
    * 异常上报（标记 task FAILED + 写 OrderEvent + WS 推客服）
    *
    * V2-S1 修复：deliveryTask.update + orderEvent.create 包事务
@@ -581,8 +697,10 @@ export class DispatchService {
    * 幂等：已存在 DeliveryTask 则跳过
    */
   async createTaskForOrder(orderId: string): Promise<DeliveryTaskView | null> {
-    const existing = await db.deliveryTask.findUnique({
-      where: { orderId },
+    // P14 ④：orderId 去 @unique 改复合 @@unique([orderId, taskType])，findUnique 改 findFirst
+    // 幂等：同 order 已有 delivery task 则跳过（return task 不影响，taskType 区分）
+    const existing = await db.deliveryTask.findFirst({
+      where: { orderId, taskType: 'delivery' },
       include: {
         order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
         warehouse: { select: { code: true } },
@@ -669,6 +787,150 @@ export class DispatchService {
       msg: 'DISPATCH_TASK_CREATED',
       taskId: task.id,
       orderId,
+      warehouseId: order.warehouseId,
+    });
+
+    return this.toView(task);
+  }
+
+  /**
+   * P14 ④：建退货取件任务（refund APPROVE + RETURN_REFUND 触发）
+   *
+   * 决策 2 选 A（2026-08-11）：refund.service reviewRefund APPROVE 时同步调用本方法
+   * 决策 3 选 A：复用抢单大厅（建任务 PENDING_ASSIGN + WS dispatch:new-task，骑手 acceptTask 抢）
+   *
+   * 与 createTaskForOrder 区别：
+   *   - taskType='return'（非 delivery）
+   *   - refundId 关联 refund（@unique 兜底防重）
+   *   - pickupAddress=客户地址 / dropoffAddress=仓库地址（反向，骑手去客户那取退货商品回仓）
+   *
+   * 状态机：PENDING_ASSIGN -> ASSIGNED -> PICKED_UP -> DELIVERING -> DELIVERED
+   *   - pickupTask（return）：写 refund.pickupAt
+   *   - startDelivering（return）：写 refund.pickedAt（打通 DELIVERING 死状态）
+   */
+  async createTaskForReturn(refundId: string): Promise<DeliveryTaskView> {
+    // 1. 查 refund（含 order + warehouse，校验存在 + refundType）
+    const refund = await db.refund.findUnique({
+      where: { id: refundId },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNo: true,
+            warehouseId: true,
+            deliveryAddress: true,
+            payableAmount: true,
+            paymentMethod: true,
+            warehouse: {
+              select: { id: true, code: true, address: true, centerLat: true, centerLng: true },
+            },
+          },
+        },
+      },
+    });
+    if (!refund) {
+      throw new NotFoundException({
+        code: 'E-REFUND-003',
+        message: `Refund not found: ${refundId}`,
+      });
+    }
+
+    // 2. 校验 refundType=RETURN_REFUND（REFUND_ONLY 不建 return task）
+    if (refund.refundType !== 'RETURN_REFUND') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-022',
+        message: `Refund ${refundId} not RETURN_REFUND type (current: ${refund.refundType})`,
+      });
+    }
+
+    // 3. 校验无已有 return task（refundId @unique 兜底 + 应用层前置检查给清晰错误码）
+    const existing = await db.deliveryTask.findFirst({
+      where: { refundId },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-021',
+        message: `Refund ${refundId} already has return task ${existing.id}`,
+      });
+    }
+
+    // 4. 解析地址（return 任务：pickup=客户，dropoff=仓，与 delivery 反向）
+    const order = refund.order;
+    if (!order) {
+      throw new NotFoundException({
+        code: 'E-REFUND-005',
+        message: `Order not found for refund: ${refund.orderId}`,
+      });
+    }
+    const warehouse = order.warehouse;
+    const dropoffAddress = warehouse.address ?? `Warehouse ${warehouse.code}`;
+    const dropoffLat = warehouse.centerLat ? Number(warehouse.centerLat) : 0;
+    const dropoffLng = warehouse.centerLng ? Number(warehouse.centerLng) : 0;
+
+    const dropoff = order.deliveryAddress as {
+      name?: string;
+      phone?: string;
+      detail?: string;
+      lat?: number;
+      lng?: number;
+    };
+    const pickupAddress = dropoff.detail ?? 'Customer address';
+    const pickupLat = dropoff.lat ?? 0;
+    const pickupLng = dropoff.lng ?? 0;
+
+    // 5. 建 return task（PENDING_ASSIGN，复用抢单大厅）
+    const task = await db.deliveryTask.create({
+      data: {
+        orderId: refund.orderId,
+        riderId: null,
+        warehouseId: order.warehouseId,
+        status: 'PENDING_ASSIGN',
+        taskType: 'return',
+        refundId: refund.id,
+        pickupAddress,
+        pickupLat,
+        pickupLng,
+        dropoffAddress,
+        dropoffLat,
+        dropoffLng,
+        estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
+      },
+      include: {
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        warehouse: { select: { code: true } },
+      },
+    });
+
+    // 6. WS 推 riders room（复用抢单大厅，决策 3）
+    try {
+      this.realtime.server.to('riders').emit('dispatch:new-task', {
+        taskId: task.id,
+        orderId: refund.orderId,
+        orderNo: order.orderNo,
+        warehouseId: order.warehouseId,
+        warehouseCode: warehouse.code,
+        taskType: 'return',
+        refundId: refund.id,
+        pickupAddress,
+        dropoffAddress,
+        paymentMethod: order.paymentMethod,
+        payableAmount: order.payableAmount,
+        createdAt: task.createdAt.toISOString(),
+      });
+    } catch (e) {
+      logger.warn({
+        msg: 'DISPATCH_BROADCAST_NEW_RETURN_TASK_FAILED',
+        refundId,
+        error: (e as Error).message,
+      });
+    }
+
+    logger.info({
+      msg: 'DISPATCH_RETURN_TASK_CREATED',
+      taskId: task.id,
+      refundId,
+      orderId: refund.orderId,
       warehouseId: order.warehouseId,
     });
 
@@ -933,6 +1195,8 @@ export class DispatchService {
       riderId: t.riderId,
       warehouseId: t.warehouseId,
       status: t.status,
+      taskType: (t.taskType as 'delivery' | 'return') ?? 'delivery',
+      refundId: t.refundId ?? null,
       pickupAddress: t.pickupAddress,
       pickupLat: Number(t.pickupLat),
       pickupLng: Number(t.pickupLng),
@@ -1002,6 +1266,8 @@ export class DispatchService {
       riderId: t.riderId,
       warehouseId: t.warehouseId,
       status: t.status,
+      taskType: (t.taskType as 'delivery' | 'return') ?? 'delivery',
+      refundId: t.refundId ?? null,
       pickupAddress: t.pickupAddress,
       pickupLat: Number(t.pickupLat),
       pickupLng: Number(t.pickupLng),

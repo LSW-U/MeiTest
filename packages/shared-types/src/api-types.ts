@@ -5684,6 +5684,13 @@ export interface paths {
                                     warehouseId: string;
                                     /** @enum {string} */
                                     status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    /**
+                                     * @default delivery
+                                     * @enum {string}
+                                     */
+                                    taskType: "delivery" | "return";
+                                    /** Format: uuid */
+                                    refundId: string | null;
                                     pickupAddress: string;
                                     pickupLat: number;
                                     pickupLng: number;
@@ -5773,6 +5780,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -5887,6 +5901,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -5997,6 +6018,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -6151,6 +6179,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -10121,6 +10156,13 @@ export interface paths {
                                     warehouseId: string;
                                     /** @enum {string} */
                                     status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    /**
+                                     * @default delivery
+                                     * @enum {string}
+                                     */
+                                    taskType: "delivery" | "return";
+                                    /** Format: uuid */
+                                    refundId: string | null;
                                     pickupAddress: string;
                                     pickupLat: number;
                                     pickupLng: number;
@@ -10191,6 +10233,13 @@ export interface paths {
                                     warehouseId: string;
                                     /** @enum {string} */
                                     status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                    /**
+                                     * @default delivery
+                                     * @enum {string}
+                                     */
+                                    taskType: "delivery" | "return";
+                                    /** Format: uuid */
+                                    refundId: string | null;
                                     pickupAddress: string;
                                     pickupLat: number;
                                     pickupLng: number;
@@ -10268,6 +10317,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -10363,6 +10419,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -10459,6 +10522,13 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -10556,6 +10626,96 @@ export interface paths {
                                 warehouseId: string;
                                 /** @enum {string} */
                                 status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/dispatch/tasks/{id}/start-delivering": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）。仅 taskType=return 任务可调，打通原 DELIVERING 死状态（return 三步 PICKED_UP->DELIVERING->DELIVERED；delivery 两步跳过 DELIVERING 走 deliver）。事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（前端 P14 时间轴 picked 步骤展示）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 开始配送成功（task 进入 DELIVERING；return 任务同时写 refund.pickedAt） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
                                 pickupAddress: string;
                                 pickupLat: number;
                                 pickupLng: number;
@@ -14736,6 +14896,13 @@ export interface components {
             warehouseId: string;
             /** @enum {string} */
             status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+            /**
+             * @default delivery
+             * @enum {string}
+             */
+            taskType: "delivery" | "return";
+            /** Format: uuid */
+            refundId: string | null;
             pickupAddress: string;
             pickupLat: number;
             pickupLng: number;
@@ -14784,6 +14951,13 @@ export interface components {
                     warehouseId: string;
                     /** @enum {string} */
                     status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                    /**
+                     * @default delivery
+                     * @enum {string}
+                     */
+                    taskType: "delivery" | "return";
+                    /** Format: uuid */
+                    refundId: string | null;
                     pickupAddress: string;
                     pickupLat: number;
                     pickupLng: number;

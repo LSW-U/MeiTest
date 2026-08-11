@@ -15,9 +15,11 @@ import { RefundService } from './refund.service';
 import { ClientRefundController, AdminRefundController } from './refund.controller';
 import { OrderModule } from '../order/order.module';
 import { StorageModule } from '../../shared/storage/storage.module';
+// P14 ④：refund APPROVE + RETURN_REFUND 触发建 return task（DispatchService via ModuleRef）
+import { DispatchModule } from '../dispatch/dispatch.module';
 
 @Module({
-  imports: [forwardRef(() => OrderModule), StorageModule],
+  imports: [forwardRef(() => OrderModule), StorageModule, DispatchModule],
   controllers: [ClientRefundController, AdminRefundController],
   providers: [RefundService],
   exports: [RefundService],
