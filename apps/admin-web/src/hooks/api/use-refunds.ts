@@ -134,3 +134,34 @@ export function useReviewRefund() {
     },
   });
 }
+
+/**
+ * P3-3：admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败的人工介入）
+ *
+ * 后端 POST /admin/refunds/:id/retrigger-return-task（@Roles SUPER_ADMIN + @Audit）
+ * 场景：refund APPROVE 时 createTaskForReturn 失败（dispatch 瞬时故障），refund 已 COMPLETED 但
+ *   return task 未建，admin 监控 REFUND_RETURN_TASK_TRIGGER_FAILED 日志后手动重触发。
+ * 错误码（createTaskForReturn 内校验）：E-REFUND-003 refund 不存在 / E-DISPATCH-022 不是 RETURN_REFUND /
+ *   E-DISPATCH-021 已有 return task（正常情况说明第一次已成功，无需重建）。
+ */
+export interface RetriggerReturnTaskResult {
+  id: string;
+  orderId: string;
+  taskType: 'delivery' | 'return';
+  refundId: string | null;
+  status: string;
+}
+
+export function useRetriggerReturnTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<ApiSuccess<RetriggerReturnTaskResult>>(
+        `/admin/refunds/${id}/retrigger-return-task`,
+        { method: 'POST' },
+      ).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['refunds'] });
+    },
+  });
+}

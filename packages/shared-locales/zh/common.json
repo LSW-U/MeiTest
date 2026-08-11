@@ -642,7 +642,13 @@
       "photoLightboxTitle": "凭证照片",
       "reasonExpired": "过期 / 变质",
       "reasonShortage": "少件 / 缺件",
-      "viewDetail": "查看"
+      "viewDetail": "查看",
+      "retriggerTitle": "重触发退货任务",
+      "retriggerDesc": "退款审核时退货任务创建失败的兜底（dispatch 服务故障）。手动重建骑手取件任务。",
+      "retriggerButton": "重触发退货任务",
+      "retriggerConfirm": "确定为该退款重建退货任务吗？",
+      "retriggerSuccess": "退货任务已重建",
+      "retriggerFailed": "重触发失败"
     },
     "settlements": {
       "title": "结算单",

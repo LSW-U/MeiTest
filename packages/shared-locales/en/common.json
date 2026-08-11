@@ -642,7 +642,13 @@
       "photoLightboxTitle": "Evidence photo",
       "reasonExpired": "Expired / Spoiled",
       "reasonShortage": "Shortage / Missing items",
-      "viewDetail": "View"
+      "viewDetail": "View",
+      "retriggerTitle": "Retrigger Return Task",
+      "retriggerDesc": "Fallback when refund approval failed to create return task (dispatch service issue). Manually recreate the rider pickup task.",
+      "retriggerButton": "Retrigger Return Task",
+      "retriggerConfirm": "Recreate the return task for this refund?",
+      "retriggerSuccess": "Return task recreated",
+      "retriggerFailed": "Retrigger failed"
     },
     "settlements": {
       "title": "Settlements",

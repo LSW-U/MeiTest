@@ -642,7 +642,13 @@
       "photoLightboxTitle": "Evidence photo",
       "reasonExpired": "Expired / Spoiled",
       "reasonShortage": "Shortage / Missing items",
-      "viewDetail": "View"
+      "viewDetail": "View",
+      "retriggerTitle": "Hahú Tarefa Return Foun",
+      "retriggerDesc": "Fallback wainhaksesaun refund la diak hari tarefa return (problema servisu dispatch). Hari foun tarefa hahú rider ho liman.",
+      "retriggerButton": "Hahú Tarefa Return Foun",
+      "retriggerConfirm": "Hari foun tarefa return ba refund ne'e?",
+      "retriggerSuccess": "Tarefa return hari foun ona",
+      "retriggerFailed": "Hahú foun la diak"
     },
     "settlements": {
       "title": "Settlements",

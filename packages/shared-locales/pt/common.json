@@ -642,7 +642,13 @@
       "photoLightboxTitle": "Foto de evidência",
       "reasonExpired": "Expirado / Estragado",
       "reasonShortage": "Falta / Itens faltando",
-      "viewDetail": "Ver"
+      "viewDetail": "Ver",
+      "retriggerTitle": "Reativar Tarefa de Retorno",
+      "retriggerDesc": "Fallback quando a aprovação do reembolso falhou ao criar tarefa de retorno (problema do serviço de dispatch). Recrie manualmente a tarefa de coleta do rider.",
+      "retriggerButton": "Reativar Tarefa de Retorno",
+      "retriggerConfirm": "Recriar a tarefa de retorno para este reembolso?",
+      "retriggerSuccess": "Tarefa de retorno recriada",
+      "retriggerFailed": "Reativação falhou"
     },
     "settlements": {
       "title": "Liquidações",

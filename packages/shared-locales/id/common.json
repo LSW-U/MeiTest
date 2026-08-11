@@ -642,7 +642,13 @@
       "photoLightboxTitle": "Foto bukti",
       "reasonExpired": "Kedaluwarsa / Rusak",
       "reasonShortage": "Kekurangan / Barang hilang",
-      "viewDetail": "Lihat"
+      "viewDetail": "Lihat",
+      "retriggerTitle": "Picu Ulang Tugas Return",
+      "retriggerDesc": "Cadangan ketika persetujuan refund gagal membuat tugas return (masalah layanan dispatch). Buat ulang tugas pengambilan rider secara manual.",
+      "retriggerButton": "Picu Ulang Tugas Return",
+      "retriggerConfirm": "Buat ulang tugas return untuk refund ini?",
+      "retriggerSuccess": "Tugas return dibuat ulang",
+      "retriggerFailed": "Picu ulang gagal"
     },
     "settlements": {
       "title": "Penyelesaian",

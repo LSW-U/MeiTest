@@ -26,8 +26,10 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   useRefundDetail,
+  useRetriggerReturnTask,
   type RefundItem,
 } from '@/hooks/api/use-refunds';
+import { useToast } from '@/hooks/use-toast';
 
 /** reason → i18n key 映射（含 P13 EXPIRED/SHORTAGE） */
 const REASON_LABEL_KEY: Record<string, string> = {
@@ -53,6 +55,26 @@ export default function RefundDetailPage() {
   const id = params.id as string;
 
   const { data: refund, isLoading, error } = useRefundDetail(id);
+
+  // P3-3：兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败的人工介入）
+  const retrigger = useRetriggerReturnTask();
+  const { toast } = useToast();
+
+  const handleRetrigger = () => {
+    if (!window.confirm(t('admin.refunds.retriggerConfirm'))) return;
+    retrigger.mutate(id, {
+      onSuccess: () => {
+        toast({ title: t('admin.refunds.retriggerSuccess') });
+      },
+      onError: (err: unknown) => {
+        toast({
+          title: t('admin.refunds.retriggerFailed'),
+          description: err instanceof Error ? err.message : undefined,
+          variant: 'destructive',
+        });
+      },
+    });
+  };
 
   // lightbox 状态（点击缩略图放大）
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -209,6 +231,22 @@ export default function RefundDetailPage() {
               </div>
             )}
           </dl>
+        </section>
+      )}
+
+      {/* P3-3：兜底重触发 return task（仅 RETURN_REFUND + COMPLETED 显示，运维兜底非常规审核） */}
+      {refund.refundType === 'RETURN_REFUND' && refund.status === 'COMPLETED' && (
+        <section className="rounded-lg border p-6 space-y-4">
+          <h2 className="text-lg font-semibold">{t('admin.refunds.retriggerTitle')}</h2>
+          <p className="text-sm text-muted-foreground">{t('admin.refunds.retriggerDesc')}</p>
+          <Button
+            variant="outline"
+            onClick={handleRetrigger}
+            disabled={retrigger.isPending}
+          >
+            {retrigger.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('admin.refunds.retriggerButton')}
+          </Button>
         </section>
       )}
 
