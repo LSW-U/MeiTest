@@ -123,6 +123,7 @@ import {
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
   UpdateDutyStatusRequest,
+  ReportLocationRequest,
   DeliveryTask,
   AcceptTaskRequest,
   PickupTaskRequest,
@@ -2487,6 +2488,47 @@ registry.registerPath({
           schema: z.object({ success: z.literal(true), data: z.object({ renewed: z.boolean() }) }),
         },
       },
+    },
+  },
+});
+
+// ---- 位置上报（后台定位 HTTP 通道，P0 规则 16）----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/location/report',
+  tags: ['rider'],
+  description:
+    '骑手上报位置（前台 WS location:update + 后台 HTTP /report 双通道，后端转发为 order:location WS 广播到 order:{orderId} room）。后台定位仅在「配送中」启用，orderId 必填。',
+  request: {
+    body: { content: { 'application/json': { schema: ReportLocationRequest } } },
+  },
+  responses: {
+    200: {
+      description: '上报成功（已广播到 order:{orderId} room）',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ broadcast: z.literal(true) }),
+          }),
+        },
+      },
+    },
+    400: {
+      description: 'E-RIDER-007 orderId required for background report',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: {
+      description: 'E-AUTH-002 auth required',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    403: {
+      description: 'E-DISPATCH-003 order not assigned to this rider',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    404: {
+      description: 'E-ORDER-001 order not found',
+      content: { 'application/json': { schema: ErrorResponse } },
     },
   },
 });

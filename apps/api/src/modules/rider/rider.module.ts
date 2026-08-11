@@ -14,14 +14,20 @@ import {
   RiderApplicationAdminController,
 } from './rider.controller';
 import { AdminRiderController } from './admin-rider.controller';
+import { RiderLocationController } from './location.controller';
 import { RiderService } from './rider.service';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
+  // RealtimeModule 提供 RealtimeGateway（RiderLocationController 注入，
+  // 复用 WS 广播 order:location，与 dispatch.module 同模式）
+  imports: [RealtimeModule],
   controllers: [
     RiderApplicationController,
     RiderController,
     RiderApplicationAdminController,
     AdminRiderController,
+    RiderLocationController,
   ],
   providers: [RiderService],
   exports: [RiderService],

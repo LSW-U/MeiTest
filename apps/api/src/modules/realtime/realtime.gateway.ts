@@ -33,6 +33,7 @@ import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 import { logger } from '../../shared/logger/logger';
 import { redis } from '../../shared/cache';
 import { db } from '../../shared/db';
+import { assertRiderOwnsOrder } from './rider-order-guard';
 
 /** WS 命名空间：/realtime（与 HTTP 路由 /api/v1 分开，避免冲突） */
 const WS_NAMESPACE = '/realtime';
@@ -43,7 +44,7 @@ const RIDERS_ROOM = 'riders';
 const CUSTOMER_SERVICE_ROOM = 'customer-service';
 
 /** 订单 room 前缀（按 orderId 拼接） */
-const ORDER_ROOM_PREFIX = 'order:';
+export const ORDER_ROOM_PREFIX = 'order:';
 
 /** IM 三方会话类型（决策 2026-06-24 自建 WebSocket） */
 export type ConversationType = 'customer_merchant' | 'customer_rider' | 'customer_service';
@@ -322,22 +323,19 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
 
     // P1-9 修复：骑手-订单绑定校验（防骑手 A 给骑手 B 的订单推伪造位置）
-    const order = await db.order.findUnique({
-      where: { id: data.orderId },
-      select: { riderId: true },
-    });
-    if (!order) {
+    // 抽 assertRiderOwnsOrder shared helper（HTTP /rider/location/report 复用，P0 后台定位）
+    const ownership = await assertRiderOwnsOrder(data.orderId, user.sub);
+    if (!ownership.ok) {
+      if (ownership.reason === 'mismatch') {
+        this.wsLogger.warn({
+          msg: 'ws_location_forbidden_rider_mismatch',
+          userId: user.sub,
+          orderId: data.orderId,
+          assignedRiderId: ownership.assignedRiderId,
+        });
+        return { ok: false, error: 'order not assigned to this rider' };
+      }
       return { ok: false, error: 'order not found' };
-    }
-    // riderId 可能为 null（订单未派单），但已派单时必须本人
-    if (order.riderId && order.riderId !== user.sub) {
-      this.wsLogger.warn({
-        msg: 'ws_location_forbidden_rider_mismatch',
-        userId: user.sub,
-        orderId: data.orderId,
-        assignedRiderId: order.riderId,
-      });
-      return { ok: false, error: 'order not assigned to this rider' };
     }
 
     const room = `${ORDER_ROOM_PREFIX}${data.orderId}`;
