@@ -426,6 +426,33 @@ describe('e2e: 异常路径', () => {
     expect(refundRes.error?.code).toBe('E-ORDER-003');
   });
 
+  it('refund refundType 非法值 -> 400 E-COMMON-001（zod enum 拒绝，P14-defer 审查 P3-1 修复）', async () => {
+    const addrRes = await apiCall('/client/addresses', customerToken);
+    const addressId = addrRes.data[0]?.id;
+
+    const orderRes = await apiCall('/client/orders', customerToken, {
+      method: 'POST',
+      headers: { 'Idempotency-Key': uuid() },
+      body: JSON.stringify({
+        addressId,
+        items: [{ skuId, quantity: 1 }],
+        paymentMethod: 'COD',
+      }),
+    });
+
+    // refundType 传非法值 'WRONG' -> controller L64 z.enum(['REFUND_ONLY','RETURN_REFUND']) 拒绝
+    const refundRes = await apiCall('/client/refunds', customerToken, {
+      method: 'POST',
+      body: JSON.stringify({
+        orderId: orderRes.data.id,
+        reason: 'CUSTOMER_CHANGE_MIND',
+        refundType: 'WRONG',
+      }),
+    });
+    expect(refundRes.success).toBe(false);
+    expect(refundRes.error?.code).toBe('E-COMMON-001');
+  });
+
   it('customer 不能调 admin 端点 → 403', async () => {
     const res = await apiCall('/admin/orders', customerToken);
     expect(res.success).toBe(false);

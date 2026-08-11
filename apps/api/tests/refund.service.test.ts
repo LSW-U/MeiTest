@@ -15,6 +15,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { CreateRefundRequest } from '@meimart/api-contract';
 
 const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage } = vi.hoisted(() => ({
   mockDb: {
@@ -582,6 +583,61 @@ describe('RefundService', () => {
     it('非 PENDING → E-REFUND-004', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, status: 'COMPLETED' });
       await expect(service.cancelRefund('refund-1', 'user-1')).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('CreateRefundRequest zod schema（P14-defer 审查 P3-1 修复：refundType enum 拒绝）', () => {
+    // 测 api-contract CreateRefundRequest schema（与 refund.controller 内联 CreateRefundRequest 一致，
+    // 审查报告 §2.3 verify 两层一致）。e2e 也补了 HTTP 层用例（e2e-main-flows L429-454），
+    // 但 e2e 依赖 DB seed（当前环境 P2002 脏数据跑不起来），此单测不依赖 DB 兜底验证 zod enum 拒绝。
+    it('refundType 非法值 "WRONG" -> safeParse 失败', () => {
+      const result = CreateRefundRequest.safeParse({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        reason: 'OTHER',
+        refundType: 'WRONG',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('refundType=RETURN_REFUND -> 通过', () => {
+      const result = CreateRefundRequest.safeParse({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        reason: 'OTHER',
+        refundType: 'RETURN_REFUND',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.refundType).toBe('RETURN_REFUND');
+      }
+    });
+
+    it('refundType=REFUND_ONLY -> 通过', () => {
+      const result = CreateRefundRequest.safeParse({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        reason: 'OTHER',
+        refundType: 'REFUND_ONLY',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('refundType 不传 -> 默认 REFUND_ONLY（向后兼容）', () => {
+      const result = CreateRefundRequest.safeParse({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        reason: 'OTHER',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.refundType).toBe('REFUND_ONLY');
+      }
+    });
+
+    it('refundType 小写 "refund_only" -> 拒绝（enum 大小写敏感）', () => {
+      const result = CreateRefundRequest.safeParse({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        reason: 'OTHER',
+        refundType: 'refund_only',
+      });
+      expect(result.success).toBe(false);
     });
   });
 });
