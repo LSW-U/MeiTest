@@ -24,6 +24,7 @@ import {
   Inject,
   HttpException,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { z } from 'zod';
 import { RefundService } from './refund.service';
@@ -122,7 +123,7 @@ export class ClientRefundController {
 
   /** 退款详情 */
   @Get(':id')
-  async detail(@Param('id') id: string) {
+  async detail(@Param('id', new ParseUUIDPipe()) id: string) {
     const refund = await this.refundService.getRefundDetail(id);
     return { success: true as const, data: refund };
   }
@@ -130,7 +131,7 @@ export class ClientRefundController {
   /** 撤回退款申请 */
   @Post(':id/cancel')
   @Audit({ resource: 'Refund', resourceIdParam: 'id' })
-  async cancel(@Param('id') id: string, @Req() req: RequestWithUser) {
+  async cancel(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: RequestWithUser) {
     if (!req.user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
@@ -170,7 +171,7 @@ export class AdminRefundController {
 
   /** 退款详情 */
   @Get(':id')
-  async detail(@Param('id') id: string) {
+  async detail(@Param('id', new ParseUUIDPipe()) id: string) {
     const refund = await this.refundService.getRefundDetail(id);
     return { success: true as const, data: refund };
   }
@@ -188,7 +189,7 @@ export class AdminRefundController {
   @Roles('SUPER_ADMIN')
   @Audit({ resource: 'Refund', resourceIdParam: 'id' })
   async review(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(ReviewRefundRequest)) body: z.infer<typeof ReviewRefundRequest>,
     @Req() req: RequestWithUser,
   ) {
@@ -219,7 +220,7 @@ export class AdminRefundController {
   @Post(':id/retrigger-return-task')
   @Roles('SUPER_ADMIN')
   @Audit({ resource: 'Refund', resourceIdParam: 'id' })
-  async retriggerReturnTask(@Param('id') id: string, @Req() req: RequestWithUser) {
+  async retriggerReturnTask(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: RequestWithUser) {
     if (!req.user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
