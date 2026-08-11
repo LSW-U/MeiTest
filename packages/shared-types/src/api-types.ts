@@ -11636,6 +11636,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/refunds/{id}/retrigger-return-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description P3-3：admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败，refund 已 COMPLETED 但 return task 未建时的人工介入）。返新建的 DeliveryTask（taskType=return）。错误码：E-REFUND-003 refund 不存在 / E-DISPATCH-022 refund 不是 RETURN_REFUND / E-DISPATCH-021 已有 return task。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 重触发成功（返新建的 return task） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                riderId: string | null;
+                                /** Format: uuid */
+                                warehouseId: string;
+                                /** @enum {string} */
+                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+                                /**
+                                 * @default delivery
+                                 * @enum {string}
+                                 */
+                                taskType: "delivery" | "return";
+                                /** Format: uuid */
+                                refundId: string | null;
+                                pickupAddress: string;
+                                pickupLat: number;
+                                pickupLng: number;
+                                dropoffAddress: string;
+                                dropoffLat: number;
+                                dropoffLng: number;
+                                /** Format: date-time */
+                                assignedAt: string | null;
+                                /** Format: date-time */
+                                pickedUpAt: string | null;
+                                /** Format: date-time */
+                                deliveredAt: string | null;
+                                note: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-REFUND-003 refund 不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-DISPATCH-021 已有 return task / E-DISPATCH-022 refund 不是 RETURN_REFUND */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/orders/{id}/confirm": {
         parameters: {
             query?: never;

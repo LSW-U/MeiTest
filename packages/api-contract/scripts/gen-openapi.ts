@@ -2802,6 +2802,28 @@ registry.registerPath({
   },
 });
 
+// P3-3: admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败的人工介入）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/refunds/{id}/retrigger-return-task',
+  tags: ['refund'],
+  description:
+    'P3-3：admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败，refund 已 COMPLETED 但 return task 未建时的人工介入）。' +
+    '返新建的 DeliveryTask（taskType=return）。错误码：E-REFUND-003 refund 不存在 / E-DISPATCH-022 refund 不是 RETURN_REFUND / E-DISPATCH-021 已有 return task。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '重触发成功（返新建的 return task）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+    },
+    404: { description: 'E-REFUND-003 refund 不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: {
+      description: 'E-DISPATCH-021 已有 return task / E-DISPATCH-022 refund 不是 RETURN_REFUND',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
 // W6 P1: admin confirm 订单
 registry.registerPath({
   method: 'post',

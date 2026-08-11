@@ -20787,6 +20787,174 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/refunds/{id}/retrigger-return-task:
+    post:
+      tags:
+        - refund
+      description: P3-3：admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn
+        失败，refund 已 COMPLETED 但 return task 未建时的人工介入）。返新建的
+        DeliveryTask（taskType=return）。错误码：E-REFUND-003 refund 不存在 /
+        E-DISPATCH-022 refund 不是 RETURN_REFUND / E-DISPATCH-021 已有 return task。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: 重触发成功（返新建的 return task）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      riderId:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      warehouseId:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: *a17
+                      taskType:
+                        type: string
+                        enum: *a18
+                        default: delivery
+                      refundId:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      pickupAddress:
+                        type: string
+                      pickupLat:
+                        type: number
+                      pickupLng:
+                        type: number
+                      dropoffAddress:
+                        type: string
+                      dropoffLat:
+                        type: number
+                      dropoffLng:
+                        type: number
+                      assignedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedUpAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      deliveredAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      note:
+                        type: string
+                        nullable: true
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - orderId
+                      - riderId
+                      - warehouseId
+                      - status
+                      - refundId
+                      - pickupAddress
+                      - pickupLat
+                      - pickupLng
+                      - dropoffAddress
+                      - dropoffLat
+                      - dropoffLng
+                      - assignedAt
+                      - pickedUpAt
+                      - deliveredAt
+                      - note
+                      - createdAt
+                      - updatedAt
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-REFUND-003 refund 不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-DISPATCH-021 已有 return task / E-DISPATCH-022 refund 不是
+            RETURN_REFUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/admin/orders/{id}/confirm:
     post:
       tags:

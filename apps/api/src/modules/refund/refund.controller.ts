@@ -11,6 +11,7 @@
  *   GET    /                退款列表（可按 status 筛选）
  *   GET    /:id             退款详情
  *   POST   /:id/review      审核退款（APPROVE / REJECT）
+ *   POST   /:id/retrigger-return-task  P3-3 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败的人工介入）
  */
 import {
   Controller,
@@ -26,6 +27,8 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import { RefundService } from './refund.service';
+// P3-3：admin retrigger-return-task 调 createTaskForReturn（refund APPROVE 时失败的兜底）
+import { DispatchService } from '../dispatch/dispatch.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
@@ -143,7 +146,10 @@ export class ClientRefundController {
 @Controller('api/v1/admin/refunds')
 @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
 export class AdminRefundController {
-  constructor(@Inject(RefundService) private readonly refundService: RefundService) {}
+  constructor(
+    @Inject(RefundService) private readonly refundService: RefundService,
+    @Inject(DispatchService) private readonly dispatchService: DispatchService,
+  ) {}
 
   /**
    * 退款列表（游标分页，可按 status 筛选）
@@ -196,5 +202,28 @@ export class AdminRefundController {
       body.reviewNote,
     );
     return { success: true as const, data: refund };
+  }
+
+  /**
+   * P3-3：admin 兜底重触发 return task（refund APPROVE 时 createTaskForReturn 失败的人工介入）
+   *
+   * 场景：refund APPROVE 时 createTaskForReturn 失败（dispatch 服务瞬时故障），
+   * refund 已 COMPLETED 但 return task 未建，退货流程卡住。admin 监控
+   * REFUND_RETURN_TASK_TRIGGER_FAILED 日志后手动调本端点重新触发。
+   *
+   * 错误码（createTaskForReturn 内校验，自动映射 404/409）：
+   *   - E-REFUND-003：refund 不存在
+   *   - E-DISPATCH-022：refund 不是 RETURN_REFUND（REFUND_ONLY 不建 return task）
+   *   - E-DISPATCH-021：refund 已有 return task（无需重建，正常情况说明第一次已成功）
+   */
+  @Post(':id/retrigger-return-task')
+  @Roles('SUPER_ADMIN')
+  @Audit({ resource: 'Refund', resourceIdParam: 'id' })
+  async retriggerReturnTask(@Param('id') id: string, @Req() req: RequestWithUser) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const task = await this.dispatchService.createTaskForReturn(id);
+    return { success: true as const, data: task };
   }
 }
