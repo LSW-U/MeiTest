@@ -31,7 +31,7 @@ const MockLoginRequest = z.object({
 type MockLoginRequestType = z.infer<typeof MockLoginRequest>;
 
 /** Seed super_admin phone（与 seed.ts 一致） */
-const SEED_ADMIN_PHONE = '+670999999999';
+const SEED_ADMIN_PHONE = '+67099999999';
 
 /** 正常 role × deviceType 组合（用于检测非常规组合并 warning） */
 const NORMAL_COMBINATIONS: Record<Role, DeviceType[]> = {

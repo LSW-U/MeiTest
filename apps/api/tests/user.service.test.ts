@@ -114,7 +114,7 @@ describe('UserService', () => {
     it('返回 user profile（role 转 contract 小写）', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
-        phone: '+670999999999',
+        phone: '+67099999999',
         email: null,
         name: 'Alice',
         avatarUrl: null,
@@ -138,7 +138,7 @@ describe('UserService', () => {
 
     it('F10：积分 ≥1000 → silver', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({
-        id: 'user-1', phone: '+670999999999', email: null, name: 'Silver', avatarUrl: null,
+        id: 'user-1', phone: '+67099999999', email: null, name: 'Silver', avatarUrl: null,
         role: 'CUSTOMER', status: 'ACTIVE', phoneVerified: true, emailVerified: false,
         createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-02'),
       });
@@ -150,7 +150,7 @@ describe('UserService', () => {
 
     it('F10：积分 ≥5000 → gold', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({
-        id: 'user-1', phone: '+670999999999', email: null, name: 'Gold', avatarUrl: null,
+        id: 'user-1', phone: '+67099999999', email: null, name: 'Gold', avatarUrl: null,
         role: 'CUSTOMER', status: 'ACTIVE', phoneVerified: true, emailVerified: false,
         createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-02'),
       });
@@ -170,7 +170,7 @@ describe('UserService', () => {
     it('更新 name 字段', async () => {
       dbMocks.userUpdate.mockResolvedValueOnce({
         id: 'user-1',
-        phone: '+670999999999',
+        phone: '+67099999999',
         email: null,
         name: 'NewName',
         avatarUrl: null,
@@ -196,7 +196,7 @@ describe('UserService', () => {
           id: 'addr-1',
           userId: 'user-1',
           name: 'Home',
-          phone: '+670999999999',
+          phone: '+67099999999',
           region: { province: 'Dili', city: 'Dili' },
           detail: 'Rua A',
           lat: null,
@@ -229,7 +229,7 @@ describe('UserService', () => {
         id: 'addr-new',
         userId: 'user-1',
         name: 'Office',
-        phone: '+670999999999',
+        phone: '+67099999999',
         region: { province: 'Dili', city: 'Dili' },
         detail: 'Rua B',
         lat: null,
@@ -242,7 +242,7 @@ describe('UserService', () => {
 
       const result = await service.createAddress('user-1', {
         name: 'Office',
-        phone: '+670999999999',
+        phone: '+67099999999',
         region: { province: 'Dili', city: 'Dili' },
         detail: 'Rua B',
         tag: 'work',
@@ -265,7 +265,7 @@ describe('UserService', () => {
         id: 'addr-2',
         userId: 'user-1',
         name: 'Home',
-        phone: '+670999999999',
+        phone: '+67099999999',
         region: { province: 'Dili', city: 'Dili' },
         detail: 'Rua C',
         lat: null,
@@ -278,7 +278,7 @@ describe('UserService', () => {
 
       const result = await service.createAddress('user-1', {
         name: 'Home',
-        phone: '+670999999999',
+        phone: '+67099999999',
         region: { province: 'Dili', city: 'Dili' },
         detail: 'Rua C',
         isDefault: true,

@@ -2,7 +2,7 @@
  * Dev 一次性脚本：给 seed admin 创建/重置一条 APPROVED 的 RiderProfile
  *
  * 背景：骑手端 app login 页的 mock-login 按钮（POST /common/auth/mock-login）
- *   默认用 seed admin(+670999999999) 签 rider token，但 DB 里该 user 没有
+ *   默认用 seed admin(+67099999999) 签 rider token，但 DB 里该 user 没有
  *   RiderProfile 记录 → /rider/profile 报 E-RIDER-001「骑手资料不存在」。
  *   本脚本补一条 APPROVED 记录，让 mock-login 后骑手端全功能可用
  *   （getProfile / updateDuty 上线 / heartbeat / 任务可见都通）。
@@ -19,7 +19,7 @@ import { PrismaClient } from '../src/prisma/client';
 const prisma = new PrismaClient();
 
 /** 与 seed.ts 保持一致 */
-const SEED_ADMIN_PHONE = '+670999999999';
+const SEED_ADMIN_PHONE = '+67099999999';
 
 async function main(): Promise<void> {
   const admin = await prisma.user.findUnique({ where: { phone: SEED_ADMIN_PHONE } });

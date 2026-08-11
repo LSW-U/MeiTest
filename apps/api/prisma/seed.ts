@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
 /** 测试密码：admin12345（dev only，密码强度 ≥ 8 位 + 字母 + 数字）
  *  bcrypt cost=12（OWASP 2023 推荐 ≥12） */
 const SEED_PASSWORD_HASH = bcrypt.hashSync('admin12345', 12);
-const SEED_ADMIN_PHONE = '+670999999999';
+const SEED_ADMIN_PHONE = '+67099999999';
 
 /** i18n 助手：构造 4 语言字段 */
 function i18n(en: string, zh: string, id: string, pt: string): Record<string, string> {
@@ -94,14 +94,14 @@ async function main() {
 
   // ===== 1. super_admin =====
   const admin = await prisma.user.upsert({
-    where: { phone: '+670999999999' },
+    where: { phone: '+67099999999' },
     update: {
       password: SEED_PASSWORD_HASH, // dev 每次重 hash，确保用最新 BCRYPT_COST
       role: 'SUPER_ADMIN', // 防 DB 被测试/迁移改坏，每次 re-seed 强制复位
       status: 'ACTIVE',
     },
     create: {
-      phone: '+670999999999',
+      phone: '+67099999999',
       email: 'admin@meimart.dev',
       password: SEED_PASSWORD_HASH,
       name: 'Super Admin',
@@ -509,7 +509,7 @@ async function main() {
   console.log(`  ✅ ${HOT_SEARCH_SEED.length} hot search terms (5 langs × 6: 2 PINNED + 4 MANUAL)`);
 
   console.log('\n🎉 Seed completed!');
-  console.log(`   Login: phone=+670999999999, password=admin12345`);
+  console.log(`   Login: phone=+67099999999, password=admin12345`);
 }
 
 main()

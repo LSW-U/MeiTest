@@ -33,7 +33,7 @@ describe('ShopService', () => {
     name: { en: 'MeiMart', zh: '美超市' },
     announcement: { en: 'Welcome' },
     logoUrl: 'https://example.com/logo.png',
-    phone: '+670999999999',
+    phone: '+67099999999',
     address: 'Dili',
     lat: { toNumber: () => -8.5568 },
     lng: { toNumber: () => 125.56 },

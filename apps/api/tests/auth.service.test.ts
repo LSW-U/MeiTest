@@ -212,14 +212,14 @@ describe('AuthService', () => {
       const passwordHash = await passwordStrategy.hashPassword('Pass1234');
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
-        phone: '+670999999999',
+        phone: '+67099999999',
         password: passwordHash,
         role: 'CUSTOMER',
         status: 'ACTIVE',
       });
       userUpdate.mockResolvedValue({});
 
-      const result = await service.loginWithPassword('+670999999999', 'Pass1234');
+      const result = await service.loginWithPassword('+67099999999', 'Pass1234');
       expect(result.userId).toBe('user-1');
       expect(result.role).toBe('CUSTOMER');
       expect(result.accessToken).toBeTruthy();
@@ -241,7 +241,7 @@ describe('AuthService', () => {
         role: 'CUSTOMER',
         status: 'ACTIVE',
       });
-      await expect(service.loginWithPassword('+670999999999', 'WrongPass')).rejects.toThrow(
+      await expect(service.loginWithPassword('+67099999999', 'WrongPass')).rejects.toThrow(
         UnauthorizedException,
       );
     });
@@ -253,7 +253,7 @@ describe('AuthService', () => {
         role: 'CUSTOMER',
         status: 'SUSPENDED',
       });
-      await expect(service.loginWithPassword('+670999999999', 'Pass1234')).rejects.toMatchObject({
+      await expect(service.loginWithPassword('+67099999999', 'Pass1234')).rejects.toMatchObject({
         response: { code: 'E-USER-006' },
       });
     });
@@ -263,20 +263,20 @@ describe('AuthService', () => {
     it('已注册用户 SMS 登录成功', async () => {
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
-        phone: '+670999999999',
+        phone: '+67099999999',
         role: 'CUSTOMER',
         status: 'ACTIVE',
         phoneVerified: true,
       });
       userUpdate.mockResolvedValue({});
 
-      const result = await service.loginWithSms('+670999999999', '123456');
+      const result = await service.loginWithSms('+67099999999', '123456');
       expect(result.userId).toBe('user-1');
       expect(result.role).toBe('CUSTOMER');
     });
 
     it('SMS 错误抛 E-USER-003', async () => {
-      await expect(service.loginWithSms('+670999999999', '000000')).rejects.toThrow(
+      await expect(service.loginWithSms('+67099999999', '000000')).rejects.toThrow(
         UnauthorizedException,
       );
     });
@@ -345,7 +345,7 @@ describe('AuthService', () => {
 
   describe('sendSmsCode', () => {
     it('返回 expireIn', async () => {
-      const result = await service.sendSmsCode('+670999999999', 'LOGIN');
+      const result = await service.sendSmsCode('+67099999999', 'LOGIN');
       expect(result.expireIn).toBe(300);
     });
   });
@@ -354,12 +354,12 @@ describe('AuthService', () => {
     it('重置成功', async () => {
       userFindUnique.mockResolvedValueOnce({
         id: 'user-1',
-        phone: '+670999999999',
+        phone: '+67099999999',
       });
       userUpdate.mockResolvedValue({});
 
       await service.resetPassword({
-        phone: '+670999999999',
+        phone: '+67099999999',
         smsCode: '123456',
         newPassword: 'NewPass1234',
       });
@@ -381,7 +381,7 @@ describe('AuthService', () => {
       userFindUnique.mockResolvedValueOnce({ id: 'user-1' });
       await expect(
         service.resetPassword({
-          phone: '+670999999999',
+          phone: '+67099999999',
           smsCode: '000000',
           newPassword: 'NewPass1234',
         }),
