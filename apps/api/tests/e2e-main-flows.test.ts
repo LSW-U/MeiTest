@@ -423,7 +423,7 @@ describe('e2e: 异常路径', () => {
       body: JSON.stringify({ orderId: orderRes.data.id, reason: 'OTHER' }),
     });
     expect(refundRes.success).toBe(false);
-    expect(refundRes.error?.code).toBe('E-ORDER-003');
+    expect(refundRes.error?.code).toBe('E-REFUND-001');
   });
 
   it('refund refundType 非法值 -> 400 E-COMMON-001（zod enum 拒绝，P14-defer 审查 P3-1 修复）', async () => {
@@ -488,9 +488,9 @@ describe('e2e: 异常路径', () => {
     expect(cancelRes.success).toBe(true);
     expect(cancelRes.data.status).toBe('CANCELLED');
 
-    // 验证退款已创建
+    // 验证退款已创建（admin refunds 接口批次 2.1 改 cursor 分页，返 { items, nextCursor, hasMore }）
     const refunds = await apiCall('/admin/refunds?status=COMPLETED', adminToken);
-    const matching = refunds.data?.find((r: any) => r.orderId === orderRes.data.id);
+    const matching = refunds.data?.items?.find((r: any) => r.orderId === orderRes.data.id);
     expect(matching).toBeDefined();
     expect(matching.status).toBe('COMPLETED');
   });
