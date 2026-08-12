@@ -17,6 +17,15 @@ export type ReviewCategory = 'PRODUCT' | 'DELIVERY';
 export type ReviewType = 'customer' | 'rider';
 export type RiderReviewTag = 'on_time' | 'polite' | 'professional' | 'careful';
 
+/** P15 B1：商品评价快捷标签（与后端 GoodsReviewTag enum 同步） */
+export type GoodsReviewTag =
+  | 'good_quality'
+  | 'good_price'
+  | 'fresh'
+  | 'well_packaged'
+  | 'accurate_description'
+  | 'fast_delivery';
+
 /** 客户评论 */
 export interface Review {
   id: string;
@@ -27,6 +36,10 @@ export interface Review {
   rating: number;
   content: Record<string, string>;
   images: string[];
+  /** P15 B1：匿名评价（提交时定死，admin 列表/详情仍见真实用户，仅 client 侧隐藏） */
+  anonymous: boolean;
+  /** P15 B1：商品评价快捷标签 */
+  tags: GoodsReviewTag[];
   status: ReviewStatus;
   category: ReviewCategory;
   reply: Record<string, string> | null;
@@ -67,6 +80,8 @@ export interface ReviewListQuery {
 export interface UpdateReviewInput {
   status?: ReviewStatus;
   reply?: Record<string, string> | null; // P1-8：null = 清除回复
+  /** P15 B1：null/[] = 清空标签，array = 写入，undefined = 不改（anonymous 不可改 - 隐私） */
+  tags?: GoodsReviewTag[] | null;
 }
 
 function buildQuery(q: ReviewListQuery): string {

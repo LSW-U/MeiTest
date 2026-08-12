@@ -1031,8 +1031,15 @@
         "on_time": "准时到达",
         "polite": "态度礼貌",
         "professional": "专业高效",
-        "careful": "配送细心"
+        "careful": "配送细心",
+        "good_quality": "质量好",
+        "good_price": "价格实惠",
+        "fresh": "新鲜",
+        "well_packaged": "包装好",
+        "accurate_description": "描述相符",
+        "fast_delivery": "物流快"
       },
+      "anonymousBadge": "匿名",
       "noText": "（无文字）",
       "viewButton": "查看",
       "deleteButton": "删除",

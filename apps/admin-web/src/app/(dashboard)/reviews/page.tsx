@@ -79,7 +79,20 @@ export default function ReviewsListPage() {
     {
       key: 'userName',
       header: t('admin.reviews.columnReviewer'),
-      render: (row) => <span className="text-sm font-medium">{row.userName}</span>,
+      render: (row) => {
+        // P15 B1：customer 匿名评价显示 badge（admin 仍见真实用户，仅标记对外匿名）
+        const anonymous = tab === 'customer' && (row as Review).anonymous;
+        return (
+          <span className="flex items-center gap-1 text-sm font-medium">
+            {row.userName}
+            {anonymous && (
+              <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] text-amber-700">
+                {t('admin.reviews.anonymousBadge')}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: 'rating',
@@ -94,7 +107,10 @@ export default function ReviewsListPage() {
           tab === 'customer'
             ? ((row as Review).content?.en ?? '')
             : ((row as RiderReview).comment?.en ?? '');
-        const tags = tab === 'rider' ? (row as RiderReview).tags : [];
+        const tags =
+          tab === 'rider'
+            ? (row as RiderReview).tags
+            : ((row as Review).tags ?? []);
         return (
           <div className="max-w-md space-y-1">
             {tags.length > 0 && (

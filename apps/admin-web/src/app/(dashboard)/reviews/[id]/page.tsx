@@ -98,6 +98,11 @@ function ReviewDetailContent() {
           <span className="text-sm">
             <span className="text-muted-foreground">{t('admin.reviews.fieldReviewer')}: </span>
             <span className="font-medium">{data.userName}</span>
+            {isCustomer && review.anonymous && (
+              <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[10px] text-amber-700">
+                {t('admin.reviews.anonymousBadge')}
+              </span>
+            )}
           </span>
           <span className="text-sm">
             <span className="text-muted-foreground">{t('admin.reviews.columnRating')}: </span>
@@ -106,10 +111,11 @@ function ReviewDetailContent() {
           <StatusBadge status={data.status} label={data.status} />
         </div>
 
-        {/* 骑手评价标签 */}
-        {!isCustomer && riderReview.tags.length > 0 && (
+        {/* 评价标签（骑手固定 4 枚举 / 客户商品评价 6 枚举，P15 B1 客户评价也展示 tags） */}
+        {((!isCustomer && riderReview.tags.length > 0) ||
+          (isCustomer && review.tags.length > 0)) && (
           <div className="flex flex-wrap gap-2">
-            {riderReview.tags.map((tag) => (
+            {(isCustomer ? review.tags : riderReview.tags).map((tag) => (
               <span key={tag} className="rounded bg-muted px-2 py-0.5 text-xs">
                 {t(`admin.reviews.tag.${tag}`)}
               </span>

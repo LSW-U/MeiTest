@@ -1031,8 +1031,15 @@
         "on_time": "On time",
         "polite": "Polite",
         "professional": "Professional",
-        "careful": "Careful"
+        "careful": "Careful",
+        "good_quality": "Good quality",
+        "good_price": "Good price",
+        "fresh": "Fresh",
+        "well_packaged": "Well packaged",
+        "accurate_description": "Accurate description",
+        "fast_delivery": "Fast delivery"
       },
+      "anonymousBadge": "Anonymous",
       "noText": "(no text)",
       "viewButton": "View",
       "deleteButton": "Delete",
