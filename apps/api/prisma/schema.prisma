@@ -860,6 +860,13 @@ model Review {
   content   Json
   images    String[]
 
+  // P15 B1：匿名评价 + 快捷标签（2026-08-11）
+  // 决策：与 RiderReview.tags 同模式 String[]，但商品评价用 GoodsReviewTag 枚举
+  /// 匿名评价（提交时定死，admin 不可改 - 用户隐私权利）
+  anonymous Boolean @default(false) @map("anonymous")
+  /// 商品评价快捷标签（GoodsReviewTag 枚举：good_quality/good_price/fresh/well_packaged/accurate_description/fast_delivery；admin 可改）
+  tags      String[] @default([])
+
   // reviews-1：评论中心扩展 —— 审核 + 分类 + 商家回复 + 商品绑定
   /// 审核状态（决策1：默认 APPROVED 直接发布）
   status     ReviewStatus   @default(APPROVED) @map("status")

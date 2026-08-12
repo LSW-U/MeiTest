@@ -35,6 +35,20 @@ export const DELIVERED_STATUSES: ReadonlySet<PrismaOrderStatus> = new Set([
 export const RIDER_REVIEW_TAGS = ['on_time', 'polite', 'professional', 'careful'] as const;
 export type RiderReviewTagValue = (typeof RIDER_REVIEW_TAGS)[number];
 
+/**
+ * 商品评价快捷标签枚举值（P15 B1，与 contract GoodsReviewTag 同步，i18n key）
+ * 覆盖商品/配送两类评价（fast_delivery 仅 DELIVERY 类相关）
+ */
+export const GOODS_REVIEW_TAGS = [
+  'good_quality',
+  'good_price',
+  'fresh',
+  'well_packaged',
+  'accurate_description',
+  'fast_delivery',
+] as const;
+export type GoodsReviewTagValue = (typeof GOODS_REVIEW_TAGS)[number];
+
 /** 评论类型（admin 列表 type 参数：客户评论 / 骑手评价） */
 export type ReviewType = 'customer' | 'rider';
 
@@ -45,6 +59,10 @@ export interface CreateReviewInput {
   rating: number;
   content: Record<string, string>;
   images: string[];
+  /** 匿名评价（P15 B1，提交时定死，admin 不可改） */
+  anonymous: boolean;
+  /** 快捷标签（P15 B1，固定枚举值数组） */
+  tags: string[];
   category: ReviewCategoryValue;
   productId?: string;
 }
@@ -58,8 +76,12 @@ export interface CreateRiderReviewInput {
   comment?: Record<string, string>;
 }
 
-/** Admin 更新入参（审核 status + 商家回复 reply；P1-8：reply=null 清除，undefined 不改） */
+/**
+ * Admin 更新入参（审核 status + 商家回复 reply；P1-8：reply=null 清除，undefined 不改）
+ * P15 B1：tags=null/[] 清空，array 写入，undefined 不改；anonymous 不可改（提交时定死）
+ */
 export interface AdminUpdateReviewInput {
   status?: ReviewStatusValue;
   reply?: Record<string, string> | null;
+  tags?: string[] | null;
 }

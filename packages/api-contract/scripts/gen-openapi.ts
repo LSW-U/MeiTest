@@ -2985,6 +2985,33 @@ registry.registerPath({
   },
 });
 
+// ===== Client Upload - review-image（P15 B2 评价图上传，2026-08-11）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/uploads/review-image',
+  tags: ['upload'],
+  description:
+    '评价图片上传（P15 B2 评价图 2026-08-11）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，评价图任意比例），服务端校验 magic bytes（防 mime 伪造）。MinIO 路径前缀 reviews/（与 refund-evidence 的 refunds/ 区分，便于审计/清理）。',
+  // multipart/form-data 不在 zod 注册，request body 用 OpenAPI 原生描述
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/orders/:id/review 的 images[]）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 跨端调用或 E-AUTH-012 非本人', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
 // ===== Home Entries（活动入口 PromoDock，路线 A 配置接口）=====
 registry.registerPath({
   method: 'get',

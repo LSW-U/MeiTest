@@ -41,6 +41,10 @@ export interface ReviewView {
   rating: number;
   content: Record<string, string>;
   images: string[];
+  /** 匿名评价标记（P15 B1） */
+  anonymous: boolean;
+  /** 商品评价快捷标签（P15 B1） */
+  tags: string[];
   status: ReviewStatusValue;
   category: ReviewCategoryValue;
   reply: Record<string, string> | null;
@@ -127,6 +131,8 @@ export class ReviewService {
             rating: input.rating,
             content: input.content as Prisma.InputJsonValue,
             images: input.images,
+            anonymous: input.anonymous,
+            tags: input.tags,
             category: input.category,
             productId: input.productId,
             status: 'APPROVED', // 决策1：默认直接发布
@@ -354,6 +360,10 @@ export class ReviewService {
         data.reply = input.reply ? (input.reply as Prisma.InputJsonValue) : Prisma.JsonNull;
         data.repliedAt = input.reply ? new Date() : null;
       }
+      // P15 B1：tags !== undefined 才更新；null/[] = 清空，array = 写入（anonymous 不可改 - 隐私）
+      if (input.tags !== undefined) {
+        data.tags = input.tags ?? [];
+      }
       if (Object.keys(data).length === 0) return this.toReviewView(existing);
       const updated = await db.review.update({ where: { id }, data });
       return this.toReviewView(updated);
@@ -440,6 +450,8 @@ export class ReviewService {
       rating: r.rating,
       content: r.content as Record<string, string>,
       images: r.images,
+      anonymous: r.anonymous,
+      tags: r.tags,
       status: r.status,
       category: r.category,
       reply: (r.reply as Record<string, string> | null) ?? null,

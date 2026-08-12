@@ -71,6 +71,8 @@ describe('ReviewService (reviews-2)', () => {
       rating: 5,
       content: { en: 'good' },
       images: [],
+      anonymous: false,
+      tags: [] as string[],
       category: 'PRODUCT' as const,
     };
     const createdReview = {
@@ -82,6 +84,8 @@ describe('ReviewService (reviews-2)', () => {
       rating: 5,
       content: { en: 'good' },
       images: [],
+      anonymous: false,
+      tags: [],
       status: 'APPROVED',
       category: 'PRODUCT',
       reply: null,
@@ -172,6 +176,43 @@ describe('ReviewService (reviews-2)', () => {
       await expect(
         service.createReview({ ...input, productId: 'p-not-in-order' }),
       ).rejects.toMatchObject({ response: { code: 'E-COMMON-001' }, status: 400 });
+    });
+
+    it('P15 B1: anonymous=true + tags 透传到 create data', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
+      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.create.mockResolvedValue({
+        ...createdReview,
+        anonymous: true,
+        tags: ['good_quality', 'fresh'],
+      });
+      const r = await service.createReview({
+        ...input,
+        anonymous: true,
+        tags: ['good_quality', 'fresh'],
+      });
+      expect(r.anonymous).toBe(true);
+      expect(r.tags).toEqual(['good_quality', 'fresh']);
+      expect(mockDb.review.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            anonymous: true,
+            tags: ['good_quality', 'fresh'],
+          }),
+        }),
+      );
+    });
+
+    it('P15 B1: anonymous 默认 false + tags 默认 []（baseInput 透传，service 不做默认兜底，由 contract default 保证）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
+      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.create.mockResolvedValue(createdReview);
+      await service.createReview(input);
+      expect(mockDb.review.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ anonymous: false, tags: [] }),
+        }),
+      );
     });
   });
 
@@ -291,8 +332,8 @@ describe('ReviewService (reviews-2)', () => {
   describe('adminUpdateReview - reply + P1-5 短路 + recalc', () => {
     const baseReview = {
       id: 'r1', orderId: 'o1', userId: 'u1', userName: 'Alice', avatarUrl: null,
-      rating: 5, content: { en: 'good' }, images: [], status: 'APPROVED',
-      category: 'PRODUCT', reply: null, repliedAt: null, productId: null,
+      rating: 5, content: { en: 'good' }, images: [], anonymous: false, tags: [],
+      status: 'APPROVED', category: 'PRODUCT', reply: null, repliedAt: null, productId: null,
       createdAt: new Date('2026-07-28T00:00:00Z'),
     };
     const baseRiderReview = {
@@ -337,6 +378,35 @@ describe('ReviewService (reviews-2)', () => {
       expect(mockDb.riderReview.update).not.toHaveBeenCalled();
       expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
       expect(r.id).toBe('rr1');
+    });
+
+    it('P15 B1: customer 写 tags -> update data.tags', async () => {
+      mockDb.review.findUnique.mockResolvedValue(baseReview);
+      mockDb.review.update.mockResolvedValue({ ...baseReview, tags: ['good_quality'] });
+      const r = await service.adminUpdateReview('r1', 'customer', { tags: ['good_quality'] });
+      expect(mockDb.review.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ tags: ['good_quality'] }) }),
+      );
+      expect(r.tags).toEqual(['good_quality']);
+    });
+
+    it('P15 B1: customer tags=null -> 清空 tags（update data.tags=[]）', async () => {
+      mockDb.review.findUnique.mockResolvedValue({ ...baseReview, tags: ['good_quality'] });
+      mockDb.review.update.mockResolvedValue({ ...baseReview, tags: [] });
+      await service.adminUpdateReview('r1', 'customer', { tags: null });
+      expect(mockDb.review.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ tags: [] }) }),
+      );
+    });
+
+    it('P15 B1: customer 不传 tags -> 不改 tags（data 不含 tags key，anonymous 永远不可改）', async () => {
+      mockDb.review.findUnique.mockResolvedValue({ ...baseReview, tags: ['good_quality'] });
+      mockDb.review.update.mockResolvedValue({ ...baseReview, status: 'REJECTED' });
+      await service.adminUpdateReview('r1', 'customer', { status: 'REJECTED' });
+      const call = mockDb.review.update.mock.calls[0][0] as { data: Record<string, unknown> };
+      expect(call.data).toHaveProperty('status', 'REJECTED');
+      expect(call.data).not.toHaveProperty('tags');
+      expect(call.data).not.toHaveProperty('anonymous');
     });
   });
 

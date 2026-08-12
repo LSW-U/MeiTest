@@ -183,3 +183,76 @@ describe('ClientUploadController.uploadRefundEvidence', () => {
     expect(key).toMatch(/^refunds\/evidence-\d{13}-[a-f0-9]{8}\.jpg$/);
   });
 });
+
+/**
+ * P15 B2：评价图上传（2026-08-11）
+ * 与 refund-evidence 完全同模式（magic bytes / size / 尺寸 / storage 错误），
+ * 仅 key 前缀差异（reviews/image- vs refunds/evidence-）。
+ * 不重复 15 用例，只覆盖差异点 + 核心校验链路（校验逻辑共用 helpers 已被 refund-evidence 充分覆盖）。
+ */
+describe('ClientUploadController.uploadReviewImage', () => {
+  let controller: ClientUploadController;
+
+  beforeEach(() => {
+    mockStorage.uploadFile.mockReset();
+    controller = new ClientUploadController(mockStorage as never);
+  });
+
+  const fakeFile = (mimetype: string, buffer: Buffer) =>
+    ({
+      buffer,
+      mimetype,
+      originalname: `test.${mimetype.split('/')[1]}`,
+      size: buffer.length,
+    }) as unknown as Express.Multer.File;
+
+  it('⭐ 正常上传 jpg -> key reviews/image-* 前缀（关键差异：vs refund-evidence 的 refunds/evidence-）', async () => {
+    mockStorage.uploadFile.mockResolvedValueOnce({
+      url: 'http://localhost:9000/meimart/reviews/image-x.jpg',
+      key: 'reviews/image-x.jpg',
+      bucket: 'meimart',
+      size: JPG_600.length,
+    });
+    const result = await controller.uploadReviewImage(fakeFile('image/jpeg', JPG_600));
+    expect(result.success).toBe(true);
+    expect(result.data.url).toBe('http://localhost:9000/meimart/reviews/image-x.jpg');
+    const key = mockStorage.uploadFile.mock.calls[0][0].key;
+    expect(key).toMatch(/^reviews\/image-\d{13}-[a-f0-9]{8}\.jpg$/);
+  });
+
+  it('正常上传 png/webp -> ext 对', async () => {
+    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+    await controller.uploadReviewImage(fakeFile('image/png', PNG_600));
+    expect(mockStorage.uploadFile.mock.calls[0][0].key).toMatch(/\.png$/);
+    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+    await controller.uploadReviewImage(fakeFile('image/webp', WEBP_300));
+    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/\.webp$/);
+  });
+
+  it('非正方形（800x600）-> 通过（同 refund-evidence：评价图任意比例）', async () => {
+    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+    await controller.uploadReviewImage(fakeFile('image/jpeg', JPG_800x600));
+    expect(mockStorage.uploadFile).toHaveBeenCalled();
+  });
+
+  it('尺寸过小（50x50 < 100）-> 抛 BadRequest（同 refund-evidence MIN_DIMENSION=100）', async () => {
+    await expect(
+      controller.uploadReviewImage(fakeFile('image/jpeg', JPG_50)),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockStorage.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('magic bytes 与 header mime 不一致 -> 抛 BadRequest', async () => {
+    await expect(
+      controller.uploadReviewImage(fakeFile('image/png', JPG_600)),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockStorage.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('storage.uploadFile 抛 StorageError -> 抛 InternalServerError（E-UPLOAD-001）', async () => {
+    mockStorage.uploadFile.mockRejectedValueOnce(new StorageError('MinIO down'));
+    await expect(
+      controller.uploadReviewImage(fakeFile('image/jpeg', JPG_600)),
+    ).rejects.toThrow(InternalServerErrorException);
+  });
+});

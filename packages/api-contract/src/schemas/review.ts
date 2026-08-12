@@ -20,6 +20,20 @@ export const ReviewCategory = z.enum(['PRODUCT', 'DELIVERY']);
 /** 骑手评价标签（固定枚举，i18n key，决策3） */
 export const RiderReviewTag = z.enum(['on_time', 'polite', 'professional', 'careful']);
 
+/**
+ * 商品评价快捷标签（P15 B1，2026-08-11）
+ * 与 RiderReviewTag 同模式（固定枚举 + i18n key），覆盖商品/配送两类评价
+ * 前端按 category 决定展示哪些 tag（如 fast_delivery 仅 DELIVERY 类显示）
+ */
+export const GoodsReviewTag = z.enum([
+  'good_quality', // 质量好
+  'good_price', // 价格实惠
+  'fresh', // 新鲜
+  'well_packaged', // 包装好
+  'accurate_description', // 描述相符
+  'fast_delivery', // 物流快
+]);
+
 /** 客户评论视图 */
 export const Review = z.object({
   id: Id,
@@ -30,6 +44,10 @@ export const Review = z.object({
   rating: z.number().int().min(1).max(5),
   content: I18nText,
   images: z.array(z.string()),
+  /** 匿名评价标记（P15 B1，admin 列表/详情仍见真实用户，仅 client 侧展示层隐藏） */
+  anonymous: z.boolean(),
+  /** 商品评价快捷标签（P15 B1，固定枚举） */
+  tags: z.array(GoodsReviewTag),
   status: ReviewStatus,
   category: ReviewCategory,
   reply: I18nText.nullable(),
@@ -59,6 +77,10 @@ export const CreateReviewRequest = z.object({
   /** 多语言评论文本 */
   content: I18nText,
   images: z.array(z.string().url()).max(9).default([]),
+  /** 匿名评价（P15 B1，提交时定死，admin 不可改 - 用户隐私权利） */
+  anonymous: z.boolean().optional().default(false),
+  /** 快捷标签（P15 B1，固定枚举，最多 6 个） */
+  tags: z.array(GoodsReviewTag).max(6).default([]),
   category: ReviewCategory,
   /** 商品评论绑定的商品 ID（可选；订单整体评论则不传） */
   productId: Id.optional(),
@@ -89,4 +111,10 @@ export const AdminUpdateReviewRequest = z.object({
   status: ReviewStatus.optional(),
   /** 商家回复（多语言，仅客户评论有意义；P1-8：null = 清除回复，undefined = 不改） */
   reply: I18nText.nullable().optional(),
+  /**
+   * 快捷标签（P15 B1，仅客户评论有意义）
+   * null/[] = 清空标签，array = 写入，undefined = 不改
+   * 注意：anonymous 不可由 admin 改（提交时定死 - 用户隐私权利）
+   */
+  tags: z.array(GoodsReviewTag).nullable().optional(),
 });

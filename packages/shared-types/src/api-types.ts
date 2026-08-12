@@ -12329,6 +12329,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/uploads/review-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 评价图片上传（P15 B2 评价图 2026-08-11）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，评价图任意比例），服务端校验 magic bytes（防 mime 伪造）。MinIO 路径前缀 reviews/（与 refund-evidence 的 refunds/ 区分，便于审计/清理）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/orders/:id/review 的 images[]） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-001 跨端调用或 E-AUTH-012 非本人 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/home-entries": {
         parameters: {
             query?: never;
@@ -12485,6 +12621,10 @@ export interface paths {
                         };
                         /** @default [] */
                         images?: string[];
+                        /** @default false */
+                        anonymous?: boolean;
+                        /** @default [] */
+                        tags?: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                         /** @enum {string} */
                         category: "PRODUCT" | "DELIVERY";
                         /** Format: uuid */
@@ -12513,6 +12653,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                             /** @enum {string} */
                             status: "PENDING" | "APPROVED" | "REJECTED";
                             /** @enum {string} */
@@ -12736,6 +12878,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                             /** @enum {string} */
                             status: "PENDING" | "APPROVED" | "REJECTED";
                             /** @enum {string} */
@@ -12799,6 +12943,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                             /** @enum {string} */
                             status: "PENDING" | "APPROVED" | "REJECTED";
                             /** @enum {string} */
@@ -12862,6 +13008,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                             /** @enum {string} */
                             status: "PENDING" | "APPROVED" | "REJECTED";
                             /** @enum {string} */
@@ -12957,6 +13105,7 @@ export interface paths {
                         reply?: {
                             [key: string]: string;
                         } | null;
+                        tags?: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[] | null;
                     };
                 };
             };
@@ -12981,6 +13130,8 @@ export interface paths {
                                 [key: string]: string;
                             };
                             images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
                             /** @enum {string} */
                             status: "PENDING" | "APPROVED" | "REJECTED";
                             /** @enum {string} */
@@ -15632,6 +15783,8 @@ export interface components {
                 [key: string]: string;
             };
             images: string[];
+            anonymous: boolean;
+            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
             /** @enum {string} */
@@ -15673,6 +15826,10 @@ export interface components {
             };
             /** @default [] */
             images: string[];
+            /** @default false */
+            anonymous: boolean;
+            /** @default [] */
+            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
             /** @enum {string} */
             category: "PRODUCT" | "DELIVERY";
             /** Format: uuid */

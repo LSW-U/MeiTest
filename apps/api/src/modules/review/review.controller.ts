@@ -73,6 +73,8 @@ export class ReviewController {
       rating: body.rating,
       content: body.content,
       images: body.images,
+      anonymous: body.anonymous,
+      tags: body.tags,
       category: body.category as ReviewCategoryValue,
       productId: body.productId,
     };
