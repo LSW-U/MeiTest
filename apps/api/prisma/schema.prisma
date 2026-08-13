@@ -514,7 +514,7 @@ model Order {
   // P14 ④：1:1 -> 1:N（同 order 可有 delivery + return 各一个 task），改 deliveryTasks 数组
   deliveryTasks  DeliveryTask[]
   paymentIntent  PaymentIntent?
-  review         Review?
+  reviews        Review[] // P15 多商品评价：1:1 -> 1:N（同 order 多 review，每商品一条，@@unique([orderId, productId]) 拦同订单同商品重复）
   riderReview    RiderReview? // reviews-1：骑手评价反向
   cashCollection CashCollection?
 
@@ -851,7 +851,7 @@ model Favorite {
 
 model Review {
   id        String   @id @default(uuid())
-  orderId   String   @unique @map("order_id")
+  orderId   String   @map("order_id")
   userId    String   @map("user_id")
   userName  String   @map("user_name")
   avatarUrl String?  @map("avatar_url")
@@ -884,6 +884,7 @@ model Review {
   product Product? @relation(fields: [productId], references: [id])
   user    User     @relation(fields: [userId], references: [id])
 
+  @@unique([orderId, productId]) // P15 多商品评价：同订单同商品不重复（productId=null 订单整体评论可多条，Postgres null 不去重）
   @@index([userId])
   @@index([category, status])
   @@index([productId])

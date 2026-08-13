@@ -14,6 +14,7 @@ const { mockDb, mockTx, mockWithTransaction } = vi.hoisted(() => {
     order: { findUnique: vi.fn() },
     review: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
@@ -96,7 +97,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('DELIVERED 可评 + status APPROVED', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue(createdReview);
       const r = await service.createReview(input);
       expect(r.status).toBe('APPROVED');
@@ -107,7 +108,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('DELIVERED_PAID（COD 已收款）可评 —— F2 关键', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED_PAID' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue(createdReview);
       await service.createReview(input);
       expect(mockDb.review.create).toHaveBeenCalled();
@@ -115,7 +116,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('DELIVERED_UNPAID（COD 拒付）可评', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED_UNPAID' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue(createdReview);
       await service.createReview(input);
       expect(mockDb.review.create).toHaveBeenCalled();
@@ -123,7 +124,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('COMPLETED 可评', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'COMPLETED' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue(createdReview);
       await service.createReview(input);
       expect(mockDb.review.create).toHaveBeenCalled();
@@ -163,7 +164,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('重复评论 -> E-REVIEW-003 (409)', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
-      mockDb.review.findUnique.mockResolvedValue({ id: 'existing' });
+      mockDb.review.findFirst.mockResolvedValue({ id: 'existing' });
       await expect(service.createReview(input)).rejects.toMatchObject({
         response: { code: 'E-REVIEW-003' },
         status: 409,
@@ -172,7 +173,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('productId 不在订单 -> E-COMMON-001 (400)', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       await expect(
         service.createReview({ ...input, productId: 'p-not-in-order' }),
       ).rejects.toMatchObject({ response: { code: 'E-COMMON-001' }, status: 400 });
@@ -180,7 +181,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('P15 B1: anonymous=true + tags 透传到 create data', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue({
         ...createdReview,
         anonymous: true,
@@ -205,7 +206,7 @@ describe('ReviewService (reviews-2)', () => {
 
     it('P15 B1: anonymous 默认 false + tags 默认 []（baseInput 透传，service 不做默认兜底，由 contract default 保证）', async () => {
       mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
-      mockDb.review.findUnique.mockResolvedValue(null);
+      mockDb.review.findFirst.mockResolvedValue(null);
       mockDb.review.create.mockResolvedValue(createdReview);
       await service.createReview(input);
       expect(mockDb.review.create).toHaveBeenCalledWith(
@@ -417,6 +418,47 @@ describe('ReviewService (reviews-2)', () => {
       expect(mockDb.review.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { productId: 'p1', status: 'APPROVED' } }),
       );
+    });
+  });
+
+  describe('listOrderReviews - P15 多商品评价（订单评价列表，评价页判断哪些商品已评）', () => {
+    it('订单存在 + 归属 → 返该订单所有 review（按 createdAt 升序，含所有状态）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ id: 'o1', userId: 'u1' });
+      const r1 = {
+        id: 'r1', orderId: 'o1', userId: 'u1', userName: 'Alice', avatarUrl: null,
+        rating: 5, content: { en: 'good' }, images: [], anonymous: false, tags: ['good_quality'],
+        status: 'APPROVED', category: 'PRODUCT', reply: null, repliedAt: null,
+        productId: 'p1', createdAt: new Date('2026-08-01T00:00:00Z'),
+      };
+      const r2 = {
+        ...r1, id: 'r2', productId: 'p2', tags: ['fresh'], createdAt: new Date('2026-08-02T00:00:00Z'),
+      };
+      mockDb.review.findMany.mockResolvedValue([r1, r2]);
+      const result = await service.listOrderReviews('o1', 'u1');
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('r1');
+      expect(result[1].id).toBe('r2');
+      expect(mockDb.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { orderId: 'o1' }, orderBy: { createdAt: 'asc' } }),
+      );
+    });
+
+    it('订单不存在 → E-REVIEW-001 404（不查 review）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(null);
+      await expect(service.listOrderReviews('o-x', 'u1')).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-001' },
+        status: 404,
+      });
+      expect(mockDb.review.findMany).not.toHaveBeenCalled();
+    });
+
+    it('订单不归属 → E-REVIEW-005 403（不泄露他人订单评价）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ id: 'o1', userId: 'other' });
+      await expect(service.listOrderReviews('o1', 'u1')).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-005' },
+        status: 403,
+      });
+      expect(mockDb.review.findMany).not.toHaveBeenCalled();
     });
   });
 });

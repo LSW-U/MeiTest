@@ -85,7 +85,7 @@
   "E-REFUND-011": "URL da foto deve ser do nosso serviço de upload",
   "E-REVIEW-001": "Review not found",
   "E-REVIEW-002": "Order not delivered yet, cannot review",
-  "E-REVIEW-003": "This order has already been reviewed",
+  "E-REVIEW-003": "Este produto já foi avaliado neste pedido",
   "E-REVIEW-004": "Order has no rider assigned, cannot review rider",
   "E-REVIEW-005": "You do not have permission to review this order",
   "E-RIDER-001": "Perfil do rider não encontrado (por favor, registre-se primeiro)",

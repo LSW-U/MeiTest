@@ -12906,6 +12906,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/orders/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 订单的所有评价（自己提交的，含 PENDING/REJECTED，按 createdAt 升序）。评价页用于判断哪些商品已评 + 标记（P15 多商品评价）。需订单归属（E-REVIEW-005 非自己订单拒）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订单评价列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            userName: string;
+                            avatarUrl: string | null;
+                            rating: number;
+                            content: {
+                                [key: string]: string;
+                            };
+                            images: string[];
+                            anonymous: boolean;
+                            tags: ("good_quality" | "good_price" | "fresh" | "well_packaged" | "accurate_description" | "fast_delivery")[];
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED";
+                            /** @enum {string} */
+                            category: "PRODUCT" | "DELIVERY";
+                            reply: {
+                                [key: string]: string;
+                            } | null;
+                            /** Format: date-time */
+                            repliedAt: string | null;
+                            /** Format: uuid */
+                            productId: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                    };
+                };
+                /** @description E-REVIEW-005 订单不归属 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-REVIEW-001 订单不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/reviews": {
         parameters: {
             query?: never;

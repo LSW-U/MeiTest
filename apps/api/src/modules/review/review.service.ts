@@ -118,9 +118,17 @@ export class ReviewService {
     // P0-2：existing 检查 + create 进事务（防并发双击撞 orderId unique），P2002 兜底转 E-REVIEW-003
     try {
       const review = await withTransaction(async (tx) => {
-        const existing = await tx.review.findUnique({ where: { orderId: input.orderId } });
+        // P15 多商品评价：同订单同商品不重复（productId 有值时联合唯一拦）；productId=null 订单整体评论可多条（Postgres null 不去重，用户选 A）
+        const existing = await tx.review.findFirst({
+          where: { orderId: input.orderId, productId: input.productId ?? null },
+        });
         if (existing) {
-          throw new ConflictException({ code: 'E-REVIEW-003', message: 'Order already reviewed' });
+          throw new ConflictException({
+            code: 'E-REVIEW-003',
+            message: input.productId
+              ? 'Product already reviewed in this order'
+              : 'Order already reviewed (overall)',
+          });
         }
         const created = await tx.review.create({
           data: {
@@ -142,9 +150,9 @@ export class ReviewService {
       });
       return this.toReviewView(review);
     } catch (e) {
-      // 并发：existing 检查过了但 create 撞 unique（双击/恶意并发）
+      // 并发：existing 检查过了但 create 撞联合唯一 [orderId, productId]（双击/恶意并发，productId 有值时触发；null 不触发 P2002）
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({ code: 'E-REVIEW-003', message: 'Order already reviewed' });
+        throw new ConflictException({ code: 'E-REVIEW-003', message: 'Product already reviewed in this order' });
       }
       throw e;
     }
@@ -239,6 +247,30 @@ export class ReviewService {
       nextCursor: hasMore ? sliced[sliced.length - 1].id : null,
       hasMore,
     };
+  }
+
+  /**
+   * 订单的所有评价（C 端评价页：P15 多商品评价，判断哪些商品已评 + 标记）
+   *
+   * 校验：订单存在 + 归属该用户（E-REVIEW-005）
+   * 返回：该订单所有 review（含 PENDING/REJECTED，用户看自己提交的所有状态），按 createdAt 升序
+   */
+  async listOrderReviews(orderId: string, userId: string): Promise<ReviewView[]> {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, userId: true },
+    });
+    if (!order) {
+      throw new NotFoundException({ code: 'E-REVIEW-001', message: 'Order not found' });
+    }
+    if (order.userId !== userId) {
+      throw new ForbiddenException({ code: 'E-REVIEW-005', message: 'Not your order' });
+    }
+    const reviews = await db.review.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'asc' },
+    });
+    return reviews.map((r) => this.toReviewView(r));
   }
 
   /** 订单的骑手评价（C 端订单详情展示） */

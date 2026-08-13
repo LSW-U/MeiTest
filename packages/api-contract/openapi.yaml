@@ -22400,6 +22400,152 @@ paths:
                   - repliedAt
                   - productId
                   - createdAt
+  /api/v1/client/orders/{id}/reviews:
+    get:
+      tags:
+        - review
+      description: 订单的所有评价（自己提交的，含 PENDING/REJECTED，按 createdAt 升序）。评价页用于判断哪些商品已评 +
+        标记（P15 多商品评价）。需订单归属（E-REVIEW-005 非自己订单拒）。
+      responses:
+        "200":
+          description: 订单评价列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    orderId:
+                      type: string
+                      format: uuid
+                    userId:
+                      type: string
+                      format: uuid
+                    userName:
+                      type: string
+                    avatarUrl:
+                      type: string
+                      nullable: true
+                    rating:
+                      type: integer
+                      minimum: 1
+                      maximum: 5
+                    content:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    images:
+                      type: array
+                      items:
+                        type: string
+                    anonymous:
+                      type: boolean
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                        enum: *a23
+                    status:
+                      type: string
+                      enum: *a22
+                    category:
+                      type: string
+                      enum: *a24
+                    reply:
+                      type: object
+                      nullable: true
+                      additionalProperties:
+                        type: string
+                    repliedAt:
+                      type: string
+                      nullable: true
+                      format: date-time
+                    productId:
+                      type: string
+                      nullable: true
+                      format: uuid
+                    createdAt:
+                      type: string
+                      format: date-time
+                  required:
+                    - id
+                    - orderId
+                    - userId
+                    - userName
+                    - avatarUrl
+                    - rating
+                    - content
+                    - images
+                    - anonymous
+                    - tags
+                    - status
+                    - category
+                    - reply
+                    - repliedAt
+                    - productId
+                    - createdAt
+        "403":
+          description: E-REVIEW-005 订单不归属
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: E-REVIEW-001 订单不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/admin/reviews:
     get:
       tags:

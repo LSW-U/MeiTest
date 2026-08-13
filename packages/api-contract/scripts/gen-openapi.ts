@@ -3133,6 +3133,20 @@ registry.registerPath({
   },
 });
 
+// C 端：订单的所有评价（评价页判断哪些商品已评 + 标记，P15 多商品评价）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/orders/{id}/reviews',
+  tags: ['review'],
+  description:
+    '订单的所有评价（自己提交的，含 PENDING/REJECTED，按 createdAt 升序）。评价页用于判断哪些商品已评 + 标记（P15 多商品评价）。需订单归属（E-REVIEW-005 非自己订单拒）。',
+  responses: {
+    200: { description: '订单评价列表', content: { 'application/json': { schema: Review.array() } } },
+    403: { description: 'E-REVIEW-005 订单不归属', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-REVIEW-001 订单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // Admin：评论列表（type=customer|rider + 多维筛选 + 分页）
 registry.registerPath({
   method: 'get',

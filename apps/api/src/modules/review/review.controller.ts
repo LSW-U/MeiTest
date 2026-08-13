@@ -125,4 +125,20 @@ export class ReviewController {
     const review = await this.reviewService.getRiderReviewByOrder(orderId);
     return { success: true as const, data: review };
   }
+
+  /**
+   * 订单的所有评价（C 端评价页：P15 多商品评价，判断哪些商品已评 + 标记）
+   * 返该订单所有 review（自己提交的，含 PENDING/REJECTED），按 createdAt 升序
+   */
+  @Get('orders/:id/reviews')
+  async listOrderReviews(
+    @Param('id') orderId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const reviews = await this.reviewService.listOrderReviews(orderId, req.user.sub);
+    return { success: true as const, data: reviews };
+  }
 }
