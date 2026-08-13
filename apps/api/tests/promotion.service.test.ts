@@ -412,87 +412,7 @@ describe('PromotionService (W7-ext-G)', () => {
     });
   });
 
-  describe('listClientCoupons (B10 + used/expired)', () => {
-    it('available（默认）-> ACTIVE + 有效期内 + 未超额，status=available', async () => {
-      mockDb.promotion.findMany.mockResolvedValue([basePromo]);
-      const result = await service.listClientCoupons('available', 'user-1');
-      expect(result).toHaveLength(1);
-      expect(result[0].status).toBe('available');
-      expect(mockDb.orderPromotion.findMany).not.toHaveBeenCalled();
-    });
-
-    it('available 未传 status -> 默认 available（向后兼容）', async () => {
-      mockDb.promotion.findMany.mockResolvedValue([basePromo]);
-      const result = await service.listClientCoupons();
-      expect(result[0].status).toBe('available');
-    });
-
-    it('available 超额（usedCount >= totalQuota）-> 过滤掉', async () => {
-      mockDb.promotion.findMany.mockResolvedValue([{ ...basePromo, usedCount: 100, totalQuota: 100 }]);
-      const result = await service.listClientCoupons('available', 'user-1');
-      expect(result).toHaveLength(0);
-    });
-
-    it('used -> OrderPromotion JOIN + 去重 + 按最近使用 desc 排序，status=used', async () => {
-      mockDb.orderPromotion.findMany.mockResolvedValue([
-        { promotionId: 'promo-1', createdAt: new Date('2026-07-28T00:00:00Z') },
-        { promotionId: 'promo-2', createdAt: new Date('2026-07-29T00:00:00Z') },
-        { promotionId: 'promo-1', createdAt: new Date('2026-07-20T00:00:00Z') }, // promo-1 旧记录（去重）
-      ]);
-      mockDb.promotion.findMany.mockResolvedValue([
-        { ...basePromo, id: 'promo-1' },
-        { ...basePromo, id: 'promo-2', code: 'SAVE20' },
-      ]);
-
-      const result = await service.listClientCoupons('used', 'user-1');
-
-      expect(result).toHaveLength(2);
-      // promo-2 最近使用（7-29）排在 promo-1（7-28）前
-      expect(result.map((x) => x.id)).toEqual(['promo-2', 'promo-1']);
-      expect(result[0].status).toBe('used');
-      expect(mockDb.promotion.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: { in: ['promo-1', 'promo-2'] }, status: { not: 'DELETED' } }),
-        }),
-      );
-    });
-
-    it('used 无记录 -> 空数组', async () => {
-      mockDb.orderPromotion.findMany.mockResolvedValue([]);
-      const result = await service.listClientCoupons('used', 'user-1');
-      expect(result).toEqual([]);
-    });
-
-    it('used 不传 userId -> 空数组（不查 DB）', async () => {
-      const result = await service.listClientCoupons('used');
-      expect(result).toEqual([]);
-      expect(mockDb.orderPromotion.findMany).not.toHaveBeenCalled();
-    });
-
-    it('expired（E2：我用过且过期）-> endAt<now 过滤，status=expired', async () => {
-      const pastPromo = { ...basePromo, id: 'promo-old', endAt: new Date('2020-01-01T00:00:00Z') };
-      mockDb.orderPromotion.findMany.mockResolvedValue([
-        { promotionId: 'promo-old', createdAt: new Date('2019-01-01T00:00:00Z') },
-        { promotionId: 'promo-1', createdAt: new Date('2026-07-28T00:00:00Z') },
-      ]);
-      // DB where 含 endAt<now 过滤，mock 只返过期的
-      mockDb.promotion.findMany.mockResolvedValue([pastPromo]);
-
-      const result = await service.listClientCoupons('expired', 'user-1');
-
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('promo-old');
-      expect(result[0].status).toBe('expired');
-      expect(mockDb.promotion.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: { in: ['promo-old', 'promo-1'] },
-            endAt: { lt: expect.any(Date) },
-          }),
-        }),
-      );
-    });
-  });
+  // listClientCoupons describe 已删除（C4，2026-08-13）：方法零调用已删，单测同步删
 
   // ==========================================================================
   // P1 领券卡包体系（UserCoupon 维度，2026-07-31）
@@ -586,7 +506,7 @@ describe('PromotionService (W7-ext-G)', () => {
         // 原子 increment 配额守卫
         expect(mockDb.$executeRaw).toHaveBeenCalled();
         expect(result.id).toBe('uc-1');
-        expect(result.status).toBe('unused');
+        expect(result.status).toBe('available');
       });
 
       it('重复领取（P2002 unique 冲突）-> E-COUPON-003 / 409', async () => {
@@ -637,7 +557,7 @@ describe('PromotionService (W7-ext-G)', () => {
           expect.objectContaining({ where: { code: 'SAVE10' } }),
         );
         expect(result.id).toBe('uc-2');
-        expect(result.status).toBe('unused');
+        expect(result.status).toBe('available');
       });
     });
 
@@ -653,9 +573,9 @@ describe('PromotionService (W7-ext-G)', () => {
         promotion: promoRow,
       };
 
-      it('unused -> where 含 status=UNUSED + promotion.endAt>=now', async () => {
+      it('available -> where 含 status=UNUSED + promotion.endAt>=now', async () => {
         mockDb.userCoupon.findMany.mockResolvedValue([ucRow]);
-        const result = await service.listMyCoupons('user-1', 'unused');
+        const result = await service.listMyCoupons('user-1', 'available');
         expect(mockDb.userCoupon.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
@@ -665,7 +585,7 @@ describe('PromotionService (W7-ext-G)', () => {
             }),
           }),
         );
-        expect(result[0].status).toBe('unused');
+        expect(result[0].status).toBe('available');
       });
 
       it('used -> where status=USED，行派生 status=used', async () => {

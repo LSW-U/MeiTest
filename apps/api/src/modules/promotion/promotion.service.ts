@@ -94,7 +94,7 @@ export interface ClientCouponView {
  *
  * 与 ClientCouponView（模板维度）的区别：
  *   - id = UserCoupon.id（不是 Promotion.id）
- *   - status = unused/used/expired（用户实例状态，精确）
+ *   - status = available/used/expired（用户实例状态，精确，对齐前端/文档语义）
  *   - 带 promotionId / receivedAt / usedAt / orderId（追溯用）
  */
 export interface MyCouponView {
@@ -102,7 +102,7 @@ export interface MyCouponView {
   id: string;
   promotionId: string;
   code: string;
-  status: 'unused' | 'used' | 'expired';
+  status: 'available' | 'used' | 'expired';
   type: PromotionTypeValue;
   value: number;
   minOrderAmount: number;
@@ -404,77 +404,15 @@ export class PromotionService {
     return { valid: true, discount, type: promo.type };
   }
 
-  /**
-   * 客户端优惠券列表（B10 + used/expired 扩展，GET /client/coupons?status=）
-   *
-   * @deprecated P1 领券卡包体系（2026-07-31）后改用 listMyCoupons（UserCoupon 精确查）。
-   * 此方法从 OrderPromotion 派生 used/expired（不精确），仅保留给未迁移的旧调用方，
-   * controller 已切到 listMyCoupons。后续前端全量迁移后删除本法 + 其单测。
-   *
-   * - available（默认）：ACTIVE + 有效期内 + 未超额
-   * - used：该用户用过的券（OrderPromotion JOIN Order.userId，去重 promotionId，按最近使用排序）
-   * - expired（E2）：我用过且已过期（usedPromoIds ∩ endAt<now）
-   *
-   * MVP 无领券机制，靠 OrderPromotion（下单用券记录）派生 used/expired，不需新表。
-   * 隐藏 createdBy/usedCount/totalQuota/perUserLimit 管理字段。
-   */
-  async listClientCoupons(
-    status: 'available' | 'used' | 'expired' = 'available',
-    userId?: string,
-  ): Promise<ClientCouponView[]> {
-    const now = new Date();
-
-    // used / expired 都需先查用户用过的 promotionId（OrderPromotion JOIN Order.userId）
-    if (status === 'used' || status === 'expired') {
-      if (!userId) return [];
-      const usedRecords = await db.orderPromotion.findMany({
-        where: { order: { userId } },
-        select: { promotionId: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        // F3：限制最近 200 条用券记录（防高频用户全量拉，去重后 promoIds 足够覆盖 used/expired）
-        take: 200,
-      });
-      // 去重 promotionId，保留每券最近一次使用时间（用于 used 排序）
-      const latestUsedAt = new Map<string, Date>();
-      for (const r of usedRecords) {
-        if (!latestUsedAt.has(r.promotionId)) latestUsedAt.set(r.promotionId, r.createdAt);
-      }
-      const promoIds = [...latestUsedAt.keys()];
-      if (promoIds.length === 0) return [];
-
-      const expired = status === 'expired';
-      const rows = await db.promotion.findMany({
-        // P1-3：过滤 DELETED 券（软删不进 used/expired 历史；PAUSED 保留 -- 用户用过的暂停券仍可见）
-        where: expired
-          ? { id: { in: promoIds }, endAt: { lt: now }, status: { not: 'DELETED' } }
-          : { id: { in: promoIds }, endAt: { gte: now }, status: { not: 'DELETED' } },
-        orderBy: expired ? { endAt: 'desc' } : undefined,
-      });
-      // used 按"最近使用时间"desc 排序（DB 无法直接按 OrderPromotion.createdAt 排 Promotion，内存排）
-      if (!expired) {
-        rows.sort(
-          (a, b) => (latestUsedAt.get(b.id)?.getTime() ?? 0) - (latestUsedAt.get(a.id)?.getTime() ?? 0),
-        );
-      }
-      return rows.map((r) => this.toClientCouponView(r, status));
-    }
-
-    // available（现有逻辑，向后兼容）
-    const rows = await db.promotion.findMany({
-      where: { status: 'ACTIVE', startAt: { lte: now }, endAt: { gte: now } },
-      orderBy: { createdAt: 'desc' },
-    });
-    return rows
-      .filter((r) => r.totalQuota === null || r.usedCount < r.totalQuota)
-      .map((r) => this.toClientCouponView(r, 'available'));
-  }
+  // listClientCoupons 已删除（C4，2026-08-13）：P1 领券卡包体系（2026-07-31）后零 controller 调用死代码，
+  // 从 OrderPromotion 派生 used/expired 不精确，已由 listMyCoupons（UserCoupon 精确查）取代。
 
   // ============================================================================
   // P1 领券卡包体系（UserCoupon 维度）
   // 决策依据：方案 §3/§6（2026-07-31）
   //   - 领券中心：listAvailableTemplates（全局可领模板，排除已领）
   //   - 领取：claimCoupon / redeemCoupon（码兑换）-> 生成 UserCoupon(UNUSED)
-  //   - 卡包：listMyCoupons（按 unused/used/expired 精确查 UserCoupon）
+  //   - 卡包：listMyCoupons（按 available/used/expired 精确查 UserCoupon）
   //   - 下单用券：applyCoupon（createOrder 事务内调，UNUSED -> USED）
   //   - 过期：expireStaleCoupons（BullMQ 每 5min 扫，UNUSED + endAt<now -> EXPIRED）
   // 错误码段：E-COUPON-001 ~ E-COUPON-005
@@ -484,7 +422,7 @@ export class PromotionService {
    * 领券中心：可领的模板列表（GET /client/coupons/available）
    *
    * 筛选：ACTIVE + 有效期内 + 未超额 + 当前用户未领过（NOT userCoupons.some）
-   * 返回 ClientCouponView（status='available'），与旧 listClientCoupons('available') 形状一致。
+   * 返回 ClientCouponView（status='available'，模板维度，供领券中心展示）。
    */
   async listAvailableTemplates(userId: string): Promise<ClientCouponView[]> {
     const now = new Date();
@@ -588,23 +526,23 @@ export class PromotionService {
   }
 
   /**
-   * 我的卡包（GET /client/coupons?status=unused|used|expired）
+   * 我的卡包（GET /client/coupons?status=available|used|expired）
    *
    * 精确查 UserCoupon（不再从 OrderPromotion 派生）：
-   *   - unused：status=UNUSED 且 promotion.endAt>=now（过期未标记的归 expired tab）
+   *   - available：status=UNUSED 且 promotion.endAt>=now（过期未标记的归 expired tab）
    *   - used：status=USED
    *   - expired：status=EXPIRED 或 (status=UNUSED 且 endAt<now)（定时任务未跑时的查询兜底）
    *   - 不传 status：全部返回（按行派生 status）
    */
   async listMyCoupons(
     userId: string,
-    status?: 'unused' | 'used' | 'expired',
+    status?: 'available' | 'used' | 'expired',
   ): Promise<MyCouponView[]> {
     const now = new Date();
     const baseWhere = { userId };
 
     let where: Prisma.UserCouponWhereInput;
-    if (status === 'unused') {
+    if (status === 'available') {
       where = { ...baseWhere, status: 'UNUSED', promotion: { endAt: { gte: now } } };
     } else if (status === 'used') {
       where = { ...baseWhere, status: 'USED' };
@@ -784,13 +722,13 @@ export class PromotionService {
     };
   }): MyCouponView {
     const now = new Date();
-    let derived: 'unused' | 'used' | 'expired';
+    let derived: 'available' | 'used' | 'expired';
     if (uc.status === 'USED') {
       derived = 'used';
     } else if (uc.status === 'EXPIRED' || uc.promotion.endAt < now) {
       derived = 'expired';
     } else {
-      derived = 'unused';
+      derived = 'available';
     }
     return {
       id: uc.id,

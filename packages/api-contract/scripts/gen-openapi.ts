@@ -1343,12 +1343,12 @@ registry.registerPath({
   path: '/api/v1/client/coupons',
   tags: ['promotion'],
   description:
-    '我的卡包（P1 领券体系，精确查 UserCoupon）。?status=unused|used|expired，默认 unused。' +
-    'unused=UNUSED 且未过期；used=USED；expired=EXPIRED 或 UNUSED 但模板已过期（定时任务未跑的查询兜底）。' +
-    '【BREAKING】P1 起响应从 ClientCoupon（模板维度）改为 MyCoupon（实例维度），status 枚举由 available 改 unused。',
+    '我的卡包（P1 领券体系，精确查 UserCoupon）。?status=available|used|expired，默认 available。' +
+    'available=UNUSED 且未过期；used=USED；expired=EXPIRED 或 UNUSED 但模板已过期（定时任务未跑的查询兜底）。' +
+    '响应 MyCoupon（实例维度），status 枚举 available/used/expired（对齐前端/文档语义，2026-08-13 统一）。',
   request: {
     query: z.object({
-      status: z.enum(['unused', 'used', 'expired']).optional(),
+      status: z.enum(['available', 'used', 'expired']).optional(),
     }),
   },
   responses: {

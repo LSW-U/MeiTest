@@ -174,7 +174,7 @@ export class ClientPromotionController {
  *   GET    /available             领券中心（可领模板，排除已领）
  *   POST   /:promotionId/claim    领取（生成 UserCoupon UNUSED）
  *   POST   /redeem                码兑换领取（输 code -> 领到卡包）
- *   GET    /?status=unused|used|expired  我的卡包（精确查 UserCoupon）
+ *   GET    /?status=available|used|expired  我的卡包（精确查 UserCoupon）
  */
 const RedeemCouponRequest = z.object({
   code: z.string().min(1).max(20),
@@ -221,15 +221,15 @@ export class ClientCouponController {
     return { success: true as const, data };
   }
 
-  /** 我的卡包（按 unused/used/expired 精确查 UserCoupon） */
+  /** 我的卡包（按 available/used/expired 精确查 UserCoupon，对齐前端/文档语义） */
   @Get()
   async list(@Query('status') status: string | undefined, @Req() req: RequestWithUser) {
-    const validStatuses = ['unused', 'used', 'expired'];
-    const s = status ?? 'unused';
+    const validStatuses = ['available', 'used', 'expired'];
+    const s = status ?? 'available';
     if (!validStatuses.includes(s)) {
       throw new BadRequestException({
         code: 'E-COMMON-001',
-        message: 'status must be one of: unused, used, expired',
+        message: 'status must be one of: available, used, expired',
       });
     }
     const user = req.user;
@@ -238,7 +238,7 @@ export class ClientCouponController {
     }
     const data = await this.promoService.listMyCoupons(
       user.sub,
-      s as 'unused' | 'used' | 'expired',
+      s as 'available' | 'used' | 'expired',
     );
     return { success: true as const, data };
   }
