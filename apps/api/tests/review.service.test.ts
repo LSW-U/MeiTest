@@ -46,6 +46,7 @@ vi.mock('../src/shared/logger/logger', () => ({
 }));
 
 import { ReviewService } from '../src/modules/review/review.service';
+import { Prisma } from '../src/prisma/client';
 
 describe('ReviewService (reviews-2)', () => {
   let service: ReviewService;
@@ -167,6 +168,35 @@ describe('ReviewService (reviews-2)', () => {
       mockDb.review.findFirst.mockResolvedValue({ id: 'existing' });
       await expect(service.createReview(input)).rejects.toMatchObject({
         response: { code: 'E-REVIEW-003' },
+        status: 409,
+      });
+    });
+
+    it('P3-1: productId 有值 + 并发 P2002 -> E-REVIEW-003 Product already reviewed（联合 unique 拦）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
+      mockDb.review.findFirst.mockResolvedValue(null); // 单次检查过
+      const p2002 = new Prisma.PrismaClientKnownRequestError('unique constraint', {
+        code: 'P2002',
+        clientVersion: '5.22.0',
+      });
+      mockDb.review.create.mockRejectedValue(p2002); // 并发撞 @@unique([orderId, productId])
+      await expect(service.createReview({ ...input, productId: 'p1' })).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-003', message: 'Product already reviewed in this order' },
+        status: 409,
+      });
+    });
+
+    it('P3-1: productId=null（订单整体/配送评论）+ 并发 P2002 -> E-REVIEW-003 Order overall（partial unique 拦）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ ...baseOrder, status: 'DELIVERED' });
+      mockDb.review.findFirst.mockResolvedValue(null); // 单次检查过
+      const p2002 = new Prisma.PrismaClientKnownRequestError('unique constraint', {
+        code: 'P2002',
+        clientVersion: '5.22.0',
+      });
+      mockDb.review.create.mockRejectedValue(p2002); // 并发撞 partial unique reviews_order_overall_unique
+      // input 不传 productId（undefined -> null），P2002 catch 走 productId=null 分支
+      await expect(service.createReview(input)).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-003', message: 'Order already reviewed (overall)' },
         status: 409,
       });
     });

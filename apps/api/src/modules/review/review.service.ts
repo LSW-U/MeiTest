@@ -150,9 +150,16 @@ export class ReviewService {
       });
       return this.toReviewView(review);
     } catch (e) {
-      // 并发：existing 检查过了但 create 撞联合唯一 [orderId, productId]（双击/恶意并发，productId 有值时触发；null 不触发 P2002）
+      // 并发：existing 检查过了但 create 撞 unique（双击/恶意并发）
+      // - productId 有值：撞 @@unique([orderId, productId]) 联合 unique
+      // - productId=null：撞 partial unique reviews_order_overall_unique（P3-1 加固，2026-08-13，堵原 Postgres null 不去重漏洞）
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({ code: 'E-REVIEW-003', message: 'Product already reviewed in this order' });
+        throw new ConflictException({
+          code: 'E-REVIEW-003',
+          message: input.productId
+            ? 'Product already reviewed in this order'
+            : 'Order already reviewed (overall)',
+        });
       }
       throw e;
     }

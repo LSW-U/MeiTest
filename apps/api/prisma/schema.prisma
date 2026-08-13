@@ -884,7 +884,9 @@ model Review {
   product Product? @relation(fields: [productId], references: [id])
   user    User     @relation(fields: [userId], references: [id])
 
-  @@unique([orderId, productId]) // P15 多商品评价：同订单同商品不重复（productId=null 订单整体评论可多条，Postgres null 不去重）
+  @@unique([orderId, productId]) // P15 多商品评价：同订单同商品不重复（productId 有值时联合 unique 拦）
+  // P3-1（2026-08-13）：productId=null（订单整体/配送评论）一订单一条，由 partial unique index（WHERE product_id IS NULL）强制，
+  // 在 migration 20260813000001 管理（prisma 不支持 partial unique schema 表达，仅 DB 层）
   @@index([userId])
   @@index([category, status])
   @@index([productId])
