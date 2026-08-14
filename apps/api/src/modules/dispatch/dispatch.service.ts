@@ -56,6 +56,8 @@ export interface DeliveryTaskView {
   warehouseCode?: string;
   /** W7 补字段：订单应付金额（骑手 COD 收款参考） */
   payableAmount?: number;
+  /** COD 判断依据（'COD' 时骑手端 sign 页要求输入实收金额） */
+  paymentMethod?: string;
   /** W7 补字段：配送费 */
   deliveryFee?: number;
   /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
@@ -1283,6 +1285,7 @@ export class DispatchService {
       orderNo: (t.order as any)?.orderNo,
       warehouseCode: (t.warehouse as any)?.code,
       payableAmount: (t.order as any)?.payableAmount,
+      paymentMethod: (t.order as any)?.paymentMethod,
       deliveryFee: (t.order as any)?.deliveryFee,
       itemsSummary,
     };
