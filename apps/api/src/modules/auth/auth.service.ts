@@ -30,6 +30,7 @@ import {
 } from '../../shared/cache';
 import { assertJwtSecret } from '../../shared/auth/assert-jwt-secret';
 import { db } from '../../shared/db';
+import { Prisma } from '../../prisma/client';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import { getOtpStrategy } from '../../infrastructure/otp/otp.factory';
 import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
@@ -593,11 +594,22 @@ export class AuthService {
         message: 'New phone SMS code invalid or expired',
       });
     }
-    // 4. 更新 + 撤销全部会话
-    await db.user.update({
-      where: { id: userId },
-      data: { phone: input.newPhone, phoneVerified: true },
-    });
+    // 4. 更新 + 撤销全部会话（P17 审查 P2 修复：catch P2002 并发撞 unique，语义化 409）
+    try {
+      await db.user.update({
+        where: { id: userId },
+        data: { phone: input.newPhone, phoneVerified: true },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        // TOCTOU：检查后另一并发请求先占用了新号（phone @unique 兜底）
+        throw new ConflictException({
+          code: 'E-USER-004',
+          message: 'New phone already registered',
+        });
+      }
+      throw e;
+    }
     await revokeUserSessions(userId);
     logger.info({ msg: 'PHONE_CHANGE_SUCCESS', userId, newPhone: input.newPhone });
   }

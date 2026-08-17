@@ -31,6 +31,7 @@ import {
   revokeUserSessions,
   isSessionValid,
   getRefreshSession,
+  listUserSessions,
 } from '../src/shared/cache/refresh-session';
 
 describe('createRefreshSession', () => {
@@ -216,5 +217,75 @@ describe('getRefreshSession', () => {
     mockRedis.get.mockResolvedValue(null);
     const r = await getRefreshSession('jti-x');
     expect(r).toBeNull();
+  });
+});
+
+// ===== P17 B2.3 listUserSessions（2026-08-17，审查 P2 补测）=====
+
+describe('listUserSessions (P17 B2.3)', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  const session = (familyId: string, jti: string, createdAt: number) =>
+    JSON.stringify({
+      familyId,
+      userId: 'user-1',
+      status: 'active',
+      deviceType: 'client_app',
+      createdAt,
+      expiresAt: createdAt + 86400000,
+    });
+
+  it('单 family 单 jti -> 返一条', async () => {
+    mockRedis.smembers
+      .mockResolvedValueOnce(['fam-1']) // user 索引
+      .mockResolvedValueOnce(['jti-1']); // family 索引
+    mockRedis.get.mockResolvedValueOnce(session('fam-1', 'jti-1', 1000));
+    const result = await listUserSessions('user-1');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ familyId: 'fam-1', deviceType: 'client_app', status: 'active' });
+  });
+
+  it('同 family 多 jti（refresh 轮换历史）-> 只返最新 createdAt 一条', async () => {
+    mockRedis.smembers
+      .mockResolvedValueOnce(['fam-1'])
+      .mockResolvedValueOnce(['jti-old', 'jti-new']);
+    mockRedis.get
+      .mockResolvedValueOnce(session('fam-1', 'jti-old', 1000))
+      .mockResolvedValueOnce(session('fam-1', 'jti-new', 2000));
+    const result = await listUserSessions('user-1');
+    expect(result).toHaveLength(1);
+    // 返原始 number createdAt（ISO 转换在 controller 层做）
+    expect(result[0].createdAt).toBe(2000);
+  });
+
+  it('family 内全部 session 已被 TTL 驱逐 -> 跳过该 family', async () => {
+    mockRedis.smembers
+      .mockResolvedValueOnce(['fam-gone', 'fam-live'])
+      .mockResolvedValueOnce(['jti-x']) // fam-gone
+      .mockResolvedValueOnce(['jti-y']); // fam-live
+    mockRedis.get
+      .mockResolvedValueOnce(null) // fam-gone 唯一 jti 已驱逐
+      .mockResolvedValueOnce(session('fam-live', 'jti-y', 3000));
+    const result = await listUserSessions('user-1');
+    expect(result).toHaveLength(1);
+    expect(result[0].familyId).toBe('fam-live');
+  });
+
+  it('多 family -> 按 createdAt 降序（最新登录在前）', async () => {
+    mockRedis.smembers
+      .mockResolvedValueOnce(['fam-old', 'fam-new'])
+      .mockResolvedValueOnce(['jti-a'])
+      .mockResolvedValueOnce(['jti-b']);
+    mockRedis.get
+      .mockResolvedValueOnce(session('fam-old', 'jti-a', 1000))
+      .mockResolvedValueOnce(session('fam-new', 'jti-b', 5000));
+    const result = await listUserSessions('user-1');
+    expect(result.map((s) => s.familyId)).toEqual(['fam-new', 'fam-old']);
+  });
+
+  it('用户无任何 family -> 空数组', async () => {
+    mockRedis.smembers.mockResolvedValueOnce([]);
+    const result = await listUserSessions('user-1');
+    expect(result).toEqual([]);
   });
 });

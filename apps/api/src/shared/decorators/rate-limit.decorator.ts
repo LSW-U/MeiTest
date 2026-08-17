@@ -8,7 +8,8 @@
  *   - ${ip}            -> 请求 IP（trust proxy 生效后的真实 IP）
  *   - ${body.field}    -> 请求 body 字段（如 ${body.phone}）
  *   - ${query.field}   -> 请求 query 字段
- *   - ${param.field}    -> 路由参数
+ *   - ${param.field}   -> 路由参数
+ *   - ${user.field}    -> JWT request.user 字段（如 ${user.sub}；@Public 端点为 anonymous）（P17 审查 P1，2026-08-17）
  *
  * 用法：
  *   @RateLimit({ key: 'login:ip:${ip}', limit: 10, window: 60 })
@@ -22,7 +23,7 @@ import { SetMetadata } from '@nestjs/common';
 export const RATE_LIMIT_KEY = 'rate_limit';
 
 export interface RateLimitOptions {
-  /** 限流 key 模板（支持 ${ip} ${body.xxx} ${query.xxx} ${param.xxx}） */
+  /** 限流 key 模板（支持 ${ip} ${body.xxx} ${query.xxx} ${param.xxx} ${user.xxx}） */
   key: string;
   /** 窗口内最大次数 */
   limit: number;

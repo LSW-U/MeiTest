@@ -59,6 +59,7 @@ vi.mock('../src/shared/db', () => ({
 }));
 
 import { AuthService } from '../src/modules/auth/auth.service';
+import { Prisma } from '../src/prisma/client';
 import { passwordStrategy } from '../src/infrastructure/otp/password.strategy';
 import type { RefreshPayload } from '../src/modules/auth/auth.service';
 
@@ -497,6 +498,22 @@ describe('AuthService', () => {
         service.changePhone('user-1', { ...input, newSmsCode: '000000' }),
       ).rejects.toMatchObject({ response: { code: 'E-USER-003' }, status: 401 });
       expect(userUpdate).not.toHaveBeenCalled();
+    });
+
+    it('P2 修复：并发撞 unique（P2002）→ 409 E-USER-004（TOCTOU 兜底，非 500）', async () => {
+      userFindUnique
+        .mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' })
+        .mockResolvedValueOnce(null);
+      const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '5.22.0',
+      });
+      userUpdate.mockRejectedValueOnce(p2002);
+      await expect(service.changePhone('user-1', input)).rejects.toMatchObject({
+        response: { code: 'E-USER-004' },
+        status: 409,
+      });
+      expect(mockRevokeUserSessions).not.toHaveBeenCalled();
     });
   });
 });

@@ -77,6 +77,8 @@ export class RateLimitGuard implements CanActivate {
    *
    * 安全：${body.xxx} 值用 SHA256 hash（截断 16），Redis key 不含明文手机号/邮箱。
    * ${ip} 保留明文（IP 非手机号，限流调试需要）。
+   * ${user.xxx}（P17 审查 P1 修复，2026-08-17）：JWT 解析后的 request.user 字段（如 ${user.sub}）。
+   *   @Public 端点 request.user 为 undefined -> 'anonymous' 兜底（用户维度限流只该用在登录态端点）。
    */
   private resolveKey(template: string, request: any, ip: string): string {
     return template
@@ -93,6 +95,11 @@ export class RateLimitGuard implements CanActivate {
       .replace(/\$\{param\.(\w+)\}/g, (_, field: string) => {
         const val = request.params?.[field];
         return val ?? 'unknown';
+      })
+      .replace(/\$\{user\.(\w+)\}/g, (_, field: string) => {
+        // P17 审查 P1：用户维度限流 key（change-password/change-phone 等登录态端点）
+        const val = request.user?.[field];
+        return val ?? 'anonymous';
       });
   }
 
