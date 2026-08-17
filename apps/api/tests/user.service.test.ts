@@ -369,5 +369,66 @@ describe('UserService', () => {
       const result = await service.getUnreadCount('user-1');
       expect(result.count).toBe(7);
     });
+
+    // ===== P17 B1 通知偏好（2026-08-17）=====
+
+    it('B1: getNotificationPreferences null 兜底全 true', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({ notificationPreferences: null });
+      const prefs = await service.getNotificationPreferences('user-1');
+      expect(prefs).toEqual({ orderUpdates: true, promotions: true, system: true });
+    });
+
+    it('B1: getNotificationPreferences 部分缺省 key 兜底 true', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({ notificationPreferences: { promotions: false } });
+      const prefs = await service.getNotificationPreferences('user-1');
+      expect(prefs).toEqual({ orderUpdates: true, promotions: false, system: true });
+    });
+
+    it('B1: updateNotificationPreferences merge 未传 key 不变 + 返回全量', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        notificationPreferences: { orderUpdates: true, promotions: true, system: true },
+      });
+      const next = await service.updateNotificationPreferences('user-1', { promotions: false });
+      expect(next).toEqual({ orderUpdates: true, promotions: false, system: true });
+      expect(dbMocks.userUpdate).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { notificationPreferences: { orderUpdates: true, promotions: false, system: true } },
+      });
+    });
+
+    it('B1: listNotifications 偏好过滤（promotions=false → where type 不含 PROMOTION）', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        notificationPreferences: { orderUpdates: true, promotions: false, system: true },
+      });
+      dbMocks.notificationFindMany.mockResolvedValueOnce([]);
+      await service.listNotifications('user-1');
+      expect(dbMocks.notificationFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ type: { in: ['ORDER_UPDATE', 'SYSTEM'] } }),
+        }),
+      );
+    });
+
+    it('B1: 偏好全关 → enabledTypes 空数组（列表空）', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        notificationPreferences: { orderUpdates: false, promotions: false, system: false },
+      });
+      dbMocks.notificationFindMany.mockResolvedValueOnce([]);
+      await service.listNotifications('user-1');
+      expect(dbMocks.notificationFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ type: { in: [] } }) }),
+      );
+    });
+
+    it('B1: getUnreadCount 偏好过滤同步（关的 type 不计数）', async () => {
+      dbMocks.userFindUnique.mockResolvedValueOnce({
+        notificationPreferences: { orderUpdates: true, promotions: false, system: false },
+      });
+      dbMocks.notificationCount.mockResolvedValueOnce(0);
+      await service.getUnreadCount('user-1');
+      expect(dbMocks.notificationCount).toHaveBeenCalledWith({
+        where: { userId: 'user-1', isRead: false, type: { in: ['ORDER_UPDATE'] } },
+      });
+    });
   });
 });

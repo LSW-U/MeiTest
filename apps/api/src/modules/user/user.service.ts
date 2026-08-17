@@ -310,9 +310,73 @@ export class UserService {
 
   // ===== Notifications =====
 
+  /**
+   * 读取通知偏好（P17 B1，2026-08-17）：User.notificationPreferences JSON，
+   * null / 缺省 key 兜底全 true（默认收全部）
+   */
+  private async loadNotificationPreferences(
+    userId: string,
+  ): Promise<{ orderUpdates: boolean; promotions: boolean; system: boolean }> {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { notificationPreferences: true },
+    });
+    const raw = (user?.notificationPreferences ?? null) as {
+      orderUpdates?: boolean;
+      promotions?: boolean;
+      system?: boolean;
+    } | null;
+    return {
+      orderUpdates: raw?.orderUpdates ?? true,
+      promotions: raw?.promotions ?? true,
+      system: raw?.system ?? true,
+    };
+  }
+
+  /** 偏好 → enabled NotificationType 集合（全关 = 空数组 = 列表/未读数全空） */
+  private enabledNotificationTypes(prefs: {
+    orderUpdates: boolean;
+    promotions: boolean;
+    system: boolean;
+  }): ('ORDER_UPDATE' | 'PROMOTION' | 'SYSTEM')[] {
+    const types: ('ORDER_UPDATE' | 'PROMOTION' | 'SYSTEM')[] = [];
+    if (prefs.orderUpdates) types.push('ORDER_UPDATE');
+    if (prefs.promotions) types.push('PROMOTION');
+    if (prefs.system) types.push('SYSTEM');
+    return types;
+  }
+
+  /** P17 B1：读取通知偏好（对外全量三布尔） */
+  async getNotificationPreferences(
+    userId: string,
+  ): Promise<{ orderUpdates: boolean; promotions: boolean; system: boolean }> {
+    return this.loadNotificationPreferences(userId);
+  }
+
+  /** P17 B1：部分更新通知偏好（merge 未传 key 不变，返回更新后全量） */
+  async updateNotificationPreferences(
+    userId: string,
+    patch: { orderUpdates?: boolean; promotions?: boolean; system?: boolean },
+  ): Promise<{ orderUpdates: boolean; promotions: boolean; system: boolean }> {
+    const current = await this.loadNotificationPreferences(userId);
+    const next = { ...current, ...patch };
+    await db.user.update({
+      where: { id: userId },
+      data: { notificationPreferences: next as unknown as Prisma.InputJsonValue },
+    });
+    return next;
+  }
+
   async listNotifications(userId: string, onlyUnread = false): Promise<NotificationDTO[]> {
+    // P17 B1：偏好过滤（关 false 的 type 不返；全关 = 空列表）
+    const prefs = await this.loadNotificationPreferences(userId);
+    const enabledTypes = this.enabledNotificationTypes(prefs);
     const items = await db.notification.findMany({
-      where: onlyUnread ? { userId, isRead: false } : { userId },
+      where: {
+        userId,
+        ...(onlyUnread ? { isRead: false } : {}),
+        type: { in: enabledTypes },
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -351,8 +415,11 @@ export class UserService {
   }
 
   async getUnreadCount(userId: string): Promise<{ count: number }> {
+    // P17 B1：偏好过滤（与 listNotifications 同步，关 false 的 type 不计数）
+    const prefs = await this.loadNotificationPreferences(userId);
+    const enabledTypes = this.enabledNotificationTypes(prefs);
     const count = await db.notification.count({
-      where: { userId, isRead: false },
+      where: { userId, isRead: false, type: { in: enabledTypes } },
     });
     return { count };
   }

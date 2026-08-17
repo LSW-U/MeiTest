@@ -208,3 +208,36 @@ export async function getRefreshSession(jti: string): Promise<RefreshSession | n
   if (!data) return null;
   return JSON.parse(data) as RefreshSession;
 }
+
+/**
+ * P17 B2.3（2026-08-17）：用户全部登录会话只读聚合（设备管理页展示用）
+ *
+ * 遍历 refresh:user:{userId} 索引 -> 各 family 的 jti -> refresh:session:{jti}。
+ * 只读（不消费/不撤销），展示 deviceType + 登录时间 + 过期时间 + 状态。
+ * family 维度合并：同 family 多 jti（refresh 轮换历史）只返最新一条（createdAt 最大）。
+ */
+export async function listUserSessions(userId: string): Promise<
+  Array<Pick<RefreshSession, 'familyId' | 'deviceType' | 'status' | 'createdAt' | 'expiresAt'>>
+> {
+  const familyIds = await redis.smembers(`refresh:user:${userId}`);
+  const result: Array<
+    Pick<RefreshSession, 'familyId' | 'deviceType' | 'status' | 'createdAt' | 'expiresAt'>
+  > = [];
+  for (const familyId of familyIds) {
+    const jtis = await redis.smembers(`refresh:family:${familyId}`);
+    let latest: RefreshSession | null = null;
+    for (const jti of jtis) {
+      const data = await redis.get(`refresh:session:${jti}`);
+      if (!data) continue;
+      const session = JSON.parse(data) as RefreshSession;
+      if (!latest || session.createdAt > latest.createdAt) latest = session;
+    }
+    // family 内全部 session 已被 Redis TTL 驱逐：跳过（视为已不存在，不展示）
+    if (!latest) continue;
+    const { familyId: fid, deviceType, status, createdAt, expiresAt } = latest;
+    result.push({ familyId: fid, deviceType, status, createdAt, expiresAt });
+  }
+  // 最新登录在前
+  result.sort((a, b) => b.createdAt - a.createdAt);
+  return result;
+}

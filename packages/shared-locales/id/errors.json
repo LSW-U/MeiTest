@@ -111,5 +111,6 @@
   "E-USER-007": "Sumber daya tidak ditemukan",
   "E-WAREHOUSE-001": "Kode gudang sudah ada",
   "E-WAREHOUSE-002": "Di luar jangkauan pengiriman",
-  "E-WAREHOUSE-003": "Gudang tidak ditemukan"
+  "E-WAREHOUSE-003": "Gudang tidak ditemukan",
+  "E-AUTH-007": "Kata sandi belum diatur, atur melalui reset SMS terlebih dahulu"
 }

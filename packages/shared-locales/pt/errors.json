@@ -111,5 +111,6 @@
   "E-USER-007": "Recurso não encontrado",
   "E-WAREHOUSE-001": "Código de armazém já existe",
   "E-WAREHOUSE-002": "Fora da área de entrega",
-  "E-WAREHOUSE-003": "Armazém não encontrado"
+  "E-WAREHOUSE-003": "Armazém não encontrado",
+  "E-AUTH-007": "Sem senha definida, defina primeiro via redefinição SMS"
 }

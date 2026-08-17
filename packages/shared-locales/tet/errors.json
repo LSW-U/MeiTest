@@ -111,5 +111,6 @@
   "E-USER-007": "Rekursu lahetan",
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
-  "E-WAREHOUSE-003": "Armazén laha iha"
+  "E-WAREHOUSE-003": "Armazén laha iha",
+  "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida"
 }

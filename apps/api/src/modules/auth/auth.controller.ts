@@ -29,6 +29,8 @@ import {
   PasswordResetRequest,
   RefreshRequest,
   LogoutRequest,
+  ChangePasswordRequest,
+  ChangePhoneRequest,
 } from '@meimart/api-contract';
 import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
 import { AuthService } from './auth.service';
@@ -288,6 +290,63 @@ export class AuthController {
     }
     // 无条件 clear cookie（幂等：移动端调到也无副作用）
     clearAuthCookies(res);
+    return { success: true, data: null };
+  }
+
+  /**
+   * P17 B2.1（2026-08-17）：登录态修改密码
+   *
+   * - password=null（SMS 注册无密码用户）-> 400 E-AUTH-007，前端引导走 /password-reset SMS 路径首次设密
+   * - 成功后撤销全部会话（revokeUserSessions），前端引导重新登录
+   */
+  @Audit({ resource: 'User', maskFields: ['oldPassword', 'newPassword'] })
+  @RateLimit(
+    { key: 'chpwd:user:${user.sub}', limit: 3, window: 300 },
+    { key: 'chpwd:ip:${ip}', limit: 10, window: 300 },
+  )
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Body(new ZodValidationPipe(ChangePasswordRequest)) body: {
+      oldPassword: string;
+      newPassword: string;
+    },
+    @Req() req: Request,
+  ) {
+    const user = (req as { user?: { sub: string } }).user;
+    if (!user) {
+      throw new UnauthorizedException({ code: 'E-AUTH-002', message: 'auth required' });
+    }
+    await this.auth.changePassword(user.sub, body.oldPassword, body.newPassword);
+    return { success: true, data: null };
+  }
+
+  /**
+   * P17 B2.2（2026-08-17）：登录态换绑手机号（双号验证）
+   *
+   * 前置：POST /sms-code 两次（旧号 + 新号，scene=BIND_PHONE）。
+   * 成功后撤销全部会话（phone 变更等同身份变更，强制重登）。
+   */
+  @Audit({ resource: 'User', maskFields: ['oldSmsCode', 'newSmsCode'] })
+  @RateLimit(
+    { key: 'bindphone:user:${user.sub}', limit: 3, window: 300 },
+    { key: 'bindphone:ip:${ip}', limit: 10, window: 300 },
+  )
+  @Post('change-phone')
+  @HttpCode(HttpStatus.OK)
+  async changePhone(
+    @Body(new ZodValidationPipe(ChangePhoneRequest)) body: {
+      oldSmsCode: string;
+      newPhone: string;
+      newSmsCode: string;
+    },
+    @Req() req: Request,
+  ) {
+    const user = (req as { user?: { sub: string } }).user;
+    if (!user) {
+      throw new UnauthorizedException({ code: 'E-AUTH-002', message: 'auth required' });
+    }
+    await this.auth.changePhone(user.sub, body);
     return { success: true, data: null };
   }
 }

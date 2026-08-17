@@ -189,7 +189,7 @@ export interface paths {
                          * @default LOGIN
                          * @enum {string}
                          */
-                        scene?: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+                        scene?: "REGISTER" | "LOGIN" | "RESET_PASSWORD" | "BIND_PHONE";
                     };
                 };
             };
@@ -287,6 +287,165 @@ export interface paths {
                 };
                 /** @description PHONE_NOT_FOUND */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 登录态修改密码（需 Bearer accessToken）。password=null（SMS 注册用户）返 400 E-AUTH-007 引导走 /password-reset 首次设密；旧密码错 401 E-USER-006；成功撤销全部会话（前端引导重登）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        oldPassword: string;
+                        newPassword: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 修改成功（全部会话已撤销，需重新登录） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-AUTH-007 未设置密码（SMS 注册用户），走 /password-reset 首次设密 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-USER-006 旧密码错误 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/auth/change-phone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 登录态换绑手机号（需 Bearer accessToken，双号验证）。前置：POST /sms-code 两次（旧号 + 新号，scene=BIND_PHONE）。新号已被注册 409 E-USER-004；验证码错 401 E-USER-003；成功撤销全部会话（强制重登）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        oldSmsCode: string;
+                        newPhone: string;
+                        newSmsCode: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 换绑成功（全部会话已撤销，需重新登录） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-USER-003 验证码无效或已过期（旧号/新号统一） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-USER-004 新号已被注册或与当前号相同 */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -597,6 +756,177 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/client/user/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 通知偏好（三分类开关，null/缺省兜底全 true） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 偏好全量 {orderUpdates, promotions, system} */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            orderUpdates: boolean;
+                            promotions: boolean;
+                            system: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 通知偏好部分更新（至少传一个 key，未传保持不变，返回更新后全量）。列表/未读数按偏好过滤（关 false 的 type 不返/不计数）。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        orderUpdates?: boolean;
+                        promotions?: boolean;
+                        system?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新后偏好全量 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            orderUpdates: boolean;
+                            promotions: boolean;
+                            system: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/client/user/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 登录设备列表（Redis Token Family 只读聚合，family 维度一条，最新登录在前）。P17 决策 3：不补设备元数据（无机型/IP），只显示 deviceType + 登录/过期时间 + 状态。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 会话列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            familyId: string;
+                            /** @enum {string} */
+                            deviceType: "client_app" | "rider_app" | "admin_web";
+                            /** @enum {string} */
+                            status: "active" | "used" | "revoked";
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            expiresAt: string;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/user/sessions/{familyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 下线指定设备（按 familyId 撤销整族 refresh token，归属校验防撤他人会话） */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 已下线 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-USER-007 会话不存在或不属于当前用户 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/client/addresses": {
@@ -14281,7 +14611,7 @@ export interface components {
              * @default LOGIN
              * @enum {string}
              */
-            scene: "REGISTER" | "LOGIN" | "RESET_PASSWORD";
+            scene: "REGISTER" | "LOGIN" | "RESET_PASSWORD" | "BIND_PHONE";
         };
         SendSmsResponseData: {
             expireIn: number;

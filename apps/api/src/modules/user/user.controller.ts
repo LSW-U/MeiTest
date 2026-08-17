@@ -26,18 +26,21 @@ import {
   Inject,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   UpdateProfileRequest,
   CreateAddressRequest,
   UpdateAddressRequest,
   FavoriteToggleRequest,
+  UpdateNotificationPreferencesRequest,
 } from '@meimart/api-contract';
 import { UserService } from './user.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
+import { listUserSessions, revokeFamily } from '../../shared/cache';
 
 /** 用户资料 */
 @Controller('api/v1/client/user')
@@ -59,6 +62,58 @@ export class UserController {
   ) {
     const data = await this.users.updateProfile(req.user.sub, body);
     return { success: true, data };
+  }
+
+  /** P17 B1（2026-08-17）：通知偏好（GET 全量三布尔，null 兜底全 true） */
+  @Get('notification-preferences')
+  async getNotificationPreferences(@Request() req: { user: RequestUser }) {
+    const data = await this.users.getNotificationPreferences(req.user.sub);
+    return { success: true, data };
+  }
+
+  /** P17 B1：通知偏好部分更新（至少传一个 key，返回更新后全量；列表/未读数按偏好过滤） */
+  @Patch('notification-preferences')
+  @Audit({ resource: 'User' })
+  async updateNotificationPreferences(
+    @Request() req: { user: RequestUser },
+    @Body(new ZodValidationPipe(UpdateNotificationPreferencesRequest))
+    body: { orderUpdates?: boolean; promotions?: boolean; system?: boolean },
+  ) {
+    const data = await this.users.updateNotificationPreferences(req.user.sub, body);
+    return { success: true, data };
+  }
+
+  /**
+   * P17 B2.3（2026-08-17）：登录设备列表（Redis Token Family 只读聚合）
+   * family 维度一条（同 family refresh 轮换合并），最新登录在前
+   */
+  @Get('sessions')
+  async listSessions(@Request() req: { user: RequestUser }) {
+    const sessions = await listUserSessions(req.user.sub);
+    const data = sessions.map((s) => ({
+      familyId: s.familyId,
+      deviceType: s.deviceType,
+      status: s.status,
+      createdAt: new Date(s.createdAt).toISOString(),
+      expiresAt: new Date(s.expiresAt).toISOString(),
+    }));
+    return { success: true, data };
+  }
+
+  /** P17 B2.3：下线指定设备（按 familyId 撤销整族 refresh token） */
+  @Delete('sessions/:familyId')
+  @Audit({ resource: 'User' })
+  async revokeSession(
+    @Request() req: { user: RequestUser },
+    @Param('familyId') familyId: string,
+  ) {
+    // 归属校验：该 family 必须属于当前用户（防撤他人会话）
+    const sessions = await listUserSessions(req.user.sub);
+    if (!sessions.some((s) => s.familyId === familyId)) {
+      throw new NotFoundException({ code: 'E-USER-007', message: 'Session not found' });
+    }
+    await revokeFamily(familyId);
+    return { success: true, data: null };
   }
 }
 

@@ -24,10 +24,13 @@ vi.mock('../src/shared/cache', () => ({
     },
   }),
   revokeFamily: vi.fn().mockResolvedValue(undefined),
-  revokeUserSessions: vi.fn().mockResolvedValue(undefined),
+  revokeUserSessions: mockRevokeUserSessions,
   isSessionValid: vi.fn().mockResolvedValue(true),
   getRefreshSession: vi.fn().mockResolvedValue({ familyId: 'family-1' }),
 }));
+
+// P17 B2.1：revokeUserSessions 单独 hoisted（断言 changePassword 撤销会话用；vi.hoisted 保证 vi.mock 工厂可用）
+const mockRevokeUserSessions = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 // Mock SMS OTP strategy（避免依赖 Redis）
 vi.mock('../src/infrastructure/otp/otp.factory', () => ({
@@ -386,6 +389,114 @@ describe('AuthService', () => {
           newPassword: 'NewPass1234',
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  // ===== P17 B2.1 登录态修改密码（2026-08-17）=====
+
+  describe('changePassword (P17 B2.1)', () => {
+    it('成功：verify 旧密 + hash 新密 + passwordChangedAt + revokeUserSessions', async () => {
+      const oldHash = await passwordStrategy.hashPassword('OldPass1234');
+      userFindUnique.mockResolvedValueOnce({ id: 'user-1', password: oldHash });
+      userUpdate.mockResolvedValue({});
+      await service.changePassword('user-1', 'OldPass1234', 'NewPass1234');
+      expect(userUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({ passwordChangedAt: expect.any(Date) }),
+        }),
+      );
+      expect(mockRevokeUserSessions).toHaveBeenCalledWith('user-1');
+    });
+
+    it('password=null（SMS 注册用户）→ 400 E-AUTH-007（引导走 password-reset 首次设密）', async () => {
+      userFindUnique.mockResolvedValueOnce({ id: 'user-1', password: null });
+      await expect(
+        service.changePassword('user-1', 'whatever', 'NewPass1234'),
+      ).rejects.toMatchObject({
+        response: { code: 'E-AUTH-007' },
+        status: 400,
+      });
+      expect(userUpdate).not.toHaveBeenCalled();
+      expect(mockRevokeUserSessions).not.toHaveBeenCalled();
+    });
+
+    it('旧密码错 → 401 E-USER-006（不撤销会话）', async () => {
+      const oldHash = await passwordStrategy.hashPassword('OldPass1234');
+      userFindUnique.mockResolvedValueOnce({ id: 'user-1', password: oldHash });
+      await expect(
+        service.changePassword('user-1', 'WrongPass999', 'NewPass1234'),
+      ).rejects.toMatchObject({
+        response: { code: 'E-USER-006' },
+        status: 401,
+      });
+      expect(mockRevokeUserSessions).not.toHaveBeenCalled();
+    });
+
+    it('用户不存在 → 401 E-AUTH-003', async () => {
+      userFindUnique.mockResolvedValueOnce(null);
+      await expect(service.changePassword('ghost', 'a', 'NewPass1234')).rejects.toMatchObject({
+        response: { code: 'E-AUTH-003' },
+        status: 401,
+      });
+    });
+  });
+
+  // ===== P17 B2.2 换绑手机号（2026-08-17，双号验证）=====
+
+  describe('changePhone (P17 B2.2)', () => {
+    const input = { oldSmsCode: '123456', newPhone: '+67088888001', newSmsCode: '123456' };
+
+    it('成功：双号验证 + 更新 phone/phoneVerified + revokeUserSessions', async () => {
+      // 第一次 findUnique：查 user（by id）；第二次：新号 unique 检查（by phone）
+      userFindUnique
+        .mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' })
+        .mockResolvedValueOnce(null);
+      userUpdate.mockResolvedValue({});
+      await service.changePhone('user-1', input);
+      expect(userUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { phone: '+67088888001', phoneVerified: true },
+        }),
+      );
+      expect(mockRevokeUserSessions).toHaveBeenCalledWith('user-1');
+    });
+
+    it('旧号验证码错 → 401 E-USER-003（不查新号不更新）', async () => {
+      userFindUnique.mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' });
+      await expect(
+        service.changePhone('user-1', { ...input, oldSmsCode: '000000' }),
+      ).rejects.toMatchObject({ response: { code: 'E-USER-003' }, status: 401 });
+      expect(userUpdate).not.toHaveBeenCalled();
+    });
+
+    it('新号与当前号相同 → 409 E-USER-004', async () => {
+      userFindUnique.mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' });
+      await expect(
+        service.changePhone('user-1', { ...input, newPhone: '+67077777777' }),
+      ).rejects.toMatchObject({ response: { code: 'E-USER-004' }, status: 409 });
+    });
+
+    it('新号已被注册 → 409 E-USER-004（验新号验证码前检查，省无谓验证）', async () => {
+      userFindUnique
+        .mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' })
+        .mockResolvedValueOnce({ id: 'user-other' }); // 新号占用
+      await expect(service.changePhone('user-1', input)).rejects.toMatchObject({
+        response: { code: 'E-USER-004' },
+        status: 409,
+      });
+      expect(userUpdate).not.toHaveBeenCalled();
+    });
+
+    it('新号验证码错 → 401 E-USER-003', async () => {
+      userFindUnique
+        .mockResolvedValueOnce({ id: 'user-1', phone: '+67077777777' })
+        .mockResolvedValueOnce(null);
+      await expect(
+        service.changePhone('user-1', { ...input, newSmsCode: '000000' }),
+      ).rejects.toMatchObject({ response: { code: 'E-USER-003' }, status: 401 });
+      expect(userUpdate).not.toHaveBeenCalled();
     });
   });
 });

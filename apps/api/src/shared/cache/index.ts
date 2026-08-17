@@ -8,6 +8,7 @@ export {
   revokeUserSessions,
   isSessionValid,
   getRefreshSession,
+  listUserSessions,
   type RefreshSession,
   type RefreshSessionStatus,
   type ConsumeResult,

@@ -31,6 +31,7 @@ import {
   SendSmsRequest,
   SendSmsCodeRequest,
   SendSmsResponseData,
+  ChangePhoneRequest,
   ResetPasswordRequest,
   PasswordResetRequest,
   // user
@@ -44,6 +45,9 @@ import {
   FavoriteToggleResponse,
   NotificationItem,
   MarkNotificationReadResponse,
+  NotificationPreferences,
+  UpdateNotificationPreferencesRequest,
+  UserSession,
   // admin users（W7 P1-2 + W7-feature 2026-07-10）
   AdminUserListItem,
   AdminUserListResponseData,
@@ -401,6 +405,40 @@ registry.registerPath({
   },
 });
 
+// P17 B2.1（2026-08-17）：登录态修改密码
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/change-password',
+  tags: ['auth'],
+  description:
+    '登录态修改密码（需 Bearer accessToken）。password=null（SMS 注册用户）返 400 E-AUTH-007 引导走 /password-reset 首次设密；旧密码错 401 E-USER-006；成功撤销全部会话（前端引导重登）。',
+  request: {
+    body: { content: { 'application/json': { schema: ChangePasswordRequest } } },
+  },
+  responses: {
+    200: { description: '修改成功（全部会话已撤销，需重新登录）' },
+    400: { description: 'E-AUTH-007 未设置密码（SMS 注册用户），走 /password-reset 首次设密', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: 'E-USER-006 旧密码错误', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P17 B2.2（2026-08-17）：登录态换绑手机号（双号验证）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/auth/change-phone',
+  tags: ['auth'],
+  description:
+    '登录态换绑手机号（需 Bearer accessToken，双号验证）。前置：POST /sms-code 两次（旧号 + 新号，scene=BIND_PHONE）。新号已被注册 409 E-USER-004；验证码错 401 E-USER-003；成功撤销全部会话（强制重登）。',
+  request: {
+    body: { content: { 'application/json': { schema: ChangePhoneRequest } } },
+  },
+  responses: {
+    200: { description: '换绑成功（全部会话已撤销，需重新登录）' },
+    401: { description: 'E-USER-003 验证码无效或已过期（旧号/新号统一）', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-USER-004 新号已被注册或与当前号相同', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 registry.registerPath({
   method: 'post',
   path: '/api/v1/common/auth/register',
@@ -471,6 +509,63 @@ registry.registerPath({
     200: {
       description: '更新成功',
       content: { 'application/json': { schema: User } },
+    },
+  },
+});
+
+// P17 B1（2026-08-17）：通知偏好
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/user/notification-preferences',
+  tags: ['user'],
+  description: '通知偏好（三分类开关，null/缺省兜底全 true）',
+  responses: {
+    200: {
+      description: '偏好全量 {orderUpdates, promotions, system}',
+      content: { 'application/json': { schema: NotificationPreferences } },
+    },
+  },
+});
+
+// P17 B2.3（2026-08-17）：登录设备列表
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/user/sessions',
+  tags: ['user'],
+  description:
+    '登录设备列表（Redis Token Family 只读聚合，family 维度一条，最新登录在前）。P17 决策 3：不补设备元数据（无机型/IP），只显示 deviceType + 登录/过期时间 + 状态。',
+  responses: {
+    200: {
+      description: '会话列表',
+      content: { 'application/json': { schema: UserSession.array() } },
+    },
+  },
+});
+
+// P17 B2.3：下线指定设备
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/user/sessions/{familyId}',
+  tags: ['user'],
+  description: '下线指定设备（按 familyId 撤销整族 refresh token，归属校验防撤他人会话）',
+  responses: {
+    200: { description: '已下线' },
+    404: { description: 'E-USER-007 会话不存在或不属于当前用户', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/user/notification-preferences',
+  tags: ['user'],
+  description: '通知偏好部分更新（至少传一个 key，未传保持不变，返回更新后全量）。列表/未读数按偏好过滤（关 false 的 type 不返/不计数）。',
+  request: {
+    body: { content: { 'application/json': { schema: UpdateNotificationPreferencesRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新后偏好全量',
+      content: { 'application/json': { schema: NotificationPreferences } },
     },
   },
 });

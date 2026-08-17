@@ -10,7 +10,7 @@
  *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
  *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
  */
-import { Injectable, UnauthorizedException, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { genId } from '@meimart/shared-utils';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -513,5 +513,92 @@ export class AuthService {
     const sms = getOtpStrategy('SMS');
     const result = await sms.verifyCode({ target: phone, code, scene });
     return result.valid;
+  }
+
+  /**
+   * P17 B2.1（2026-08-17）：登录态修改密码
+   *
+   * - password=null（SMS 注册用户无密码）-> 400 E-AUTH-007，前端引导走 /password-reset SMS 首次设密
+   * - 旧密码错 -> 401 E-USER-006（与 login 同码，不区分「密码错」细节）
+   * - 成功：hash 新密 + passwordChangedAt + revokeUserSessions（全部会话下线，前端引导重登）
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException({ code: 'E-AUTH-003', message: 'User not found' });
+    }
+    if (user.password === null) {
+      // SMS 注册无密码用户：无旧密可验，引导走 SMS 找回流程首次设密（P17 决策 2：null 拒绝+引导）
+      throw new BadRequestException({
+        code: 'E-AUTH-007',
+        message: 'No password set. Use SMS password-reset to set one first.',
+      });
+    }
+    const ok = await passwordStrategy.verifyPassword(user.password, oldPassword);
+    if (!ok) {
+      throw new UnauthorizedException({ code: 'E-USER-006', message: 'Old password invalid' });
+    }
+    const newHash = await passwordStrategy.hashPassword(newPassword);
+    await db.user.update({
+      where: { id: userId },
+      data: { password: newHash, passwordChangedAt: new Date() },
+    });
+    await revokeUserSessions(userId);
+    logger.info({ msg: 'PASSWORD_CHANGE_SUCCESS', userId });
+  }
+
+  /**
+   * P17 B2.2（2026-08-17）：登录态换绑手机号（双号验证）
+   *
+   * 流程：旧号 BIND_PHONE 验证码（证明持有旧号）→ 新号 unique 检查 → 新号 BIND_PHONE 验证码（证明持有新号）→ 更新 phone + phoneVerified
+   * - 旧号验证码错 → 401 E-USER-003（统一 SMS 错，防枚举）
+   * - 新号已被注册 → 409 E-USER-004（必须明确告知换绑失败原因，此处无法防枚举——用户主动选号，非攻击面）
+   * - 成功后撤销全部会话（phone 变更等同身份变更，强制重登）
+   */
+  async changePhone(
+    userId: string,
+    input: { oldSmsCode: string; newPhone: string; newSmsCode: string },
+  ): Promise<void> {
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException({ code: 'E-AUTH-003', message: 'User not found' });
+    }
+    // 1. 旧号验证（BIND_PHONE scene）
+    const oldOk = await this.verifySmsCode(user.phone, input.oldSmsCode, 'BIND_PHONE');
+    if (!oldOk) {
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'Old phone SMS code invalid or expired',
+      });
+    }
+    // 2. 新号 unique 检查（在验新号验证码之前：省用户一步无谓验证）
+    if (input.newPhone === user.phone) {
+      throw new ConflictException({
+        code: 'E-USER-004',
+        message: 'New phone is same as current phone',
+      });
+    }
+    const existing = await db.user.findUnique({ where: { phone: input.newPhone } });
+    if (existing) {
+      throw new ConflictException({
+        code: 'E-USER-004',
+        message: 'New phone already registered',
+      });
+    }
+    // 3. 新号验证（BIND_PHONE scene）
+    const newOk = await this.verifySmsCode(input.newPhone, input.newSmsCode, 'BIND_PHONE');
+    if (!newOk) {
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'New phone SMS code invalid or expired',
+      });
+    }
+    // 4. 更新 + 撤销全部会话
+    await db.user.update({
+      where: { id: userId },
+      data: { phone: input.newPhone, phoneVerified: true },
+    });
+    await revokeUserSessions(userId);
+    logger.info({ msg: 'PHONE_CHANGE_SUCCESS', userId, newPhone: input.newPhone });
   }
 }

@@ -96,6 +96,47 @@ export const SetDefaultAddressRequest = z.object({
   isDefault: z.literal(true),
 });
 
+// ============================================================================
+// P17 B1 通知偏好（2026-08-17）：三分类开关（与 NotificationType 三值对应），null/缺省全 true
+// ============================================================================
+
+/** 通知偏好（GET 响应 / PATCH 返回全量） */
+export const NotificationPreferences = z.object({
+  /** ORDER_UPDATE 类通知开关 */
+  orderUpdates: z.boolean(),
+  /** PROMOTION 类通知开关 */
+  promotions: z.boolean(),
+  /** SYSTEM 类通知开关 */
+  system: z.boolean(),
+});
+
+/** 通知偏好部分更新请求（至少传一个 key，未传的保持不变） */
+export const UpdateNotificationPreferencesRequest = z
+  .object({
+    orderUpdates: z.boolean().optional(),
+    promotions: z.boolean().optional(),
+    system: z.boolean().optional(),
+  })
+  .refine(
+    (v) => v.orderUpdates !== undefined || v.promotions !== undefined || v.system !== undefined,
+    { message: 'at least one preference key is required' },
+  );
+
+// ============================================================================
+// P17 B2.3 登录设备管理（2026-08-17）：Redis Token Family 只读聚合（不建表）
+// ============================================================================
+
+/** 登录会话项（GET /client/user/sessions；family 维度一条，最新登录在前） */
+export const UserSession = z.object({
+  /** refresh token family ID（DELETE /sessions/:familyId 用） */
+  familyId: z.string(),
+  deviceType: z.enum(['client_app', 'rider_app', 'admin_web']),
+  /** active（在线）/ used（已轮换待刷新）/ revoked（已下线） */
+  status: z.enum(['active', 'used', 'revoked']),
+  createdAt: IsoTimestamp,
+  expiresAt: IsoTimestamp,
+});
+
 /** 收藏切换请求 */
 export const FavoriteToggleRequest = z.object({
   productId: Id,

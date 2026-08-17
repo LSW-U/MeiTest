@@ -204,6 +204,8 @@ model User {
   passwordChangedAt DateTime? @map("password_changed_at")
   // W7-ext-H-unified-auth：统一入口 complete 时写（服务条款 + 隐私政策确认版本）
   agreedTermsVersion String? @map("agreed_terms_version")
+  // P17 B1（2026-08-17）：通知偏好 JSON {orderUpdates, promotions, system}，null=默认全 true（列表/未读数按此过滤）
+  notificationPreferences Json? @map("notification_preferences")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 

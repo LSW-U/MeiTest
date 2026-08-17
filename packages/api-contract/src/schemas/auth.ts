@@ -107,7 +107,19 @@ export const LoginSmsRequest = z.object({
 /** 简化版发 SMS 验证码请求（不带 scene，默认 LOGIN；对应 POST /api/v1/common/auth/sms-code） */
 export const SendSmsCodeRequest = z.object({
   phone: z.string().min(1),
-  scene: z.enum(['REGISTER', 'LOGIN', 'RESET_PASSWORD']).default('LOGIN'),
+  scene: z.enum(['REGISTER', 'LOGIN', 'RESET_PASSWORD', 'BIND_PHONE']).default('LOGIN'),
+});
+
+/**
+ * P17 B2.2（2026-08-17）：换绑手机号请求（登录态，双号验证）
+ * 流程：旧号 scene=BIND_PHONE 验证码 → 新号 scene=BIND_PHONE 验证码 → 提交本请求
+ */
+export const ChangePhoneRequest = z.object({
+  /** 当前手机号收到的验证码（证明持有旧号） */
+  oldSmsCode: z.string().min(1),
+  newPhone: z.string().min(5).max(20),
+  /** 新手机号收到的验证码（证明持有新号） */
+  newSmsCode: z.string().min(1),
 });
 
 /** SMS 找回密码请求（对应 POST /api/v1/common/auth/password-reset） */
