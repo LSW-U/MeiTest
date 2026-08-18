@@ -75,14 +75,21 @@ export interface AppliedDiscount {
 }
 
 /** 客户端优惠券视图（B10，隐藏 createdBy/usedCount/totalQuota/perUserLimit 等管理字段） */
+/**
+ * 客户端券视图（模板维度）—— 金额单位「元」（DB 存分，toView ÷100 转换）。
+ * PERCENTAGE 的 value 是 0-100 百分比，不换算。
+ */
 export interface ClientCouponView {
   id: string;
   code: string;
   name: string;
   description: string | null;
   type: PromotionTypeValue;
+  /** PERCENTAGE: 0-100（%）；FIXED_AMOUNT: 元；FREE_DELIVERY: 0 */
   value: number;
+  /** 元 */
   minOrderAmount: number;
+  /** 元（PERCENTAGE 封顶） */
   maxDiscountAmount: number | null;
   startAt: string;
   endAt: string;
@@ -104,8 +111,11 @@ export interface MyCouponView {
   code: string;
   status: 'available' | 'used' | 'expired';
   type: PromotionTypeValue;
+  /** PERCENTAGE: 0-100（%）；FIXED_AMOUNT: 元；FREE_DELIVERY: 0 —— 单位同 ClientCouponView（元） */
   value: number;
+  /** 元 */
   minOrderAmount: number;
+  /** 元（PERCENTAGE 封顶） */
   maxDiscountAmount: number | null;
   name: string;
   description: string | null;
@@ -730,15 +740,18 @@ export class PromotionService {
     } else {
       derived = 'available';
     }
+    // DB 金额存「分」，客户端视图统一「元」（PERCENTAGE 的 value 是百分比不换算）
+    const isPercentage = uc.promotion.type === 'PERCENTAGE';
     return {
       id: uc.id,
       promotionId: uc.promotionId,
       code: uc.code,
       status: derived,
       type: uc.promotion.type,
-      value: uc.promotion.value,
-      minOrderAmount: uc.promotion.minOrderAmount,
-      maxDiscountAmount: uc.promotion.maxDiscountAmount,
+      value: isPercentage ? uc.promotion.value : uc.promotion.value / 100,
+      minOrderAmount: uc.promotion.minOrderAmount / 100,
+      maxDiscountAmount:
+        uc.promotion.maxDiscountAmount === null ? null : uc.promotion.maxDiscountAmount / 100,
       name: uc.promotion.name,
       description: uc.promotion.description,
       startAt: uc.promotion.startAt.toISOString(),
@@ -874,15 +887,17 @@ export class PromotionService {
     },
     status: 'available' | 'used' | 'expired' = 'available',
   ): ClientCouponView {
+    // DB 金额存「分」，客户端视图统一「元」（PERCENTAGE 的 value 是百分比不换算）
+    const isPercentage = r.type === 'PERCENTAGE';
     return {
       id: r.id,
       code: r.code,
       name: r.name,
       description: r.description,
       type: r.type,
-      value: r.value,
-      minOrderAmount: r.minOrderAmount,
-      maxDiscountAmount: r.maxDiscountAmount,
+      value: isPercentage ? r.value : r.value / 100,
+      minOrderAmount: r.minOrderAmount / 100,
+      maxDiscountAmount: r.maxDiscountAmount === null ? null : r.maxDiscountAmount / 100,
       startAt: r.startAt.toISOString(),
       endAt: r.endAt.toISOString(),
       status,
