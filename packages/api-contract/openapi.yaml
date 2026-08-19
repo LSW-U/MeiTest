@@ -2981,6 +2981,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        contactPhone:
+          type: string
         estimatedArrival:
           type: string
           nullable: true
@@ -3116,6 +3118,8 @@ components:
                   updatedAt:
                     type: string
                     format: date-time
+                  contactPhone:
+                    type: string
                   estimatedArrival:
                     type: string
                     nullable: true
@@ -12039,6 +12043,8 @@ paths:
                             updatedAt:
                               type: string
                               format: date-time
+                            contactPhone:
+                              type: string
                             estimatedArrival:
                               type: string
                               nullable: true
@@ -12200,6 +12206,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                       estimatedArrival:
                         type: string
                         nullable: true
@@ -12394,6 +12402,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                       estimatedArrival:
                         type: string
                         nullable: true
@@ -12583,6 +12593,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                       estimatedArrival:
                         type: string
                         nullable: true
@@ -12811,6 +12823,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                       estimatedArrival:
                         type: string
                         nullable: true
@@ -19028,6 +19042,8 @@ paths:
                             updatedAt:
                               type: string
                               format: date-time
+                            contactPhone:
+                              type: string
                           required:
                             - id
                             - orderId
@@ -19134,6 +19150,8 @@ paths:
                             updatedAt:
                               type: string
                               format: date-time
+                            contactPhone:
+                              type: string
                           required:
                             - id
                             - orderId
@@ -19248,6 +19266,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId
@@ -19392,6 +19412,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId
@@ -19540,6 +19562,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId
@@ -19694,6 +19718,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId
@@ -19812,6 +19838,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId
@@ -21439,6 +21467,8 @@ paths:
                       updatedAt:
                         type: string
                         format: date-time
+                      contactPhone:
+                        type: string
                     required:
                       - id
                       - orderId

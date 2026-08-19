@@ -43,6 +43,8 @@ export const DeliveryTask = z.object({
   note: z.string().nullable(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
+  /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
+  contactPhone: z.string().optional(),
 });
 
 // Why: taskId 走 URL path param（:id），body 不重复携带。

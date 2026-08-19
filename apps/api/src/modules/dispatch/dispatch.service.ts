@@ -62,6 +62,8 @@ export interface DeliveryTaskView {
   deliveryFee?: number;
   /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
   itemsSummary?: string;
+  /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
+  contactPhone?: string;
 }
 
 /** 抢单上下文 */
@@ -1288,6 +1290,9 @@ export class DispatchService {
       paymentMethod: (t.order as any)?.paymentMethod,
       deliveryFee: (t.order as any)?.deliveryFee,
       itemsSummary,
+      // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
+      contactPhone:
+        ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,
     };
   }
 }

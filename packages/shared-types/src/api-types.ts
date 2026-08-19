@@ -6038,6 +6038,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                     /** Format: date-time */
                                     estimatedArrival: string | null;
                                     warehouseCode: string;
@@ -6134,6 +6135,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6255,6 +6257,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6372,6 +6375,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6533,6 +6537,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -10640,6 +10645,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                 }[];
                             };
                         };
@@ -10717,6 +10723,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                 }[];
                             };
                         };
@@ -10801,6 +10808,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -10903,6 +10911,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11006,6 +11015,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11110,6 +11120,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11193,6 +11204,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -12161,6 +12173,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -16001,6 +16014,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            contactPhone?: string;
             /** Format: date-time */
             estimatedArrival: string | null;
             warehouseCode: string;
@@ -16056,6 +16070,7 @@ export interface components {
                     createdAt: string;
                     /** Format: date-time */
                     updatedAt: string;
+                    contactPhone?: string;
                     /** Format: date-time */
                     estimatedArrival: string | null;
                     warehouseCode: string;

@@ -130,6 +130,26 @@ describe('DispatchService', () => {
       );
     });
 
+    it('T6 联系拨号：order.deliveryAddress 有 phone → toView 透传 contactPhone', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({
+          order: { orderNo: 'MM1', deliveryAddress: { name: 'João', phone: '+670 7733 4072' } },
+        }),
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      expect(result.items[0]?.contactPhone).toBe('+670 7733 4072');
+    });
+
+    it('T6 联系拨号：deliveryAddress 无 phone / null → contactPhone undefined（前端降级 toast）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({ order: { orderNo: 'MM2', deliveryAddress: { name: 'No phone' } } }),
+        buildTask({ order: { orderNo: 'MM3', deliveryAddress: null } }),
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      expect(result.items[0]?.contactPhone).toBeUndefined();
+      expect(result.items[1]?.contactPhone).toBeUndefined();
+    });
+
     it('传 warehouseId 时按仓库过滤', async () => {
       mockDb.deliveryTask.findMany.mockResolvedValue([]);
       await service.listPendingTasks({ riderId: 'r1', warehouseId: 'wh-2' });
