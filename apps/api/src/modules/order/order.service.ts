@@ -653,6 +653,28 @@ export class OrderService {
         },
       });
 
+      // 联动关闭配送任务（2026-08-20）：订单取消时未接单（PENDING_ASSIGN）/已接单（ASSIGNED）的
+      // 任务一并置 FAILED，否则任务永远挂在抢单大厅（实测 49 条 CANCELLED 订单的死任务堆积）。
+      // 对齐 dispatch.service cancelTask 范式（置 FAILED + 清 order.riderId）；PICKED_UP 之后的
+      // 任务不关（货已在骑手手上，走 dispatch reportIssue 流程），仅清抢单大厅可见性。
+      const cancelledTasks = await tx.deliveryTask.updateMany({
+        where: { orderId, status: { in: ['PENDING_ASSIGN', 'ASSIGNED'] } },
+        data: { status: 'FAILED' },
+      });
+      if (cancelledTasks.count > 0 && order.riderId) {
+        await tx.order.update({
+          where: { id: orderId },
+          data: { riderId: null },
+        });
+      }
+      if (cancelledTasks.count > 0) {
+        logger.info({
+          msg: 'ORDER_CANCELLED_TASKS_CLOSED',
+          orderId,
+          closedTasks: cancelledTasks.count,
+        });
+      }
+
       logger.info({
         msg: 'ORDER_CANCELLED',
         orderId,
