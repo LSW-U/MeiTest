@@ -208,6 +208,9 @@ import {
   CreateRiderReviewRequest,
   AdminListReviewsQuery,
   AdminUpdateReviewRequest,
+  // feedback（P22 反馈页 2026-08-19）
+  Feedback,
+  CreateFeedbackRequest,
   // common
   ErrorResponse,
   Id,
@@ -3107,6 +3110,34 @@ registry.registerPath({
   },
 });
 
+// ===== Client Upload - feedback-image（P22 F2 反馈截图上传，2026-08-19）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/uploads/feedback-image',
+  tags: ['upload'],
+  description:
+    '反馈截图上传（P22 F2 2026-08-19）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，反馈截图任意比例），服务端校验 magic bytes（防 mime 伪造）。MinIO 路径前缀 feedbacks/（与 reviews/、refunds/ 区分，便于审计/清理）。止血用途：反馈页此前复用 review-image，real 模式上传 URL 无消费方 → 孤儿文件 + reviews/ 前缀语义污染。',
+  // multipart/form-data 不在 zod 注册，request body 用 OpenAPI 原生描述
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/feedback 的 images[]）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 跨端调用或 E-AUTH-012 非本人', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+
 // ===== Home Entries（活动入口 PromoDock，路线 A 配置接口）=====
 registry.registerPath({
   method: 'get',
@@ -3292,6 +3323,29 @@ registry.registerPath({
   },
 });
 
+// ===== feedback（P22 反馈页 2026-08-19）=====
+registry.register('Feedback', Feedback);
+registry.register('CreateFeedbackRequest', CreateFeedbackRequest);
+
+// C 端：提交反馈
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/feedback',
+  tags: ['feedback'],
+  description:
+    '客户提交反馈（P22 F1 2026-08-19）。category 六值纯枚举（feature/product/order/payment/shipping/other，前端 FEEDBACK_TYPE_KEYS 提交前 .split(\'.\').pop() 转尾段）。content 10-500 字单语言原话。截图先调 POST /client/uploads/feedback-image 拿 URL 传 images[]（isOwnUrl 校验防外链）。限流：user 维度 5 次/小时 + ip 维度 20 次/小时。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateFeedbackRequest } } },
+  },
+  responses: {
+    200: { description: '反馈创建成功，返回 feedbackId', content: { 'application/json': { schema: Feedback } } },
+    400: { description: '校验失败（category 枚举外 / content 长度 / images > 9）', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-FEEDBACK-001 图片 URL 非本服务上传（防 SSRF/外链）', content: { 'application/json': { schema: ErrorResponse } } },
+    429: { description: '限流（5 次/小时/用户）', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+
 // ============================================================================
 // settle 端点（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册，之前零注册）
 // ============================================================================
@@ -3452,6 +3506,7 @@ const openapi = generator.generateDocument({
     { name: 'upload', description: '商品图片上传（W7-feature）' },
     { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
     { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
+    { name: 'feedback', description: '用户反馈（P22 反馈页）' },
     { name: 'home', description: '首页活动入口（PromoDock）' },
     { name: 'search', description: '热搜词（Redis ZSET + 运营种子词）' },
   ],

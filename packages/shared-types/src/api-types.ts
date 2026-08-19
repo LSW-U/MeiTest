@@ -12795,6 +12795,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/uploads/feedback-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 反馈截图上传（P22 F2 2026-08-19）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 100×100（无 1:1 约束，反馈截图任意比例），服务端校验 magic bytes（防 mime 伪造）。MinIO 路径前缀 feedbacks/（与 reviews/、refunds/ 区分，便于审计/清理）。止血用途：反馈页此前复用 review-image，real 模式上传 URL 无消费方 → 孤儿文件 + reviews/ 前缀语义污染。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /client/feedback 的 images[]） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 100×100） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-001 跨端调用或 E-AUTH-012 非本人 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/home-entries": {
         parameters: {
             query?: never;
@@ -13602,6 +13738,122 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/client/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户提交反馈（P22 F1 2026-08-19）。category 六值纯枚举（feature/product/order/payment/shipping/other，前端 FEEDBACK_TYPE_KEYS 提交前 .split('.').pop() 转尾段）。content 10-500 字单语言原话。截图先调 POST /client/uploads/feedback-image 拿 URL 传 images[]（isOwnUrl 校验防外链）。限流：user 维度 5 次/小时 + ip 维度 20 次/小时。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                        content: string;
+                        contact?: string;
+                        /** @default [] */
+                        images?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 反馈创建成功，返回 feedbackId */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** @enum {string} */
+                            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                            content: string;
+                            contact: string | null;
+                            images: string[];
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description 校验失败（category 枚举外 / content 长度 / images > 9） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-FEEDBACK-001 图片 URL 非本服务上传（防 SSRF/外链） */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 限流（5 次/小时/用户） */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/settle/settlements": {
@@ -16328,6 +16580,27 @@ export interface components {
             word: string;
             lang: string;
             count: number;
+        };
+        Feedback: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+            content: string;
+            contact: string | null;
+            images: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateFeedbackRequest: {
+            /** @enum {string} */
+            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+            content: string;
+            contact?: string;
+            /** @default [] */
+            images: string[];
         };
     };
     responses: never;

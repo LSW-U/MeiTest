@@ -256,3 +256,66 @@ describe('ClientUploadController.uploadReviewImage', () => {
     ).rejects.toThrow(InternalServerErrorException);
   });
 });
+
+/**
+ * P22 F2：反馈截图上传（2026-08-19）
+ * 与 review-image 完全同模式（校验逻辑共用 uploadImage helper 已被充分覆盖），
+ * 仅 key 前缀差异（feedbacks/image-）。止血孤儿文件：反馈图隔离到 feedbacks/ 前缀。
+ */
+describe('ClientUploadController.uploadFeedbackImage', () => {
+  let controller: ClientUploadController;
+
+  beforeEach(() => {
+    mockStorage.uploadFile.mockReset();
+    controller = new ClientUploadController(mockStorage as never);
+  });
+
+  const fakeFile = (mimetype: string, buffer: Buffer) =>
+    ({
+      buffer,
+      mimetype,
+      originalname: `test.${mimetype.split('/')[1]}`,
+      size: buffer.length,
+    }) as unknown as Express.Multer.File;
+
+  it('⭐ 正常上传 jpg -> key feedbacks/image-* 前缀（关键差异：vs review-image 的 reviews/image-）', async () => {
+    mockStorage.uploadFile.mockResolvedValueOnce({
+      url: 'http://localhost:9000/meimart/feedbacks/image-x.jpg',
+      key: 'feedbacks/image-x.jpg',
+      bucket: 'meimart',
+      size: JPG_600.length,
+    });
+    const result = await controller.uploadFeedbackImage(fakeFile('image/jpeg', JPG_600));
+    expect(result.success).toBe(true);
+    expect(result.data.url).toBe('http://localhost:9000/meimart/feedbacks/image-x.jpg');
+    const key = mockStorage.uploadFile.mock.calls[0][0].key;
+    expect(key).toMatch(/^feedbacks\/image-\d{13}-[a-f0-9]{8}\.jpg$/);
+  });
+
+  it('非正方形（800x600）-> 通过（反馈截图任意比例，同 review-image）', async () => {
+    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+    await controller.uploadFeedbackImage(fakeFile('image/jpeg', JPG_800x600));
+    expect(mockStorage.uploadFile).toHaveBeenCalled();
+  });
+
+  it('尺寸过小（50x50 < 100）-> 抛 BadRequest（同 review-image MIN_DIMENSION=100）', async () => {
+    await expect(
+      controller.uploadFeedbackImage(fakeFile('image/jpeg', JPG_50)),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockStorage.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('magic bytes 与 header mime 不一致 -> 抛 BadRequest', async () => {
+    await expect(
+      controller.uploadFeedbackImage(fakeFile('image/png', JPG_600)),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockStorage.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('storage.uploadFile 抛 StorageError -> 抛 InternalServerError（E-UPLOAD-001）', async () => {
+    mockStorage.uploadFile.mockRejectedValueOnce(new StorageError('MinIO down'));
+    await expect(
+      controller.uploadFeedbackImage(fakeFile('image/jpeg', JPG_600)),
+    ).rejects.toThrow(InternalServerErrorException);
+  });
+});

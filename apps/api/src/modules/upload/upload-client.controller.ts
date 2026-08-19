@@ -1,25 +1,27 @@
 /**
- * Client Upload Controller — 客户端图片上传 endpoint（P13 售后图片 + P15 B2 评价图）
+ * Client Upload Controller — 客户端图片上传 endpoint（P13 售后图片 + P15 B2 评价图 + P22 F2 反馈图）
  *
  * 端点：
  *   POST /api/v1/client/uploads/refund-evidence  (P13 售后凭证)
  *   POST /api/v1/client/uploads/review-image     (P15 B2 评价图)
+ *   POST /api/v1/client/uploads/feedback-image    (P22 F2 反馈截图)
  *     - multipart/form-data, field name="file"
  *     - CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType
  *     - 验 size > 0 + magic bytes（防 mime 欺骗）+ mime ∈ {jpg/png/webp} + size ≤ 5MB
- *     - 最小尺寸 100×100（防空图/图标滥用），无最大尺寸 + 无 1:1 约束（凭证/评价图任意比例）
+ *     - 最小尺寸 100×100（防空图/图标滥用），无最大尺寸 + 无 1:1 约束（凭证/评价/反馈图任意比例）
  *     - 写 MinIO：refund-evidence -> `refunds/evidence-{ts}-{rand8}.{ext}`
  *                review-image    -> `reviews/image-{ts}-{rand8}.{ext}`
+ *                feedback-image  -> `feedbacks/image-{ts}-{rand8}.{ext}`
  *     - 返回 { success: true, data: { url, key, size } }
  *
- * 重构（P3-2，2026-08-12）：两端点校验 + 上传主体逻辑 95% 相同，抽 uploadImage private helper
+ * 重构（P3-2，2026-08-12）：端点校验 + 上传主体逻辑 95% 相同，抽 uploadImage private helper
  * 共用，仅 keyPrefix/logLabel/sizeErrorLabel 三参数分化。fileFilter 因 multer 类型耦合
- * 无法干净抽模块级常量，保留两端点内联（FileInterceptor 上下文推断参数类型）。
+ * 无法干净抽模块级常量，保留各端点内联（FileInterceptor 上下文推断参数类型）。
  *
  * 与 admin 商品图端点（upload.controller.ts）的差异：
  *   - 权限：CUSTOMER（admin 端点是 SUPER_ADMIN/WAREHOUSE_STAFF）
  *   - 尺寸：最小 100×100，无上限 + 无 1:1（admin 端点 200-2000px + 1:1 正方形）
- *   - 路径：refunds/ + reviews/ （admin 端点 products/main-*）
+ *   - 路径：refunds/ + reviews/ + feedbacks/（admin 端点 products/main-*）
  *   - 共用：MAX_FILE_SIZE / MIN_FILE_SIZE / ALLOWED_MIME / detectImageFormat（upload.helpers.ts）
  *
  * 安全：
@@ -126,6 +128,41 @@ export class ClientUploadController {
       keyPrefix: 'reviews/image-',
       logLabel: 'review_image',
       sizeErrorLabel: '评价图',
+    });
+  }
+
+  /**
+   * P22 F2：反馈截图上传（2026-08-19）
+   * 与 review-image 完全同模式，仅 MinIO 路径前缀不同（feedbacks/image-*）。
+   * 止血用途：此前反馈页复用 review-image，real 模式上传的 URL 无消费方（表单不提交）
+   * → MinIO 孤儿文件 + reviews/ 前缀语义污染。此端点把反馈图隔离到 feedbacks/ 前缀，
+   * F1 提交端点落地后 URL 随 Feedback.images 落库。
+   */
+  @Post('feedback-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME[file.mimetype]) {
+          cb(
+            new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadFeedbackImage(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<UploadResult> {
+    return this.uploadImage(file, {
+      keyPrefix: 'feedbacks/image-',
+      logLabel: 'feedback_image',
+      sizeErrorLabel: '反馈截图',
     });
   }
 
