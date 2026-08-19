@@ -112,5 +112,6 @@
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
   "E-WAREHOUSE-003": "Armazén laha iha",
-  "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida"
+  "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida",
+  "E-FEEDBACK-001": "[TET] URL imajen tenki husi servisu upload ami"
 }

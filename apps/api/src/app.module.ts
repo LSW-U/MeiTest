@@ -17,6 +17,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { CartModule } from './modules/cart/cart.module';
 import { CommonModule } from './modules/common/common.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 import { HomeModule } from './modules/home/home.module';
 import { ImModule } from './modules/im/im.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
@@ -53,6 +54,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     CatalogModule,
     CommonModule,
     DispatchModule,
+    FeedbackModule,
     HomeModule,
     ImModule,
     InventoryModule,

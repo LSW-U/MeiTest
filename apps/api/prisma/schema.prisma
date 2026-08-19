@@ -225,6 +225,8 @@ model User {
   reviews           Review[]
   riderReviewsGiven RiderReview[]
   refunds           Refund[]
+  // P22 F1（2026-08-19）：用户提交的反馈
+  feedbacks         Feedback[]
 
   @@index([role, status])
   @@map("users")
@@ -963,6 +965,30 @@ model Banner {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("banners")
+}
+
+/// 用户反馈（P22 F1，2026-08-19）
+/// 客户在「反馈页」提交的意见/问题（功能建议/商品/订单/支付/配送/其他），
+/// 与 Review（商品评价）/ RiderReview（骑手评价）语义不同：反馈不挂订单、无需审核流程，仅落库供后台查看。
+/// MVP 无 admin 列表端点（先落数据，后台消费排期后再加），故不带 status/handler 字段。
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  /// 反馈类型（与前端 FEEDBACK_TYPE_KEYS 尾段纯枚举对齐，service 层校验）
+  category  String
+  /// 反馈正文（单语言纯文本，用户当前语言，非 i18n JSON —— 反馈是用户原话，不做翻译）
+  content   String
+  /// 联系方式（可选，≤60：电话/邮箱/WhatsApp 等，回访用）
+  contact   String?
+  /// 截图 URL（前端先调 POST /client/uploads/feedback-image 拿 URL 再提交；max 3 后端宽松同 review/refund 的 9）
+  images    String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([category, createdAt])
+  @@map("feedbacks")
 }
 
 // ============================================================================
