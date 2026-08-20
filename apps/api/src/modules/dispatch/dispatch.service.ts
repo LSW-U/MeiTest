@@ -192,7 +192,7 @@ export class DispatchService {
       orderBy: { createdAt: 'asc' },
       take: limit,
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -218,7 +218,7 @@ export class DispatchService {
       },
       orderBy: { updatedAt: 'desc' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -288,7 +288,7 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -351,7 +351,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -452,7 +452,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -517,7 +517,7 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -553,7 +553,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -706,7 +706,7 @@ export class DispatchService {
     const existing = await db.deliveryTask.findFirst({
       where: { orderId, taskType: 'delivery' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -761,7 +761,7 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -901,7 +901,7 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
