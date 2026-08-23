@@ -57,6 +57,12 @@ function buildProfile(overrides: Partial<Record<string, unknown>> = {}) {
     reviewedById: null,
     reviewedAt: null,
     rejectReason: null,
+    // W3 骑手个人区（2026-08-24）：证件/头像 URL + 配送积分/等级
+    avatarUrl: null,
+    idCardImageUrl: null,
+    licenseImageUrl: null,
+    points: 0,
+    tier: 'BRONZE',
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -300,15 +306,172 @@ describe('RiderService', () => {
 
     it('DB status=ONLINE 且 Redis 仍在 → 正常返回 ONLINE', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
-        buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
+        buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED', points: 0, tier: 'BRONZE' }),
       );
       mockRedis.exists.mockResolvedValue(1);
+      // tier 回写兜底：points=0 → BRONZE，与 DB tier 一致，不触发 update
+      mockDb.riderProfile.update.mockResolvedValue({});
 
       const result = await service.getProfile('user-1');
       expect(result.status).toBe('ONLINE');
       expect(result.isOnline).toBe(true);
-      // 不触发异步 UPDATE
+      // tier 一致 → 不触发异步 tier 回写；状态一致 → 不触发 status 回写
       expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // W3 骑手个人区（2026-08-24）：积分/等级 + 自助改资料
+  describe('calcTier - 积分等级计算', () => {
+    it('0 分 → BRONZE', async () => {
+      const { calcTier } = await import('../src/modules/rider/rider.service');
+      expect(calcTier(0)).toBe('BRONZE');
+      expect(calcTier(99)).toBe('BRONZE');
+    });
+
+    it('100 分 → SILVER', async () => {
+      const { calcTier } = await import('../src/modules/rider/rider.service');
+      expect(calcTier(100)).toBe('SILVER');
+      expect(calcTier(499)).toBe('SILVER');
+    });
+
+    it('500 分 → GOLD', async () => {
+      const { calcTier } = await import('../src/modules/rider/rider.service');
+      expect(calcTier(500)).toBe('GOLD');
+      expect(calcTier(1999)).toBe('GOLD');
+    });
+
+    it('2000 分 → PLATINUM', async () => {
+      const { calcTier } = await import('../src/modules/rider/rider.service');
+      expect(calcTier(2000)).toBe('PLATINUM');
+      expect(calcTier(99999)).toBe('PLATINUM');
+    });
+  });
+
+  describe('getProfile - W3 tier 兜底回写', () => {
+    it('DB tier 滞后（points=500 但 tier=SILVER）→ 返回 GOLD + 异步回写 tier', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({
+          status: 'OFFLINE',
+          applicationStatus: 'APPROVED',
+          points: 500,
+          tier: 'SILVER', // 滞后：应为 GOLD
+        }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+      mockDb.riderProfile.update.mockResolvedValue({});
+
+      const result = await service.getProfile('user-1');
+      expect(result.tier).toBe('GOLD'); // calcTier(500) 兜底
+      expect(result.points).toBe(500);
+
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          data: { tier: 'GOLD' },
+        }),
+      );
+    });
+  });
+
+  describe('updateProfile - W3 骑手自助改资料', () => {
+    it('profile 不存在 → E-RIDER-001', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(null);
+      await expect(
+        service.updateProfile({ riderId: 'user-1', riderName: 'Bob' }),
+      ).rejects.toThrow(/not found/);
+    });
+
+    it('未 APPROVED → E-RIDER-006', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'PENDING' }),
+      );
+      await expect(
+        service.updateProfile({ riderId: 'user-1', riderName: 'Bob' }),
+      ).rejects.toThrow(/not approved/);
+    });
+
+    it('空 body（无字段）→ 直接返回当前 profile，不触发 update', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED' }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      const result = await service.updateProfile({ riderId: 'user-1' });
+      expect(result.riderName).toBe('Alice');
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('改 riderName + avatarUrl → 写入对应字段', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', riderName: 'Bob', avatarUrl: 'http://x/a.jpg' }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      const result = await service.updateProfile({
+        riderId: 'user-1',
+        riderName: 'Bob',
+        avatarUrl: 'http://x/a.jpg',
+      });
+      expect(result.riderName).toBe('Bob');
+      expect(result.avatarUrl).toBe('http://x/a.jpg');
+      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          data: expect.objectContaining({ riderName: 'Bob', avatarUrl: 'http://x/a.jpg' }),
+        }),
+      );
+    });
+
+    it('vehiclePlate 传空串 → 置 null（清除车牌）', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', vehiclePlate: null }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      await service.updateProfile({ riderId: 'user-1', vehiclePlate: '   ' });
+      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vehiclePlate: null }),
+        }),
+      );
+    });
+
+    it('avatarUrl 传 null → 置 null（清除头像）', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', avatarUrl: 'http://x/old.jpg' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', avatarUrl: null }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      await service.updateProfile({ riderId: 'user-1', avatarUrl: null });
+      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ avatarUrl: null }),
+        }),
+      );
+    });
+
+    it('idCardNumber 不在 updateProfile 入参（不可改）', async () => {
+      // UpdateRiderProfileInput 接口不含 idCardNumber，TS 层保证不可改
+      // 此测试固化契约：调用 updateProfile 不应触发 idCardNumber 字段写入
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(buildProfile({ applicationStatus: 'APPROVED' }));
+      mockRedis.exists.mockResolvedValue(0);
+
+      await service.updateProfile({ riderId: 'user-1', riderName: 'Bob' });
+      const call = mockDb.riderProfile.update.mock.calls[0][0] as { data: Record<string, unknown> };
+      expect(call.data).not.toHaveProperty('idCardNumber');
     });
   });
 });

@@ -694,6 +694,13 @@ model RiderProfile {
   // V2-S6 修复：去掉 ? 让 schema 与 migration (NOT NULL DEFAULT 'PENDING') 对齐
   applicationStatus       String      @default("PENDING") @map("application_status")
   idCardNumber            String?     @map("id_card_number")
+  // W3 骑手个人区（2026-08-24）：证件/头像 URL（apply 阶段 client_app 上传后回填，update 可改）
+  avatarUrl               String?     @map("avatar_url")
+  idCardImageUrl          String?     @map("id_card_image_url")
+  licenseImageUrl         String?     @map("license_image_url")
+  // W3 骑手个人区（2026-08-24）：配送积分 + 等级（每完成 1 单 +10 分，4 档 BRONZE/SILVER/GOLD/PLATINUM）
+  points                  Int         @default(0)
+  tier                    String      @default("BRONZE")
   // V2-S7 修复：加 User relation（FK 约束，admin 硬删时 SET NULL）
   reviewedById            String?     @map("reviewed_by_id")
   reviewedBy              User?       @relation("ReviewedRiders", fields: [reviewedById], references: [id], onDelete: SetNull)

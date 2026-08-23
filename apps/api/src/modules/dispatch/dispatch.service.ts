@@ -26,6 +26,7 @@ import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 import { redis } from '../../shared/cache';
+import { POINTS_PER_DELIVERY } from '../rider/rider.service';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -421,6 +422,10 @@ export class DispatchService {
       });
     }
 
+    // W3 骑手积分（2026-08-24）：仅 delivery 任务送达累计积分 + totalDeliveries（return 退货任务不计）
+    // 用 Prisma compound update 一次写两字段，tier 不在事务内重算（读多写少，profile 查询时 calcTier 兜底）
+    const countDeliveryForPoints = task.taskType === 'delivery';
+
     const order = task.order;
     const isCod = order.paymentMethod === 'COD';
 
@@ -472,6 +477,18 @@ export class DispatchService {
             note: input.note,
           },
           select: { id: true },
+        });
+      }
+
+      // W3 骑手积分：delivery 任务送达 +1 单 +10 分（事务内，保证与订单状态一致）
+      // tier 在 getProfile 查询时按 points 重算兜底，此处不写 tier
+      if (countDeliveryForPoints) {
+        await tx.riderProfile.update({
+          where: { id: riderId },
+          data: {
+            totalDeliveries: { increment: 1 },
+            points: { increment: POINTS_PER_DELIVERY },
+          },
         });
       }
       return { updated: t };

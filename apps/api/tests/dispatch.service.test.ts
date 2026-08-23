@@ -45,6 +45,8 @@ const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
       },
       riderProfile: {
         findUnique: vi.fn().mockResolvedValue({ id: 'rider-profile-1' }),
+        // W3 骑手积分：deliverTask 事务内 tx.riderProfile.update（increment totalDeliveries + points）
+        update: vi.fn().mockResolvedValue({}),
       },
       $executeRaw: vi.fn(),
     },

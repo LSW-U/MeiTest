@@ -32,6 +32,28 @@ export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 /** 接单模式 */
 export type AcceptMode = 'GRAB' | 'AUTO_DISPATCH';
 
+/** 骑手等级（配送积分门槛：BRONZE 0+ / SILVER 100+ / GOLD 500+ / PLATINUM 2000+） */
+export type RiderTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+
+/** 等级门槛（每完成 1 单 +10 分，故门槛 = 单数 × 10） */
+const TIER_THRESHOLDS: Array<{ tier: RiderTier; min: number }> = [
+  { tier: 'PLATINUM', min: 2000 },
+  { tier: 'GOLD', min: 500 },
+  { tier: 'SILVER', min: 100 },
+  { tier: 'BRONZE', min: 0 },
+];
+
+/** 每完成 1 单增加的配送积分 */
+export const POINTS_PER_DELIVERY = 10;
+
+/** 按积分计算等级（取第一个满足门槛的，数组已按门槛降序） */
+export function calcTier(points: number): RiderTier {
+  for (const { tier, min } of TIER_THRESHOLDS) {
+    if (points >= min) return tier;
+  }
+  return 'BRONZE';
+}
+
 /** 入驻申请 DTO */
 export interface ApplyRiderInput {
   userId: string;
@@ -40,6 +62,9 @@ export interface ApplyRiderInput {
   vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
   vehiclePlate?: string;
   idCardNumber: string;
+  avatarUrl?: string;
+  idCardImageUrl?: string;
+  licenseImageUrl?: string;
   preferredWarehouseIds?: string[];
 }
 
@@ -58,6 +83,18 @@ export interface UpdateDutyInput {
   acceptMode?: AcceptMode;
 }
 
+/** 骑手自助改资料 DTO（idCardNumber 不可改） */
+export interface UpdateRiderProfileInput {
+  riderId: string;
+  riderName?: string;
+  phone?: string;
+  vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
+  vehiclePlate?: string | null;
+  avatarUrl?: string | null;
+  idCardImageUrl?: string | null;
+  licenseImageUrl?: string | null;
+}
+
 /** 骑手 profile 视图（API 返回） */
 export interface RiderProfileView {
   id: string;
@@ -70,6 +107,11 @@ export interface RiderProfileView {
   applicationStatus: ApplicationStatus;
   totalDeliveries: number;
   rating: number;
+  avatarUrl: string | null;
+  idCardImageUrl: string | null;
+  licenseImageUrl: string | null;
+  points: number;
+  tier: RiderTier;
   preferredWarehouseIds: string[];
   isOnline: boolean;
   createdAt: string;
@@ -117,6 +159,9 @@ export class RiderService {
         vehiclePlate: input.vehiclePlate,
         applicationStatus: 'PENDING',
         idCardNumber: input.idCardNumber,
+        avatarUrl: input.avatarUrl,
+        idCardImageUrl: input.idCardImageUrl,
+        licenseImageUrl: input.licenseImageUrl,
         preferredWarehouseIds: input.preferredWarehouseIds ?? [],
       },
     });
@@ -323,7 +368,87 @@ export class RiderService {
       return this.toView({ ...profile, status: 'OFFLINE' as const }, false);
     }
 
-    return this.toView(profile, isOnline);
+    // W3 骑手积分（2026-08-24）：tier 读多写少，查询时按 points 重算兜底
+    //   - DB tier 仅在 deliverTask increment 时滞后写（见 dispatch.service），查询时 calcTier 兜底保证准确
+    const view = this.toView(profile, isOnline);
+    const expectedTier = calcTier(view.points);
+    if (view.tier !== expectedTier) {
+      view.tier = expectedTier;
+      // 异步回写 DB tier（不阻塞响应，下次查询命中）
+      db.riderProfile
+        .update({ where: { userId: riderId }, data: { tier: expectedTier } })
+        .catch((e) => {
+          logger.warn({
+            msg: 'RIDER_TIER_RECONCILE_FAILED',
+            riderId,
+            error: (e as Error).message,
+          });
+        });
+    }
+    return view;
+  }
+
+  /**
+   * 骑手自助改资料（W3 骑手个人区，2026-08-24）
+   *
+   * - idCardNumber 不可改（换号应重新走 apply 审核）
+   * - 仅 APPROVED 骑手可改（PENDING/REJECTED 拒绝）
+   * - 改 vehiclePlate 传 null/空串 → 置 null（与 adminUpdateRider 一致）
+   * - 改 URL 字段传 null → 置 null（清除证件图）
+   */
+  async updateProfile(input: UpdateRiderProfileInput): Promise<RiderProfileView> {
+    const profile = await db.riderProfile.findUnique({ where: { userId: input.riderId } });
+    if (!profile) {
+      throw new NotFoundException({
+        code: 'E-RIDER-001',
+        message: 'Rider profile not found (please apply first)',
+      });
+    }
+
+    if (profile.applicationStatus !== 'APPROVED') {
+      throw new ConflictException({
+        code: 'E-RIDER-006',
+        message: `Rider not approved (current: ${profile.applicationStatus})`,
+      });
+    }
+
+    const data: {
+      riderName?: string;
+      phone?: string;
+      vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
+      vehiclePlate?: string | null;
+      avatarUrl?: string | null;
+      idCardImageUrl?: string | null;
+      licenseImageUrl?: string | null;
+    } = {};
+    if (input.riderName !== undefined) data.riderName = input.riderName;
+    if (input.phone !== undefined) data.phone = input.phone;
+    if (input.vehicleType !== undefined) data.vehicleType = input.vehicleType;
+    if (input.vehiclePlate !== undefined) {
+      data.vehiclePlate = input.vehiclePlate === null || input.vehiclePlate.trim() === '' ? null : input.vehiclePlate.trim();
+    }
+    if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl;
+    if (input.idCardImageUrl !== undefined) data.idCardImageUrl = input.idCardImageUrl;
+    if (input.licenseImageUrl !== undefined) data.licenseImageUrl = input.licenseImageUrl;
+
+    if (Object.keys(data).length === 0) {
+      const isOnline = await this.isOnline(profile.userId);
+      return this.toView(profile, isOnline);
+    }
+
+    const updated = await db.riderProfile.update({
+      where: { userId: input.riderId },
+      data,
+    });
+
+    logger.info({
+      msg: 'RIDER_PROFILE_UPDATED',
+      riderId: input.riderId,
+      fields: Object.keys(data),
+    });
+
+    const isOnline = await this.isOnline(updated.userId);
+    return this.toView(updated, isOnline);
   }
 
   /** 列出待审核申请（admin 用） */
@@ -576,6 +701,11 @@ export class RiderService {
       applicationStatus: string; // V2-S6 修复：schema 改 NOT NULL，去掉 | null
       totalDeliveries: number;
       rating: { toNumber(): number };
+      avatarUrl: string | null;
+      idCardImageUrl: string | null;
+      licenseImageUrl: string | null;
+      points: number;
+      tier: string;
       preferredWarehouseIds: string[];
       createdAt: Date;
       updatedAt: Date;
@@ -594,6 +724,11 @@ export class RiderService {
       applicationStatus: p.applicationStatus as ApplicationStatus,
       totalDeliveries: p.totalDeliveries,
       rating: typeof p.rating === 'number' ? p.rating : p.rating?.toNumber() ?? 5,
+      avatarUrl: p.avatarUrl,
+      idCardImageUrl: p.idCardImageUrl,
+      licenseImageUrl: p.licenseImageUrl,
+      points: p.points,
+      tier: p.tier as RiderTier,
       preferredWarehouseIds: p.preferredWarehouseIds ?? [],
       isOnline,
       createdAt: p.createdAt.toISOString(),
