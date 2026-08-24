@@ -36,6 +36,7 @@ import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
 import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Public } from '../../shared/decorators/public.decorator';
+import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import { RateLimit } from '../../shared/decorators/rate-limit.decorator';
 import { db } from '../../shared/db';
@@ -298,7 +299,13 @@ export class AuthController {
    *
    * - password=null（SMS 注册无密码用户）-> 400 E-AUTH-007，前端引导走 /password-reset SMS 路径首次设密
    * - 成功后撤销全部会话（revokeUserSessions），前端引导重新登录
+   *
+   * 权限（v5 修复 2026-08-25）：放行所有登录态角色（CUSTOMER/RIDER/WAREHOUSE_STAFF/CUSTOMER_SERVICE/SUPER_ADMIN）。
+   *   - 放 common 前缀 → DeviceTypeGuard 不限制（任意 deviceType 可调）
+   *   - RolesGuard 默认 least-privilege：未声明 @Roles 直接 E-AUTH-008 拒绝 → 原缺 @Roles 导致所有登录态用户无法改密
+   *   - 换号/改密涉及登录态身份，服务端已做 oldPassword 校验 + 限流 + 撤会话，无需额外角色收窄
    */
+  @Roles('CUSTOMER', 'RIDER', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE', 'SUPER_ADMIN')
   @Audit({ resource: 'User', maskFields: ['oldPassword', 'newPassword'] })
   @RateLimit(
     { key: 'chpwd:user:${user.sub}', limit: 3, window: 300 },
@@ -326,7 +333,12 @@ export class AuthController {
    *
    * 前置：POST /sms-code 两次（旧号 + 新号，scene=BIND_PHONE）。
    * 成功后撤销全部会话（phone 变更等同身份变更，强制重登）。
+   *
+   * 权限（v5 修复 2026-08-25）：同 change-password，放行所有登录态角色。
+   *   - 原缺 @Roles → RolesGuard 默认 E-AUTH-008 拒绝，所有登录态用户无法换绑手机号
+   *   - 已做双号 SMS 验证 + 限流 + 撤会话，无需角色收窄
    */
+  @Roles('CUSTOMER', 'RIDER', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE', 'SUPER_ADMIN')
   @Audit({ resource: 'User', maskFields: ['oldSmsCode', 'newSmsCode'] })
   @RateLimit(
     { key: 'bindphone:user:${user.sub}', limit: 3, window: 300 },

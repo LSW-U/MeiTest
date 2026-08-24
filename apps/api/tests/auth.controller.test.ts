@@ -58,6 +58,10 @@ import { AuthService } from '../src/modules/auth/auth.service';
 import { AuthController } from '../src/modules/auth/auth.controller';
 import { JwtService } from '@nestjs/jwt';
 import { consumeRefreshSession } from '../src/shared/cache';
+import 'reflect-metadata';
+import { ROLES_KEY } from '../src/shared/decorators/roles.decorator';
+import { IS_PUBLIC_KEY } from '../src/shared/decorators/public.decorator';
+import type { Role } from '@meimart/api-contract';
 
 describe('AuthController.refresh - W7-fix P0 安全检查', () => {
   let controller: AuthController;
@@ -186,5 +190,54 @@ describe('AuthController.refresh - W7-fix P0 安全检查', () => {
     await expect(controller.refresh({ refreshToken })).rejects.toMatchObject({
       response: { code: 'E-USER-001' },
     });
+  });
+});
+
+/**
+ * v5 修复（2026-08-25）回归：change-password / change-phone 必须声明 @Roles
+ *
+ * 背景：RolesGuard 全局 least-privilege —— 端点未声明 @Roles 且未声明 @Public 时
+ * 默认抛 E-AUTH-008 拒绝（roles.guard.ts:37-43）。change-password/change-phone 原仅
+ * 挂 @Audit + @RateLimit，导致所有登录态角色被拒（客户/骑手/仓库/客服/super_admin 都调不了）。
+ *
+ * 本用例断言两个 handler 的元数据已声明全部 5 个登录态角色，防止「忘加 @Roles」回归。
+ * RolesGuard 的拒绝逻辑本身由 roles.guard.test.ts 覆盖，此处只校验装饰器元数据存在。
+ */
+describe('AuthController.changePassword/changePhone - @Roles 装饰器回归（v5 修复 2026-08-25）', () => {
+  const EXPECTED_ROLES: Role[] = [
+    'CUSTOMER',
+    'RIDER',
+    'WAREHOUSE_STAFF',
+    'CUSTOMER_SERVICE',
+    'SUPER_ADMIN',
+  ];
+
+  it('changePassword 声明全部登录态角色（非 @Public）', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      AuthController.prototype.changePassword,
+    ) as Role[] | undefined;
+    expect(roles).toEqual(EXPECTED_ROLES);
+
+    // 确保未误挂 @Public（@Public 会绕过 RolesGuard，违背登录态鉴权意图）
+    const isPublic = Reflect.getMetadata(
+      IS_PUBLIC_KEY,
+      AuthController.prototype.changePassword,
+    );
+    expect(isPublic).toBeFalsy();
+  });
+
+  it('changePhone 声明全部登录态角色（非 @Public）', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      AuthController.prototype.changePhone,
+    ) as Role[] | undefined;
+    expect(roles).toEqual(EXPECTED_ROLES);
+
+    const isPublic = Reflect.getMetadata(
+      IS_PUBLIC_KEY,
+      AuthController.prototype.changePhone,
+    );
+    expect(isPublic).toBeFalsy();
   });
 });
