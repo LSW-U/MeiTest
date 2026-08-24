@@ -134,12 +134,28 @@ export interface RiderProfileView {
   tier: RiderTier;
   preferredWarehouseIds: string[];
   isOnline: boolean;
+  /**
+   * 可能掉线标记（P6 #6，2026-08-25）
+   * 仅当 isOnline=true 且 TTL≤30s 宽限期时为 true；离线 / 正常在线均为 false。
+   */
+  maybeOffline: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 /** 骑手在线状态 Redis key TTL（60 秒，每次心跳续期） */
 const RIDER_ONLINE_TTL_SEC = 60;
+/**
+ * 心跳宽限阈值（P6 #6，2026-08-25）
+ *
+ * 剩余 TTL ≤ 此阈值视为「可能掉线」（maybeOffline）：
+ *   - 正常心跳每 < 30s 续期一次，TTL 始终 > 30s → maybeOffline=false
+ *   - 心跳延迟 / 网络抖动：TTL 跌入 (0, 30] 区间 → maybeOffline=true（骑手 App 提示「重连中」，但仍计入可派列表）
+ *   - TTL 归零：彻底离线，从可派列表移除（listAvailableRiders EXISTS=0）
+ *
+ * 设计：单 key + TTL 读，不引入第二 key；listAvailableRiders 仍用 EXISTS（宽限期内可见）。
+ */
+const RIDER_ONLINE_GRACE_THRESHOLD_SEC = 30;
 
 @Injectable()
 export class RiderService {
@@ -336,25 +352,28 @@ export class RiderService {
    *
    * M4：仅 APPROVED 骑手心跳生效（PENDING/REJECTED 心跳返回 false 不污染在线列表）
    * 注意：每次心跳查 DB 会增加 QPS，可改成首次心跳查 DB + 后续只 SET Redis（依赖前端保证状态）
+   *
+   * P6 #6（2026-08-25）：返回 maybeOffline=false（刚续期，TTL 重置为 60s，远离宽限阈值）
    */
-  async heartbeat(riderId: string): Promise<{ renewed: boolean }> {
+  async heartbeat(riderId: string): Promise<{ renewed: boolean; maybeOffline: boolean }> {
     const profile = await db.riderProfile.findUnique({
       where: { userId: riderId },
       select: { applicationStatus: true },
     });
     if (!profile || profile.applicationStatus !== 'APPROVED') {
-      return { renewed: false };
+      return { renewed: false, maybeOffline: false };
     }
     try {
       await redis.set(this.onlineKey(riderId), '1', 'EX', RIDER_ONLINE_TTL_SEC);
-      return { renewed: true };
+      // 刚 SETEX，TTL=60s > 宽限阈值 30s，不在宽限期
+      return { renewed: true, maybeOffline: false };
     } catch (e) {
       logger.warn({
         msg: 'RIDER_HEARTBEAT_FAILED',
         riderId,
         error: (e as Error).message,
       });
-      return { renewed: false };
+      return { renewed: false, maybeOffline: false };
     }
   }
 
@@ -391,7 +410,9 @@ export class RiderService {
 
     // F5 修复（2026-08-24 审查报告）：tier 是 points 的纯派生量，deliverTask 写积分时已同步写 DB.tier；
     //   查询路径只读不写，用 calcTier 兜底校正返回值（防御历史脏值/旧滞后），消除写放大 + 竞态
-    return withDerivedTier(this.toView(profile, isOnline));
+    // P6 #6（2026-08-25）：在线骑手顺带算 maybeOffline（TTL≤30s 宽限期），离线已是上面分支
+    const maybeOffline = isOnline ? await this.isMaybeOffline(riderId) : false;
+    return withDerivedTier(this.toView(profile, isOnline, maybeOffline));
   }
 
   /**
@@ -481,6 +502,32 @@ export class RiderService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * 取在线 key 剩余 TTL（秒，P6 #6 宽限机制 2026-08-25）
+   *
+   * @returns TTL 秒数；-2=key 不存在（彻底离线）；-1=key 无过期时间（异常，视为在线）
+   */
+  async getOnlineTtl(riderId: string): Promise<number> {
+    try {
+      return await redis.ttl(this.onlineKey(riderId));
+    } catch {
+      return -2;
+    }
+  }
+
+  /**
+   * 骑手是否处于「可能掉线」宽限期（P6 #6，2026-08-25）
+   *
+   * 宽限期：0 < TTL ≤ RIDER_ONLINE_GRACE_THRESHOLD_SEC（30s）
+   *   - TTL=0：刚续期后理论上不存在；查询瞬间 TTL 恰为 0 视为宽限（极短窗口）
+   *   - TTL≤30：心跳延迟，骑手 App 提示重连，但仍计入可派列表
+   *   - TTL<0（不存在 / 无过期）：不在宽限期（前者已离线，后者异常在线）
+   */
+  async isMaybeOffline(riderId: string): Promise<boolean> {
+    const ttl = await this.getOnlineTtl(riderId);
+    return ttl >= 0 && ttl <= RIDER_ONLINE_GRACE_THRESHOLD_SEC;
   }
 
   // ========================================================================
@@ -717,6 +764,7 @@ export class RiderService {
       updatedAt: Date;
     },
     isOnline: boolean,
+    maybeOffline = false,
   ): RiderProfileView {
     return {
       id: p.id,
@@ -744,6 +792,8 @@ export class RiderService {
       })(),
       preferredWarehouseIds: p.preferredWarehouseIds ?? [],
       isOnline,
+      // P6 #6（2026-08-25）：maybeOffline 由调用方按 TTL 宽限期决定；默认 false（离线/普通在线）
+      maybeOffline: isOnline ? maybeOffline : false,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
     };

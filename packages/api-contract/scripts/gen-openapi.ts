@@ -2635,13 +2635,21 @@ registry.registerPath({
   method: 'post',
   path: '/api/v1/rider/heartbeat',
   tags: ['rider'],
-  description: '心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）',
+  description:
+    '心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）。P6 #6（2026-08-25）：返回 maybeOffline=false（刚续期 TTL=60s 远离 30s 宽限阈值）；profile 查询接口在 TTL≤30s 时返回 maybeOffline=true 供前端提示重连。',
   responses: {
     200: {
-      description: '续期成功',
+      description: '续期结果',
       content: {
         'application/json': {
-          schema: z.object({ success: z.literal(true), data: z.object({ renewed: z.boolean() }) }),
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              renewed: z.boolean(),
+              /** 是否处于宽限期（刚续期为 false；保留字段供未来按 TTL 反算） */
+              maybeOffline: z.boolean(),
+            }),
+          }),
         },
       },
     },

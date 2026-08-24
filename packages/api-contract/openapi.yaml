@@ -16121,6 +16121,8 @@ paths:
                                 format: uuid
                             isOnline:
                               type: boolean
+                            maybeOffline:
+                              type: boolean
                             createdAt:
                               type: string
                               format: date-time
@@ -16145,6 +16147,7 @@ paths:
                             - tier
                             - preferredWarehouseIds
                             - isOnline
+                            - maybeOffline
                             - createdAt
                             - updatedAt
                     required:
@@ -16307,6 +16310,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -16331,6 +16336,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -16509,6 +16515,8 @@ paths:
                             format: uuid
                         isOnline:
                           type: boolean
+                        maybeOffline:
+                          type: boolean
                         createdAt:
                           type: string
                           format: date-time
@@ -16533,6 +16541,7 @@ paths:
                         - tier
                         - preferredWarehouseIds
                         - isOnline
+                        - maybeOffline
                         - createdAt
                         - updatedAt
                 required:
@@ -16677,6 +16686,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -16701,6 +16712,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -16833,6 +16845,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -16857,6 +16871,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -18925,6 +18940,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -18949,6 +18966,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -19057,6 +19075,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -19081,6 +19101,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -19222,6 +19243,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -19246,6 +19269,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -19399,6 +19423,8 @@ paths:
                           format: uuid
                       isOnline:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                       createdAt:
                         type: string
                         format: date-time
@@ -19423,6 +19449,7 @@ paths:
                       - tier
                       - preferredWarehouseIds
                       - isOnline
+                      - maybeOffline
                       - createdAt
                       - updatedAt
                 required:
@@ -19461,10 +19488,12 @@ paths:
     post:
       tags:
         - rider
-      description: 心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）
+      description: "心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）。P6
+        #6（2026-08-25）：返回 maybeOffline=false（刚续期 TTL=60s 远离 30s 宽限阈值）；profile
+        查询接口在 TTL≤30s 时返回 maybeOffline=true 供前端提示重连。"
       responses:
         "200":
-          description: 续期成功
+          description: 续期结果
           content:
             application/json:
               schema:
@@ -19479,8 +19508,11 @@ paths:
                     properties:
                       renewed:
                         type: boolean
+                      maybeOffline:
+                        type: boolean
                     required:
                       - renewed
+                      - maybeOffline
                 required:
                   - success
                   - data

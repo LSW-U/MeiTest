@@ -43,6 +43,13 @@ export const RiderProfile = z.object({
   tier: RiderTier,
   preferredWarehouseIds: z.array(Id),
   isOnline: z.boolean(),
+  /**
+   * 可能掉线标记（P6 #6，2026-08-25）
+   * isOnline=true 且 Redis 在线 key 剩余 TTL ≤ 30s 宽限期时为 true；
+   * 骑手 App 据此提示「网络重连中」，但仍计入可派列表（不立即踢出）。
+   * 离线 / 正常在线（TTL>30s）均为 false。
+   */
+  maybeOffline: z.boolean(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });

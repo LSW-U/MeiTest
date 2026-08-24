@@ -29,6 +29,7 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
     del: vi.fn(),
     get: vi.fn(),
     exists: vi.fn(),
+    ttl: vi.fn(),
   },
 }));
 
@@ -79,6 +80,7 @@ describe('RiderService', () => {
     mockRedis.del.mockReset();
     mockRedis.exists.mockReset();
     mockRedis.get.mockReset();
+    mockRedis.ttl.mockReset();
   });
 
   describe('apply', () => {
@@ -253,13 +255,14 @@ describe('RiderService', () => {
     });
   });
 
-  describe('heartbeat - M4 修复', () => {
+  describe('heartbeat - M4 修复 + P6 #6 宽限机制', () => {
     it('未 APPROVED → renewed=false（不污染在线列表）', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ applicationStatus: 'PENDING' }),
       );
       const result = await service.heartbeat('user-1');
       expect(result.renewed).toBe(false);
+      expect(result.maybeOffline).toBe(false);
       expect(mockRedis.set).not.toHaveBeenCalled();
     });
 
@@ -267,9 +270,10 @@ describe('RiderService', () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(null);
       const result = await service.heartbeat('user-1');
       expect(result.renewed).toBe(false);
+      expect(result.maybeOffline).toBe(false);
     });
 
-    it('APPROVED → Redis SET 续期', async () => {
+    it('APPROVED → Redis SET 续期 + maybeOffline=false（TTL 重置远离宽限阈值）', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ applicationStatus: 'APPROVED' }),
       );
@@ -277,7 +281,74 @@ describe('RiderService', () => {
 
       const result = await service.heartbeat('user-1');
       expect(result.renewed).toBe(true);
+      expect(result.maybeOffline).toBe(false); // 刚续期 TTL=60s > 30s 阈值
       expect(mockRedis.set).toHaveBeenCalledWith('rider:online:user-1', '1', 'EX', 60);
+    });
+  });
+
+  describe('isMaybeOffline - P6 #6 宽限期判定', () => {
+    it('TTL=10s（≤30）→ maybeOffline=true（宽限期内，仍可派单）', async () => {
+      mockRedis.ttl.mockResolvedValue(10);
+      const result = await service.isMaybeOffline('user-1');
+      expect(result).toBe(true);
+      expect(mockRedis.ttl).toHaveBeenCalledWith('rider:online:user-1');
+    });
+
+    it('TTL=45s（>30）→ maybeOffline=false（正常在线）', async () => {
+      mockRedis.ttl.mockResolvedValue(45);
+      const result = await service.isMaybeOffline('user-1');
+      expect(result).toBe(false);
+    });
+
+    it('TTL=-2（key 不存在，已离线）→ maybeOffline=false', async () => {
+      mockRedis.ttl.mockResolvedValue(-2);
+      const result = await service.isMaybeOffline('user-1');
+      expect(result).toBe(false);
+    });
+
+    it('Redis 故障 → 降级 maybeOffline=false（不误判，配合 isOnline=false 兜底）', async () => {
+      mockRedis.ttl.mockRejectedValue(new Error('redis down'));
+      const result = await service.isMaybeOffline('user-1');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getProfile - P6 #6 maybeOffline 透传', () => {
+    it('在线 + TTL≤30s → view.maybeOffline=true', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
+      );
+      mockRedis.exists.mockResolvedValue(1); // 在线
+      mockRedis.ttl.mockResolvedValue(20); // 宽限期内
+
+      const view = await service.getProfile('user-1');
+      expect(view.isOnline).toBe(true);
+      expect(view.maybeOffline).toBe(true);
+    });
+
+    it('在线 + TTL=50s → view.maybeOffline=false', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
+      );
+      mockRedis.exists.mockResolvedValue(1);
+      mockRedis.ttl.mockResolvedValue(50);
+
+      const view = await service.getProfile('user-1');
+      expect(view.isOnline).toBe(true);
+      expect(view.maybeOffline).toBe(false);
+    });
+
+    it('离线 → view.maybeOffline=false（不查 TTL）', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
+      );
+      mockRedis.exists.mockResolvedValue(0); // TTL 过期 → 离线分支
+      mockDb.riderProfile.update.mockResolvedValue({});
+
+      const view = await service.getProfile('user-1');
+      expect(view.isOnline).toBe(false);
+      expect(view.maybeOffline).toBe(false);
+      expect(mockRedis.ttl).not.toHaveBeenCalled();
     });
   });
 
