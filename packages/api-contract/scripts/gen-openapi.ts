@@ -123,6 +123,8 @@ import {
   SystemConfigListResponse,
   SystemConfigResponse,
   UpdateSystemConfigRequest,
+  SupportConfig,
+  SupportConfigResponse,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
@@ -339,6 +341,7 @@ registry.register('AuditLogDetail', AuditLogDetail);
 registry.register('AuditLogQuery', AuditLogQuery);
 registry.register('SystemConfigItem', SystemConfigItem);
 registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
+registry.register('SupportConfig', SupportConfig);
 // Response 包装 schema 不注册到 components（gen-openapi 直接 inline 即可）
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
@@ -1250,6 +1253,21 @@ registry.registerPath({
       content: { 'application/json': { schema: SystemConfigResponse } },
     },
     404: { description: 'CONFIG_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P5 #1 客服配置公开下发（2026-08-25）：骑手/客户端 help 页读 support.phone
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/support/config',
+  tags: ['platform'],
+  description: '客服配置公开下发（phone + hours，help 页消费，无需登录）',
+  responses: {
+    200: {
+      description: '客服配置（phone 可拨号，hours 展示）',
+      content: { 'application/json': { schema: SupportConfigResponse } },
+    },
+    404: { description: 'SUPPORT_CONFIG_NOT_INITIALIZED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

@@ -122,5 +122,6 @@
   "E-WAREHOUSE-002": "Di luar jangkauan pengiriman",
   "E-WAREHOUSE-003": "Gudang tidak ditemukan",
   "E-AUTH-007": "Kata sandi belum diatur, atur melalui reset SMS terlebih dahulu",
-  "E-FEEDBACK-001": "URL gambar harus dari layanan unggah kami"
+  "E-FEEDBACK-001": "URL gambar harus dari layanan unggah kami",
+  "E-PLATFORM-003": "Konfigurasi dukungan belum diinisialisasi"
 }

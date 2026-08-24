@@ -4298,6 +4298,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/support/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 客服配置公开下发（phone + hours，help 页消费，无需登录） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 客服配置（phone 可拨号，hours 展示） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                phone: string;
+                                hours: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description SUPPORT_CONFIG_NOT_INITIALIZED */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders/{id}": {
         parameters: {
             query?: never;
@@ -16865,6 +16928,10 @@ export interface components {
         UpdateSystemConfigRequest: {
             value: string;
             description?: string;
+        };
+        SupportConfig: {
+            phone: string;
+            hours: string;
         };
         ImSignature: {
             url: string;

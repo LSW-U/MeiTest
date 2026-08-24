@@ -350,6 +350,18 @@ async function main() {
       value: '30',
       description: 'Minutes before PENDING_CONFIRM order is flagged as abnormal',
     },
+    {
+      // P5 #1 客服热线配置下发（2026-08-25）：骑手/客户端 help 页从后端读，避免硬编码
+      key: 'support.phone',
+      value: '+6707700000',
+      description: 'Customer support hotline (E.164-ish, displayed on help page; admin editable)',
+    },
+    {
+      // P5 #1 客服热线配置下发：客服工作时间（help 页展示，admin 可改）
+      key: 'support.hours',
+      value: 'Mon-Sun 08:00-20:00',
+      description: 'Customer support working hours (display only)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {

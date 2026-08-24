@@ -135,3 +135,22 @@ export const UpdateSystemConfigRequest = z.object({
 export type UpdateSystemConfigRequestType = z.infer<typeof UpdateSystemConfigRequest>;
 
 export const SystemConfigResponse = ApiResponse(SystemConfigItem);
+
+// ============================================================================
+// SupportConfig（客服配置公开下发，P5 #1 2026-08-25）
+// ============================================================================
+
+/**
+ * 客服配置视图（help 页消费，骑手/客户端通用）
+ *
+ * 数据源：SystemConfig key support.phone / support.hours（admin 可改，Redis cache-aside）
+ * - phone：E.164-ish 客服热线，前端 `tel:` 拨号
+ * - hours：客服工作时间（纯文本展示）
+ */
+export const SupportConfig = z.object({
+  phone: z.string().min(1),
+  hours: z.string(),
+});
+export type SupportConfigType = z.infer<typeof SupportConfig>;
+
+export const SupportConfigResponse = ApiResponse(SupportConfig);

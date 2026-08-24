@@ -122,5 +122,6 @@
   "E-WAREHOUSE-002": "Out of delivery range",
   "E-WAREHOUSE-003": "Armazén laha iha",
   "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida",
-  "E-FEEDBACK-001": "[TET] URL imajen tenki husi servisu upload ami"
+  "E-FEEDBACK-001": "[TET] URL imajen tenki husi servisu upload ami",
+  "E-PLATFORM-003": "Support config not initialized"
 }
