@@ -18954,10 +18954,6 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 50
-                phone:
-                  type: string
-                  minLength: 6
-                  maxLength: 20
                 vehicleType:
                   type: string
                   enum: *a52

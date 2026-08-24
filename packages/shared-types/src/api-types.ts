@@ -10432,7 +10432,6 @@ export interface paths {
                 content: {
                     "application/json": {
                         riderName?: string;
-                        phone?: string;
                         /** @enum {string} */
                         vehicleType?: "MOTORCYCLE" | "BICYCLE" | "CAR";
                         vehiclePlate?: string | null;
