@@ -347,8 +347,11 @@ describe('RiderService', () => {
     });
   });
 
-  describe('getProfile - W3 tier 兜底回写', () => {
-    it('DB tier 滞后（points=500 但 tier=SILVER）→ 返回 GOLD + 异步回写 tier', async () => {
+  describe('getProfile - W3 tier 派生校正（F5 2026-08-24 审查报告）', () => {
+    it('DB tier 滞后（points=500 但 tier=SILVER）→ 返回 GOLD，且不再 fire-and-forget 回写 DB', async () => {
+      // F5 修复：tier 是 points 纯派生量，查询路径只读不写
+      //   - 返回值用 calcTier 校正（防御历史脏值/旧滞后）
+      //   - 不再异步回写 DB（消除写放大 + 竞态），写时算准由 deliverTask 负责
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({
           status: 'OFFLINE',
@@ -361,16 +364,12 @@ describe('RiderService', () => {
       mockDb.riderProfile.update.mockResolvedValue({});
 
       const result = await service.getProfile('user-1');
-      expect(result.tier).toBe('GOLD'); // calcTier(500) 兜底
+      expect(result.tier).toBe('GOLD'); // calcTier(500) 派生校正
       expect(result.points).toBe(500);
 
       await new Promise((r) => setTimeout(r, 0));
-      expect(mockDb.riderProfile.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { userId: 'user-1' },
-          data: { tier: 'GOLD' },
-        }),
-      );
+      // F5 修复后：查询路径不再回写 tier（写时算准），update 不应被调
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
     });
   });
 
@@ -472,6 +471,44 @@ describe('RiderService', () => {
       await service.updateProfile({ riderId: 'user-1', riderName: 'Bob' });
       const call = mockDb.riderProfile.update.mock.calls[0][0] as { data: Record<string, unknown> };
       expect(call.data).not.toHaveProperty('idCardNumber');
+    });
+
+    it('phone 不在 updateProfile 入参（F2 2026-08-24 审查报告：换号走 auth.changePhone）', async () => {
+      // UpdateRiderProfileInput 接口不含 phone，TS 层保证不可改
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(buildProfile({ applicationStatus: 'APPROVED' }));
+      mockRedis.exists.mockResolvedValue(0);
+
+      await service.updateProfile({ riderId: 'user-1', riderName: 'Bob' });
+      const call = mockDb.riderProfile.update.mock.calls[0][0] as { data: Record<string, unknown> };
+      expect(call.data).not.toHaveProperty('phone');
+    });
+
+    it('空补丁也 calcTier 兜底（F6 2026-08-24 审查报告：与 getProfile 对称）', async () => {
+      // points=500 但 DB tier=SILVER 滞后，空补丁早返回应仍返回 GOLD
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', points: 500, tier: 'SILVER' }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      const result = await service.updateProfile({ riderId: 'user-1' });
+      expect(result.tier).toBe('GOLD');
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
+    });
+
+    it('非空补丁也 calcTier 兜底（F6）', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', points: 500, tier: 'SILVER' }),
+      );
+      mockDb.riderProfile.update.mockResolvedValue(
+        buildProfile({ applicationStatus: 'APPROVED', points: 500, tier: 'SILVER', riderName: 'Bob' }),
+      );
+      mockRedis.exists.mockResolvedValue(0);
+
+      const result = await service.updateProfile({ riderId: 'user-1', riderName: 'Bob' });
+      expect(result.tier).toBe('GOLD');
     });
   });
 });

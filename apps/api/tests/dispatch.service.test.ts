@@ -417,6 +417,83 @@ describe('DispatchService', () => {
     });
   });
 
+  describe('deliverTask - F1 return 任务拦截（2026-08-24 审查报告）', () => {
+    it('return 任务送达 → 只推进 task→DELIVERED，不碰 Order / 不建 CashCollection / 不计积分', async () => {
+      // return 任务走到第三步 DELIVERING，调 deliverTask 送达
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'DELIVERING',
+          taskType: 'return',
+          refundId: 'refund-1',
+          orderId: 'order-1',
+          order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD' },
+        }),
+      );
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED', taskType: 'return', refundId: 'refund-1' }),
+      );
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
+
+      const result = await service.deliverTask({
+        riderId: 'r1',
+        taskId: 'task-1',
+        collectedAmount: 100,
+      });
+
+      expect(result.status).toBe('DELIVERED');
+      // 不碰 Order（退货单已是 CANCELLED，不应倒退回 DELIVERED_*）
+      expect(mockDb.order.update).not.toHaveBeenCalled();
+      // 不建 CashCollection（退货不收款）
+      expect(mockDb.cashCollection.create).not.toHaveBeenCalled();
+      // 不计积分（return 不计）
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled();
+      // 也不应进入事务（return 送达走独立分支，无 withTransaction）
+      expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+    });
+
+    it('delivery 任务送达 → 仍正常推进 Order + 计积分 + 同步 tier（回归保护）', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'PICKED_UP',
+          taskType: 'delivery',
+          orderId: 'order-1',
+          order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD' },
+        }),
+      );
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED', taskType: 'delivery' }),
+      );
+      // F5 修复：deliverTask 事务内 increment points 后重读 points 算 tier 再写回
+      //   - 第 1 次 findUnique = resolveRiderProfileId（riderId → profileId）
+      //   - 第 2 次 findUnique = 事务内重读 points（返回 mock points 供 calcTier）
+      let findUniqueCallCount = 0;
+      mockDb.riderProfile.findUnique.mockImplementation(async () => {
+        findUniqueCallCount += 1;
+        // resolveRiderProfileId 返回 { id }；事务内重读返回 { points }
+        return findUniqueCallCount === 1 ? { id: 'r1' } : { points: 110 };
+      });
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+      expect(mockDb.order.update).toHaveBeenCalled();
+      expect(mockDb.cashCollection.create).toHaveBeenCalled();
+      // 积分 increment + tier 同步写（两次 update：increment points / set tier）
+      expect(mockDb.riderProfile.update).toHaveBeenCalledTimes(2);
+      // 第二次 update 写 tier=calcTier(110)=SILVER（100 门槛）
+      expect(mockDb.riderProfile.update).toHaveBeenNthCalledWith(2, {
+        where: { id: 'r1' },
+        data: { tier: 'SILVER' },
+      });
+    });
+  });
+
   describe('reportIssue - S5 / V2-S1 / V2-S2 修复', () => {
     it('写 OrderEvent(ISSUE_REPORTED) + WS 推 customer-service room', async () => {
       mockDb.deliveryTask.findUnique.mockResolvedValue(

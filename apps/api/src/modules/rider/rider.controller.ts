@@ -51,10 +51,17 @@ const UpdateDutyRequest = z.object({
   acceptMode: z.enum(['GRAB', 'AUTO_DISPATCH']).optional(),
 });
 
-/** 骑手自助改资料 schema（idCardNumber 不可改；与 contract UpdateRiderProfileRequest 同步） */
+/**
+ * 骑手自助改资料 schema
+ *
+ * 不可改字段（F2 2026-08-24 审查报告）：
+ *   - idCardNumber：换号=换人，应重新走 apply 审核
+ *   - phone：换号涉及登录态 + SMS 验证 + 唯一性 + token revoke，应走 auth.changePhone，
+ *     不在自助改资料范围（避免无验证改号后门）
+ * 与 contract UpdateRiderProfileRequest 同步
+ */
 const UpdateRiderProfileRequest = z.object({
   riderName: z.string().min(1).max(50).optional(),
-  phone: z.string().min(6).max(20).optional(),
   vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']).optional(),
   vehiclePlate: z.string().max(20).nullable().optional(),
   avatarUrl: z.string().url().max(2048).optional().nullable(),
@@ -137,7 +144,8 @@ export class RiderController {
    * 骑手自助改资料（W3 骑手个人区，2026-08-24）
    *
    * - idCardNumber 不可改（换号 = 换人，应重新走 apply 审核）
-   * - 支持改：riderName / phone / vehicleType / vehiclePlate / avatarUrl / idCardImageUrl / licenseImageUrl
+   * - phone 不可改（换号涉及登录态 + SMS 验证，应走 auth.changePhone；F2 2026-08-24 审查报告）
+   * - 支持改：riderName / vehicleType / vehiclePlate / avatarUrl / idCardImageUrl / licenseImageUrl
    * - 仅 APPROVED 骑手可改（PENDING/REJECTED 不允许自助改资料）
    */
   @Patch('profile')
@@ -153,7 +161,6 @@ export class RiderController {
     const profile = await this.riderService.updateProfile({
       riderId: user.sub,
       riderName: body.riderName,
-      phone: body.phone,
       vehicleType: body.vehicleType,
       vehiclePlate: body.vehiclePlate,
       avatarUrl: body.avatarUrl ?? undefined,

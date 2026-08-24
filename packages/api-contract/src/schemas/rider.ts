@@ -60,10 +60,16 @@ export const ApplyRiderRequest = z.object({
   preferredWarehouseIds: z.array(Id).optional(),
 });
 
-/** 骑手自助改资料请求（rider/profile，PATCH；idCardNumber 不可改） */
+/**
+ * 骑手自助改资料请求（rider/profile，PATCH）
+ *
+ * 不可改字段（F2 2026-08-24 审查报告）：
+ *   - idCardNumber：换号=换人，应重新走 apply 审核
+ *   - phone：换号涉及登录态 + SMS 验证 + 唯一性 + token revoke，应走 auth.changePhone，
+ *     不在自助改资料范围（与 idCardNumber 同决策，避免无验证改号后门）
+ */
 export const UpdateRiderProfileRequest = z.object({
   riderName: z.string().min(1).max(50).optional(),
-  phone: z.string().min(6).max(20).optional(),
   vehicleType: VehicleType.optional(),
   vehiclePlate: z.string().max(20).nullable().optional(),
   avatarUrl: ImageUrl,

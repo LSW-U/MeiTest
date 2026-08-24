@@ -54,6 +54,21 @@ export function calcTier(points: number): RiderTier {
   return 'BRONZE';
 }
 
+/**
+ * 对 profile 视图做 tier 派生校正（F5/F6 2026-08-24 审查报告）
+ *
+ * - tier 是 points 的纯派生量（calcTier(points)），DB.tier 由 deliverTask 写积分时同步写准（见 dispatch.service）
+ * - 此处仍按 points 重算一次返回值做兜底防御：若 DB.tier 因历史脏值/旧路径滞后，view.tier 以 calcTier 为准
+ * - 不再 fire-and-forget 回写 DB（消除 getProfile 写放大 + 两条端点 tier 不一致），写时算准即够
+ */
+function withDerivedTier(view: RiderProfileView): RiderProfileView {
+  const expected = calcTier(view.points);
+  if (view.tier !== expected) {
+    view.tier = expected;
+  }
+  return view;
+}
+
 /** 入驻申请 DTO */
 export interface ApplyRiderInput {
   userId: string;
@@ -83,11 +98,16 @@ export interface UpdateDutyInput {
   acceptMode?: AcceptMode;
 }
 
-/** 骑手自助改资料 DTO（idCardNumber 不可改） */
+/**
+ * 骑手自助改资料 DTO
+ *
+ * 不可改字段（F2 2026-08-24 审查报告）：
+ *   - idCardNumber：换号=换人，应重新走 apply 审核
+ *   - phone：换号涉及登录态 + SMS 验证 + 唯一性 + token revoke，应走 auth.changePhone
+ */
 export interface UpdateRiderProfileInput {
   riderId: string;
   riderName?: string;
-  phone?: string;
   vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
   vehiclePlate?: string | null;
   avatarUrl?: string | null;
@@ -365,27 +385,13 @@ export class RiderService {
             error: (e as Error).message,
           });
         });
-      return this.toView({ ...profile, status: 'OFFLINE' as const }, false);
+      // F5 修复（2026-08-24 审查报告）：tier 改为派生校正返回，不再 fire-and-forget 回写 DB
+      return withDerivedTier(this.toView({ ...profile, status: 'OFFLINE' as const }, false));
     }
 
-    // W3 骑手积分（2026-08-24）：tier 读多写少，查询时按 points 重算兜底
-    //   - DB tier 仅在 deliverTask increment 时滞后写（见 dispatch.service），查询时 calcTier 兜底保证准确
-    const view = this.toView(profile, isOnline);
-    const expectedTier = calcTier(view.points);
-    if (view.tier !== expectedTier) {
-      view.tier = expectedTier;
-      // 异步回写 DB tier（不阻塞响应，下次查询命中）
-      db.riderProfile
-        .update({ where: { userId: riderId }, data: { tier: expectedTier } })
-        .catch((e) => {
-          logger.warn({
-            msg: 'RIDER_TIER_RECONCILE_FAILED',
-            riderId,
-            error: (e as Error).message,
-          });
-        });
-    }
-    return view;
+    // F5 修复（2026-08-24 审查报告）：tier 是 points 的纯派生量，deliverTask 写积分时已同步写 DB.tier；
+    //   查询路径只读不写，用 calcTier 兜底校正返回值（防御历史脏值/旧滞后），消除写放大 + 竞态
+    return withDerivedTier(this.toView(profile, isOnline));
   }
 
   /**
@@ -414,7 +420,6 @@ export class RiderService {
 
     const data: {
       riderName?: string;
-      phone?: string;
       vehicleType?: 'MOTORCYCLE' | 'BICYCLE' | 'CAR';
       vehiclePlate?: string | null;
       avatarUrl?: string | null;
@@ -422,7 +427,6 @@ export class RiderService {
       licenseImageUrl?: string | null;
     } = {};
     if (input.riderName !== undefined) data.riderName = input.riderName;
-    if (input.phone !== undefined) data.phone = input.phone;
     if (input.vehicleType !== undefined) data.vehicleType = input.vehicleType;
     if (input.vehiclePlate !== undefined) {
       data.vehiclePlate = input.vehiclePlate === null || input.vehiclePlate.trim() === '' ? null : input.vehiclePlate.trim();
@@ -433,7 +437,8 @@ export class RiderService {
 
     if (Object.keys(data).length === 0) {
       const isOnline = await this.isOnline(profile.userId);
-      return this.toView(profile, isOnline);
+      // F6 修复（2026-08-24 审查报告）：空补丁早返回也要 calcTier 兜底，与 getProfile 对称
+      return withDerivedTier(this.toView(profile, isOnline));
     }
 
     const updated = await db.riderProfile.update({
@@ -448,7 +453,8 @@ export class RiderService {
     });
 
     const isOnline = await this.isOnline(updated.userId);
-    return this.toView(updated, isOnline);
+    // F6 修复（2026-08-24 审查报告）：非空补丁路径同样 calcTier 兜底
+    return withDerivedTier(this.toView(updated, isOnline));
   }
 
   /** 列出待审核申请（admin 用） */
@@ -728,7 +734,14 @@ export class RiderService {
       idCardImageUrl: p.idCardImageUrl,
       licenseImageUrl: p.licenseImageUrl,
       points: p.points,
-      tier: p.tier as RiderTier,
+      // F3 修复（2026-08-24 审查报告）：DB 已加 CHECK 约束（migration 20260824141706），
+      //   此处再做运行时 narrowing 兜底（防御历史脏值/直连 DB 写入），非法值降级 BRONZE 而非裸断言通过
+      tier: ((): RiderTier => {
+        const t = p.tier as string;
+        return t === 'BRONZE' || t === 'SILVER' || t === 'GOLD' || t === 'PLATINUM'
+          ? (t as RiderTier)
+          : 'BRONZE';
+      })(),
       preferredWarehouseIds: p.preferredWarehouseIds ?? [],
       isOnline,
       createdAt: p.createdAt.toISOString(),

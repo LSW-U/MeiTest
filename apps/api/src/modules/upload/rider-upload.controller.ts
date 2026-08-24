@@ -63,7 +63,8 @@ interface UploadResult {
 interface UploadOptions {
   keyPrefix: string;
   logLabel: string;
-  sizeErrorLabel: string;
+  /** 'doc' 模式尺寸过小的错误前缀（avatar 模式不使用） */
+  sizeErrorLabel?: string;
   /** 'avatar' 强制 1:1；'doc' 仅最小尺寸任意比例 */
   mode: 'avatar' | 'doc';
 }
@@ -83,7 +84,8 @@ export class RiderUploadController {
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         if (!ALLOWED_MIME[file.mimetype]) {
-          cb(new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`), false);
+          // F4 修复（2026-08-24 审查报告）：错误码化 + i18n，移除硬编码中文字符串
+          cb(new BadRequestException({ code: 'E-UPLOAD-010', message: `unsupported mime: ${file.mimetype}` }), false);
           return;
         }
         cb(null, true);
@@ -95,7 +97,6 @@ export class RiderUploadController {
     return this.uploadImage(file, {
       keyPrefix: 'riders/avatar-',
       logLabel: 'rider_avatar',
-      sizeErrorLabel: '头像',
       mode: 'avatar',
     });
   }
@@ -108,7 +109,7 @@ export class RiderUploadController {
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         if (!ALLOWED_MIME[file.mimetype]) {
-          cb(new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`), false);
+          cb(new BadRequestException({ code: 'E-UPLOAD-010', message: `unsupported mime: ${file.mimetype}` }), false);
           return;
         }
         cb(null, true);
@@ -120,7 +121,7 @@ export class RiderUploadController {
     return this.uploadImage(file, {
       keyPrefix: 'riders/idcard-',
       logLabel: 'rider_id_card',
-      sizeErrorLabel: '身份证图',
+      sizeErrorLabel: 'ID card image',
       mode: 'doc',
     });
   }
@@ -133,7 +134,7 @@ export class RiderUploadController {
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         if (!ALLOWED_MIME[file.mimetype]) {
-          cb(new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`), false);
+          cb(new BadRequestException({ code: 'E-UPLOAD-010', message: `unsupported mime: ${file.mimetype}` }), false);
           return;
         }
         cb(null, true);
@@ -145,7 +146,7 @@ export class RiderUploadController {
     return this.uploadImage(file, {
       keyPrefix: 'riders/license-',
       logLabel: 'rider_license',
-      sizeErrorLabel: '证件图',
+      sizeErrorLabel: 'License image',
       mode: 'doc',
     });
   }
@@ -164,47 +165,51 @@ export class RiderUploadController {
     options: UploadOptions,
   ): Promise<UploadResult> {
     if (!file) {
-      throw new BadRequestException('未收到文件（field name 必须为 "file"）');
+      // F4 修复（2026-08-24 审查报告）：错误码化 + i18n，所有 BadRequestException 走 E-UPLOAD-xxx
+      throw new BadRequestException({ code: 'E-UPLOAD-011', message: 'No file received (field name must be "file")' });
     }
     if (!file.buffer || file.buffer.length < MIN_FILE_SIZE) {
-      throw new BadRequestException('文件为空');
+      throw new BadRequestException({ code: 'E-UPLOAD-012', message: 'File is empty' });
     }
     const detected = detectImageFormat(file.buffer);
     if (!detected) {
-      throw new BadRequestException('文件内容不是有效的图片（jpg/png/webp），可能 mime 类型被伪造');
+      throw new BadRequestException({
+        code: 'E-UPLOAD-013',
+        message: 'File content is not a valid image (jpg/png/webp), the mime type may be forged',
+      });
     }
     if (detected !== ALLOWED_MIME[file.mimetype]) {
-      throw new BadRequestException(`文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`);
+      throw new BadRequestException({ code: 'E-UPLOAD-014', message: `File content (${detected}) does not match declared mime (${file.mimetype})` });
     }
     // 尺寸校验
     try {
       const r = imageSize(file.buffer);
       if (!r.width || !r.height) {
-        throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
+        throw new BadRequestException({ code: 'E-UPLOAD-015', message: 'Unable to read image dimensions (file may be corrupted)' });
       }
       if (options.mode === 'avatar') {
         if (r.width < AVATAR_MIN_DIMENSION || r.height < AVATAR_MIN_DIMENSION) {
-          throw new BadRequestException(
-            `头像尺寸 ${r.width}x${r.height} 过小，最小 ${AVATAR_MIN_DIMENSION}x${AVATAR_MIN_DIMENSION}`,
-          );
+          throw new BadRequestException({
+            code: 'E-UPLOAD-016',
+            message: `Avatar dimensions ${r.width}x${r.height} too small, minimum ${AVATAR_MIN_DIMENSION}x${AVATAR_MIN_DIMENSION}`,
+          });
         }
         // 1:1 容差校验
         const ratio = r.width / r.height;
         if (Math.abs(ratio - 1) > AVATAR_ASPECT_TOLERANCE) {
-          throw new BadRequestException(
-            `头像必须为 1:1 正方形（当前 ${r.width}x${r.height}），请裁剪后重新上传`,
-          );
+          throw new BadRequestException({ code: 'E-UPLOAD-017', message: `Avatar must be 1:1 square (current ${r.width}x${r.height}), please crop and re-upload` });
         }
       } else {
         if (r.width < DOC_MIN_WIDTH || r.height < DOC_MIN_HEIGHT) {
-          throw new BadRequestException(
-            `${options.sizeErrorLabel}尺寸 ${r.width}x${r.height} 过小，最小 ${DOC_MIN_WIDTH}x${DOC_MIN_HEIGHT}`,
-          );
+          throw new BadRequestException({
+            code: 'E-UPLOAD-016',
+            message: `${options.sizeErrorLabel} dimensions ${r.width}x${r.height} too small, minimum ${DOC_MIN_WIDTH}x${DOC_MIN_HEIGHT}`,
+          });
         }
       }
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
-      throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
+      throw new BadRequestException({ code: 'E-UPLOAD-018', message: `Failed to read image dimensions: ${(err as Error).message}` });
     }
     const ext = detected;
     const rand = randomBytes(4).toString('hex');
