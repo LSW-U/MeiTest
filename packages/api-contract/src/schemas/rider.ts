@@ -14,6 +14,15 @@ export const RiderStatus = z.enum(['OFFLINE', 'ONLINE', 'BUSY']);
 /** 车辆类型 */
 export const VehicleType = z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']);
 
+/** 骑手等级（配送积分门槛：BRONZE 0+ / SILVER 100+ / GOLD 500+ / PLATINUM 2000+） */
+export const RiderTier = z.enum(['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']);
+
+/** 骑手申请状态 */
+export const ApplicationStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
+
+/** OSS 图片 URL（apply/update 通用，可选） */
+const ImageUrl = z.string().url().max(2048).optional().nullable();
+
 /** 骑手资料视图 */
 export const RiderProfile = z.object({
   id: Id,
@@ -23,10 +32,49 @@ export const RiderProfile = z.object({
   vehicleType: VehicleType,
   vehiclePlate: z.string().nullable(),
   status: RiderStatus,
+  applicationStatus: ApplicationStatus,
   totalDeliveries: z.number().int().nonnegative(),
   rating: z.number().min(0).max(5),
+  // W3 骑手个人区（2026-08-24）：证件/头像 URL + 配送积分/等级
+  avatarUrl: z.string().url().nullable(),
+  idCardImageUrl: z.string().url().nullable(),
+  licenseImageUrl: z.string().url().nullable(),
+  points: z.number().int().nonnegative(),
+  tier: RiderTier,
+  preferredWarehouseIds: z.array(Id),
+  isOnline: z.boolean(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
+});
+
+/** 入驻申请请求（common/rider/apply，apply payload 带 URL 方案） */
+export const ApplyRiderRequest = z.object({
+  riderName: z.string().min(1).max(50),
+  phone: z.string().min(6).max(20),
+  vehicleType: VehicleType.optional(),
+  vehiclePlate: z.string().max(20).optional(),
+  idCardNumber: z.string().min(6).max(30),
+  avatarUrl: ImageUrl,
+  idCardImageUrl: ImageUrl,
+  licenseImageUrl: ImageUrl,
+  preferredWarehouseIds: z.array(Id).optional(),
+});
+
+/**
+ * 骑手自助改资料请求（rider/profile，PATCH）
+ *
+ * 不可改字段（F2 2026-08-24 审查报告）：
+ *   - idCardNumber：换号=换人，应重新走 apply 审核
+ *   - phone：换号涉及登录态 + SMS 验证 + 唯一性 + token revoke，应走 auth.changePhone，
+ *     不在自助改资料范围（与 idCardNumber 同决策，避免无验证改号后门）
+ */
+export const UpdateRiderProfileRequest = z.object({
+  riderName: z.string().min(1).max(50).optional(),
+  vehicleType: VehicleType.optional(),
+  vehiclePlate: z.string().max(20).nullable().optional(),
+  avatarUrl: ImageUrl,
+  idCardImageUrl: ImageUrl,
+  licenseImageUrl: ImageUrl,
 });
 
 /** 接单模式（抢单 vs 系统派单） */

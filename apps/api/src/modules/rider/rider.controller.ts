@@ -32,13 +32,16 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
-/** 入驻申请 schema（rider.ts contract 缺，本地补 zod） */
+/** 入驻申请 schema（与 packages/api-contract/src/schemas/rider.ts ApplyRiderRequest 同步） */
 const ApplyRiderRequest = z.object({
   riderName: z.string().min(1).max(50),
   phone: z.string().min(6).max(20),
   vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']).optional(),
   vehiclePlate: z.string().max(20).optional(),
   idCardNumber: z.string().min(6).max(30),
+  avatarUrl: z.string().url().max(2048).optional().nullable(),
+  idCardImageUrl: z.string().url().max(2048).optional().nullable(),
+  licenseImageUrl: z.string().url().max(2048).optional().nullable(),
   preferredWarehouseIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -46,6 +49,24 @@ const ApplyRiderRequest = z.object({
 const UpdateDutyRequest = z.object({
   status: z.enum(['OFFLINE', 'ONLINE', 'BUSY']),
   acceptMode: z.enum(['GRAB', 'AUTO_DISPATCH']).optional(),
+});
+
+/**
+ * 骑手自助改资料 schema
+ *
+ * 不可改字段（F2 2026-08-24 审查报告）：
+ *   - idCardNumber：换号=换人，应重新走 apply 审核
+ *   - phone：换号涉及登录态 + SMS 验证 + 唯一性 + token revoke，应走 auth.changePhone，
+ *     不在自助改资料范围（避免无验证改号后门）
+ * 与 contract UpdateRiderProfileRequest 同步
+ */
+const UpdateRiderProfileRequest = z.object({
+  riderName: z.string().min(1).max(50).optional(),
+  vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']).optional(),
+  vehiclePlate: z.string().max(20).nullable().optional(),
+  avatarUrl: z.string().url().max(2048).optional().nullable(),
+  idCardImageUrl: z.string().url().max(2048).optional().nullable(),
+  licenseImageUrl: z.string().url().max(2048).optional().nullable(),
 });
 
 /** 审核 schema */
@@ -91,6 +112,9 @@ export class RiderApplicationController {
       vehicleType: body.vehicleType,
       vehiclePlate: body.vehiclePlate,
       idCardNumber: body.idCardNumber,
+      avatarUrl: body.avatarUrl ?? undefined,
+      idCardImageUrl: body.idCardImageUrl ?? undefined,
+      licenseImageUrl: body.licenseImageUrl ?? undefined,
       preferredWarehouseIds: body.preferredWarehouseIds,
     });
     return { success: true as const, data: profile };
@@ -113,6 +137,36 @@ export class RiderController {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
     const profile = await this.riderService.getProfile(user.sub);
+    return { success: true as const, data: profile };
+  }
+
+  /**
+   * 骑手自助改资料（W3 骑手个人区，2026-08-24）
+   *
+   * - idCardNumber 不可改（换号 = 换人，应重新走 apply 审核）
+   * - phone 不可改（换号涉及登录态 + SMS 验证，应走 auth.changePhone；F2 2026-08-24 审查报告）
+   * - 支持改：riderName / vehicleType / vehiclePlate / avatarUrl / idCardImageUrl / licenseImageUrl
+   * - 仅 APPROVED 骑手可改（PENDING/REJECTED 不允许自助改资料）
+   */
+  @Patch('profile')
+  @Audit({ resource: 'RiderProfile' })
+  async updateProfile(
+    @Body(new ZodValidationPipe(UpdateRiderProfileRequest)) body: z.infer<typeof UpdateRiderProfileRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const profile = await this.riderService.updateProfile({
+      riderId: user.sub,
+      riderName: body.riderName,
+      vehicleType: body.vehicleType,
+      vehiclePlate: body.vehiclePlate,
+      avatarUrl: body.avatarUrl ?? undefined,
+      idCardImageUrl: body.idCardImageUrl ?? undefined,
+      licenseImageUrl: body.licenseImageUrl ?? undefined,
+    });
     return { success: true as const, data: profile };
   }
 

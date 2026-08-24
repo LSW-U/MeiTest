@@ -6038,6 +6038,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                     /** Format: date-time */
                                     estimatedArrival: string | null;
                                     warehouseCode: string;
@@ -6134,6 +6135,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6255,6 +6257,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6372,6 +6375,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6533,6 +6537,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -8396,8 +8401,21 @@ export interface paths {
                                     vehiclePlate: string | null;
                                     /** @enum {string} */
                                     status: "OFFLINE" | "ONLINE" | "BUSY";
+                                    /** @enum {string} */
+                                    applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                     totalDeliveries: number;
                                     rating: number;
+                                    /** Format: uri */
+                                    avatarUrl: string | null;
+                                    /** Format: uri */
+                                    idCardImageUrl: string | null;
+                                    /** Format: uri */
+                                    licenseImageUrl: string | null;
+                                    points: number;
+                                    /** @enum {string} */
+                                    tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                    preferredWarehouseIds: string[];
+                                    isOnline: boolean;
                                     /** Format: date-time */
                                     createdAt: string;
                                     /** Format: date-time */
@@ -8505,8 +8523,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -8605,8 +8636,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -8703,8 +8747,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -8781,8 +8838,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10164,7 +10234,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 骑手入驻申请（创建 RiderProfile applicationStatus=PENDING） */
+        /** @description 骑手入驻申请（创建 RiderProfile applicationStatus=PENDING）。W3 骑手个人区（2026-08-24）：apply payload 改带 URL 字段（avatarUrl/idCardImageUrl/licenseImageUrl），前端先调 /common/rider/uploads/* 拿 URL 再提交；后端只存 URL 不收文件。 */
         post: {
             parameters: {
                 query?: never;
@@ -10178,9 +10248,16 @@ export interface paths {
                         riderName: string;
                         phone: string;
                         /** @enum {string} */
-                        vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                        vehicleType?: "MOTORCYCLE" | "BICYCLE" | "CAR";
                         vehiclePlate?: string;
                         idCardNumber: string;
+                        /** Format: uri */
+                        avatarUrl?: string | null;
+                        /** Format: uri */
+                        idCardImageUrl?: string | null;
+                        /** Format: uri */
+                        licenseImageUrl?: string | null;
+                        preferredWarehouseIds?: string[];
                     };
                 };
             };
@@ -10206,8 +10283,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10250,7 +10340,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 获取当前骑手资料（含 applicationStatus + 在线状态） */
+        /** @description 获取当前骑手资料（含 applicationStatus + 在线状态 + avatarUrl/证件 URL + points/tier） */
         get: {
             parameters: {
                 query?: never;
@@ -10281,8 +10371,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10317,7 +10420,116 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description 骑手自助改资料（W3 骑手个人区 2026-08-24）。idCardNumber 不可改（换号应重新 apply）；支持改 riderName/phone/vehicleType/vehiclePlate/avatarUrl/idCardImageUrl/licenseImageUrl；URL 字段传 null 清除。仅 APPROVED 骑手可改。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        riderName?: string;
+                        phone?: string;
+                        /** @enum {string} */
+                        vehicleType?: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                        vehiclePlate?: string | null;
+                        /** Format: uri */
+                        avatarUrl?: string | null;
+                        /** Format: uri */
+                        idCardImageUrl?: string | null;
+                        /** Format: uri */
+                        licenseImageUrl?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新后的骑手资料 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                riderName: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicleType: "MOTORCYCLE" | "BICYCLE" | "CAR";
+                                vehiclePlate: string | null;
+                                /** @enum {string} */
+                                status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
+                                totalDeliveries: number;
+                                rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description NOT_APPROVED */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description PROFILE_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/rider/duty": {
@@ -10373,8 +10585,21 @@ export interface paths {
                                 vehiclePlate: string | null;
                                 /** @enum {string} */
                                 status: "OFFLINE" | "ONLINE" | "BUSY";
+                                /** @enum {string} */
+                                applicationStatus: "PENDING" | "APPROVED" | "REJECTED";
                                 totalDeliveries: number;
                                 rating: number;
+                                /** Format: uri */
+                                avatarUrl: string | null;
+                                /** Format: uri */
+                                idCardImageUrl: string | null;
+                                /** Format: uri */
+                                licenseImageUrl: string | null;
+                                points: number;
+                                /** @enum {string} */
+                                tier: "BRONZE" | "SILVER" | "GOLD" | "PLATINUM";
+                                preferredWarehouseIds: string[];
+                                isOnline: boolean;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10640,6 +10865,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                 }[];
                             };
                         };
@@ -10717,6 +10943,7 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    contactPhone?: string;
                                 }[];
                             };
                         };
@@ -10801,6 +11028,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -10903,6 +11131,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11006,6 +11235,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11110,6 +11340,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -11193,6 +11424,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -12161,6 +12393,7 @@ export interface paths {
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
+                                contactPhone?: string;
                             };
                         };
                     };
@@ -12868,6 +13101,357 @@ export interface paths {
                 };
                 /** @description E-AUTH-001 跨端调用或 E-AUTH-012 非本人 */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/rider/uploads/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手头像上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 200×200，强制 1:1 正方形（容差 5%）。MinIO 路径前缀 riders/avatar-。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（apply 阶段填入 avatarUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 200×200）/ 非 1:1 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/rider/uploads/id-card-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手身份证图上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，防模糊）。MinIO 路径前缀 riders/idcard-。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（apply 阶段填入 idCardImageUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/rider/uploads/license-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手驾照/车辆证件图上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，防模糊）。MinIO 路径前缀 riders/license-。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（apply 阶段填入 licenseImageUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -16001,6 +16585,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            contactPhone?: string;
             /** Format: date-time */
             estimatedArrival: string | null;
             warehouseCode: string;
@@ -16056,6 +16641,7 @@ export interface components {
                     createdAt: string;
                     /** Format: date-time */
                     updatedAt: string;
+                    contactPhone?: string;
                     /** Format: date-time */
                     estimatedArrival: string | null;
                     warehouseCode: string;

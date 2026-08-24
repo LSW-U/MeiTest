@@ -127,6 +127,8 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
       },
       riderProfile: {
         findUnique: vi.fn().mockResolvedValue({ id: 'rider-1' }),
+        // W3 骑手积分：deliverTask 事务内 tx.riderProfile.update（increment totalDeliveries + points）
+        update: vi.fn().mockResolvedValue({}),
       },
       $executeRaw: vi.fn(),
       _tables: tables,

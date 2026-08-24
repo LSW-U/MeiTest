@@ -26,6 +26,7 @@ import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 import { redis } from '../../shared/cache';
+import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -62,6 +63,8 @@ export interface DeliveryTaskView {
   deliveryFee?: number;
   /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
   itemsSummary?: string;
+  /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
+  contactPhone?: string;
 }
 
 /** 抢单上下文 */
@@ -190,7 +193,7 @@ export class DispatchService {
       orderBy: { createdAt: 'asc' },
       take: limit,
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -216,7 +219,7 @@ export class DispatchService {
       },
       orderBy: { updatedAt: 'desc' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -286,7 +289,7 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -349,7 +352,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -419,6 +422,35 @@ export class DispatchService {
       });
     }
 
+    // F1 修复（2026-08-24 审查报告）：return 任务送达走独立分支，不复用 delivery 状态机推进
+    //   - return 任务（退货回仓）送达：只推进 deliveryTask → DELIVERED，不碰 Order（订单已是 CANCELLED）、
+    //     不建 CashCollection（退货不收款）、不计积分（delivery 才计）
+    //   - 历史问题：原 deliverTask 对 taskType 无前置断言，return 任务走 DELIVERING 第三步会被 deliverTask 接管，
+    //     把退款单 Order.status 倒退回 DELIVERED_* 并写入虚假 cashCollection
+    if (task.taskType === 'return') {
+      const updated = await db.deliveryTask.update({
+        where: { id: input.taskId },
+        data: {
+          status: 'DELIVERED',
+          deliveredAt: new Date(),
+          note: input.note ?? task.note,
+        },
+        include: {
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+          warehouse: { select: { code: true } },
+        },
+      });
+      logger.info({
+        msg: 'DISPATCH_RETURN_TASK_DELIVERED',
+        taskId: input.taskId,
+        orderId: task.orderId,
+        refundId: task.refundId,
+      });
+      return this.toView(updated);
+    }
+
+    // delivery 任务送达：推进 Order 状态机 + COD 收款 + 计积分
+
     const order = task.order;
     const isCod = order.paymentMethod === 'COD';
 
@@ -450,7 +482,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -470,6 +502,31 @@ export class DispatchService {
             note: input.note,
           },
           select: { id: true },
+        });
+      }
+
+      // W3 骑手积分：delivery 任务送达 +1 单 +10 分 + 同步 tier（F5/F6 2026-08-24 审查报告）
+      //   - 事务内 increment points，并按新 points 同步写 tier（calcTier 纯派生量，写时算准）
+      //   - 这样 getProfile/updateProfile 只读 tier 不再需要回写兜底，消除查询路径写放大 + 两条端点 tier 不一致
+      await tx.riderProfile.update({
+        where: { id: riderId },
+        data: {
+          totalDeliveries: { increment: 1 },
+          points: { increment: POINTS_PER_DELIVERY },
+          // Prisma 不支持 increment 后在同一 UPDATE 用结果算 tier，先读后算再写：
+          // 此处用子查询式 SQL 太重，退而求其次：increment points 后单独再 update tier。
+          // 为保证单事务一致性，下面显式查一次再写（事务内可见刚 increment 的值）。
+        },
+      });
+      // 事务内重读 points 算 tier 并写回（calcTier 是 points 纯派生量）
+      const reloaded = await tx.riderProfile.findUnique({
+        where: { id: riderId },
+        select: { points: true },
+      });
+      if (reloaded) {
+        await tx.riderProfile.update({
+          where: { id: riderId },
+          data: { tier: calcTier(reloaded.points) },
         });
       }
       return { updated: t };
@@ -515,7 +572,7 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -551,7 +608,7 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -704,7 +761,7 @@ export class DispatchService {
     const existing = await db.deliveryTask.findFirst({
       where: { orderId, taskType: 'delivery' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -759,7 +816,7 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -899,7 +956,7 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -1288,6 +1345,9 @@ export class DispatchService {
       paymentMethod: (t.order as any)?.paymentMethod,
       deliveryFee: (t.order as any)?.deliveryFee,
       itemsSummary,
+      // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
+      contactPhone:
+        ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,
     };
   }
 }

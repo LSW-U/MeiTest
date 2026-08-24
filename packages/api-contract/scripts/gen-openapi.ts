@@ -127,6 +127,8 @@ import {
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
   UpdateDutyStatusRequest,
+  ApplyRiderRequest,
+  UpdateRiderProfileRequest,
   ReportLocationRequest,
   DeliveryTask,
   AcceptTaskRequest,
@@ -2510,21 +2512,10 @@ registry.registerPath({
   method: 'post',
   path: '/api/v1/common/rider/apply',
   tags: ['rider'],
-  description: '骑手入驻申请（创建 RiderProfile applicationStatus=PENDING）',
+  description:
+    '骑手入驻申请（创建 RiderProfile applicationStatus=PENDING）。W3 骑手个人区（2026-08-24）：apply payload 改带 URL 字段（avatarUrl/idCardImageUrl/licenseImageUrl），前端先调 /common/rider/uploads/* 拿 URL 再提交；后端只存 URL 不收文件。',
   request: {
-    body: {
-      content: {
-        'application/json': {
-          schema: z.object({
-            riderName: z.string(),
-            phone: z.string(),
-            vehicleType: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR']),
-            vehiclePlate: z.string().optional(),
-            idCardNumber: z.string(),
-          }),
-        },
-      },
-    },
+    body: { content: { 'application/json': { schema: ApplyRiderRequest } } },
   },
   responses: {
     200: {
@@ -2544,12 +2535,32 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/rider/profile',
   tags: ['rider'],
-  description: '获取当前骑手资料（含 applicationStatus + 在线状态）',
+  description: '获取当前骑手资料（含 applicationStatus + 在线状态 + avatarUrl/证件 URL + points/tier）',
   responses: {
     200: {
       description: '骑手资料',
       content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderProfile }) } },
     },
+    404: { description: 'PROFILE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 骑手自助改资料（W3 骑手个人区，2026-08-24）----
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/rider/profile',
+  tags: ['rider'],
+  description:
+    '骑手自助改资料（W3 骑手个人区 2026-08-24）。idCardNumber 不可改（换号应重新 apply）；支持改 riderName/phone/vehicleType/vehiclePlate/avatarUrl/idCardImageUrl/licenseImageUrl；URL 字段传 null 清除。仅 APPROVED 骑手可改。',
+  request: {
+    body: { content: { 'application/json': { schema: UpdateRiderProfileRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的骑手资料',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderProfile }) } },
+    },
+    403: { description: 'NOT_APPROVED', content: { 'application/json': { schema: ErrorResponse } } },
     404: { description: 'PROFILE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -3136,7 +3147,80 @@ registry.registerPath({
     },
   },
 });
+// ===== Rider Upload - avatar/id-card-image/license-image（W3 骑手个人区，2026-08-24）=====
+// common 前缀：apply 阶段用户尚持 client_app token（role=CUSTOMER），审核通过后才变 rider_app。
+// apply payload 改带 URL 方案：前端先调这三个端点拿 URL，再提交到 POST /common/rider/apply。
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/rider/uploads/avatar',
+  tags: ['upload', 'rider'],
+  description:
+    '骑手头像上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 200×200，强制 1:1 正方形（容差 5%）。MinIO 路径前缀 riders/avatar-。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（apply 阶段填入 avatarUrl）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 200×200）/ 非 1:1',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/rider/uploads/id-card-image',
+  tags: ['upload', 'rider'],
+  description:
+    '骑手身份证图上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，防模糊）。MinIO 路径前缀 riders/idcard-。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（apply 阶段填入 idCardImageUrl）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/rider/uploads/license-image',
+  tags: ['upload', 'rider'],
+  description:
+    '骑手驾照/车辆证件图上传（W3 骑手个人区 2026-08-24）。multipart/form-data，field name="file"。CUSTOMER 权限（apply 阶段用户）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，防模糊）。MinIO 路径前缀 riders/license-。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（apply 阶段填入 licenseImageUrl）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 
 // ===== Home Entries（活动入口 PromoDock，路线 A 配置接口）=====
 registry.registerPath({

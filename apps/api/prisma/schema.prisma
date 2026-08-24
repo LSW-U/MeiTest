@@ -694,6 +694,15 @@ model RiderProfile {
   // V2-S6 修复：去掉 ? 让 schema 与 migration (NOT NULL DEFAULT 'PENDING') 对齐
   applicationStatus       String      @default("PENDING") @map("application_status")
   idCardNumber            String?     @map("id_card_number")
+  // W3 骑手个人区（2026-08-24）：证件/头像 URL（apply 阶段 client_app 上传后回填，update 可改）
+  avatarUrl               String?     @map("avatar_url")
+  idCardImageUrl          String?     @map("id_card_image_url")
+  licenseImageUrl         String?     @map("license_image_url")
+  // W3 骑手个人区（2026-08-24）：配送积分 + 等级（每完成 1 单 +10 分，4 档 BRONZE/SILVER/GOLD/PLATINUM）
+  // F3 修复（2026-08-24 审查报告）：DB CHECK 约束见 migration 20260824141706_add_rider_tier_points_check
+  //   tier 仅 4 档枚举值，points 非负；Prisma 不支持 CHECK 语法，约束在 migration raw SQL 维护
+  points                  Int         @default(0)
+  tier                    String      @default("BRONZE")
   // V2-S7 修复：加 User relation（FK 约束，admin 硬删时 SET NULL）
   reviewedById            String?     @map("reviewed_by_id")
   reviewedBy              User?       @relation("ReviewedRiders", fields: [reviewedById], references: [id], onDelete: SetNull)

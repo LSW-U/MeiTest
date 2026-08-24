@@ -2,10 +2,11 @@
 import { Module } from '@nestjs/common';
 import { UploadController } from './upload.controller';
 import { ClientUploadController } from './upload-client.controller';
+import { RiderUploadController } from './rider-upload.controller';
 import { StorageModule } from '../../shared/storage/storage.module';
 
 @Module({
   imports: [StorageModule],
-  controllers: [UploadController, ClientUploadController],
+  controllers: [UploadController, ClientUploadController, RiderUploadController],
 })
 export class UploadModule {}
