@@ -125,6 +125,9 @@ import {
   UpdateSystemConfigRequest,
   SupportConfig,
   SupportConfigResponse,
+  LegalDocType,
+  LegalDocument,
+  LegalDocumentResponse,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
@@ -342,6 +345,8 @@ registry.register('AuditLogQuery', AuditLogQuery);
 registry.register('SystemConfigItem', SystemConfigItem);
 registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
 registry.register('SupportConfig', SupportConfig);
+registry.register('LegalDocType', LegalDocType);
+registry.register('LegalDocument', LegalDocument);
 // Response 包装 schema 不注册到 components（gen-openapi 直接 inline 即可）
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
@@ -1268,6 +1273,30 @@ registry.registerPath({
       content: { 'application/json': { schema: SupportConfigResponse } },
     },
     404: { description: 'SUPPORT_CONFIG_NOT_INITIALIZED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P5 #3 法律文档公开下发（2026-08-25）：注册/协议页读 TERMS / PRIVACY 正文
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/legal/{docType}',
+  tags: ['platform'],
+  description: '法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策，按 Accept-Language 切片，无需登录）',
+  parameters: [
+    {
+      name: 'docType',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', enum: ['TERMS', 'PRIVACY'] },
+      description: '文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）',
+    },
+  ],
+  responses: {
+    200: {
+      description: '当前生效版本（按请求语言切片的单语言正文）',
+      content: { 'application/json': { schema: LegalDocumentResponse } },
+    },
+    404: { description: 'LEGAL_DOCUMENT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

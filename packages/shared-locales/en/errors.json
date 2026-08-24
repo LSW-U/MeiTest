@@ -123,5 +123,6 @@
   "E-WAREHOUSE-003": "Warehouse not found",
   "E-AUTH-007": "No password set. Use SMS password reset to set one first",
   "E-FEEDBACK-001": "Image URL must be from our upload service",
-  "E-PLATFORM-003": "Support config not initialized"
+  "E-PLATFORM-003": "Support config not initialized",
+  "E-LEGAL-001": "Legal document not found"
 }

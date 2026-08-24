@@ -154,3 +154,28 @@ export const SupportConfig = z.object({
 export type SupportConfigType = z.infer<typeof SupportConfig>;
 
 export const SupportConfigResponse = ApiResponse(SupportConfig);
+
+// ============================================================================
+// LegalDocument（服务条款/隐私政策公开下发，P5 #3 2026-08-25）
+// ============================================================================
+
+/** 法律文档类型（路径参数，path：/api/v1/common/legal/{docType}） */
+export const LegalDocType = z.enum(['TERMS', 'PRIVACY']);
+export type LegalDocTypeType = z.infer<typeof LegalDocType>;
+
+/**
+ * 法律文档视图（按 Accept-Language 切片，单语言正文）
+ *
+ * 数据源：LegalDocument 表当前生效版本（is_active=true，content 多语言 JSON）
+ * - content：按 lang fallback（lang → en → ""）切片后的单语言正文
+ * - effectiveAt：前端展示「最近更新于」用
+ */
+export const LegalDocument = z.object({
+  docType: LegalDocType,
+  version: z.string().min(1),
+  content: z.string(),
+  effectiveAt: IsoTimestamp,
+});
+export type LegalDocumentType = z.infer<typeof LegalDocument>;
+
+export const LegalDocumentResponse = ApiResponse(LegalDocument);

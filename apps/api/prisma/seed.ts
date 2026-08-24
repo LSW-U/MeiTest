@@ -374,6 +374,52 @@ async function main() {
   console.log(`  ✅ system_configs: ${SYSTEM_CONFIGS.length} keys (commission / delivery / rider / order timeouts)`);
   // === END FLOW M ===
 
+  // === P5 #3 法律文档（2026-08-25）===
+  // 服务条款(TERMS)/隐私政策(PRIVACY) 正文预置，content 为多语言 JSON（en/zh/id/pt/tet）
+  // MVP 无 admin 编辑后台，先 seed；同 docType 仅一条 is_active=true（DB 部分唯一索引兜底）
+  console.log('\n📄 法律文档（TERMS / PRIVACY）...');
+  const LEGAL_DOCS: Array<{
+    docType: string;
+    version: string;
+    content: Record<string, string>;
+  }> = [
+    {
+      docType: 'TERMS',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Terms of Service\n\n1. By using MeiMart, you agree to place orders for personal use and pay the displayed amount (including delivery fees) via the selected payment method.\n2. Orders are confirmed once accepted by the platform/warehouse. You may cancel before confirmation; after confirmation, cancellation is subject to the refund policy.\n3. Cash-on-delivery orders must be paid to the rider upon receipt. Refused payment may affect future orders.\n4. We reserve the right to refuse service in cases of fraud, abuse, or violation of these terms.',
+        zh: 'MeiMart 服务条款\n\n1. 使用 MeiMart 即表示您同意为个人使用下单，并按显示金额（含配送费）通过所选支付方式支付。\n2. 订单在平台/仓库确认后生效。确认前可取消；确认后取消须遵守退款政策。\n3. 货到付款订单须在收货时向骑手支付。拒付可能影响后续下单。\n4. 我们保留在欺诈、滥用或违反本条款的情况下拒绝服务的权利。',
+        id: 'Syarat & Ketentuan MeiMart\n\n1. Dengan menggunakan MeiMart, Anda setuju melakukan pemesanan untuk penggunaan pribadi dan membayar sesuai jumlah yang ditampilkan (termasuk biaya pengiriman) melalui metode pembayaran yang dipilih.\n2. Pesanan dikonfirmasi setelah diterima platform/gudang. Pembatalan sebelum konfirmasi diizinkan; setelah konfirmasi tunduk pada kebijakan pengembalian dana.\n3. Pesanan bayar di tempat harus dibayar ke kurir saat diterima. Penolakan pembayaran dapat memengaruhi pesanan mendatang.\n4. Kami berhak menolak layanan dalam kasus penipuan, penyalahgunaan, atau pelanggaran ketentuan ini.',
+        pt: 'Termos de Serviço MeiMart\n\n1. Ao usar MeiMart, concorda em fazer encomendas para uso pessoal e pagar o valor exibido (incluindo taxas de entrega) pelo método de pagamento selecionado.\n2. As encomendas são confirmadas após aceitação pela plataforma/armazém. Pode cancelar antes da confirmação; após confirmação, está sujeito à política de reembolso.\n3. Encomendas pagamento na entrega devem ser pagas ao estafeta na receção. Recusa de pagamento pode afetar encomendas futuras.\n4. Reservamo-nos o direito de recusar serviço em casos de fraude, abuso ou violação destes termos.',
+        tet: 'MeiMart Terms of Service\n\n1. Uza MeiMart signifika ita konfirma hatutan order ba uza pessoál no halo pagamentu tuir valor hatudu (inklui taxa entrega) liu husi métodu pagamentu nebe ita hili.\n2. Order konfirma depois plataforma/armazem simu. bele kansa antes konfirma; depois konfirma submete ba polítika refundo.\n3. Order bayar iha lokal tenke bayar ba rider bainhira simu. labele bayare bele afeta order futuru.',
+      },
+    },
+    {
+      docType: 'PRIVACY',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Privacy Policy\n\n1. We collect your phone number, name, delivery address, and order history solely to fulfil orders and provide support.\n2. We do not sell your personal data. Location data is used only for active deliveries and is not stored beyond the delivery period.\n3. Payment credentials are handled by third-party providers; we do not store full card or account details.\n4. You may request data deletion by contacting support; we will process it within a reasonable period.',
+        zh: 'MeiMart 隐私政策\n\n1. 我们仅收集您的手机号、姓名、收货地址和订单历史，用于完成订单和提供客服支持。\n2. 我们不会出售您的个人数据。位置数据仅用于进行中的配送，配送结束后不再保留。\n3. 支付凭证由第三方支付商处理；我们不存储完整的卡号或账户信息。\n4. 您可联系客服申请删除数据；我们将在合理期限内处理。',
+        id: 'Kebijakan Privasi MeiMart\n\n1. Kami mengumpulkan nomor telepon, nama, alamat pengiriman, dan riwayat pesanan Anda semata-mata untuk memenuhi pesanan dan memberikan dukungan.\n2. Kami tidak menjual data pribadi Anda. Data lokasi hanya digunakan untuk pengiriman aktif dan tidak disimpan setelah periode pengiriman.\n3. Kredensial pembayaran ditangani oleh penyedia pihak ketiga; kami tidak menyimpan detail kartu atau akun lengkap.\n4. Anda dapat meminta penghapusan data dengan menghubungi dukungan; kami akan memprosesnya dalam waktu yang wajar.',
+        pt: 'Política de Privacidade MeiMart\n\n1. Recolhemos o seu número de telefone, nome, endereço de entrega e histórico de encomendas apenas para cumprir encomendas e fornecer suporte.\n2. Não vendemos os seus dados pessoais. Os dados de localização são usados apenas para entregas ativas e não são guardados após o período de entrega.\n3. As credenciais de pagamento são tratadas por fornecedores terceiros; não armazenamos detalhes completos de cartão ou conta.\n4. Pode solicitar a eliminação de dados contactando o suporte; processaremos dentro de um prazo razoável.',
+        tet: 'MeiMart Privacy Policy\n\n1. Ami hetan numeru telefone, naran, moris adresu, no istoria order deit atu kumpre order no fornese suporte.\n2. Ami la faan dados pessoál. dados lokalizasaun uza deit ba entrega ativa no la keeps depois periodo entrega.\n3. Kredensial pagamentu tabeke husi provider parte sira-tolu; ami la keeps kartun ka konta detalle kompleto.',
+      },
+    },
+  ];
+  for (const doc of LEGAL_DOCS) {
+    await prisma.legalDocument.upsert({
+      where: { docType_version: { docType: doc.docType, version: doc.version } },
+      update: {}, // 不覆盖已编辑版本
+      create: {
+        docType: doc.docType,
+        version: doc.version,
+        content: doc.content,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ✅ legal_documents: ${LEGAL_DOCS.length} docs (TERMS v1.0.0 / PRIVACY v1.0.0)`);
+
   // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / Banner
   // 注：分类已在 4a 步骤创建，此处不再重复
   console.log('\n📦 W 流程扩展数据...');

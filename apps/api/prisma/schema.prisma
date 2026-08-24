@@ -1000,6 +1000,30 @@ model Feedback {
   @@map("feedbacks")
 }
 
+/// 法律文档（P5 #3，2026-08-25）
+/// 服务条款(TERMS)/隐私政策(PRIVACY) 正文，按版本管理；
+/// content 为多语言 JSON（en/zh/id/pt/tet），接口按 Accept-Language 切片下发。
+/// MVP 单商家、无富文本编辑后台 → 由 seed 预置，admin 可后续扩展编辑端点。
+model LegalDocument {
+  id          String   @id @default(uuid())
+  /// 文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）
+  docType     String   @map("doc_type")
+  /// 版本号（语义版本，如 1.0.0；同一 docType 多版本共存，仅一条 isActive）
+  version     String
+  /// 多语言正文 { "en": "...", "zh": "...", "id": "...", "pt": "...", "tet": "..." }
+  content     Json
+  /// 生效时间（用于前端展示「最近更新于」）
+  effectiveAt DateTime @default(now()) @map("effective_at")
+  /// 是否当前生效版本（同 docType 仅一条 true）
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([docType, version])
+  @@index([docType, isActive])
+  @@map("legal_documents")
+}
+
 // ============================================================================
 // 流程 M（治理/财务）扩展表 — W2 起，按 W-M-C-T 任务推进逐个启用
 // ----------------------------------------------------------------------------

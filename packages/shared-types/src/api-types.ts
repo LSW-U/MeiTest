@@ -4361,6 +4361,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/legal/{docType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策，按 Accept-Language 切片，无需登录） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 文档类型：TERMS（服务条款）/ PRIVACY（隐私政策） */
+                    docType: "TERMS" | "PRIVACY";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 当前生效版本（按请求语言切片的单语言正文） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** @enum {string} */
+                                docType: "TERMS" | "PRIVACY";
+                                version: string;
+                                content: string;
+                                /** Format: date-time */
+                                effectiveAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description LEGAL_DOCUMENT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/orders/{id}": {
         parameters: {
             query?: never;
@@ -16932,6 +17002,16 @@ export interface components {
         SupportConfig: {
             phone: string;
             hours: string;
+        };
+        /** @enum {string} */
+        LegalDocType: "TERMS" | "PRIVACY";
+        LegalDocument: {
+            /** @enum {string} */
+            docType: "TERMS" | "PRIVACY";
+            version: string;
+            content: string;
+            /** Format: date-time */
+            effectiveAt: string;
         };
         ImSignature: {
             url: string;

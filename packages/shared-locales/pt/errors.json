@@ -123,5 +123,6 @@
   "E-WAREHOUSE-003": "Armazém não encontrado",
   "E-AUTH-007": "Sem senha definida, defina primeiro via redefinição SMS",
   "E-FEEDBACK-001": "O URL da imagem deve ser do nosso serviço de upload",
-  "E-PLATFORM-003": "Configuração de suporte não inicializada"
+  "E-PLATFORM-003": "Configuração de suporte não inicializada",
+  "E-LEGAL-001": "Documento legal não encontrado"
 }
