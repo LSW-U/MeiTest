@@ -318,19 +318,20 @@ describe('RiderService', () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
       );
-      mockRedis.exists.mockResolvedValue(1); // 在线
-      mockRedis.ttl.mockResolvedValue(20); // 宽限期内
+      mockRedis.ttl.mockResolvedValue(20); // 在线 + 宽限期内
 
       const view = await service.getProfile('user-1');
       expect(view.isOnline).toBe(true);
       expect(view.maybeOffline).toBe(true);
+      // P2-6 修复：单次 ttl 推 isOnline，不再调 exists
+      expect(mockRedis.exists).not.toHaveBeenCalled();
+      expect(mockRedis.ttl).toHaveBeenCalledWith('rider:online:user-1');
     });
 
     it('在线 + TTL=50s → view.maybeOffline=false', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
       );
-      mockRedis.exists.mockResolvedValue(1);
       mockRedis.ttl.mockResolvedValue(50);
 
       const view = await service.getProfile('user-1');
@@ -338,17 +339,16 @@ describe('RiderService', () => {
       expect(view.maybeOffline).toBe(false);
     });
 
-    it('离线 → view.maybeOffline=false（不查 TTL）', async () => {
+    it('离线（TTL=-2）→ view.maybeOffline=false', async () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
       );
-      mockRedis.exists.mockResolvedValue(0); // TTL 过期 → 离线分支
+      mockRedis.ttl.mockResolvedValue(-2); // key 不存在 → 离线分支
       mockDb.riderProfile.update.mockResolvedValue({});
 
       const view = await service.getProfile('user-1');
       expect(view.isOnline).toBe(false);
       expect(view.maybeOffline).toBe(false);
-      expect(mockRedis.ttl).not.toHaveBeenCalled();
     });
   });
 
@@ -357,7 +357,7 @@ describe('RiderService', () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED' }),
       );
-      mockRedis.exists.mockResolvedValue(0); // TTL 过期
+      mockRedis.ttl.mockResolvedValue(-2); // TTL 过期
       mockDb.riderProfile.update.mockResolvedValue({}); // 异步 UPDATE 不阻塞
 
       const result = await service.getProfile('user-1');
@@ -379,7 +379,7 @@ describe('RiderService', () => {
       mockDb.riderProfile.findUnique.mockResolvedValue(
         buildProfile({ status: 'ONLINE', applicationStatus: 'APPROVED', points: 0, tier: 'BRONZE' }),
       );
-      mockRedis.exists.mockResolvedValue(1);
+      mockRedis.ttl.mockResolvedValue(50);
       // tier 回写兜底：points=0 → BRONZE，与 DB tier 一致，不触发 update
       mockDb.riderProfile.update.mockResolvedValue({});
 
@@ -431,7 +431,7 @@ describe('RiderService', () => {
           tier: 'SILVER', // 滞后：应为 GOLD
         }),
       );
-      mockRedis.exists.mockResolvedValue(0);
+      mockRedis.ttl.mockResolvedValue(-2); // 离线（key 不存在），status=OFFLINE 不触发一致性强制修正
       mockDb.riderProfile.update.mockResolvedValue({});
 
       const result = await service.getProfile('user-1');

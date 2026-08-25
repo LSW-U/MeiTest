@@ -124,6 +124,5 @@
   "E-AUTH-007": "No password set. Use SMS password reset to set one first",
   "E-FEEDBACK-001": "Image URL must be from our upload service",
   "E-PLATFORM-003": "Support config not initialized",
-  "E-LEGAL-001": "Legal document not found",
-  "E-ABOUT-001": "About profile config not initialized"
+  "E-LEGAL-001": "Legal document not found"
 }

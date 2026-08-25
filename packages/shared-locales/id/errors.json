@@ -124,6 +124,5 @@
   "E-AUTH-007": "Kata sandi belum diatur, atur melalui reset SMS terlebih dahulu",
   "E-FEEDBACK-001": "URL gambar harus dari layanan unggah kami",
   "E-PLATFORM-003": "Konfigurasi dukungan belum diinisialisasi",
-  "E-LEGAL-001": "Dokumen hukum tidak ditemukan",
-  "E-ABOUT-001": "Konfigurasi profil tentang tidak diinisialisasi"
+  "E-LEGAL-001": "Dokumen hukum tidak ditemukan"
 }

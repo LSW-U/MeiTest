@@ -389,7 +389,14 @@ export class RiderService {
         message: 'Rider profile not found',
       });
     }
-    const isOnline = await this.isOnline(riderId);
+
+    // P2-6 修复（2026-08-25）：单次 redis.ttl 同时推 isOnline + maybeOffline，
+    //   不再先 EXISTS 再 TTL（两次 Redis 往返）。
+    //   TTL 语义：>30 在线且健康 / 0..30 在线但宽限 / <0 离线（-2 不存在 / -1 无过期异常）。
+    //   isMaybeOffline 内部本就调 getOnlineTtl，此处复用同一 TTL，避免重复往返。
+    const ttl = await this.getOnlineTtl(riderId);
+    const isOnline = ttl > 0 || ttl === -1; // ttl>0 在线；-1 无过期视为在线（异常但不误判离线）
+    const maybeOffline = isOnline ? ttl >= 0 && ttl <= RIDER_ONLINE_GRACE_THRESHOLD_SEC : false;
 
     // S6 / V2-S3 修复：DB status 与 Redis isOnline 不一致时
     //   - 客户端视角：以 Redis 为准（强制返回 OFFLINE）
@@ -413,8 +420,6 @@ export class RiderService {
 
     // F5 修复（2026-08-24 审查报告）：tier 是 points 的纯派生量，deliverTask 写积分时已同步写 DB.tier；
     //   查询路径只读不写，用 calcTier 兜底校正返回值（防御历史脏值/旧滞后），消除写放大 + 竞态
-    // P6 #6（2026-08-25）：在线骑手顺带算 maybeOffline（TTL≤30s 宽限期），离线已是上面分支
-    const maybeOffline = isOnline ? await this.isMaybeOffline(riderId) : false;
     return withDerivedTier(this.toView(profile, isOnline, maybeOffline));
   }
 
