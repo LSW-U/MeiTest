@@ -124,5 +124,6 @@
   "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida",
   "E-FEEDBACK-001": "[TET] URL imajen tenki husi servisu upload ami",
   "E-PLATFORM-003": "Support config not initialized",
-  "E-LEGAL-001": "Documentu legal la hetan"
+  "E-LEGAL-001": "Documentu legal la hetan",
+  "E-ABOUT-001": "Konfigurasaun perfil sobre la inisializa"
 }

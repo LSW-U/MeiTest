@@ -19,6 +19,7 @@ import { CommonModule } from './modules/common/common.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { HomeModule } from './modules/home/home.module';
+import { AboutModule } from './modules/about/about.module';
 import { ImModule } from './modules/im/im.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
@@ -50,6 +51,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
   //   User → Warehouse + Idempotency + Queue
   imports: [
     AuthModule,
+    AboutModule,
     CartModule,
     CatalogModule,
     CommonModule,

@@ -20,7 +20,7 @@ import {
   type SupportedLanguage,
 } from '@meimart/shared-utils';
 
-export type LegalDocType = 'TERMS' | 'PRIVACY';
+export type LegalDocType = 'TERMS' | 'PRIVACY' | 'LICENSE';
 
 /** 法律文档视图（按请求语言切片） */
 export interface LegalDocumentView {
@@ -32,7 +32,7 @@ export interface LegalDocumentView {
   effectiveAt: string;
 }
 
-const ALLOWED_DOC_TYPES: readonly LegalDocType[] = ['TERMS', 'PRIVACY'];
+const ALLOWED_DOC_TYPES: readonly LegalDocType[] = ['TERMS', 'PRIVACY', 'LICENSE'];
 
 @Injectable()
 export class LegalService {

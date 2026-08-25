@@ -362,6 +362,18 @@ async function main() {
       value: 'Mon-Sun 08:00-20:00',
       description: 'Customer support working hours (display only)',
     },
+    {
+      // P25 #2 关于页社交链接配置下发（2026-08-25）：about 页 socials 从 SystemConfig 读
+      // value 为 JSON 字符串数组 [{type,url}]，type ∈ facebook/whatsapp/instagram
+      // host 白名单在后端 AboutService 校验；运营改此 key 即可更新社交链接
+      key: 'about.socials',
+      value: JSON.stringify([
+        { type: 'whatsapp', url: 'https://wa.me/67077000000' },
+        { type: 'facebook', url: 'https://facebook.com/meimart' },
+        { type: 'instagram', url: 'https://instagram.com/meimart' },
+      ]),
+      description: 'About page social links (JSON array of {type,url}; type ∈ facebook/whatsapp/instagram)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {
@@ -405,6 +417,18 @@ async function main() {
         tet: 'MeiMart Privacy Policy\n\n1. Ami hetan numeru telefone, naran, moris adresu, no istoria order deit atu kumpre order no fornese suporte.\n2. Ami la faan dados pessoál. dados lokalizasaun uza deit ba entrega ativa no la keeps depois periodo entrega.\n3. Kredensial pagamentu tabeke husi provider parte sira-tolu; ami la keeps kartun ka konta detalle kompleto.',
       },
     },
+    {
+      // P25 #1 营业资质（LICENSE）正文预置（2026-08-25）：三类法务文案同源补齐
+      docType: 'LICENSE',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Business License\n\nMeiMart is a local e-commerce platform serving Timor-Leste, operated by MeiMart Lda. We are committed to lawful operation and are completing the registration of the required business licenses with the relevant Timor-Leste authorities. During the MVP launch period, operations are conducted under personal accounts; formal business licensing will be completed before full-scale operations. For verification or partnership inquiries, please contact support.',
+        zh: 'MeiMart 营业资质\n\nMeiMart 是服务东帝汶的本地电商平台，由 MeiMart Lda. 运营。我们承诺合法经营，正在向东帝汶相关主管部门办理所需的营业资质登记。MVP 上线阶段以个人账号运营，正式营业资质将在全面运营前补齐。如需核验或合作咨询，请联系客服。',
+        id: 'Lisensi Bisnis MeiMart\n\nMeiMart adalah platform e-commerce lokal yang melayani Timor-Leste, dioperasikan oleh MeiMart Lda. Kami berkomitmen untuk beroperasi secara sah dan sedang menyelesaikan pendaftaran lisensi bisnis yang diperlukan dengan otoritas Timor-Leste yang berwenang. Selama periode peluncuran MVP, operasi dilakukan dengan akun pribadi; lisensi bisnis formal akan diselesaikan sebelum operasi skala penuh. Untuk verifikasi atau pertanyaan kemitraan, silakan hubungi dukungan.',
+        pt: 'Licença de Negócio MeiMart\n\nMeiMart é uma plataforma de comércio eletrónico local que serve Timor-Leste, operada pela MeiMart Lda. Estamos comprometidos com a operação legal e estamos a concluir o registo das licenças de negócio necessárias junto das autoridades competentes de Timor-Leste. Durante o período de lançamento do MVP, as operações são realizadas com contas pessoais; o licenciamento comercial formal será concluído antes das operações em grande escala. Para verificação ou perguntas sobre parcerias, contacte o suporte.',
+        tet: 'MeiMart Business License\n\nMeiMart platforma e-commerce lokal nebe servisu Timor-Leste, opera husi MeiMart Lda. Ami konfirma halo operasaun legal no remata rejistu lisensi bisnis nebe presiza hamutuk autoridade Timor-Leste. Durante periodu MVP, operasaun uza konta pessoál; lisensi bisnis formal remata antes operasaun kompletu. Atu verifika ka konsulta parceria, favur kontaktu suporte.',
+      },
+    },
   ];
   for (const doc of LEGAL_DOCS) {
     await prisma.legalDocument.upsert({
@@ -418,7 +442,7 @@ async function main() {
       },
     });
   }
-  console.log(`  ✅ legal_documents: ${LEGAL_DOCS.length} docs (TERMS v1.0.0 / PRIVACY v1.0.0)`);
+  console.log(`  ✅ legal_documents: ${LEGAL_DOCS.length} docs (TERMS v1.0.0 / PRIVACY v1.0.0 / LICENSE v1.0.0)`);
 
   // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / Banner
   // 注：分类已在 4a 步骤创建，此处不再重复

@@ -3,7 +3,7 @@
  *
  * 路径：
  *   GET  /api/v1/common/legal/:docType   公开（注册/协议页读，无需登录）
- *     docType: TERMS（服务条款）/ PRIVACY（隐私政策）
+ *     docType: TERMS（服务条款）/ PRIVACY（隐私政策）/ LICENSE（营业资质）
  *
  * 决策依据：
  *   - @Public：未登录可读（注册页/首次启动协议页都要展示）
@@ -20,7 +20,7 @@ import { Public } from '../../shared/decorators/public.decorator';
 export class LegalController {
   constructor(private readonly legal: LegalService) {}
 
-  /** 公开获取法律文档（TERMS / PRIVACY）当前生效版本，按语言切片 */
+  /** 公开获取法律文档（TERMS / PRIVACY / LICENSE）当前生效版本，按语言切片 */
   @Public()
   @Get(':docType')
   async getDoc(

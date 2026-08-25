@@ -1,9 +1,10 @@
 /**
- * LegalService 单测（P5 #3，2026-08-25）
+ * LegalService 单测（P5 #3，2026-08-25；P25 #1 扩 LICENSE 2026-08-25）
  *
  * 覆盖：
  *   - getActiveDoc: TERMS + zh header → 返回 zh 切片正文
  *   - getActiveDoc: PRIVACY + id header → 返回 id 切片正文
+ *   - getActiveDoc: LICENSE + zh header → 返回 zh 切片正文（P25 #1 营业资质）
  *   - getActiveDoc: tet/pt 翻译缺失 → fallback en
  *   - getActiveDoc: 非法 docType → NotFoundException + E-LEGAL-001
  *   - getActiveDoc: 未 seed（无 active 文档）→ NotFoundException + E-LEGAL-001
@@ -73,6 +74,21 @@ describe('LegalService.getActiveDoc - P5 #3 法律文档下发', () => {
 
     expect(data.docType).toBe('PRIVACY');
     expect(data.content).toBe('Privasi ID');
+  });
+
+  it('LICENSE + zh header → 返回 zh 切片正文（P25 #1 营业资质）', async () => {
+    dbMock.legalDocument.findFirst.mockResolvedValue(
+      docRow({ en: 'EN license', zh: '中文营业资质' }, 'LICENSE'),
+    );
+
+    const data = await service.getActiveDoc('LICENSE', 'zh,en;q=0.8');
+
+    expect(data.docType).toBe('LICENSE');
+    expect(data.content).toBe('中文营业资质');
+    expect(dbMock.legalDocument.findFirst).toHaveBeenCalledWith({
+      where: { docType: 'LICENSE', isActive: true },
+      orderBy: { effectiveAt: 'desc' },
+    });
   });
 
   it('请求语言翻译缺失 → fallback en', async () => {
