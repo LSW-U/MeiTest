@@ -35,8 +35,11 @@ export class SupportConfigController {
   @Public()
   @Get('config')
   async getConfig(): Promise<{ success: true; data: SupportConfigView }> {
-    const phone = await this.config.get('support.phone');
-    const hours = await this.config.get('support.hours');
+    // P2-5 修复（2026-08-25）：两个 key 互相独立，串行 await 缓存 miss 期间首字节延迟翻倍，改并行
+    const [phone, hours] = await Promise.all([
+      this.config.get('support.phone'),
+      this.config.get('support.hours'),
+    ]);
     if (!phone) {
       // key 未 seed（或被 admin 误删）→ 404，前端降级到本地兜底号码
       throw new NotFoundException({

@@ -1,5 +1,5 @@
 /**
- * MeiMart 清理 MinIO reviews/image-* 孤儿对象（一次性脚本，P22 F2 配套，2026-08-19）
+ * MeiMart 清理 MinIO reviews/image-* 孤儿对象（一次性脚本，P22 F2 配套，2026-08-19；F5/F6 修复 2026-08-25）
  *
  * 背景：反馈页（P22）此前复用 review-image 端点，real 模式上传的截图 URL 无消费方
  * （反馈表单不提交）→ MinIO 孤儿对象累积 + reviews/ 前缀语义污染。
@@ -7,10 +7,14 @@
  *
  * 逻辑：
  *   1. MinIO listObjects 前缀 reviews/image-（评价图命名空间）
- *   2. DB 查 Review.images 全量 URL → 解析出 key 集合（DB 存完整 URL，取 bucket 后路径）
+ *   2. DB 查 Review.images + Feedback.images 全量 URL → 解析出 key 集合
+ *      （DB 存完整 URL，取 bucket 后路径）
  *   3. MinIO 有 + DB 无 → 孤儿 → 删除
  *   注意：只清 reviews/image-*（不动 refunds/、products/、feedbacks/）；
- *   Review.images 存 URL 而非 key，比对时按 key 后缀匹配（防 endpoint 环境差异）。
+ *   referenced 集合并入 Feedback.images 防 cross-table 误删（derived risk，F5 修复）。
+ *
+ * F5 修复：removeObjects 返回错误数组，部分失败时 process.exitCode=1（不静默吞错）。
+ * F6 修复：urlToKey 的 decodeURIComponent 包 try/catch（防畸形 URL 抛 URIError 中断整个清理）。
  *
  * 安全：默认 DRY-RUN（只打印不删），--execute 才真删。
  *
@@ -44,19 +48,33 @@ function loadMinioConfig() {
   };
 }
 
-/** URL → key（去 `${endpoint}/${bucket}/` 前缀；不匹配的返回 null） */
+/**
+ * URL → key（去 `${endpoint}/${bucket}/` 前缀；不匹配的返回 null）
+ * F6 修复：decodeURIComponent 包 try/catch，畸形 URL 不致整个清理中断（返回 null 跳过该项）。
+ */
 function urlToKey(url: string, endpoint: string, bucket: string): string | null {
   const base = `${endpoint.replace(/\/$/, '')}/${bucket}/`;
   if (!url.startsWith(base)) return null;
-  return decodeURIComponent(url.slice(base.length));
+  try {
+    return decodeURIComponent(url.slice(base.length));
+  } catch {
+    // 畸形 URL（含非法 % 序列）→ 跳过，不当孤儿误删，也不阻塞其余 URL 解析
+    return null;
+  }
 }
 
 async function main() {
   const endpoint = process.env.OSS_ENDPOINT!;
   const { client, bucket } = loadMinioConfig();
 
-  // 1. DB 全量 Review.images URL → key 集合（reviews 表量级 MVP 小于万级，全量拉安全）
-  const reviews = await prisma.review.findMany({ select: { images: true } });
+  // 1. DB 全量 Review.images + Feedback.images URL → key 集合
+  //    F5 修复（derived risk）：并入 Feedback.images 防 cross-table 误删
+  //    （reviews/image-* 与 feedbacks/image-* 物理前缀不同，但 referenced 集合仍应全量并入，
+  //     万一命名空间有交叉或日后调整，多一层保护比少一层强）
+  const [reviews, feedbacks] = await Promise.all([
+    prisma.review.findMany({ select: { images: true } }),
+    prisma.feedback.findMany({ select: { images: true } }),
+  ]);
   const referenced = new Set<string>();
   for (const r of reviews) {
     for (const url of r.images) {
@@ -64,7 +82,13 @@ async function main() {
       if (key) referenced.add(key);
     }
   }
-  console.log(`DB Review.images 引用 key 数：${referenced.size}`);
+  for (const fb of feedbacks) {
+    for (const url of fb.images) {
+      const key = urlToKey(url, endpoint, bucket);
+      if (key) referenced.add(key);
+    }
+  }
+  console.log(`DB 引用 key 数：Review.images=${reviews.length} Feedback.images=${feedbacks.length}，去重后 referenced=${referenced.size}`);
 
   // 2. MinIO 列 reviews/image- 前缀对象
   const objects: { key: string; size: number }[] = [];
@@ -96,7 +120,16 @@ async function main() {
     console.log('无孤儿，跳过。');
     return;
   }
-  await client.removeObjects(bucket, orphans.map((o) => o.key));
+  // F5 修复：removeObjects 返回错误数组，部分失败需感知并置非零退出码（不静默吞错）
+  const deleteErrors = await client.removeObjects(bucket, orphans.map((o) => o.key));
+  if (deleteErrors && deleteErrors.length > 0) {
+    console.error(`⚠️ 部分删除失败：${deleteErrors.length}/${orphans.length}`);
+    for (const e of deleteErrors) {
+      console.error(`  - key=${e.name} code=${e.code} message=${e.message}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
   console.log(`\n✅ 已删除 ${orphans.length} 个孤儿对象。`);
 }
 

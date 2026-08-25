@@ -7,13 +7,11 @@
  *   - getProfile: cache 损坏（非 JSON）→ 重建
  *   - loadSocials: host 白名单放行（wa.me / facebook.com / instagram.com）
  *   - loadSocials: 非法项静默丢弃（type 非法 / url 非法 / host 不在白名单）
- *   - loadSocials: key 未 seed → NotFoundException + E-ABOUT-001
- *   - loadSocials: value 非 JSON 数组 → NotFoundException + E-ABOUT-001
+ *   - P2-4 修复：key 未 seed / 非 JSON / 非数组 → socials 降级 []，stats 正常下发（不抛 404）
  *
  * Mock：db（prisma 单例）+ redis（shared/cache 单例）。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
 
 // vi.mock 的 factory 必须先于 import 被求值（hoist），用变量占位
 vi.mock('../src/shared/db', () => ({
@@ -169,45 +167,32 @@ describe('AboutService.loadSocials - socials 校验', () => {
     ]);
   });
 
-  it('socials key 未 seed → NotFoundException + E-ABOUT-001', async () => {
+  it('P2-4 修复：socials key 未 seed → socials 降级 []，stats 正常下发（不抛 404）', async () => {
     dbMock.systemConfig.findUnique.mockResolvedValue(null);
 
-    await expect(service.getProfile()).rejects.toThrow(NotFoundException);
-    try {
-      await service.getProfile();
-    } catch (e) {
-      const resp = (e as NotFoundException).getResponse() as { code: string };
-      expect(resp.code).toBe('E-ABOUT-001');
-    }
+    const data = await service.getProfile();
+    expect(data.stats).toEqual({ regions: 0, merchants: 0, orders: 0 });
+    expect(data.socials).toEqual([]);
   });
 
-  it('socials value 非 JSON → NotFoundException + E-ABOUT-001', async () => {
+  it('P2-4 修复：socials value 非 JSON → socials 降级 []，stats 正常下发', async () => {
     dbMock.systemConfig.findUnique.mockResolvedValue({
       key: 'about.socials',
       value: 'not json at all',
     });
 
-    await expect(service.getProfile()).rejects.toThrow(NotFoundException);
-    try {
-      await service.getProfile();
-    } catch (e) {
-      const resp = (e as NotFoundException).getResponse() as { code: string };
-      expect(resp.code).toBe('E-ABOUT-001');
-    }
+    const data = await service.getProfile();
+    expect(data.stats).toEqual({ regions: 0, merchants: 0, orders: 0 });
+    expect(data.socials).toEqual([]);
   });
 
-  it('socials value 非 JSON 数组（如对象）→ NotFoundException + E-ABOUT-001', async () => {
+  it('P2-4 修复：socials value 非 JSON 数组（如对象）→ socials 降级 []', async () => {
     dbMock.systemConfig.findUnique.mockResolvedValue({
       key: 'about.socials',
       value: JSON.stringify({ type: 'whatsapp', url: 'https://wa.me/1' }),
     });
 
-    await expect(service.getProfile()).rejects.toThrow(NotFoundException);
-    try {
-      await service.getProfile();
-    } catch (e) {
-      const resp = (e as NotFoundException).getResponse() as { code: string };
-      expect(resp.code).toBe('E-ABOUT-001');
-    }
+    const data = await service.getProfile();
+    expect(data.socials).toEqual([]);
   });
 });

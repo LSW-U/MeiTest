@@ -46,6 +46,11 @@ export const DeliveryTask = z.object({
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
   contactPhone: z.string().optional(),
   /**
+   * 配送费（分，P0-1 修复 2026-08-25）
+   * 从 order.deliveryFee 透传；骑手卡片展示真实配送费。历史订单可能无 → 可选。
+   */
+  deliveryFee: z.number().int().nonnegative().optional(),
+  /**
    * 配送直线距离（km，P6 #7 2026-08-25）
    * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
    * 非实时路况距离，仅作展示/排序参考。

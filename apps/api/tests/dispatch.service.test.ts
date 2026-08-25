@@ -96,7 +96,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     note: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD' },
+    order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 },
     warehouse: { code: 'W01' },
     ...overrides,
   };
@@ -152,6 +152,16 @@ describe('DispatchService', () => {
       expect(result.items[1]?.contactPhone).toBeUndefined();
     });
 
+    it('P0-1 修复：order.deliveryFee 透传 → toView 返回 deliveryFee（骑手卡片展示真实配送费）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({ order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 } }),
+        buildTask({ order: { orderNo: 'MM2', payableAmount: 100, paymentMethod: 'COD' } }), // 无 deliveryFee → undefined
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      expect(result.items[0]?.deliveryFee).toBe(250);
+      expect(result.items[1]?.deliveryFee).toBeUndefined();
+    });
+
     it('P6 #7：pickup/dropoff 坐标齐全 → 透传 distanceKm + estimatedMinutes', async () => {
       // 用 number 直接覆盖（绕过 buildTask 的 Decimal mock，Number(number) 正常）
       mockDb.deliveryTask.findMany.mockResolvedValue([
@@ -176,11 +186,10 @@ describe('DispatchService', () => {
         buildTask({ pickupLat: 0, pickupLng: 0, dropoffLat: 0, dropoffLng: 0 }),
       ]);
       const result = await service.listPendingTasks({ riderId: 'r1' });
-      // (0,0)→(0,0) 同点 → distanceKm = 0（非缺失），estimatedMinutes = 0
-      // 但 (0,0) 实际是赤道/本初子午线交点，Haversine 视为合法坐标；
-      // 历史无坐标场景由前端配合 pickupLat===0 判定，后端如实返回 0/0
-      expect(result.items[0]?.distanceKm).toBe(0);
-      expect(result.items[0]?.estimatedMinutes).toBe(0);
+      // P3-7 修复：(0,0) 视为历史无坐标哨兵，toView 返回 undefined（非 0）
+      // 避免骑手卡片显示「0.0km · 0 分钟」，前端降级隐藏 ETA
+      expect(result.items[0]?.distanceKm).toBeUndefined();
+      expect(result.items[0]?.estimatedMinutes).toBeUndefined();
     });
 
     it('传 warehouseId 时按仓库过滤', async () => {

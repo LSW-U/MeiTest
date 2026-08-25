@@ -14,23 +14,13 @@ import { Injectable, Inject, ConflictException } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { StorageService } from '../../shared/storage/storage.service';
 import type { Feedback as DbFeedback } from '../../prisma/client';
-import type { FeedbackCategoryValue } from './feedback.types';
-
-/** 反馈视图（service → controller → client） */
-export interface FeedbackView {
-  id: string;
-  userId: string;
-  category: FeedbackCategoryValue;
-  content: string;
-  contact: string | null;
-  images: string[];
-  createdAt: string;
-}
+import { FeedbackCategorySchema, type FeedbackView } from './feedback.types';
 
 /** 反馈创建入参（service 内部） */
 export interface CreateFeedbackInput {
   userId: string;
-  category: FeedbackCategoryValue;
+  /** category 已由 contract CreateFeedbackRequest z.enum 校验 */
+  category: string;
   content: string;
   contact?: string;
   images: string[];
@@ -67,10 +57,13 @@ export class FeedbackService {
   }
 
   private toFeedbackView(f: DbFeedback): FeedbackView {
+    // F4：DB category 是 String，用 contract zod safeParse 收敛为枚举（防历史脏数据透传前端）。
+    // CHECK 约束是写入保险，读出仍需收敛（旧数据可能早于约束存在）。
+    const parsed = FeedbackCategorySchema.safeParse(f.category);
     return {
       id: f.id,
       userId: f.userId,
-      category: f.category as FeedbackCategoryValue,
+      category: parsed.success ? parsed.data : 'other',
       content: f.content,
       contact: f.contact,
       images: f.images,

@@ -18,6 +18,7 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
   mockRedis: {
     exists: vi.fn(),
     del: vi.fn(),
+    ttl: vi.fn(),
   },
 }));
 
@@ -79,6 +80,30 @@ describe('RiderService.adminRiders (W7-ext-D)', () => {
       expect(result.items[0].id).toBe('rider-1');
     });
 
+    it('P1-2 修复：在线骑手补查 maybeOffline（TTL≤30 → true）', async () => {
+      mockDb.riderProfile.findMany.mockResolvedValue([
+        { ...sampleProfile, status: 'ONLINE' },
+      ]);
+      mockRedis.exists.mockResolvedValue(1); // 在线
+      mockRedis.ttl.mockResolvedValue(15); // 宽限期内
+
+      const result = await service.adminListRiders({});
+
+      expect(result.items[0].isOnline).toBe(true);
+      expect(result.items[0].maybeOffline).toBe(true);
+    });
+
+    it('P1-2 修复：离线骑手不查 TTL，maybeOffline=false', async () => {
+      mockDb.riderProfile.findMany.mockResolvedValue([sampleProfile]); // status: OFFLINE
+      mockRedis.exists.mockResolvedValue(0); // 离线
+
+      const result = await service.adminListRiders({});
+
+      expect(result.items[0].isOnline).toBe(false);
+      expect(result.items[0].maybeOffline).toBe(false);
+      expect(mockRedis.ttl).not.toHaveBeenCalled();
+    });
+
     it('warehouseId 过滤 -> preferredWarehouseIds.has', async () => {
       mockDb.riderProfile.findMany.mockResolvedValue([]);
 
@@ -134,6 +159,22 @@ describe('RiderService.adminRiders (W7-ext-D)', () => {
       expect(result.userStatus).toBe('ACTIVE');
       expect(result.recentOrders).toHaveLength(1);
       expect(result.recentOrders[0].orderNo).toBe('MM20260625010001');
+    });
+
+    it('P1-2 修复：在线骑手详情补查 maybeOffline（TTL≤30 → true）', async () => {
+      mockDb.riderProfile.findUnique.mockResolvedValue({
+        ...sampleProfile,
+        status: 'ONLINE',
+        user: { id: 'user-1', status: 'ACTIVE', phone: '12345678' },
+        orders: [],
+      });
+      mockRedis.exists.mockResolvedValue(1); // 在线
+      mockRedis.ttl.mockResolvedValue(20); // 宽限期内
+
+      const result = await service.adminGetRiderDetail('rider-1');
+
+      expect(result.isOnline).toBe(true);
+      expect(result.maybeOffline).toBe(true);
     });
   });
 

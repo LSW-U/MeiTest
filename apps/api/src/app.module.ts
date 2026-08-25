@@ -85,15 +85,17 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     JwtAuthGuard,
     RolesGuard,
     DeviceTypeGuard,
-    // P0-2：APP_GUARD 全局注册三道闸门（顺序：Jwt → DeviceType → Roles）
+    // P0-2：APP_GUARD 全局注册四道闸门（顺序：Jwt → DeviceType → Roles → RateLimit）
     //   - JwtAuthGuard：默认所有端点需要登录，公开端点显式 @Public()
     //   - DeviceTypeGuard：拒跨端调用（client/rider/admin 前缀对应 deviceType）
     //   - RolesGuard：least privilege，未声明 @Roles() 默认拒（防业务 controller 忘加）
+    //   - RateLimitGuard：放最后（鉴权过后），${user.sub} 等用户维度限流 key 才能拿到已认证的 request.user
+    //     否则登录态端点限流 key 全部回退到 'anonymous'，导致所有登录用户共用一个桶（P22 审查 F1，2026-08-25）
     // 避免每个 controller 手动 @UseGuards，新增 controller 一忘加就裸奔
-    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: DeviceTypeGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     // CSRF 双重提交（约束 6）：放最后，鉴权链过后校验 mutate 请求；admin cookie 存在才校验
     { provide: APP_GUARD, useClass: CsrfGuard },
     // 全局拦截器（顺序：Logging → Audit）

@@ -2983,6 +2983,9 @@ components:
           format: date-time
         contactPhone:
           type: string
+        deliveryFee:
+          type: integer
+          minimum: 0
         distanceKm:
           type: number
           minimum: 0
@@ -3126,6 +3129,9 @@ components:
                     format: date-time
                   contactPhone:
                     type: string
+                  deliveryFee:
+                    type: integer
+                    minimum: 0
                   distanceKm:
                     type: number
                     minimum: 0
@@ -12394,6 +12400,9 @@ paths:
                               format: date-time
                             contactPhone:
                               type: string
+                            deliveryFee:
+                              type: integer
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -12563,6 +12572,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -12765,6 +12777,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -12962,6 +12977,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -13198,6 +13216,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -19970,6 +19991,9 @@ paths:
                               format: date-time
                             contactPhone:
                               type: string
+                            deliveryFee:
+                              type: integer
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -20084,6 +20108,9 @@ paths:
                               format: date-time
                             contactPhone:
                               type: string
+                            deliveryFee:
+                              type: integer
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -20206,6 +20233,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -20358,6 +20388,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -20514,6 +20547,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -20676,6 +20712,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -20802,6 +20841,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -22437,6 +22479,9 @@ paths:
                         format: date-time
                       contactPhone:
                         type: string
+                      deliveryFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0

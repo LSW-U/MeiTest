@@ -6244,6 +6244,7 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    deliveryFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                     /** Format: date-time */
@@ -6343,6 +6344,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6467,6 +6469,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6587,6 +6590,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6751,6 +6755,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -11090,6 +11095,7 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    deliveryFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                 }[];
@@ -11170,6 +11176,7 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    deliveryFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                 }[];
@@ -11257,6 +11264,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11362,6 +11370,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11468,6 +11477,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11575,6 +11585,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11661,6 +11672,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -12632,6 +12644,7 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                deliveryFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -16826,6 +16839,7 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             contactPhone?: string;
+            deliveryFee?: number;
             distanceKm?: number;
             estimatedMinutes?: number;
             /** Format: date-time */
@@ -16884,6 +16898,7 @@ export interface components {
                     /** Format: date-time */
                     updatedAt: string;
                     contactPhone?: string;
+                    deliveryFee?: number;
                     distanceKm?: number;
                     estimatedMinutes?: number;
                     /** Format: date-time */

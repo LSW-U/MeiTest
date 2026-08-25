@@ -344,6 +344,9 @@ export class RiderService {
       acceptMode: input.acceptMode,
     });
 
+    // P1-2 修复（2026-08-25）：updateDuty 已 SET/DEL Redis 在线 key，
+    //   ONLINE/BUSY 分支刚 SETEX TTL=60s > 宽限阈值 30s → maybeOffline=false（与 heartbeat 对称）；
+    //   OFFLINE 分支已 DEL → isOnline=false → maybeOffline=false。无需再查 TTL。
     return this.toView(updated, input.status !== 'OFFLINE');
   }
 
@@ -458,8 +461,10 @@ export class RiderService {
 
     if (Object.keys(data).length === 0) {
       const isOnline = await this.isOnline(profile.userId);
+      // P1-2 修复（2026-08-25）：空补丁路径对在线骑手补查 maybeOffline，与 getProfile 对称
+      const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
       // F6 修复（2026-08-24 审查报告）：空补丁早返回也要 calcTier 兜底，与 getProfile 对称
-      return withDerivedTier(this.toView(profile, isOnline));
+      return withDerivedTier(this.toView(profile, isOnline, maybeOffline));
     }
 
     const updated = await db.riderProfile.update({
@@ -474,8 +479,10 @@ export class RiderService {
     });
 
     const isOnline = await this.isOnline(updated.userId);
+    // P1-2 修复（2026-08-25）：非空补丁路径对在线骑手补查 maybeOffline，与 getProfile 对称
+    const maybeOffline = isOnline ? await this.isMaybeOffline(updated.userId) : false;
     // F6 修复（2026-08-24 审查报告）：非空补丁路径同样 calcTier 兜底
-    return withDerivedTier(this.toView(updated, isOnline));
+    return withDerivedTier(this.toView(updated, isOnline, maybeOffline));
   }
 
   /** 列出待审核申请（admin 用） */
@@ -567,8 +574,18 @@ export class RiderService {
       take: limit,
     });
 
+    // P1-2 修复（2026-08-25）：admin 列表对在线骑手补查 maybeOffline，管理员能看到谁在宽限期
+    // 批量并发查 TTL，避免串行 N 次往返；离线骑手 maybeOffline=false 不查
+    const withOnline = await Promise.all(
+      profiles.map(async (p) => {
+        const isOnline = await this.isOnline(p.userId);
+        const maybeOffline = isOnline ? await this.isMaybeOffline(p.userId) : false;
+        return this.toView(p, isOnline, maybeOffline);
+      }),
+    );
+
     return {
-      items: profiles.map((p) => this.toView(p, false)),
+      items: withOnline,
     };
   }
 
@@ -609,7 +626,9 @@ export class RiderService {
     }
 
     const isOnline = await this.isOnline(profile.userId);
-    const base = this.toView(profile, isOnline);
+    // P1-2 修复（2026-08-25）：admin 详情对在线骑手补查 maybeOffline，与 getProfile 对称
+    const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
+    const base = this.toView(profile, isOnline, maybeOffline);
     return {
       ...base,
       userStatus: profile.user.status,
@@ -654,11 +673,15 @@ export class RiderService {
     }
     if (Object.keys(data).length === 0) {
       const isOnline = await this.isOnline(profile.userId);
-      return this.toView(profile, isOnline);
+      // P1-2 修复（2026-08-25）：空补丁对在线骑手补查 maybeOffline
+      const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
+      return this.toView(profile, isOnline, maybeOffline);
     }
     const updated = await db.riderProfile.update({ where: { id }, data });
     const isOnline = await this.isOnline(updated.userId);
-    return this.toView(updated, isOnline);
+    // P1-2 修复（2026-08-25）：非空补丁对在线骑手补查 maybeOffline
+    const maybeOffline = isOnline ? await this.isMaybeOffline(updated.userId) : false;
+    return this.toView(updated, isOnline, maybeOffline);
   }
 
   /** Admin 停用骑手（User.status=SUSPENDED + RiderProfile.status=OFFLINE） */

@@ -983,7 +983,7 @@ model Banner {
 model Feedback {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  /// 反馈类型（与前端 FEEDBACK_TYPE_KEYS 尾段纯枚举对齐，service 层校验）
+  /// 反馈类型（纯枚举：feature/product/order/payment/shipping/other；DB CHECK 约束见 migration 20260825000002_add_feedback_category_check_c）
   category  String
   /// 反馈正文（单语言纯文本，用户当前语言，非 i18n JSON —— 反馈是用户原话，不做翻译）
   content   String

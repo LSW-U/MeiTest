@@ -13,11 +13,12 @@
  *   - socials.url 须 isOwnUrl 校验？否——社交链接是外部平台 URL（facebook.com / wa.me），
  *     非本服务上传资源，isOwnUrl 会全拒。改为只校验合法 URL + 白名单 host，防注入恶意 URL。
  *
- * 错误码：socials key 未 seed → E-ABOUT-001（404，前端降级静态默认值）
+ * 错误码：socials key 未 seed → 仅 socials 降级为 []（不阻断 stats 下发，P2-4 修复 2026-08-25）
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { redis } from '../../shared/cache';
+import { logger } from '../../shared/logger/logger';
 import type {
   AboutProfileType,
   AboutStatsType,
@@ -81,32 +82,37 @@ export class AboutService {
   /**
    * 从 SystemConfig 读 about.socials（JSON 字符串），解析 + host 白名单校验。
    *
-   * @throws NotFoundException key 未 seed → E-ABOUT-001
+   * P2-4 修复（2026-08-25）：socials 是锦上添花字段，不应拖垮核心 stats。
+   *   key 未 seed / 非 JSON / 非数组时不再抛 404，改为返回 [] + warn 日志，
+   *   让 getProfile 的 stats 正常下发；前端 socials 区块降级隐藏即可。
    */
   private async loadSocials(): Promise<SocialLinkItem[]> {
     const row = await db.systemConfig.findUnique({ where: { key: ABOUT_SOCIALS_KEY } });
     if (!row) {
-      throw new NotFoundException({
-        code: 'E-ABOUT-001',
-        message: 'About socials config not initialized (need seed: about.socials)',
+      logger.warn({
+        msg: 'ABOUT_SOCIALS_NOT_SEEDED',
+        key: ABOUT_SOCIALS_KEY,
       });
+      return [];
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(row.value);
     } catch {
-      throw new NotFoundException({
-        code: 'E-ABOUT-001',
-        message: 'About socials config is not valid JSON',
+      logger.warn({
+        msg: 'ABOUT_SOCIALS_INVALID_JSON',
+        key: ABOUT_SOCIALS_KEY,
       });
+      return [];
     }
 
     if (!Array.isArray(parsed)) {
-      throw new NotFoundException({
-        code: 'E-ABOUT-001',
-        message: 'About socials config must be a JSON array',
+      logger.warn({
+        msg: 'ABOUT_SOCIALS_NOT_ARRAY',
+        key: ABOUT_SOCIALS_KEY,
       });
+      return [];
     }
 
     // 逐项校验 type + url + host 白名单

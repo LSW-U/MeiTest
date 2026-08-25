@@ -10,7 +10,7 @@
  *   - client 前缀 → DeviceTypeGuard 限制 deviceType=client_app，但 @Public 时无 user 自动跳过
  *   - stats 用 Prisma count，socials 从 SystemConfig 读，Redis 缓存 1h
  *
- * 错误码：socials 未 seed / 配置损坏 → E-ABOUT-001
+ * 错误码：socials 未 seed / 配置损坏 → P2-4 修复后降级为空 socials 数组，不再抛 404
  */
 import { Controller, Get, Inject } from '@nestjs/common';
 import { AboutService } from './about.service';

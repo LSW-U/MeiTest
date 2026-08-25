@@ -121,44 +121,78 @@ describe('ClientUploadController.uploadRefundEvidence', () => {
     expect(mockStorage.uploadFile).toHaveBeenCalled();
   });
 
-  it('尺寸过小（50x50 < 100）-> 抛 BadRequest', async () => {
-    await expect(
-      controller.uploadRefundEvidence(fakeFile('image/jpeg', JPG_50)),
-    ).rejects.toThrow(BadRequestException);
+  it('尺寸过小（50x50 < 100）-> 抛 BadRequest + E-UPLOAD-016', async () => {
+    try {
+      await controller.uploadRefundEvidence(fakeFile('image/jpeg', JPG_50));
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-016');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('不支持的 mime header -> 抛 BadRequest（fileFilter 层）', async () => {
-    await expect(controller.uploadRefundEvidence(fakeFile('image/gif', JPG_600))).rejects.toThrow(
-      BadRequestException,
-    );
+  it('不支持的 mime header（gif + jpg 内容）-> controller 直调时 magic 一致性先触发 E-UPLOAD-014（fileFilter 层 E-UPLOAD-010 仅在 multer 管线生效）', async () => {
+    // 注意：单测直接调 controller 方法绕过 multer fileFilter，故走的是 uploadImage 的
+    // magic 一致性校验（E-UPLOAD-014）。真实请求经 multer fileFilter 才会命中 E-UPLOAD-010。
+    try {
+      await controller.uploadRefundEvidence(fakeFile('image/gif', JPG_600));
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-014');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('未收到文件 -> 抛 BadRequest', async () => {
-    await expect(controller.uploadRefundEvidence(undefined)).rejects.toThrow(BadRequestException);
+  it('未收到文件 -> 抛 BadRequest + E-UPLOAD-011', async () => {
+    try {
+      await controller.uploadRefundEvidence(undefined);
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-011');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('空文件（0 字节）-> 抛 BadRequest', async () => {
-    await expect(
-      controller.uploadRefundEvidence(fakeFile('image/jpeg', Buffer.alloc(0))),
-    ).rejects.toThrow(BadRequestException);
+  it('空文件（0 字节）-> 抛 BadRequest + E-UPLOAD-012', async () => {
+    try {
+      await controller.uploadRefundEvidence(fakeFile('image/jpeg', Buffer.alloc(0)));
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-012');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('magic bytes 不是图片（伪装 txt）-> 抛 BadRequest', async () => {
-    await expect(
-      controller.uploadRefundEvidence(fakeFile('image/jpeg', FAKE_TXT)),
-    ).rejects.toThrow(BadRequestException);
+  it('magic bytes 不是图片（伪装 txt）-> 抛 BadRequest + E-UPLOAD-013', async () => {
+    try {
+      await controller.uploadRefundEvidence(fakeFile('image/jpeg', FAKE_TXT));
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-013');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 
-  it('magic bytes 与 header mime 不一致 -> 抛 BadRequest', async () => {
+  it('magic bytes 与 header mime 不一致 -> 抛 BadRequest + E-UPLOAD-014', async () => {
     // header 说 png，实际内容是 jpg
-    await expect(
-      controller.uploadRefundEvidence(fakeFile('image/png', JPG_600)),
-    ).rejects.toThrow(BadRequestException);
+    try {
+      await controller.uploadRefundEvidence(fakeFile('image/png', JPG_600));
+      throw new Error('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(BadRequestException);
+      const resp = (e as BadRequestException).getResponse() as { code: string };
+      expect(resp.code).toBe('E-UPLOAD-014');
+    }
     expect(mockStorage.uploadFile).not.toHaveBeenCalled();
   });
 

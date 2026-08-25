@@ -206,7 +206,8 @@ export class DispatchService {
       orderBy: { createdAt: 'asc' },
       take: limit,
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -232,7 +233,8 @@ export class DispatchService {
       },
       orderBy: { updatedAt: 'desc' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -302,7 +304,8 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -365,7 +368,8 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+          // P0-1 修复：补 deliveryFee
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -449,7 +453,8 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+          // P0-1 修复：补 deliveryFee
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -495,7 +500,8 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+          // P0-1 修复：补 deliveryFee
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -585,7 +591,8 @@ export class DispatchService {
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -621,7 +628,8 @@ export class DispatchService {
           note: input.note ?? task.note,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+          // P0-1 修复：补 deliveryFee
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -774,7 +782,8 @@ export class DispatchService {
     const existing = await db.deliveryTask.findFirst({
       where: { orderId, taskType: 'delivery' },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -829,7 +838,8 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -969,7 +979,8 @@ export class DispatchService {
         estimatedArrival: new Date(Date.now() + DEFAULT_ETA_MINUTES * 60 * 1000),
       },
       include: {
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true } },
+        // P0-1 修复：补 deliveryFee
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -1333,15 +1344,17 @@ export class DispatchService {
       .join(', ');
 
     // P6 #7 配送距离/时长（pickup → dropoff 的 Haversine 距离 + 时长推导）
-    // 任一坐标缺失（0 表示历史无坐标）→ undefined，前端降级隐藏，不阻断展示
-    const distanceKm = haversineDistanceKm(
-      Number(t.pickupLat),
-      Number(t.pickupLng),
-      Number(t.dropoffLat),
-      Number(t.dropoffLng),
-    );
+    // 任一坐标缺失（含 (0,0) 哨兵——历史无坐标存 0，haversine(0,0,0,0) 返回 0 不是 null，需显式拦截）→ undefined，前端降级隐藏
+    const pLat = Number(t.pickupLat);
+    const pLng = Number(t.pickupLng);
+    const dLat = Number(t.dropoffLat);
+    const dLng = Number(t.dropoffLng);
+    const hasCoords =
+      [pLat, pLng, dLat, dLng].every(Number.isFinite) && !(pLat === 0 && pLng === 0 && dLat === 0 && dLng === 0);
+    const distanceKm = hasCoords ? haversineDistanceKm(pLat, pLng, dLat, dLng) : null;
+    // P3-8 修复：上限显式传 DEFAULT_ETA_MINUTES，与 estimatedArrival SLA 同源，避免配置漂移时两处静默不一致
     const estimatedMinutes =
-      distanceKm != null ? estimateMinutesFromDistance(distanceKm) ?? undefined : undefined;
+      distanceKm != null ? estimateMinutesFromDistance(distanceKm, 20, DEFAULT_ETA_MINUTES) ?? undefined : undefined;
 
     return {
       id: t.id,
