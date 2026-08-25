@@ -12,13 +12,14 @@
  *
  * 错误码：docType 非法 / 未 seed → E-LEGAL-001
  */
-import { Controller, Get, Headers, Param } from '@nestjs/common';
+import { Controller, Get, Headers, Inject, Param } from '@nestjs/common';
 import { LegalService } from './legal.service';
 import { Public } from '../../shared/decorators/public.decorator';
 
 @Controller('api/v1/common/legal')
 export class LegalController {
-  constructor(private readonly legal: LegalService) {}
+  // 显式 @Inject：tsx/esbuild 不生成 emitDecoratorMetadata，裸构造注入会拿到 undefined（P25 冒烟发现 TERMS/PRIVACY/LICENSE 全 500）
+  constructor(@Inject(LegalService) private readonly legal: LegalService) {}
 
   /** 公开获取法律文档（TERMS / PRIVACY / LICENSE）当前生效版本，按语言切片 */
   @Public()
