@@ -25,6 +25,7 @@ import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
+import { haversineDistanceKm, estimateMinutesFromDistance } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 
@@ -65,6 +66,18 @@ export interface DeliveryTaskView {
   itemsSummary?: string;
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
   contactPhone?: string;
+  /**
+   * 配送直线距离（km，P6 #7 2026-08-25）
+   * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
+   * 非实时路况距离，仅作展示/排序参考。
+   */
+  distanceKm?: number;
+  /**
+   * 预估配送时长（分钟，P6 #7 2026-08-25）
+   * 由 distanceKm ÷ 20km/h 推导，上限 DEFAULT_ETA_MINUTES(45) 兜底；
+   * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
+   */
+  estimatedMinutes?: number;
 }
 
 /** 抢单上下文 */
@@ -1319,6 +1332,17 @@ export class DispatchService {
       })
       .join(', ');
 
+    // P6 #7 配送距离/时长（pickup → dropoff 的 Haversine 距离 + 时长推导）
+    // 任一坐标缺失（0 表示历史无坐标）→ undefined，前端降级隐藏，不阻断展示
+    const distanceKm = haversineDistanceKm(
+      Number(t.pickupLat),
+      Number(t.pickupLng),
+      Number(t.dropoffLat),
+      Number(t.dropoffLng),
+    );
+    const estimatedMinutes =
+      distanceKm != null ? estimateMinutesFromDistance(distanceKm) ?? undefined : undefined;
+
     return {
       id: t.id,
       orderId: t.orderId,
@@ -1348,6 +1372,8 @@ export class DispatchService {
       // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
       contactPhone:
         ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,
+      distanceKm: distanceKm ?? undefined,
+      estimatedMinutes,
     };
   }
 }

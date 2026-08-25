@@ -4368,14 +4368,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策，按 Accept-Language 切片，无需登录） */
+        /** @description 法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策 / LICENSE 营业资质，按 Accept-Language 切片，无需登录） */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    /** @description 文档类型：TERMS（服务条款）/ PRIVACY（隐私政策） */
-                    docType: "TERMS" | "PRIVACY";
+                    /** @description 文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）/ LICENSE（营业资质） */
+                    docType: "TERMS" | "PRIVACY" | "LICENSE";
                 };
                 cookie?: never;
             };
@@ -4392,7 +4392,7 @@ export interface paths {
                             success: true;
                             data: {
                                 /** @enum {string} */
-                                docType: "TERMS" | "PRIVACY";
+                                docType: "TERMS" | "PRIVACY" | "LICENSE";
                                 version: string;
                                 content: string;
                                 /** Format: date-time */
@@ -4403,6 +4403,78 @@ export interface paths {
                     };
                 };
                 /** @description LEGAL_DOCUMENT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/about/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 关于页可配置数据下发（stats 信任数据条 + socials 社交链接，无需登录，Redis 缓存 1h） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 信任数据条（regions/merchants/orders 原始数字）+ 社交链接列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                stats: {
+                                    regions: number;
+                                    merchants: number;
+                                    orders: number;
+                                };
+                                socials: {
+                                    /** @enum {string} */
+                                    type: "facebook" | "whatsapp" | "instagram";
+                                    /** Format: uri */
+                                    url: string;
+                                }[];
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description ABOUT_PROFILE_NOT_INITIALIZED */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6172,6 +6244,8 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    distanceKm?: number;
+                                    estimatedMinutes?: number;
                                     /** Format: date-time */
                                     estimatedArrival: string | null;
                                     warehouseCode: string;
@@ -6269,6 +6343,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6391,6 +6467,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6509,6 +6587,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -6671,6 +6751,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                                 /** Format: date-time */
                                 estimatedArrival: string | null;
                                 warehouseCode: string;
@@ -11008,6 +11090,8 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    distanceKm?: number;
+                                    estimatedMinutes?: number;
                                 }[];
                             };
                         };
@@ -11086,6 +11170,8 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     contactPhone?: string;
+                                    distanceKm?: number;
+                                    estimatedMinutes?: number;
                                 }[];
                             };
                         };
@@ -11171,6 +11257,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -11274,6 +11362,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -11378,6 +11468,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -11483,6 +11575,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -11567,6 +11661,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -12536,6 +12632,8 @@ export interface paths {
                                 /** Format: date-time */
                                 updatedAt: string;
                                 contactPhone?: string;
+                                distanceKm?: number;
+                                estimatedMinutes?: number;
                             };
                         };
                     };
@@ -16728,6 +16826,8 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             contactPhone?: string;
+            distanceKm?: number;
+            estimatedMinutes?: number;
             /** Format: date-time */
             estimatedArrival: string | null;
             warehouseCode: string;
@@ -16784,6 +16884,8 @@ export interface components {
                     /** Format: date-time */
                     updatedAt: string;
                     contactPhone?: string;
+                    distanceKm?: number;
+                    estimatedMinutes?: number;
                     /** Format: date-time */
                     estimatedArrival: string | null;
                     warehouseCode: string;
@@ -17014,14 +17116,40 @@ export interface components {
             hours: string;
         };
         /** @enum {string} */
-        LegalDocType: "TERMS" | "PRIVACY";
+        LegalDocType: "TERMS" | "PRIVACY" | "LICENSE";
         LegalDocument: {
             /** @enum {string} */
-            docType: "TERMS" | "PRIVACY";
+            docType: "TERMS" | "PRIVACY" | "LICENSE";
             version: string;
             content: string;
             /** Format: date-time */
             effectiveAt: string;
+        };
+        /** @enum {string} */
+        SocialLinkType: "facebook" | "whatsapp" | "instagram";
+        SocialLink: {
+            /** @enum {string} */
+            type: "facebook" | "whatsapp" | "instagram";
+            /** Format: uri */
+            url: string;
+        };
+        AboutStats: {
+            regions: number;
+            merchants: number;
+            orders: number;
+        };
+        AboutProfile: {
+            stats: {
+                regions: number;
+                merchants: number;
+                orders: number;
+            };
+            socials: {
+                /** @enum {string} */
+                type: "facebook" | "whatsapp" | "instagram";
+                /** Format: uri */
+                url: string;
+            }[];
         };
         ImSignature: {
             url: string;

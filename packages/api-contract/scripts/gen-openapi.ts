@@ -128,6 +128,11 @@ import {
   LegalDocType,
   LegalDocument,
   LegalDocumentResponse,
+  SocialLink,
+  SocialLinkType,
+  AboutStats,
+  AboutProfile,
+  AboutProfileResponse,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
@@ -347,6 +352,10 @@ registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
 registry.register('SupportConfig', SupportConfig);
 registry.register('LegalDocType', LegalDocType);
 registry.register('LegalDocument', LegalDocument);
+registry.register('SocialLinkType', SocialLinkType);
+registry.register('SocialLink', SocialLink);
+registry.register('AboutStats', AboutStats);
+registry.register('AboutProfile', AboutProfile);
 // Response 包装 schema 不注册到 components（gen-openapi 直接 inline 即可）
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
@@ -1276,19 +1285,19 @@ registry.registerPath({
   },
 });
 
-// P5 #3 法律文档公开下发（2026-08-25）：注册/协议页读 TERMS / PRIVACY 正文
+// P5 #3 法律文档公开下发（2026-08-25）：注册/协议页读 TERMS / PRIVACY / LICENSE 正文
 registry.registerPath({
   method: 'get',
   path: '/api/v1/common/legal/{docType}',
   tags: ['platform'],
-  description: '法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策，按 Accept-Language 切片，无需登录）',
+  description: '法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策 / LICENSE 营业资质，按 Accept-Language 切片，无需登录）',
   parameters: [
     {
       name: 'docType',
       in: 'path',
       required: true,
-      schema: { type: 'string', enum: ['TERMS', 'PRIVACY'] },
-      description: '文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）',
+      schema: { type: 'string', enum: ['TERMS', 'PRIVACY', 'LICENSE'] },
+      description: '文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）/ LICENSE（营业资质）',
     },
   ],
   responses: {
@@ -1297,6 +1306,21 @@ registry.registerPath({
       content: { 'application/json': { schema: LegalDocumentResponse } },
     },
     404: { description: 'LEGAL_DOCUMENT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P25 #2 关于页可配置数据下发（2026-08-25）：信任数据条 stats + 社交链接 socials，无需登录
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/about/profile',
+  tags: ['platform'],
+  description: '关于页可配置数据下发（stats 信任数据条 + socials 社交链接，无需登录，Redis 缓存 1h）',
+  responses: {
+    200: {
+      description: '信任数据条（regions/merchants/orders 原始数字）+ 社交链接列表',
+      content: { 'application/json': { schema: AboutProfileResponse } },
+    },
+    404: { description: 'ABOUT_PROFILE_NOT_INITIALIZED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

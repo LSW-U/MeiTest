@@ -45,6 +45,18 @@ export const DeliveryTask = z.object({
   updatedAt: IsoTimestamp,
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
   contactPhone: z.string().optional(),
+  /**
+   * 配送直线距离（km，P6 #7 2026-08-25）
+   * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
+   * 非实时路况距离，仅作展示/排序参考。
+   */
+  distanceKm: z.number().nonnegative().optional(),
+  /**
+   * 预估配送时长（分钟，P6 #7 2026-08-25）
+   * 由 distanceKm ÷ 20km/h 推导，上限 45 分钟兜底（不做实时路况）。
+   * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
+   */
+  estimatedMinutes: z.number().int().nonnegative().optional(),
 });
 
 // Why: taskId 走 URL path param（:id），body 不重复携带。
