@@ -37,6 +37,9 @@ services:
     image: redis:7-alpine
     container_name: meimart-redis
     restart: unless-stopped
+    # maxmemory + volatile-lru：仅淘汰设了 TTL 的键，保护永久键（BullMQ 队列 meta/repeat、hotsearch 缓存等无 TTL 键不被淘汰）
+    # 来源：DBA 批次1-3（2026-08-27）。CONFIG REWRITE 不可用（容器无 redis.conf），故在启动参数固化。
+    command: ['redis-server', '--maxmemory', '256mb', '--maxmemory-policy', 'volatile-lru']
     ports:
       - '6379:6379'
     volumes:

@@ -524,9 +524,9 @@ model Order {
 
   @@index([userId, createdAt])
   @@index([warehouseId, status])
-  @@index([status])
+  // DBA 批次1-4（2026-08-27）：移除 @@index([status])——被 (status, created_at DESC) 复合索引最左前缀覆盖，冗余
+  // DBA 批次1-4：移除 @@index([orderNo])——orderNo 已有 @unique 自动建 UQ B-tree，普通索引冗余
   @@index([riderId])
-  @@index([orderNo])
   refunds Refund[]
   orderPromotions OrderPromotion[]
   userCoupons      UserCoupon[]
