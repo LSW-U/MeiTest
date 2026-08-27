@@ -24,6 +24,19 @@ const UpdateBaseFeeRequest = z.object({
   baseFee: z.number().int().nonnegative(),
 });
 
+/**
+ * 批次3 灰度配置（2026-08-28）：admin 配值请求 schema
+ * 三字段全可选 partial —— 未传字段不动，便于灰度切换（如仅调 per_km_fee=50）。
+ * baseFee/perKmFee 分单位整数 ≥0；freeKm km ≥0（允许 0 = 无起步免费距离）。
+ */
+const UpdatePricingConfigRequest = z.object({
+  baseFee: z.number().int().nonnegative().optional(),
+  perKmFee: z.number().int().nonnegative().optional(),
+  freeKm: z.number().nonnegative().optional(),
+}).refine((data) => data.baseFee !== undefined || data.perKmFee !== undefined || data.freeKm !== undefined, {
+  message: 'At least one of baseFee / perKmFee / freeKm must be provided',
+});
+
 @Controller('api/v1/client/pricing')
 @Roles('CUSTOMER')
 export class ClientPricingController {
@@ -77,6 +90,21 @@ export class AdminPricingController {
     @Body(new ZodValidationPipe(UpdateBaseFeeRequest)) body: { baseFee: number },
   ) {
     const data = await this.pricing.updateBaseFee(warehouseId, body.baseFee);
+    return { success: true, data };
+  }
+
+  // 批次3 灰度配置（2026-08-28）：扩展配置端点，支持 partial 改 baseFee/perKmFee/freeKm。
+  //   灰度节奏：per_km_fee=0 上线（行为=现状）→ admin 配 50 分/km 生效 → 摸底校准。
+  //   旧 base-fee 端点保留（向后兼容，内部转调 updatePricingConfig），新代码用 config 端点。
+  //   ⚠️ breaking：新增端点（向后兼容表「加 endpoint = 安全」），无需 [BREAKING] 标。
+  @Patch('warehouses/:warehouseId/config')
+  @Audit({ resource: 'PricingConfig' })
+  async updatePricingConfig(
+    @Param('warehouseId') warehouseId: string,
+    @Body(new ZodValidationPipe(UpdatePricingConfigRequest))
+    body: { baseFee?: number; perKmFee?: number; freeKm?: number },
+  ) {
+    const data = await this.pricing.updatePricingConfig(warehouseId, body);
     return { success: true, data };
   }
 }

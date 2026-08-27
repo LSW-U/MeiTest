@@ -217,4 +217,86 @@ describe('PricingService', () => {
       await expect(service.updateBaseFee('missing', 100)).rejects.toThrow(NotFoundException);
     });
   });
+
+  // 批次3 灰度配置（2026-08-28）：updatePricingConfig partial 三字段
+  describe('updatePricingConfig - 批次3 灰度配置', () => {
+    it('仅改 baseFee → data 只含 deliveryFee（partial，未传字段不动）', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse());
+      m.warehouseUpdate.mockResolvedValueOnce({ ...mockWarehouse(), deliveryFee: 700 });
+      const r = await service.updatePricingConfig('wh-1', { baseFee: 700 });
+      expect(r.baseFee).toBe(700);
+      expect(r.perKmFee).toBe(50); // 未传，返回原值
+      expect(r.freeKm).toBe(2);
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { deliveryFee: 700 }, // 仅 deliveryFee，无 perKmFee/freeKm
+      });
+    });
+
+    it('仅改 perKmFee（灰度切换 0→50）→ data 只含 perKmFee', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse({ perKmFee: 0 }));
+      m.warehouseUpdate.mockResolvedValueOnce({ ...mockWarehouse(), perKmFee: 50 });
+      const r = await service.updatePricingConfig('wh-1', { perKmFee: 50 });
+      expect(r.perKmFee).toBe(50);
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { perKmFee: 50 },
+      });
+    });
+
+    it('仅改 freeKm → data 只含 freeKm（Decimal 列接受 number）', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse());
+      m.warehouseUpdate.mockResolvedValueOnce({ ...mockWarehouse(), freeKm: { toNumber: () => 3 } });
+      const r = await service.updatePricingConfig('wh-1', { freeKm: 3 });
+      expect(r.freeKm).toBe(3); // .toNumber() 归一
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { freeKm: 3 },
+      });
+    });
+
+    it('三字段同改 → data 全含', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse());
+      m.warehouseUpdate.mockResolvedValueOnce({
+        ...mockWarehouse(),
+        deliveryFee: 600,
+        perKmFee: 50,
+        freeKm: { toNumber: () => 3 },
+      });
+      const r = await service.updatePricingConfig('wh-1', { baseFee: 600, perKmFee: 50, freeKm: 3 });
+      expect(r).toEqual({ warehouseId: 'wh-1', baseFee: 600, perKmFee: 50, freeKm: 3 });
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { deliveryFee: 600, perKmFee: 50, freeKm: 3 },
+      });
+    });
+
+    it('空对象（三字段都未传）→ data 为空对象（Prisma update 空操作，控制器层 refine 已拦 400）', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse());
+      m.warehouseUpdate.mockResolvedValueOnce(mockWarehouse());
+      const r = await service.updatePricingConfig('wh-1', {});
+      // service 层不校验非空（由 controller ZodValidationPipe refine 拦），空 data 走 Prisma 空更新
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: {},
+      });
+      expect(r.baseFee).toBe(500);
+    });
+
+    it('仓库不存在抛 NotFoundException', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(null);
+      await expect(service.updatePricingConfig('missing', { perKmFee: 50 })).rejects.toThrow(NotFoundException);
+    });
+
+    it('旧 updateBaseFee 转调 updatePricingConfig（向后兼容）', async () => {
+      m.warehouseFindUnique.mockResolvedValueOnce(mockWarehouse());
+      m.warehouseUpdate.mockResolvedValueOnce({ ...mockWarehouse(), deliveryFee: 800 });
+      const r = await service.updateBaseFee('wh-1', 800);
+      expect(r.baseFee).toBe(800);
+      expect(m.warehouseUpdate).toHaveBeenCalledWith({
+        where: { id: 'wh-1' },
+        data: { deliveryFee: 800 },
+      });
+    });
+  });
 });

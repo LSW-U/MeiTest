@@ -3570,7 +3570,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description 更新某仓库的基础配送费 */
+        /** @description 更新某仓库的基础配送费（旧端点，向后兼容；新代码用 /config） */
         patch: {
             parameters: {
                 query?: never;
@@ -3588,6 +3588,55 @@ export interface paths {
             responses: {
                 /** @description 更新成功 */
                 200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/pricing/warehouses/{warehouseId}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 更新某仓库的配送费配置（批次3 灰度）。三字段全可选 partial——未传字段不动。灰度节奏：perKmFee=0 上线（行为=现状）→ admin 配 50 分/km 生效 → 摸底校准。至少传一个字段，否则 400。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        baseFee?: number;
+                        perKmFee?: number;
+                        freeKm?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功（返回 warehouseId/baseFee/perKmFee/freeKm） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 至少传一个字段 / 字段非法 */
+                400: {
                     headers: {
                         [name: string]: unknown;
                     };

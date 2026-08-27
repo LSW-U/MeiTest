@@ -8797,7 +8797,7 @@ paths:
     patch:
       tags:
         - pricing
-      description: 更新某仓库的基础配送费
+      description: 更新某仓库的基础配送费（旧端点，向后兼容；新代码用 /config）
       requestBody:
         content:
           application/json:
@@ -8812,6 +8812,32 @@ paths:
       responses:
         "200":
           description: 更新成功
+  /api/v1/admin/pricing/warehouses/{warehouseId}/config:
+    patch:
+      tags:
+        - pricing
+      description: 更新某仓库的配送费配置（批次3 灰度）。三字段全可选 partial——未传字段不动。灰度节奏：perKmFee=0
+        上线（行为=现状）→ admin 配 50 分/km 生效 → 摸底校准。至少传一个字段，否则 400。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseFee:
+                  type: integer
+                  minimum: 0
+                perKmFee:
+                  type: integer
+                  minimum: 0
+                freeKm:
+                  type: number
+                  minimum: 0
+      responses:
+        "200":
+          description: 更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）
+        "400":
+          description: 至少传一个字段 / 字段非法
   /api/v1/client/orders:
     post:
       tags:

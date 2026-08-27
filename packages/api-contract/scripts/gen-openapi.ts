@@ -1145,12 +1145,40 @@ registry.registerPath({
   method: 'patch',
   path: '/api/v1/admin/pricing/warehouses/{warehouseId}/base-fee',
   tags: ['pricing'],
-  description: '更新某仓库的基础配送费',
+  description: '更新某仓库的基础配送费（旧端点，向后兼容；新代码用 /config）',
   request: {
     body: { content: { 'application/json': { schema: z.object({ baseFee: z.number().int().nonnegative() }) } } },
   },
   responses: {
     200: { description: '更新成功' },
+  },
+});
+
+// 批次3 灰度配置（2026-08-28）：admin 配值端点，partial 改 baseFee/perKmFee/freeKm
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/pricing/warehouses/{warehouseId}/config',
+  tags: ['pricing'],
+  description:
+    '更新某仓库的配送费配置（批次3 灰度）。三字段全可选 partial——未传字段不动。' +
+    '灰度节奏：perKmFee=0 上线（行为=现状）→ admin 配 50 分/km 生效 → 摸底校准。' +
+    '至少传一个字段，否则 400。',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            baseFee: z.number().int().nonnegative().optional(),
+            perKmFee: z.number().int().nonnegative().optional(),
+            freeKm: z.number().nonnegative().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: '更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）' },
+    400: { description: '至少传一个字段 / 字段非法' },
   },
 });
 

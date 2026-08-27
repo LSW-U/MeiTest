@@ -170,19 +170,63 @@ export class PricingService {
     }));
   }
 
-  /** 更新某仓库的基础配送费（直接 patch warehouse.deliveryFee） */
-  async updateBaseFee(warehouseId: string, baseFee: number) {
+  /**
+   * 更新某仓库的配送费配置（批次3 灰度配置，2026-08-28）
+   *
+   * 替代旧 updateBaseFee（仅改 baseFee）——扩展为可一并改 perKmFee/freeKm，
+   * 供 admin 灰度配值：per_km_fee=0 上线（行为=现状）→ admin 配 50 分/km 生效。
+   *
+   * 三字段全可选 partial 更新：未传字段不动（Prisma update 仅写传入键）。
+   * baseFee 写 warehouses.deliveryFee；perKmFee 写 warehouses.per_km_fee；
+   * freeKm 写 warehouses.free_km（Decimal 列，Prisma 接受 number）。
+   *
+   * @param baseFee   基础费（分，≥0 整数）—— warehouse.deliveryFee
+   * @param perKmFee  每公里加价（分，≥0 整数）—— 0 = 距离费未启用（灰度安全网）
+   * @param freeKm    起步免费距离（km，≥0）—— warehouse.freeKm
+   */
+  async updatePricingConfig(
+    warehouseId: string,
+    params: { baseFee?: number; perKmFee?: number; freeKm?: number },
+  ) {
     const existing = await db.warehouse.findUnique({ where: { id: warehouseId } });
     if (!existing) {
       throw new NotFoundException({ code: 'E-COMMON-003', message: 'Warehouse not found' });
     }
+
+    // 仅写传入字段；Prisma update 跳过 undefined 键，未传字段保持原值
+    const data: { deliveryFee?: number; perKmFee?: number; freeKm?: number } = {};
+    if (params.baseFee !== undefined) data.deliveryFee = params.baseFee;
+    if (params.perKmFee !== undefined) data.perKmFee = params.perKmFee;
+    if (params.freeKm !== undefined) data.freeKm = params.freeKm;
+
     const updated = await db.warehouse.update({
       where: { id: warehouseId },
-      data: { deliveryFee: baseFee },
+      data,
     });
+
+    // freeKm 是 Prisma Decimal，运行时需 .toNumber() 归一为 number 返回给前端
+    const freeKm =
+      updated.freeKm != null
+        ? typeof updated.freeKm === 'number'
+          ? updated.freeKm
+          : (updated.freeKm as { toNumber: () => number }).toNumber()
+        : DEFAULT_FREE_KM;
+
     return {
       warehouseId: updated.id,
       baseFee: updated.deliveryFee,
+      perKmFee: updated.perKmFee,
+      freeKm,
     };
+  }
+
+  /**
+   * @deprecated 批次3（2026-08-28）：被 updatePricingConfig 取代。
+   *   旧端点 PATCH /admin/pricing/warehouses/:warehouseId/base-fee 仅改 baseFee，
+   *   已重构为 PATCH /admin/pricing/warehouses/:warehouseId/config（partial 三字段）。
+   *   保留方法供内部/迁移期调用，新代码请用 updatePricingConfig。
+   */
+  async updateBaseFee(warehouseId: string, baseFee: number) {
+    return this.updatePricingConfig(warehouseId, { baseFee });
   }
 }
