@@ -74,13 +74,24 @@ export const MatchWarehouseRequest = z.object({
  *
  * 三字段全可选 partial —— 未传字段不动，便于灰度切换（如仅调 perKmFee=50）。
  * baseFee/perKmFee 分单位整数 ≥0；freeKm km ≥0（允许 0 = 无起步免费距离）。
- * 至少传一个字段（controller 层 zod refine 拦截空对象 → 400）。
+ * 至少传一个字段（refine 拦截空对象 → 400，与 controller 内联版同源约束）。
+ *
+ * 注：zod-to-openapi 不把 .refine() 翻译成 openapi minProperties，故 openapi 文档
+ * 不显式编码「至少一字段」约束，但源码两侧一致便于维护，400 描述亦已说明。
  */
 export const UpdatePricingConfigRequest = z.object({
   baseFee: Money.optional(),
   perKmFee: Money.optional(),
   freeKm: z.number().nonnegative().optional(),
-});
+}).refine(
+  (data) =>
+    data.baseFee !== undefined ||
+    data.perKmFee !== undefined ||
+    data.freeKm !== undefined,
+  {
+    message: 'At least one of baseFee / perKmFee / freeKm must be provided',
+  },
+);
 
 /**
  * 配送费配置响应（批次3 2026-08-28）

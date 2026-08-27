@@ -15,27 +15,21 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { UpdatePricingConfigRequest, Money } from '@meimart/api-contract';
 import { PricingService } from './pricing.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 
+// base-fee 端点用 Money（契约 Money = z.number().int().nonnegative().max(99_99_99)），
+// 与 /config 的 baseFee 同源约束（批次4 P3-N2：消除 controller 内联无 max、契约有 max 的漂移）。
 const UpdateBaseFeeRequest = z.object({
-  baseFee: z.number().int().nonnegative(),
+  baseFee: Money,
 });
 
-/**
- * 批次3 灰度配置（2026-08-28）：admin 配值请求 schema
- * 三字段全可选 partial —— 未传字段不动，便于灰度切换（如仅调 per_km_fee=50）。
- * baseFee/perKmFee 分单位整数 ≥0；freeKm km ≥0（允许 0 = 无起步免费距离）。
- */
-const UpdatePricingConfigRequest = z.object({
-  baseFee: z.number().int().nonnegative().optional(),
-  perKmFee: z.number().int().nonnegative().optional(),
-  freeKm: z.number().nonnegative().optional(),
-}).refine((data) => data.baseFee !== undefined || data.perKmFee !== undefined || data.freeKm !== undefined, {
-  message: 'At least one of baseFee / perKmFee / freeKm must be provided',
-});
+// UpdatePricingConfigRequest 改用契约版（@meimart/api-contract），消除 controller 内联
+// 与契约版的双定义漂移（批次4 P3-N1）。契约版含 .refine()「至少传一字段」约束，
+// 与原内联版同源行为一致。
 
 @Controller('api/v1/client/pricing')
 @Roles('CUSTOMER')
