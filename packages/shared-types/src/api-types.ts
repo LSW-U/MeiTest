@@ -3591,7 +3591,15 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            warehouseId: string;
+                            baseFee: number;
+                            perKmFee: number;
+                            freeKm: number;
+                        };
+                    };
                 };
             };
         };
@@ -3633,14 +3641,34 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            warehouseId: string;
+                            baseFee: number;
+                            perKmFee: number;
+                            freeKm: number;
+                        };
+                    };
                 };
                 /** @description 至少传一个字段 / 字段非法 */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
                 };
             };
         };
@@ -16891,6 +16919,18 @@ export interface components {
         SupportConfig: {
             phone: string;
             hours: string;
+        };
+        UpdatePricingConfigRequest: {
+            baseFee?: number;
+            perKmFee?: number;
+            freeKm?: number;
+        };
+        PricingConfigResponse: {
+            /** Format: uuid */
+            warehouseId: string;
+            baseFee: number;
+            perKmFee: number;
+            freeKm: number;
         };
         /** @enum {string} */
         LegalDocType: "TERMS" | "PRIVACY" | "LICENSE";

@@ -84,7 +84,10 @@ export class AdminPricingController {
   }
 
   @Patch('warehouses/:warehouseId/base-fee')
-  @Audit({ resource: 'PricingConfig' })
+  // 批次3 审查 P1-1（2026-08-28）：路由 param 是 :warehouseId（非默认 :id），
+  //   @Audit 必须显式 resourceIdParam 否则 AuditLog.resourceId=null，配置变更无仓库归属。
+  //   /base-fee 既有缺陷一并修（与 /config 同 PR）。
+  @Audit({ resource: 'PricingConfig', resourceIdParam: 'warehouseId' })
   async updateBaseFee(
     @Param('warehouseId') warehouseId: string,
     @Body(new ZodValidationPipe(UpdateBaseFeeRequest)) body: { baseFee: number },
@@ -98,7 +101,8 @@ export class AdminPricingController {
   //   旧 base-fee 端点保留（向后兼容，内部转调 updatePricingConfig），新代码用 config 端点。
   //   ⚠️ breaking：新增端点（向后兼容表「加 endpoint = 安全」），无需 [BREAKING] 标。
   @Patch('warehouses/:warehouseId/config')
-  @Audit({ resource: 'PricingConfig' })
+  // 批次3 审查 P1-1（2026-08-28）：resourceIdParam:'warehouseId'，灰度校准期审计追溯必需
+  @Audit({ resource: 'PricingConfig', resourceIdParam: 'warehouseId' })
   async updatePricingConfig(
     @Param('warehouseId') warehouseId: string,
     @Body(new ZodValidationPipe(UpdatePricingConfigRequest))

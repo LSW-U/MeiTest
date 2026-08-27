@@ -3862,6 +3862,41 @@ components:
       required:
         - phone
         - hours
+    UpdatePricingConfigRequest:
+      type: object
+      properties:
+        baseFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        perKmFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        freeKm:
+          type: number
+          minimum: 0
+    PricingConfigResponse:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+        baseFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        perKmFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        freeKm:
+          type: number
+      required:
+        - warehouseId
+        - baseFee
+        - perKmFee
+        - freeKm
     LegalDocType:
       type: string
       enum: &a21
@@ -8812,6 +8847,29 @@ paths:
       responses:
         "200":
           description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  baseFee:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  perKmFee:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  freeKm:
+                    type: number
+                required:
+                  - warehouseId
+                  - baseFee
+                  - perKmFee
+                  - freeKm
   /api/v1/admin/pricing/warehouses/{warehouseId}/config:
     patch:
       tags:
@@ -8827,17 +8885,69 @@ paths:
                 baseFee:
                   type: integer
                   minimum: 0
+                  maximum: 999999
                 perKmFee:
                   type: integer
                   minimum: 0
+                  maximum: 999999
                 freeKm:
                   type: number
                   minimum: 0
       responses:
         "200":
           description: 更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  warehouseId:
+                    type: string
+                    format: uuid
+                  baseFee:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  perKmFee:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  freeKm:
+                    type: number
+                required:
+                  - warehouseId
+                  - baseFee
+                  - perKmFee
+                  - freeKm
         "400":
           description: 至少传一个字段 / 字段非法
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/client/orders:
     post:
       tags:

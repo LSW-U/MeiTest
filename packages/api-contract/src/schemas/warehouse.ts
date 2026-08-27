@@ -68,3 +68,29 @@ export const MatchWarehouseRequest = z.object({
   lat: z.number(),
   lng: z.number(),
 });
+
+/**
+ * 配送费灰度配置请求（批次3 2026-08-28）
+ *
+ * 三字段全可选 partial —— 未传字段不动，便于灰度切换（如仅调 perKmFee=50）。
+ * baseFee/perKmFee 分单位整数 ≥0；freeKm km ≥0（允许 0 = 无起步免费距离）。
+ * 至少传一个字段（controller 层 zod refine 拦截空对象 → 400）。
+ */
+export const UpdatePricingConfigRequest = z.object({
+  baseFee: Money.optional(),
+  perKmFee: Money.optional(),
+  freeKm: z.number().nonnegative().optional(),
+});
+
+/**
+ * 配送费配置响应（批次3 2026-08-28）
+ *
+ * /config 与 /base-fee 200 响应体——service.updatePricingConfig 返回值。
+ * freeKm 已在 service 层 .toNumber() 归一为 number（Decimal→number）。
+ */
+export const PricingConfigResponse = z.object({
+  warehouseId: Id,
+  baseFee: Money,
+  perKmFee: Money,
+  freeKm: z.number(),
+});

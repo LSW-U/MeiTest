@@ -66,6 +66,8 @@ import {
   Warehouse,
   UpsertWarehouseRequest,
   MatchWarehouseRequest,
+  UpdatePricingConfigRequest,
+  PricingConfigResponse,
   // catalog
   Product,
   ProductSummary,
@@ -361,6 +363,9 @@ registry.register('AuditLogQuery', AuditLogQuery);
 registry.register('SystemConfigItem', SystemConfigItem);
 registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
 registry.register('SupportConfig', SupportConfig);
+// 批次3 灰度配置（2026-08-28）：pricing config 端点契约
+registry.register('UpdatePricingConfigRequest', UpdatePricingConfigRequest);
+registry.register('PricingConfigResponse', PricingConfigResponse);
 registry.register('LegalDocType', LegalDocType);
 registry.register('LegalDocument', LegalDocument);
 registry.register('SocialLinkType', SocialLinkType);
@@ -1150,7 +1155,8 @@ registry.registerPath({
     body: { content: { 'application/json': { schema: z.object({ baseFee: z.number().int().nonnegative() }) } } },
   },
   responses: {
-    200: { description: '更新成功' },
+    // 批次3 审查 P2-2（2026-08-28）：补 200 content schema，前端类型化（旧端点既有缺陷一并修）
+    200: { description: '更新成功', content: { 'application/json': { schema: PricingConfigResponse } } },
   },
 });
 
@@ -1167,18 +1173,15 @@ registry.registerPath({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            baseFee: z.number().int().nonnegative().optional(),
-            perKmFee: z.number().int().nonnegative().optional(),
-            freeKm: z.number().nonnegative().optional(),
-          }),
+          schema: UpdatePricingConfigRequest,
         },
       },
     },
   },
   responses: {
-    200: { description: '更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）' },
-    400: { description: '至少传一个字段 / 字段非法' },
+    // 批次3 审查 P2-2（2026-08-28）：补 200 content schema（PricingConfigResponse），前端返回体类型化
+    200: { description: '更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）', content: { 'application/json': { schema: PricingConfigResponse } } },
+    400: { description: '至少传一个字段 / 字段非法', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
