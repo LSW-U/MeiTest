@@ -166,7 +166,7 @@ export class DashboardService {
     `).map((row) => ({
       bucket: row.bucket,
       gmv: decimalToNumber(row.gmv),
-      orderCount: Number(row.order_count),
+      orderCount: decimalToNumber(row.order_count),
     }));
 
     /** 按 bucket 索引补全空桶（前端绘图需要连续点） */

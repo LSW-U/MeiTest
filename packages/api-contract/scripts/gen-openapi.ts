@@ -344,14 +344,49 @@ const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
 // AdminDeliveryTaskViewRef：register 返回的带 refId 版本，下方 4 处端点响应
 // 引用它（而非 import 的原 schema）才能输出 $ref（与 P3-1 同款 reassign 教训：
 // register 不 mutate 原 const，引用谁就用谁）
+//
+// 批次4-fix P3-1-DRIFT（审查复核报告 2026-08-28）：AdminDeliveryTaskView 字段集在
+//   schema 文件（dispatch.ts:158-163）与本脚本 DeliveryTaskRef.extend({...}）两处
+//   LIVE 定义，未来改一处另一处不同步 → 列表响应（走 schema 文件 const）与单任务
+//   响应（走本脚本 $ref）字段集漂移。
+//   方向1（让 schema 文件 const 成唯一定义源）经 POC 证伪：zod-to-openapi 的
+//   .extend() 不继承父 refId metadata，register 一个「从无 refId DeliveryTask extend
+//   来」的 schema 会输出全 inline（丢失 allOf:[$ref DeliveryTask]），比现状更差。
+//   故走方向2：build-time 校验两处字段 key 集合一致，不一致即 gen 失败（CI 红灯），
+//   把漂移风险从「静默分歧」转成「显式失败」。
+const ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS = {
+  estimatedArrival: IsoTimestamp.nullable(),
+  warehouseCode: z.string(),
+  order: TaskOrderSummary,
+  rider: TaskRiderSummary.nullable(),
+} satisfies Record<string, z.ZodTypeAny>;
+
+// 校验：schema 文件 AdminDeliveryTaskView 的【新增字段】与本脚本 extend 的字段 key 必须一致。
+// DeliveryTask.extend(extra) 产出的新字段 = extra 的 key（DeliveryTask 自身字段不在 extra），
+// 故比对 AdminDeliveryTaskView 相对 DeliveryTask 的增量字段 key 与 ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS 的 key。
+{
+  const schemaFileExtraKeys = Object.keys(
+    // AdminDeliveryTaskView 是 DeliveryTask.extend(extra)，ZodObject.shape 返回合并后全字段；
+    // 减去 DeliveryTask.shape 即得 extend 引入的增量字段 key。
+    Object.fromEntries(
+      Object.entries(AdminDeliveryTaskView.shape).filter(
+        ([k]) => !(k in DeliveryTask.shape),
+      ),
+    ),
+  ).sort();
+  const scriptExtraKeys = Object.keys(ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS).sort();
+  if (schemaFileExtraKeys.length !== scriptExtraKeys.length ||
+      !schemaFileExtraKeys.every((k, i) => k === scriptExtraKeys[i])) {
+    throw new Error(
+      `[gen-openapi] AdminDeliveryTaskView 双定义漂移：schema 文件 extend 字段 [${schemaFileExtraKeys.join(', ')}] ` +
+      `≠ gen 脚本 extend 字段 [${scriptExtraKeys.join(', ')}]。请同步两处定义（dispatch.ts:158-163 与本脚本 ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS）。`,
+    );
+  }
+}
+
 const AdminDeliveryTaskViewRef = registry.register(
   'AdminDeliveryTaskView',
-  DeliveryTaskRef.extend({
-    estimatedArrival: IsoTimestamp.nullable(),
-    warehouseCode: z.string(),
-    order: TaskOrderSummary,
-    rider: TaskRiderSummary.nullable(),
-  }),
+  DeliveryTaskRef.extend(ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS),
 );
 registry.register('AdminTaskListResponse', AdminTaskListResponse);
 registry.register('ListAllTasksQuery', ListAllTasksQuery);
