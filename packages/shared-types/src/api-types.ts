@@ -6349,64 +6349,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                billingDistanceKm?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                                /** Format: date-time */
-                                estimatedArrival: string | null;
-                                warehouseCode: string;
-                                order: {
-                                    orderNo: string;
-                                    status: string;
-                                    payableAmount: number | null;
-                                    paymentMethod: string;
-                                };
-                                rider: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    riderName: string;
-                                    phone: string;
-                                } | null;
-                            };
+                            data: components["schemas"]["AdminDeliveryTaskView"];
                         };
                     };
                 };
@@ -6477,64 +6420,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                billingDistanceKm?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                                /** Format: date-time */
-                                estimatedArrival: string | null;
-                                warehouseCode: string;
-                                order: {
-                                    orderNo: string;
-                                    status: string;
-                                    payableAmount: number | null;
-                                    paymentMethod: string;
-                                };
-                                rider: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    riderName: string;
-                                    phone: string;
-                                } | null;
-                            };
+                            data: components["schemas"]["AdminDeliveryTaskView"];
                         };
                     };
                 };
@@ -6601,64 +6487,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                billingDistanceKm?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                                /** Format: date-time */
-                                estimatedArrival: string | null;
-                                warehouseCode: string;
-                                order: {
-                                    orderNo: string;
-                                    status: string;
-                                    payableAmount: number | null;
-                                    paymentMethod: string;
-                                };
-                                rider: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    riderName: string;
-                                    phone: string;
-                                } | null;
-                            };
+                            data: components["schemas"]["AdminDeliveryTaskView"];
                         };
                     };
                 };
@@ -6769,64 +6598,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                billingDistanceKm?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                                /** Format: date-time */
-                                estimatedArrival: string | null;
-                                warehouseCode: string;
-                                order: {
-                                    orderNo: string;
-                                    status: string;
-                                    payableAmount: number | null;
-                                    paymentMethod: string;
-                                };
-                                rider: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    riderName: string;
-                                    phone: string;
-                                } | null;
-                            };
+                            data: components["schemas"]["AdminDeliveryTaskView"];
                         };
                     };
                 };
@@ -16544,7 +16316,7 @@ export interface components {
             count: number;
             totalAmount: number;
         };
-        AdminDeliveryTaskView: {
+        DeliveryTask: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -16586,6 +16358,8 @@ export interface components {
             billingDistanceKm?: number;
             distanceKm?: number;
             estimatedMinutes?: number;
+        };
+        AdminDeliveryTaskView: components["schemas"]["DeliveryTask"] & {
             /** Format: date-time */
             estimatedArrival: string | null;
             warehouseCode: string;
@@ -16698,49 +16472,6 @@ export interface components {
             isOnline: boolean;
             totalDeliveries: number;
             rating: number;
-        };
-        DeliveryTask: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            orderId: string;
-            /** Format: uuid */
-            riderId: string | null;
-            /** Format: uuid */
-            warehouseId: string;
-            /** @enum {string} */
-            status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-            /**
-             * @default delivery
-             * @enum {string}
-             */
-            taskType: "delivery" | "return";
-            /** Format: uuid */
-            refundId: string | null;
-            pickupAddress: string;
-            pickupLat: number;
-            pickupLng: number;
-            dropoffAddress: string;
-            dropoffLat: number;
-            dropoffLng: number;
-            /** Format: date-time */
-            assignedAt: string | null;
-            /** Format: date-time */
-            pickedUpAt: string | null;
-            /** Format: date-time */
-            deliveredAt: string | null;
-            note: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            contactPhone?: string;
-            deliveryFee?: number;
-            baseFee?: number;
-            distanceFee?: number;
-            billingDistanceKm?: number;
-            distanceKm?: number;
-            estimatedMinutes?: number;
         };
         BatchAdjustRequest: {
             items: {

@@ -152,6 +152,8 @@ import {
   ListAllTasksQuery,
   AdminDeliveryTaskView,
   AdminTaskListResponse,
+  TaskOrderSummary,
+  TaskRiderSummary,
   ReassignTaskRequest,
   CancelTaskRequest,
   AvailableRider,
@@ -328,7 +330,29 @@ registry.register('MarkFailedRequest', MarkFailedRequest);
 registry.register('ReconciliationItem', ReconciliationItem);
 
 // 批次 4 admin dispatch
-registry.register('AdminDeliveryTaskView', AdminDeliveryTaskView);
+// 批次4 P3-AdminDeliveryTaskView（2026-08-28）：AdminDeliveryTaskView 的 $ref 化。
+//   schema 文件里的 AdminDeliveryTaskView 是纯 DeliveryTask.extend（无 refId，
+//   schema 文件里拿不到 registry 实例），故在这里用 DeliveryTaskRef.extend
+//   重新构造同名字段集后 register → 输出 $ref:#/components/schemas/AdminDeliveryTaskView
+//   而非 inline 4 份重复字段块。
+//   ⚠️ 顺序：本块必须在 DeliveryTaskRef 定义之前只有 register 调用，
+//   DeliveryTaskRef 在此声明后，下方 extend 消费。
+//   已知残留：AdminTaskListResponse（PaginatedResponse 包裹）在 schema 文件里引用
+//   原 AdminDeliveryTaskView 构造，其 items 仍 inline —— 要全 $ref 化需在 schema
+//   文件里 extend，但那里拿不到 registry，属结构性限制，留现状。
+const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
+// AdminDeliveryTaskViewRef：register 返回的带 refId 版本，下方 4 处端点响应
+// 引用它（而非 import 的原 schema）才能输出 $ref（与 P3-1 同款 reassign 教训：
+// register 不 mutate 原 const，引用谁就用谁）
+const AdminDeliveryTaskViewRef = registry.register(
+  'AdminDeliveryTaskView',
+  DeliveryTaskRef.extend({
+    estimatedArrival: IsoTimestamp.nullable(),
+    warehouseCode: z.string(),
+    order: TaskOrderSummary,
+    rider: TaskRiderSummary.nullable(),
+  }),
+);
 registry.register('AdminTaskListResponse', AdminTaskListResponse);
 registry.register('ListAllTasksQuery', ListAllTasksQuery);
 registry.register('ReassignTaskRequest', ReassignTaskRequest);
@@ -341,10 +365,7 @@ registry.register('AvailableRider', AvailableRider);
 //   返回的是带 refId metadata 的【新 schema】，不就地 mutate 原 const；若只 register
 //   不 reassign，14 处引用仍指向无 refId 的原 schema → 仍 inline（已实测）。
 //   故必须 reassign，让后续所有引用（含 registerPath 响应 schema）拿到带 refId 版本。
-//   对照：AdminDeliveryTaskView = DeliveryTask.extend(...) 在 register 之前定义，
-//   不可对 DeliveryTask 提前 reassign（extend 会丢 refId），故仅对裸 DeliveryTask 用法生效；
-//   AdminDeliveryTaskView 仍 inline 是历史现状，本批次不动（超出范围，单开任务再处理）。
-const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
+//   （AdminDeliveryTaskView 的 $ref 化见上方批次4 注释块，用 DeliveryTaskRef.extend 方案。）
 
 // 批次 5 admin inventory
 registry.register('BatchAdjustRequest', BatchAdjustRequest);
@@ -1725,7 +1746,7 @@ registry.registerPath({
   description: '任务详情（含 order + rider；批次 4）',
   request: { params: z.object({ id: Id }) },
   responses: {
-    200: { description: '任务详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '任务详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     404: { description: 'DISPATCH_TASK_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -1740,7 +1761,7 @@ registry.registerPath({
     body: { content: { 'application/json': { schema: ReassignTaskRequest } } },
   },
   responses: {
-    200: { description: '改派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '改派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     409: { description: 'DISPATCH_REASSIGN_STATUS_CONFLICT / RIDER_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -1755,7 +1776,7 @@ registry.registerPath({
     body: { content: { 'application/json': { schema: CancelTaskRequest } } },
   },
   responses: {
-    200: { description: '取消成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '取消成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     409: { description: 'DISPATCH_CANCEL_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -1777,7 +1798,7 @@ registry.registerPath({
   description: '补建任务（仅 SUPER_ADMIN；复用 createTaskForOrder，幂等；批次 4）',
   request: { params: z.object({ orderId: Id }) },
   responses: {
-    200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });

@@ -2913,7 +2913,7 @@ components:
         - method
         - count
         - totalAmount
-    AdminDeliveryTaskView:
+    DeliveryTask:
       type: object
       properties:
         id:
@@ -3001,46 +3001,6 @@ components:
         estimatedMinutes:
           type: integer
           minimum: 0
-        estimatedArrival:
-          type: string
-          nullable: true
-          format: date-time
-        warehouseCode:
-          type: string
-        order:
-          type: object
-          properties:
-            orderNo:
-              type: string
-            status:
-              type: string
-            payableAmount:
-              type: integer
-              nullable: true
-              minimum: 0
-              maximum: 999999
-            paymentMethod:
-              type: string
-          required:
-            - orderNo
-            - status
-            - payableAmount
-            - paymentMethod
-        rider:
-          type: object
-          nullable: true
-          properties:
-            id:
-              type: string
-              format: uuid
-            riderName:
-              type: string
-            phone:
-              type: string
-          required:
-            - id
-            - riderName
-            - phone
       required:
         - id
         - orderId
@@ -3060,10 +3020,56 @@ components:
         - note
         - createdAt
         - updatedAt
-        - estimatedArrival
-        - warehouseCode
-        - order
-        - rider
+    AdminDeliveryTaskView:
+      allOf:
+        - $ref: "#/components/schemas/DeliveryTask"
+        - type: object
+          properties:
+            estimatedArrival:
+              type: string
+              nullable: true
+              format: date-time
+            warehouseCode:
+              type: string
+            order:
+              type: object
+              properties:
+                orderNo:
+                  type: string
+                status:
+                  type: string
+                payableAmount:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  maximum: 999999
+                paymentMethod:
+                  type: string
+              required:
+                - orderNo
+                - status
+                - payableAmount
+                - paymentMethod
+            rider:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                riderName:
+                  type: string
+                phone:
+                  type: string
+              required:
+                - id
+                - riderName
+                - phone
+          required:
+            - estimatedArrival
+            - warehouseCode
+            - order
+            - rider
     AdminTaskListResponse:
       type: object
       properties:
@@ -3300,105 +3306,6 @@ components:
         - isOnline
         - totalDeliveries
         - rating
-    DeliveryTask:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        orderId:
-          type: string
-          format: uuid
-        riderId:
-          type: string
-          nullable: true
-          format: uuid
-        warehouseId:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: *a17
-        taskType:
-          type: string
-          enum: *a18
-          default: delivery
-        refundId:
-          type: string
-          nullable: true
-          format: uuid
-        pickupAddress:
-          type: string
-        pickupLat:
-          type: number
-        pickupLng:
-          type: number
-        dropoffAddress:
-          type: string
-        dropoffLat:
-          type: number
-        dropoffLng:
-          type: number
-        assignedAt:
-          type: string
-          nullable: true
-          format: date-time
-        pickedUpAt:
-          type: string
-          nullable: true
-          format: date-time
-        deliveredAt:
-          type: string
-          nullable: true
-          format: date-time
-        note:
-          type: string
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        contactPhone:
-          type: string
-        deliveryFee:
-          type: integer
-          minimum: 0
-        baseFee:
-          type: integer
-          minimum: 0
-        distanceFee:
-          type: integer
-          minimum: 0
-        billingDistanceKm:
-          type: number
-          minimum: 0
-        distanceKm:
-          type: number
-          minimum: 0
-        estimatedMinutes:
-          type: integer
-          minimum: 0
-      required:
-        - id
-        - orderId
-        - riderId
-        - warehouseId
-        - status
-        - refundId
-        - pickupAddress
-        - pickupLat
-        - pickupLng
-        - dropoffAddress
-        - dropoffLat
-        - dropoffLng
-        - assignedAt
-        - pickedUpAt
-        - deliveredAt
-        - note
-        - createdAt
-        - updatedAt
     BatchAdjustRequest:
       type: object
       properties:
@@ -12759,148 +12666,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      billingDistanceKm:
-                        type: number
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                      estimatedArrival:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      warehouseCode:
-                        type: string
-                      order:
-                        type: object
-                        properties:
-                          orderNo:
-                            type: string
-                          status:
-                            type: string
-                          payableAmount:
-                            type: integer
-                            nullable: true
-                            minimum: 0
-                            maximum: 999999
-                          paymentMethod:
-                            type: string
-                        required:
-                          - orderNo
-                          - status
-                          - payableAmount
-                          - paymentMethod
-                      rider:
-                        type: object
-                        nullable: true
-                        properties:
-                          id:
-                            type: string
-                            format: uuid
-                          riderName:
-                            type: string
-                          phone:
-                            type: string
-                        required:
-                          - id
-                          - riderName
-                          - phone
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
-                      - estimatedArrival
-                      - warehouseCode
-                      - order
-                      - rider
+                    $ref: "#/components/schemas/AdminDeliveryTaskView"
                 required:
                   - success
                   - data
@@ -12973,148 +12739,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      billingDistanceKm:
-                        type: number
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                      estimatedArrival:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      warehouseCode:
-                        type: string
-                      order:
-                        type: object
-                        properties:
-                          orderNo:
-                            type: string
-                          status:
-                            type: string
-                          payableAmount:
-                            type: integer
-                            nullable: true
-                            minimum: 0
-                            maximum: 999999
-                          paymentMethod:
-                            type: string
-                        required:
-                          - orderNo
-                          - status
-                          - payableAmount
-                          - paymentMethod
-                      rider:
-                        type: object
-                        nullable: true
-                        properties:
-                          id:
-                            type: string
-                            format: uuid
-                          riderName:
-                            type: string
-                          phone:
-                            type: string
-                        required:
-                          - id
-                          - riderName
-                          - phone
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
-                      - estimatedArrival
-                      - warehouseCode
-                      - order
-                      - rider
+                    $ref: "#/components/schemas/AdminDeliveryTaskView"
                 required:
                   - success
                   - data
@@ -13182,148 +12807,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      billingDistanceKm:
-                        type: number
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                      estimatedArrival:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      warehouseCode:
-                        type: string
-                      order:
-                        type: object
-                        properties:
-                          orderNo:
-                            type: string
-                          status:
-                            type: string
-                          payableAmount:
-                            type: integer
-                            nullable: true
-                            minimum: 0
-                            maximum: 999999
-                          paymentMethod:
-                            type: string
-                        required:
-                          - orderNo
-                          - status
-                          - payableAmount
-                          - paymentMethod
-                      rider:
-                        type: object
-                        nullable: true
-                        properties:
-                          id:
-                            type: string
-                            format: uuid
-                          riderName:
-                            type: string
-                          phone:
-                            type: string
-                        required:
-                          - id
-                          - riderName
-                          - phone
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
-                      - estimatedArrival
-                      - warehouseCode
-                      - order
-                      - rider
+                    $ref: "#/components/schemas/AdminDeliveryTaskView"
                 required:
                   - success
                   - data
@@ -13430,148 +12914,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      billingDistanceKm:
-                        type: number
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                      estimatedArrival:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      warehouseCode:
-                        type: string
-                      order:
-                        type: object
-                        properties:
-                          orderNo:
-                            type: string
-                          status:
-                            type: string
-                          payableAmount:
-                            type: integer
-                            nullable: true
-                            minimum: 0
-                            maximum: 999999
-                          paymentMethod:
-                            type: string
-                        required:
-                          - orderNo
-                          - status
-                          - payableAmount
-                          - paymentMethod
-                      rider:
-                        type: object
-                        nullable: true
-                        properties:
-                          id:
-                            type: string
-                            format: uuid
-                          riderName:
-                            type: string
-                          phone:
-                            type: string
-                        required:
-                          - id
-                          - riderName
-                          - phone
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
-                      - estimatedArrival
-                      - warehouseCode
-                      - order
-                      - rider
+                    $ref: "#/components/schemas/AdminDeliveryTaskView"
                 required:
                   - success
                   - data
