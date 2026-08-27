@@ -2986,6 +2986,12 @@ components:
         deliveryFee:
           type: integer
           minimum: 0
+        baseFee:
+          type: integer
+          minimum: 0
+        distanceFee:
+          type: integer
+          minimum: 0
         distanceKm:
           type: number
           minimum: 0
@@ -3130,6 +3136,12 @@ components:
                   contactPhone:
                     type: string
                   deliveryFee:
+                    type: integer
+                    minimum: 0
+                  baseFee:
+                    type: integer
+                    minimum: 0
+                  distanceFee:
                     type: integer
                     minimum: 0
                   distanceKm:
@@ -8638,13 +8650,23 @@ paths:
                     type: string
                     format: uuid
                   baseFee:
-                    type: number
+                    type: integer
+                    minimum: 0
                   perKmFee:
+                    type: integer
+                    minimum: 0
+                  freeKm:
                     type: number
-                  distance:
+                    minimum: 0
+                  distanceKm:
                     type: number
+                    nullable: true
+                  distanceFee:
+                    type: integer
+                    minimum: 0
                   deliveryFee:
-                    type: number
+                    type: integer
+                    minimum: 0
                   currency:
                     type: string
                     enum:
@@ -8653,7 +8675,9 @@ paths:
                   - warehouseId
                   - baseFee
                   - perKmFee
-                  - distance
+                  - freeKm
+                  - distanceKm
+                  - distanceFee
                   - deliveryFee
                   - currency
   /api/v1/client/pricing/min-order-check:
@@ -12403,6 +12427,12 @@ paths:
                             deliveryFee:
                               type: integer
                               minimum: 0
+                            baseFee:
+                              type: integer
+                              minimum: 0
+                            distanceFee:
+                              type: integer
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -12573,6 +12603,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -12780,6 +12816,12 @@ paths:
                       deliveryFee:
                         type: integer
                         minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -12978,6 +13020,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -13217,6 +13265,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -19994,6 +20048,12 @@ paths:
                             deliveryFee:
                               type: integer
                               minimum: 0
+                            baseFee:
+                              type: integer
+                              minimum: 0
+                            distanceFee:
+                              type: integer
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -20109,6 +20169,12 @@ paths:
                             contactPhone:
                               type: string
                             deliveryFee:
+                              type: integer
+                              minimum: 0
+                            baseFee:
+                              type: integer
+                              minimum: 0
+                            distanceFee:
                               type: integer
                               minimum: 0
                             distanceKm:
@@ -20234,6 +20300,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -20389,6 +20461,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -20548,6 +20626,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -20715,6 +20799,12 @@ paths:
                       deliveryFee:
                         type: integer
                         minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
+                        type: integer
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -20842,6 +20932,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:
@@ -22480,6 +22576,12 @@ paths:
                       contactPhone:
                         type: string
                       deliveryFee:
+                        type: integer
+                        minimum: 0
+                      baseFee:
+                        type: integer
+                        minimum: 0
+                      distanceFee:
                         type: integer
                         minimum: 0
                       distanceKm:

@@ -301,6 +301,10 @@ model Warehouse {
   /// 多语言营业时间 JSON
   operatingHours Json?
   deliveryFee    Int                                     @default(0) @map("delivery_fee")
+  /// 每公里加价（分/km，配送费距离计费 2026-08-27）；默认 0 = 功能未启用（灰度安全网）
+  perKmFee       Int                                     @default(0) @map("per_km_fee")
+  /// 起步距离（km，baseFee 覆盖的前 N 公里）；默认 2
+  freeKm         Decimal                                 @default(2) @map("free_km") @db.Decimal(10, 2)
   status         WarehouseStatus                         @default(ACTIVE)
   createdAt      DateTime                                @default(now()) @map("created_at")
   updatedAt      DateTime                                @updatedAt @map("updated_at")
@@ -488,6 +492,11 @@ model Order {
 
   // 地址快照(下单时拷贝)
   deliveryAddress Json @map("delivery_address")
+
+  /// 配送费计价快照（配送费距离计费 2026-08-27）
+  /// {baseFee, distanceFee, distanceKm, perKmFee, freeKm}——骑手端明细展示 + 灰度期校准数据源
+  /// 无坐标订单（fallback baseFee）或历史订单 → null，前端只显总额
+  deliveryFeeBreakdown Json? @map("delivery_fee_breakdown")
 
   remark String?
 

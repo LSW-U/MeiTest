@@ -51,6 +51,25 @@ export const DeliveryTask = z.object({
    */
   deliveryFee: z.number().int().nonnegative().optional(),
   /**
+   * 配送费基础费（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.baseFee 透传（订单快照）。
+   * breakdown 缺失（历史单/无坐标）→ undefined，前端只显总额。
+   */
+  baseFee: z.number().int().nonnegative().optional(),
+  /**
+   * 配送费距离加价（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.distanceFee 透传（订单快照）。
+   * 与 baseFee 一起展示明细「基础 $X + 距离 $Y = $Z」。
+   */
+  distanceFee: z.number().int().nonnegative().optional(),
+  /**
+   * 计费距离（km，距离计费批次1 2026-08-27 / P2-2 审查报告修复）
+   * 从 order.delivery_fee_breakdown.distanceKm 透传 = PostGIS ST_DistanceSphere(仓库中心→收货地址)。
+   * 与 distanceKm（pickup→dropoff haversine 骑行距离）语义不同：本字段是距离费的计算基准。
+   * breakdown 缺失（历史单/无坐标）→ undefined。
+   */
+  billingDistanceKm: z.number().nonnegative().optional(),
+  /**
    * 配送直线距离（km，P6 #7 2026-08-25）
    * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
    * 非实时路况距离，仅作展示/排序参考。

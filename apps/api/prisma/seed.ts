@@ -315,21 +315,10 @@ async function main() {
       value: 'USD',
       description: 'Settlement currency (ISO 4217)',
     },
-    {
-      key: 'delivery.base_fee',
-      value: '500',
-      description: 'Delivery base fee in cents (per warehouse.surcharge added on top)',
-    },
-    {
-      key: 'delivery.per_km_fee',
-      value: '50',
-      description: 'Per-km surcharge in cents (added on top of base fee)',
-    },
-    {
-      key: 'delivery.min_order_amount',
-      value: '1000',
-      description: 'Minimum order amount in cents; below this order is rejected at checkout',
-    },
+    // P2-1/P2-3 修复（2026-08-27 审查报告）：删 delivery.base_fee / per_km_fee / min_order_amount 三条死配置
+    //   计费参数已迁移到 warehouse.deliveryFee / perKmFee / freeKm 真字段（distance fee 改造）
+    //   checkMinOrder 起送价校验本期不生效（DEFAULT_MIN_ORDER_AMOUNT=0），保留这三条会误导运营以为生效
+    //   运营改这三条 key 不生效 → 删除避免混淆（admin-web settings 页 minOrderAmount 列读 listWarehousePricingConfig，不读 system_config）
     {
       key: 'rider.per_order_commission',
       value: '300',

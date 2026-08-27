@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mockRealtime, mockServer } = vi.hoisted(() => {
+const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mockPricing, mockRealtime, mockServer } = vi.hoisted(() => {
   const server = {
     to: vi.fn(() => server),
     emit: vi.fn(),
@@ -143,6 +143,8 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
     mockOrderNo: { nextOrderNo: vi.fn() },
     mockPayment: { createIntentForOrder: vi.fn() },
     mockCart: { clearOrderedItems: vi.fn() },
+    // 距离计费批次1（2026-08-27）：createOrder Step 4.5 调 pricingService.calcDeliveryFee
+    mockPricing: { calcDeliveryFee: vi.fn() },
     mockRealtime: { server },
     mockServer: server,
   };
@@ -193,6 +195,18 @@ describe('Order → Dispatch 全链路集成测试', () => {
     mockOrderNo.nextOrderNo.mockReset();
     mockPayment.createIntentForOrder.mockReset();
     mockCart.clearOrderedItems.mockReset();
+    // 距离计费批次1：默认 calcDeliveryFee 返回 deliveryFee=0（集成 happy path 不关心具体费额）
+    mockPricing.calcDeliveryFee.mockReset();
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
     mockServer.to.mockClear();
     mockServer.emit.mockClear();
     mockDb.$executeRaw.mockReset();
@@ -220,6 +234,12 @@ describe('Order → Dispatch 全链路集成测试', () => {
       mockQueue,
       null, // dispatchService：markPaid 集成时手动调
       mockCart,
+      {} as never, // promotionService（集成 happy path 不用 coupon）
+      new (class {
+        calcDeliveryFee = mockPricing.calcDeliveryFee;
+      })(), // pricingService（距离计费批次1：mock calcDeliveryFee）
+      null, // realtime
+      null, // notifyFactory
     );
 
     dispatchService = new DispatchService(mockRealtime as never);

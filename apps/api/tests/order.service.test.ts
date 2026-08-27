@@ -20,7 +20,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Prisma } from '../src/prisma/client';
 
-const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart } = vi.hoisted(() => ({
+const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mockPricing } = vi.hoisted(() => ({
   mockDb: {
     address: { findUnique: vi.fn() },
     sku: { findMany: vi.fn() },
@@ -38,6 +38,8 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart } = v
   mockPayment: { createIntentForOrder: vi.fn() },
   mockQueue: { add: vi.fn(), getJob: vi.fn() },
   mockCart: { clearOrderedItems: vi.fn() },
+  // 距离计费批次1（2026-08-27）：createOrder Step 4.5 调 pricingService.calcDeliveryFee
+  mockPricing: { calcDeliveryFee: vi.fn() },
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -69,6 +71,11 @@ vi.mock('bullmq', () => ({
 }));
 
 import { OrderService } from '../src/modules/order/order.service';
+vi.mock('../src/modules/pricing/pricing.service', () => ({
+  PricingService: class {
+    calcDeliveryFee = mockPricing.calcDeliveryFee;
+  },
+}));
 
 /** 构造 mock order record（withTransaction 回调内的 tx.order.create 返回值） */
 function mockCreatedOrder(overrides: Partial<{
@@ -105,6 +112,18 @@ describe('OrderService.createOrder', () => {
     mockPayment.createIntentForOrder.mockReset();
     mockQueue.add.mockReset();
     mockCart.clearOrderedItems.mockReset();
+    mockPricing.calcDeliveryFee.mockReset();
+    // 默认 calcDeliveryFee（覆盖 happy/P1/B1；提前抛错的 case 不会走到计费，mock 设不设无影响）
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
 
     // 默认空 items 列表（createOrder 末尾查 OrderItem 用，可被具体 case 覆盖）
     mockDb.orderItem.findMany.mockResolvedValue([]);
@@ -115,6 +134,12 @@ describe('OrderService.createOrder', () => {
       mockQueue,
       null, // dispatchService（happy path 中 markPaid 才用，createOrder 不调）
       mockCart, // cartService（B1：createOrder 后调 clearOrderedItems）
+      {} as never, // promotionService（happy path 不用 coupon，P1 case 单独注入）
+      new (class {
+        calcDeliveryFee = mockPricing.calcDeliveryFee;
+      })(), // pricingService（距离计费批次1：mock calcDeliveryFee）
+      null, // realtime
+      null, // notifyFactory
     );
   });
 
@@ -318,6 +343,17 @@ describe('OrderService.createOrder', () => {
       return fn(tx);
     });
     mockHelpers.deductStock.mockResolvedValue(true);
+    // 距离计费批次1：mock calcDeliveryFee（happy path 配送费 0，与原 mockWarehouse deliveryFee=0 一致）
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
     mockPayment.createIntentForOrder.mockResolvedValue({
       intentId: 'pi-1',
       status: 'PENDING',
@@ -382,6 +418,17 @@ describe('OrderService.createOrder', () => {
     (service as { promotionService: unknown }).promotionService = {
       applyCoupon: mockApplyCoupon,
     };
+    // 距离计费批次1：P1 场景也走 calcDeliveryFee（deliveryFee=0，applyCoupon 传 0 与原断言一致）
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
 
     mockDb.address.findUnique.mockResolvedValue({
       id: 'a1',
@@ -504,6 +551,17 @@ describe('OrderService.createOrder', () => {
       return fn(tx);
     });
     mockHelpers.deductStock.mockResolvedValue(true);
+    // 距离计费批次1：B1 容错场景也走 calcDeliveryFee（deliveryFee=0）
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
     mockPayment.createIntentForOrder.mockResolvedValue({
       intentId: 'pi-1',
       status: 'PENDING',
@@ -545,6 +603,10 @@ describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {
       mockQueue as never,
       {} as never,
       mockCart as never,
+      {} as never, // promotionService（markPaid 场景不用 coupon）
+      {} as never, // pricingService（markPaid 场景不重算费）
+      null, // realtime
+      null, // notifyFactory
     );
   });
 
@@ -686,6 +748,7 @@ describe('OrderService.getOrderDetail (P10/P11 rider 嵌套)', () => {
       null, // dispatchService
       null, // cartService
       {} as never, // promotionService
+      {} as never, // pricingService
       null, // realtime
       null, // notifyFactory
     );

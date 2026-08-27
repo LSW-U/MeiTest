@@ -3504,7 +3504,9 @@ export interface paths {
                             warehouseId: string;
                             baseFee: number;
                             perKmFee: number;
-                            distance: number;
+                            freeKm: number;
+                            distanceKm: number | null;
+                            distanceFee: number;
                             deliveryFee: number;
                             /** @enum {string} */
                             currency: "USD";
@@ -6245,6 +6247,8 @@ export interface paths {
                                     updatedAt: string;
                                     contactPhone?: string;
                                     deliveryFee?: number;
+                                    baseFee?: number;
+                                    distanceFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                     /** Format: date-time */
@@ -6345,6 +6349,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6470,6 +6476,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6591,6 +6599,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6756,6 +6766,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -11096,6 +11108,8 @@ export interface paths {
                                     updatedAt: string;
                                     contactPhone?: string;
                                     deliveryFee?: number;
+                                    baseFee?: number;
+                                    distanceFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                 }[];
@@ -11177,6 +11191,8 @@ export interface paths {
                                     updatedAt: string;
                                     contactPhone?: string;
                                     deliveryFee?: number;
+                                    baseFee?: number;
+                                    distanceFee?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                 }[];
@@ -11265,6 +11281,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11371,6 +11389,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11478,6 +11498,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11586,6 +11608,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -11673,6 +11697,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -12645,6 +12671,8 @@ export interface paths {
                                 updatedAt: string;
                                 contactPhone?: string;
                                 deliveryFee?: number;
+                                baseFee?: number;
+                                distanceFee?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                             };
@@ -16840,6 +16868,8 @@ export interface components {
             updatedAt: string;
             contactPhone?: string;
             deliveryFee?: number;
+            baseFee?: number;
+            distanceFee?: number;
             distanceKm?: number;
             estimatedMinutes?: number;
             /** Format: date-time */
@@ -16899,6 +16929,8 @@ export interface components {
                     updatedAt: string;
                     contactPhone?: string;
                     deliveryFee?: number;
+                    baseFee?: number;
+                    distanceFee?: number;
                     distanceKm?: number;
                     estimatedMinutes?: number;
                     /** Format: date-time */

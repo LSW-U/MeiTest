@@ -62,6 +62,16 @@ export interface DeliveryTaskView {
   paymentMethod?: string;
   /** W7 补字段：配送费 */
   deliveryFee?: number;
+  /**
+   * 配送费基础费（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.baseFee 透传（订单快照）；breakdown 缺失 → undefined。
+   */
+  baseFee?: number;
+  /**
+   * 配送费距离加价（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.distanceFee 透传（订单快照）；breakdown 缺失 → undefined。
+   */
+  distanceFee?: number;
   /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
   itemsSummary?: string;
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
@@ -72,6 +82,14 @@ export interface DeliveryTaskView {
    * 非实时路况距离，仅作展示/排序参考。
    */
   distanceKm?: number;
+  /**
+   * 计费距离（km，距离计费批次1 2026-08-27 审查报告 P2-2）
+   * 从 order.delivery_fee_breakdown.distanceKm 透传（PostGIS ST_DistanceSphere 仓库中心→收货地址）。
+   * 与 distanceKm 区别：distanceKm = pickup→dropoff Haversine（展示用），
+   *                     billingDistanceKm = 仓库→地址 球面距离（计费用，订单快照）。
+   * breakdown 缺失 → undefined（前端降级隐藏）。
+   */
+  billingDistanceKm?: number;
   /**
    * 预估配送时长（分钟，P6 #7 2026-08-25）
    * 由 distanceKm ÷ 20km/h 推导，上限 DEFAULT_ETA_MINUTES(45) 兜底；
@@ -207,7 +225,7 @@ export class DispatchService {
       take: limit,
       include: {
         // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -234,7 +252,7 @@ export class DispatchService {
       orderBy: { updatedAt: 'desc' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -305,7 +323,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -369,7 +387,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -454,7 +472,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -501,7 +519,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -592,7 +610,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -629,7 +647,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
           warehouse: { select: { code: true } },
         },
       });
@@ -704,7 +722,19 @@ export class DispatchService {
           note: `[ISSUE:${input.reason}]${input.note ? ' ' + input.note : ''}`,
         },
         include: {
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, status: true } },
+          // P0-2 修复（2026-08-27 审查报告）：补 deliveryAddress/deliveryFee/deliveryFeeBreakdown，
+          // 与其余 11 处 select 统一，否则 reportIssue 返回的 DeliveryTaskView 丢配送费/明细/联系电话
+          order: {
+            select: {
+              orderNo: true,
+              payableAmount: true,
+              paymentMethod: true,
+              status: true,
+              deliveryAddress: true,
+              deliveryFee: true,
+              deliveryFeeBreakdown: true,
+            },
+          },
           warehouse: { select: { code: true } },
         },
       });
@@ -783,7 +813,7 @@ export class DispatchService {
       where: { orderId, taskType: 'delivery' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -839,7 +869,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -980,7 +1010,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true } },
+        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
         warehouse: { select: { code: true } },
       },
     });
@@ -1381,6 +1411,19 @@ export class DispatchService {
       payableAmount: (t.order as any)?.payableAmount,
       paymentMethod: (t.order as any)?.paymentMethod,
       deliveryFee: (t.order as any)?.deliveryFee,
+      // 配送费距离计费批次1（2026-08-27）：从订单快照 delivery_fee_breakdown 透传明细
+      // breakdown 缺失（历史单/无坐标 fallback）→ undefined，前端只显总额
+      baseFee:
+        ((t.order as any)?.deliveryFeeBreakdown as { baseFee?: number } | null)?.baseFee ?? undefined,
+      distanceFee:
+        ((t.order as any)?.deliveryFeeBreakdown as { distanceFee?: number } | null)?.distanceFee ??
+        undefined,
+      // P2-2 修复（2026-08-27 审查报告）：计费距离独立字段，与 distanceKm（haversine 骑行距离）区分
+      // billingDistanceKm = PostGIS ST_DistanceSphere(仓库中心→收货地址)，即距离费的计算基准
+      // breakdown 缺失 → undefined；骑手端对账时「距离费基准」与「骑行距离」分开展示避免困惑
+      billingDistanceKm:
+        ((t.order as any)?.deliveryFeeBreakdown as { distanceKm?: number | null } | null)?.distanceKm ??
+        undefined,
       itemsSummary,
       // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
       contactPhone:

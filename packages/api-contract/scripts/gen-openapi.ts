@@ -1096,12 +1096,19 @@ registry.registerPath({
       description: '配送费结果',
       content: {
         'application/json': {
+          // 距离计费批次1（2026-08-27）：对齐 PricingService.DeliveryFeeResult 8 字段
+          // 删旧 distance，加 freeKm/distanceKm(nullable)/distanceFee 明细
           schema: z.object({
             warehouseId: Id,
-            baseFee: z.number(),
-            perKmFee: z.number(),
-            distance: z.number(),
-            deliveryFee: z.number(),
+            baseFee: z.number().int().nonnegative(),
+            perKmFee: z.number().int().nonnegative(),
+            /** 免费起步距离（km） */
+            freeKm: z.number().nonnegative(),
+            /** 计费距离（km，PostGIS ST_DistanceSphere 仓库中心→收货地址）；无坐标时 null */
+            distanceKm: z.number().nullable(),
+            /** 距离加价（分）= max(0, distanceKm - freeKm) × perKmFee */
+            distanceFee: z.number().int().nonnegative(),
+            deliveryFee: z.number().int().nonnegative(),
             currency: z.literal('USD'),
           }),
         },
@@ -1110,27 +1117,8 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: 'get',
-  path: '/api/v1/client/pricing/min-order-check',
-  tags: ['pricing'],
-  description: '起送价校验',
-  responses: {
-    200: {
-      description: '校验结果',
-      content: {
-        'application/json': {
-          schema: z.object({
-            ok: z.boolean(),
-            minOrderAmount: z.number(),
-            cartTotal: z.number(),
-            shortfall: z.number(),
-          }),
-        },
-      },
-    },
-  },
-});
+// P2-3 修复（2026-08-27 审查报告）：移除 /client/pricing/min-order-check 路径注册
+//   端点已删（pricing.controller），checkMinOrder 死代码清理。起送价需求激活时再恢复。
 
 registry.registerPath({
   method: 'get',
