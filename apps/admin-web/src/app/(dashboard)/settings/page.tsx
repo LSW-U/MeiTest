@@ -4,7 +4,7 @@
  * W7-ext-F 实现（2026-07-10）
  * 后端三组接口：
  *   1. Shop：GET/PATCH /admin/shop
- *   2. Pricing：GET /admin/pricing/config + PATCH /admin/pricing/warehouses/:id/base-fee
+ *   2. Pricing：GET /admin/pricing/config + PATCH /admin/pricing/warehouses/:warehouseId/config（批次3 灰度配置，三字段 partial）
  *   3. SystemConfig：GET /admin/platform/system-configs + PUT /admin/platform/system-configs/:key
  */
 'use client';
@@ -42,7 +42,7 @@ import {
   useShop,
   useUpdateShop,
   usePricingConfig,
-  useUpdateWarehouseBaseFee,
+  useUpdateWarehousePricingConfig,
   useSystemConfigs,
   useUpdateSystemConfig,
   type Shop,
@@ -261,26 +261,60 @@ function PricingTab() {
   const t = useTranslations('common');
   const { toast } = useToast();
   const { data: items, isLoading, error, refetch } = usePricingConfig();
-  const updateMutation = useUpdateWarehouseBaseFee();
+  const updateMutation = useUpdateWarehousePricingConfig();
 
   const [editing, setEditing] = useState<WarehousePricing | null>(null);
   const [baseFeeInput, setBaseFeeInput] = useState('');
+  const [perKmFeeInput, setPerKmFeeInput] = useState('');
+  const [freeKmInput, setFreeKmInput] = useState('');
 
   function openEdit(row: WarehousePricing) {
     setEditing(row);
     setBaseFeeInput(String(row.baseFee));
+    setPerKmFeeInput(String(row.perKmFee));
+    setFreeKmInput(String(row.freeKm));
   }
 
-  async function handleSaveBaseFee() {
+  /**
+   * 三字段 partial 保存（批次3 灰度配置 2026-08-28）
+   * 仅传「值有变化」的字段——未改字段不写，便于灰度切换（如只调 perKmFee=50）。
+   * baseFee/perKmFee：分单位整数 ≥0；freeKm：km ≥0（允许小数如 2.5）。
+   */
+  async function handleSavePricingConfig() {
     if (!editing) return;
     const baseFee = Number(baseFeeInput);
-    if (!Number.isFinite(baseFee) || baseFee < 0 || !Number.isInteger(baseFee)) {
+    const perKmFee = Number(perKmFeeInput);
+    const freeKm = Number(freeKmInput);
+
+    if (
+      !Number.isFinite(baseFee) ||
+      baseFee < 0 ||
+      !Number.isInteger(baseFee) ||
+      !Number.isFinite(perKmFee) ||
+      perKmFee < 0 ||
+      !Number.isInteger(perKmFee) ||
+      !Number.isFinite(freeKm) ||
+      freeKm < 0
+    ) {
       toast({ title: t('admin.settings.invalidFee'), variant: 'destructive' });
       return;
     }
+
+    // 仅传变化字段——partial 更新语义，灰度切换友好
+    const body: { baseFee?: number; perKmFee?: number; freeKm?: number } = {};
+    if (baseFee !== editing.baseFee) body.baseFee = baseFee;
+    if (perKmFee !== editing.perKmFee) body.perKmFee = perKmFee;
+    if (freeKm !== editing.freeKm) body.freeKm = freeKm;
+
+    if (Object.keys(body).length === 0) {
+      toast({ title: t('admin.settings.noChange') });
+      setEditing(null);
+      return;
+    }
+
     try {
-      await updateMutation.mutateAsync({ warehouseId: editing.warehouseId, baseFee });
-      toast({ title: t('admin.settings.baseFeeSaved') });
+      await updateMutation.mutateAsync({ warehouseId: editing.warehouseId, ...body });
+      toast({ title: t('admin.settings.pricingConfigSaved') });
       setEditing(null);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t('admin.settings.saveFailed');
@@ -309,6 +343,7 @@ function PricingTab() {
               <TableHead>{t('admin.settings.warehouseName')}</TableHead>
               <TableHead className="text-right">{t('admin.settings.baseFee')}</TableHead>
               <TableHead className="text-right">{t('admin.settings.perKmFee')}</TableHead>
+              <TableHead className="text-right">{t('admin.settings.freeKm')}</TableHead>
               <TableHead className="text-right">{t('admin.settings.minOrderAmount')}</TableHead>
               <TableHead>{t('status')}</TableHead>
               <TableHead className="text-right">{t('actions')}</TableHead>
@@ -321,6 +356,7 @@ function PricingTab() {
                 <TableCell>{(row.name as Record<string, string>)?.en ?? row.code}</TableCell>
                 <TableCell className="text-right">{row.baseFee}</TableCell>
                 <TableCell className="text-right">{row.perKmFee}</TableCell>
+                <TableCell className="text-right">{row.freeKm}</TableCell>
                 <TableCell className="text-right">{row.minOrderAmount}</TableCell>
                 <TableCell>
                   <Badge variant={row.status === 'ACTIVE' ? 'default' : 'secondary'}>
@@ -329,7 +365,7 @@ function PricingTab() {
                 </TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-                    {t('admin.settings.editBaseFee')}
+                    {t('admin.settings.editPricing')}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -341,28 +377,55 @@ function PricingTab() {
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('admin.settings.editBaseFeeTitle')}</DialogTitle>
+            <DialogTitle>{t('admin.settings.editPricingTitle')}</DialogTitle>
             <DialogDescription>
-              {t('admin.settings.editBaseFeeDescription')}
+              {t('admin.settings.editPricingDescription')}
               {editing ? ` (${editing.code})` : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="baseFeeInput">{t('admin.settings.baseFee')}</Label>
-            <Input
-              id="baseFeeInput"
-              type="number"
-              min={0}
-              value={baseFeeInput}
-              onChange={(e) => setBaseFeeInput(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">{t('admin.settings.baseFeeHint')}</p>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="baseFeeInput">{t('admin.settings.baseFee')}</Label>
+              <Input
+                id="baseFeeInput"
+                type="number"
+                min={0}
+                step={1}
+                value={baseFeeInput}
+                onChange={(e) => setBaseFeeInput(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('admin.settings.baseFeeHint')}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="perKmFeeInput">{t('admin.settings.perKmFee')}</Label>
+              <Input
+                id="perKmFeeInput"
+                type="number"
+                min={0}
+                step={1}
+                value={perKmFeeInput}
+                onChange={(e) => setPerKmFeeInput(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('admin.settings.perKmFeeHint')}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="freeKmInput">{t('admin.settings.freeKm')}</Label>
+              <Input
+                id="freeKmInput"
+                type="number"
+                min={0}
+                step={0.1}
+                value={freeKmInput}
+                onChange={(e) => setFreeKmInput(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('admin.settings.freeKmHint')}</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
               {t('cancel')}
             </Button>
-            <Button onClick={handleSaveBaseFee} disabled={updateMutation.isPending}>
+            <Button onClick={handleSavePricingConfig} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? t('admin.settings.saving') : t('admin.settings.save')}
             </Button>
           </DialogFooter>
