@@ -2992,6 +2992,9 @@ components:
         distanceFee:
           type: integer
           minimum: 0
+        billingDistanceKm:
+          type: number
+          minimum: 0
         distanceKm:
           type: number
           minimum: 0
@@ -3144,6 +3147,9 @@ components:
                   distanceFee:
                     type: integer
                     minimum: 0
+                  billingDistanceKm:
+                    type: number
+                    minimum: 0
                   distanceKm:
                     type: number
                     minimum: 0
@@ -3294,6 +3300,105 @@ components:
         - isOnline
         - totalDeliveries
         - rating
+    DeliveryTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        riderId:
+          type: string
+          nullable: true
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: *a17
+        taskType:
+          type: string
+          enum: *a18
+          default: delivery
+        refundId:
+          type: string
+          nullable: true
+          format: uuid
+        pickupAddress:
+          type: string
+        pickupLat:
+          type: number
+        pickupLng:
+          type: number
+        dropoffAddress:
+          type: string
+        dropoffLat:
+          type: number
+        dropoffLng:
+          type: number
+        assignedAt:
+          type: string
+          nullable: true
+          format: date-time
+        pickedUpAt:
+          type: string
+          nullable: true
+          format: date-time
+        deliveredAt:
+          type: string
+          nullable: true
+          format: date-time
+        note:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        contactPhone:
+          type: string
+        deliveryFee:
+          type: integer
+          minimum: 0
+        baseFee:
+          type: integer
+          minimum: 0
+        distanceFee:
+          type: integer
+          minimum: 0
+        billingDistanceKm:
+          type: number
+          minimum: 0
+        distanceKm:
+          type: number
+          minimum: 0
+        estimatedMinutes:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - orderId
+        - riderId
+        - warehouseId
+        - status
+        - refundId
+        - pickupAddress
+        - pickupLat
+        - pickupLng
+        - dropoffAddress
+        - dropoffLat
+        - dropoffLng
+        - assignedAt
+        - pickedUpAt
+        - deliveredAt
+        - note
+        - createdAt
+        - updatedAt
     BatchAdjustRequest:
       type: object
       properties:
@@ -8680,32 +8785,6 @@ paths:
                   - distanceFee
                   - deliveryFee
                   - currency
-  /api/v1/client/pricing/min-order-check:
-    get:
-      tags:
-        - pricing
-      description: 起送价校验
-      responses:
-        "200":
-          description: 校验结果
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                  minOrderAmount:
-                    type: number
-                  cartTotal:
-                    type: number
-                  shortfall:
-                    type: number
-                required:
-                  - ok
-                  - minOrderAmount
-                  - cartTotal
-                  - shortfall
   /api/v1/admin/pricing/config:
     get:
       tags:
@@ -12433,6 +12512,9 @@ paths:
                             distanceFee:
                               type: integer
                               minimum: 0
+                            billingDistanceKm:
+                              type: number
+                              minimum: 0
                             distanceKm:
                               type: number
                               minimum: 0
@@ -12610,6 +12692,9 @@ paths:
                         minimum: 0
                       distanceFee:
                         type: integer
+                        minimum: 0
+                      billingDistanceKm:
+                        type: number
                         minimum: 0
                       distanceKm:
                         type: number
@@ -12822,6 +12907,9 @@ paths:
                       distanceFee:
                         type: integer
                         minimum: 0
+                      billingDistanceKm:
+                        type: number
+                        minimum: 0
                       distanceKm:
                         type: number
                         minimum: 0
@@ -13027,6 +13115,9 @@ paths:
                         minimum: 0
                       distanceFee:
                         type: integer
+                        minimum: 0
+                      billingDistanceKm:
+                        type: number
                         minimum: 0
                       distanceKm:
                         type: number
@@ -13272,6 +13363,9 @@ paths:
                         minimum: 0
                       distanceFee:
                         type: integer
+                        minimum: 0
+                      billingDistanceKm:
+                        type: number
                         minimum: 0
                       distanceKm:
                         type: number
@@ -19984,101 +20078,7 @@ paths:
                       items:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              format: uuid
-                            orderId:
-                              type: string
-                              format: uuid
-                            riderId:
-                              type: string
-                              nullable: true
-                              format: uuid
-                            warehouseId:
-                              type: string
-                              format: uuid
-                            status:
-                              type: string
-                              enum: *a17
-                            taskType:
-                              type: string
-                              enum: *a18
-                              default: delivery
-                            refundId:
-                              type: string
-                              nullable: true
-                              format: uuid
-                            pickupAddress:
-                              type: string
-                            pickupLat:
-                              type: number
-                            pickupLng:
-                              type: number
-                            dropoffAddress:
-                              type: string
-                            dropoffLat:
-                              type: number
-                            dropoffLng:
-                              type: number
-                            assignedAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            pickedUpAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            deliveredAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            note:
-                              type: string
-                              nullable: true
-                            createdAt:
-                              type: string
-                              format: date-time
-                            updatedAt:
-                              type: string
-                              format: date-time
-                            contactPhone:
-                              type: string
-                            deliveryFee:
-                              type: integer
-                              minimum: 0
-                            baseFee:
-                              type: integer
-                              minimum: 0
-                            distanceFee:
-                              type: integer
-                              minimum: 0
-                            distanceKm:
-                              type: number
-                              minimum: 0
-                            estimatedMinutes:
-                              type: integer
-                              minimum: 0
-                          required:
-                            - id
-                            - orderId
-                            - riderId
-                            - warehouseId
-                            - status
-                            - refundId
-                            - pickupAddress
-                            - pickupLat
-                            - pickupLng
-                            - dropoffAddress
-                            - dropoffLat
-                            - dropoffLng
-                            - assignedAt
-                            - pickedUpAt
-                            - deliveredAt
-                            - note
-                            - createdAt
-                            - updatedAt
+                          $ref: "#/components/schemas/DeliveryTask"
                     required:
                       - items
                 required:
@@ -20107,101 +20107,7 @@ paths:
                       items:
                         type: array
                         items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              format: uuid
-                            orderId:
-                              type: string
-                              format: uuid
-                            riderId:
-                              type: string
-                              nullable: true
-                              format: uuid
-                            warehouseId:
-                              type: string
-                              format: uuid
-                            status:
-                              type: string
-                              enum: *a17
-                            taskType:
-                              type: string
-                              enum: *a18
-                              default: delivery
-                            refundId:
-                              type: string
-                              nullable: true
-                              format: uuid
-                            pickupAddress:
-                              type: string
-                            pickupLat:
-                              type: number
-                            pickupLng:
-                              type: number
-                            dropoffAddress:
-                              type: string
-                            dropoffLat:
-                              type: number
-                            dropoffLng:
-                              type: number
-                            assignedAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            pickedUpAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            deliveredAt:
-                              type: string
-                              nullable: true
-                              format: date-time
-                            note:
-                              type: string
-                              nullable: true
-                            createdAt:
-                              type: string
-                              format: date-time
-                            updatedAt:
-                              type: string
-                              format: date-time
-                            contactPhone:
-                              type: string
-                            deliveryFee:
-                              type: integer
-                              minimum: 0
-                            baseFee:
-                              type: integer
-                              minimum: 0
-                            distanceFee:
-                              type: integer
-                              minimum: 0
-                            distanceKm:
-                              type: number
-                              minimum: 0
-                            estimatedMinutes:
-                              type: integer
-                              minimum: 0
-                          required:
-                            - id
-                            - orderId
-                            - riderId
-                            - warehouseId
-                            - status
-                            - refundId
-                            - pickupAddress
-                            - pickupLat
-                            - pickupLng
-                            - dropoffAddress
-                            - dropoffLat
-                            - dropoffLng
-                            - assignedAt
-                            - pickedUpAt
-                            - deliveredAt
-                            - note
-                            - createdAt
-                            - updatedAt
+                          $ref: "#/components/schemas/DeliveryTask"
                     required:
                       - items
                 required:
@@ -20238,101 +20144,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data
@@ -20399,101 +20211,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data
@@ -20564,101 +20282,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data
@@ -20735,101 +20359,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data
@@ -20870,101 +20400,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data
@@ -22514,101 +21950,7 @@ paths:
                     enum:
                       - true
                   data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      orderId:
-                        type: string
-                        format: uuid
-                      riderId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      warehouseId:
-                        type: string
-                        format: uuid
-                      status:
-                        type: string
-                        enum: *a17
-                      taskType:
-                        type: string
-                        enum: *a18
-                        default: delivery
-                      refundId:
-                        type: string
-                        nullable: true
-                        format: uuid
-                      pickupAddress:
-                        type: string
-                      pickupLat:
-                        type: number
-                      pickupLng:
-                        type: number
-                      dropoffAddress:
-                        type: string
-                      dropoffLat:
-                        type: number
-                      dropoffLng:
-                        type: number
-                      assignedAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      pickedUpAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      deliveredAt:
-                        type: string
-                        nullable: true
-                        format: date-time
-                      note:
-                        type: string
-                        nullable: true
-                      createdAt:
-                        type: string
-                        format: date-time
-                      updatedAt:
-                        type: string
-                        format: date-time
-                      contactPhone:
-                        type: string
-                      deliveryFee:
-                        type: integer
-                        minimum: 0
-                      baseFee:
-                        type: integer
-                        minimum: 0
-                      distanceFee:
-                        type: integer
-                        minimum: 0
-                      distanceKm:
-                        type: number
-                        minimum: 0
-                      estimatedMinutes:
-                        type: integer
-                        minimum: 0
-                    required:
-                      - id
-                      - orderId
-                      - riderId
-                      - warehouseId
-                      - status
-                      - refundId
-                      - pickupAddress
-                      - pickupLat
-                      - pickupLng
-                      - dropoffAddress
-                      - dropoffLat
-                      - dropoffLng
-                      - assignedAt
-                      - pickedUpAt
-                      - deliveredAt
-                      - note
-                      - createdAt
-                      - updatedAt
+                    $ref: "#/components/schemas/DeliveryTask"
                 required:
                   - success
                   - data

@@ -332,6 +332,17 @@ registry.register('ListAllTasksQuery', ListAllTasksQuery);
 registry.register('ReassignTaskRequest', ReassignTaskRequest);
 registry.register('CancelTaskRequest', CancelTaskRequest);
 registry.register('AvailableRider', AvailableRider);
+// 批次2 审查报告 P3-1（2026-08-28）：DeliveryTask 注册到 registry 并就地 reassign，
+//   使 14 处 dispatch 端点响应引用带 refId 的同一 schema → gen:openapi 输出
+//   $ref:#/components/schemas/DeliveryTask 而非 inline 14 份重复字段块。
+//   ⚠️ register(refId, schema) 内部走 schemaWithRefId → schema.openapi(refId)，
+//   返回的是带 refId metadata 的【新 schema】，不就地 mutate 原 const；若只 register
+//   不 reassign，14 处引用仍指向无 refId 的原 schema → 仍 inline（已实测）。
+//   故必须 reassign，让后续所有引用（含 registerPath 响应 schema）拿到带 refId 版本。
+//   对照：AdminDeliveryTaskView = DeliveryTask.extend(...) 在 register 之前定义，
+//   不可对 DeliveryTask 提前 reassign（extend 会丢 refId），故仅对裸 DeliveryTask 用法生效；
+//   AdminDeliveryTaskView 仍 inline 是历史现状，本批次不动（超出范围，单开任务再处理）。
+const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
 
 // 批次 5 admin inventory
 registry.register('BatchAdjustRequest', BatchAdjustRequest);
@@ -2722,7 +2733,7 @@ registry.registerPath({
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ items: z.array(DeliveryTask) }),
+            data: z.object({ items: z.array(DeliveryTaskRef) }),
           }),
         },
       },
@@ -2743,7 +2754,7 @@ registry.registerPath({
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ items: z.array(DeliveryTask) }),
+            data: z.object({ items: z.array(DeliveryTaskRef) }),
           }),
         },
       },
@@ -2764,7 +2775,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '接单成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_ALREADY_ASSIGNED', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2783,7 +2794,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '取货成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2802,7 +2813,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '送达成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2821,7 +2832,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '异常上报成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
   },
 });
@@ -2842,7 +2853,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '开始配送成功（task 进入 DELIVERING；return 任务同时写 refund.pickedAt）',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
   },
 });
@@ -3032,7 +3043,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '重触发成功（返新建的 return task）',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     404: { description: 'E-REFUND-003 refund 不存在', content: { 'application/json': { schema: ErrorResponse } } },
     409: {

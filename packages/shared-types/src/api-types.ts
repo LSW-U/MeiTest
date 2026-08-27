@@ -3523,47 +3523,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/client/pricing/min-order-check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 起送价校验 */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description 校验结果 */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            ok: boolean;
-                            minOrderAmount: number;
-                            cartTotal: number;
-                            shortfall: number;
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/pricing/config": {
         parameters: {
             query?: never;
@@ -6249,6 +6208,7 @@ export interface paths {
                                     deliveryFee?: number;
                                     baseFee?: number;
                                     distanceFee?: number;
+                                    billingDistanceKm?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
                                     /** Format: date-time */
@@ -6351,6 +6311,7 @@ export interface paths {
                                 deliveryFee?: number;
                                 baseFee?: number;
                                 distanceFee?: number;
+                                billingDistanceKm?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6478,6 +6439,7 @@ export interface paths {
                                 deliveryFee?: number;
                                 baseFee?: number;
                                 distanceFee?: number;
+                                billingDistanceKm?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6601,6 +6563,7 @@ export interface paths {
                                 deliveryFee?: number;
                                 baseFee?: number;
                                 distanceFee?: number;
+                                billingDistanceKm?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -6768,6 +6731,7 @@ export interface paths {
                                 deliveryFee?: number;
                                 baseFee?: number;
                                 distanceFee?: number;
+                                billingDistanceKm?: number;
                                 distanceKm?: number;
                                 estimatedMinutes?: number;
                                 /** Format: date-time */
@@ -11071,48 +11035,7 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
-                                items: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    /** Format: uuid */
-                                    orderId: string;
-                                    /** Format: uuid */
-                                    riderId: string | null;
-                                    /** Format: uuid */
-                                    warehouseId: string;
-                                    /** @enum {string} */
-                                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                    /**
-                                     * @default delivery
-                                     * @enum {string}
-                                     */
-                                    taskType: "delivery" | "return";
-                                    /** Format: uuid */
-                                    refundId: string | null;
-                                    pickupAddress: string;
-                                    pickupLat: number;
-                                    pickupLng: number;
-                                    dropoffAddress: string;
-                                    dropoffLat: number;
-                                    dropoffLng: number;
-                                    /** Format: date-time */
-                                    assignedAt: string | null;
-                                    /** Format: date-time */
-                                    pickedUpAt: string | null;
-                                    /** Format: date-time */
-                                    deliveredAt: string | null;
-                                    note: string | null;
-                                    /** Format: date-time */
-                                    createdAt: string;
-                                    /** Format: date-time */
-                                    updatedAt: string;
-                                    contactPhone?: string;
-                                    deliveryFee?: number;
-                                    baseFee?: number;
-                                    distanceFee?: number;
-                                    distanceKm?: number;
-                                    estimatedMinutes?: number;
-                                }[];
+                                items: components["schemas"]["DeliveryTask"][];
                             };
                         };
                     };
@@ -11154,48 +11077,7 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
-                                items: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    /** Format: uuid */
-                                    orderId: string;
-                                    /** Format: uuid */
-                                    riderId: string | null;
-                                    /** Format: uuid */
-                                    warehouseId: string;
-                                    /** @enum {string} */
-                                    status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                    /**
-                                     * @default delivery
-                                     * @enum {string}
-                                     */
-                                    taskType: "delivery" | "return";
-                                    /** Format: uuid */
-                                    refundId: string | null;
-                                    pickupAddress: string;
-                                    pickupLat: number;
-                                    pickupLng: number;
-                                    dropoffAddress: string;
-                                    dropoffLat: number;
-                                    dropoffLng: number;
-                                    /** Format: date-time */
-                                    assignedAt: string | null;
-                                    /** Format: date-time */
-                                    pickedUpAt: string | null;
-                                    /** Format: date-time */
-                                    deliveredAt: string | null;
-                                    note: string | null;
-                                    /** Format: date-time */
-                                    createdAt: string;
-                                    /** Format: date-time */
-                                    updatedAt: string;
-                                    contactPhone?: string;
-                                    deliveryFee?: number;
-                                    baseFee?: number;
-                                    distanceFee?: number;
-                                    distanceKm?: number;
-                                    estimatedMinutes?: number;
-                                }[];
+                                items: components["schemas"]["DeliveryTask"][];
                             };
                         };
                     };
@@ -11244,48 +11126,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -11352,48 +11193,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -11461,48 +11261,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -11571,48 +11330,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -11660,48 +11378,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -12634,48 +12311,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                orderId: string;
-                                /** Format: uuid */
-                                riderId: string | null;
-                                /** Format: uuid */
-                                warehouseId: string;
-                                /** @enum {string} */
-                                status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
-                                /**
-                                 * @default delivery
-                                 * @enum {string}
-                                 */
-                                taskType: "delivery" | "return";
-                                /** Format: uuid */
-                                refundId: string | null;
-                                pickupAddress: string;
-                                pickupLat: number;
-                                pickupLng: number;
-                                dropoffAddress: string;
-                                dropoffLat: number;
-                                dropoffLng: number;
-                                /** Format: date-time */
-                                assignedAt: string | null;
-                                /** Format: date-time */
-                                pickedUpAt: string | null;
-                                /** Format: date-time */
-                                deliveredAt: string | null;
-                                note: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                updatedAt: string;
-                                contactPhone?: string;
-                                deliveryFee?: number;
-                                baseFee?: number;
-                                distanceFee?: number;
-                                distanceKm?: number;
-                                estimatedMinutes?: number;
-                            };
+                            data: components["schemas"]["DeliveryTask"];
                         };
                     };
                 };
@@ -16870,6 +16506,7 @@ export interface components {
             deliveryFee?: number;
             baseFee?: number;
             distanceFee?: number;
+            billingDistanceKm?: number;
             distanceKm?: number;
             estimatedMinutes?: number;
             /** Format: date-time */
@@ -16931,6 +16568,7 @@ export interface components {
                     deliveryFee?: number;
                     baseFee?: number;
                     distanceFee?: number;
+                    billingDistanceKm?: number;
                     distanceKm?: number;
                     estimatedMinutes?: number;
                     /** Format: date-time */
@@ -16983,6 +16621,49 @@ export interface components {
             isOnline: boolean;
             totalDeliveries: number;
             rating: number;
+        };
+        DeliveryTask: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            riderId: string | null;
+            /** Format: uuid */
+            warehouseId: string;
+            /** @enum {string} */
+            status: "PENDING_ASSIGN" | "ASSIGNED" | "PICKED_UP" | "DELIVERING" | "DELIVERED" | "FAILED";
+            /**
+             * @default delivery
+             * @enum {string}
+             */
+            taskType: "delivery" | "return";
+            /** Format: uuid */
+            refundId: string | null;
+            pickupAddress: string;
+            pickupLat: number;
+            pickupLng: number;
+            dropoffAddress: string;
+            dropoffLat: number;
+            dropoffLng: number;
+            /** Format: date-time */
+            assignedAt: string | null;
+            /** Format: date-time */
+            pickedUpAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            contactPhone?: string;
+            deliveryFee?: number;
+            baseFee?: number;
+            distanceFee?: number;
+            billingDistanceKm?: number;
+            distanceKm?: number;
+            estimatedMinutes?: number;
         };
         BatchAdjustRequest: {
             items: {
