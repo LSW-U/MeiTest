@@ -25,6 +25,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { db } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 /** 骑手申请状态 */
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -805,7 +806,7 @@ export class RiderService {
       // V2-S6 修复：NOT NULL 后无需 ?? 兜底
       applicationStatus: p.applicationStatus as ApplicationStatus,
       totalDeliveries: p.totalDeliveries,
-      rating: typeof p.rating === 'number' ? p.rating : p.rating?.toNumber() ?? 5,
+      rating: decimalToNumber(p.rating, 5),
       avatarUrl: p.avatarUrl,
       idCardImageUrl: p.idCardImageUrl,
       licenseImageUrl: p.licenseImageUrl,

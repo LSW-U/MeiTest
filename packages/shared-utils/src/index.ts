@@ -1,4 +1,5 @@
 export * from './money';
+export * from './decimal';
 export * from './time';
 export * from './id';
 export * from './pagination';

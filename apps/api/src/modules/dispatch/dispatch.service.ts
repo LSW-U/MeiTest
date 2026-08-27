@@ -25,7 +25,7 @@ import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
-import { haversineDistanceKm, estimateMinutesFromDistance } from '@meimart/shared-utils';
+import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 
@@ -838,8 +838,8 @@ export class DispatchService {
 
     const warehouse = order.warehouse;
     const pickupAddress = warehouse.address ?? `Warehouse ${warehouse.code}`;
-    const pickupLat = warehouse.centerLat ? Number(warehouse.centerLat) : 0;
-    const pickupLng = warehouse.centerLng ? Number(warehouse.centerLng) : 0;
+    const pickupLat = decimalToNumber(warehouse.centerLat, 0);
+    const pickupLng = decimalToNumber(warehouse.centerLng, 0);
 
     const dropoff = order.deliveryAddress as {
       name?: string;
@@ -977,8 +977,8 @@ export class DispatchService {
     }
     const warehouse = order.warehouse;
     const dropoffAddress = warehouse.address ?? `Warehouse ${warehouse.code}`;
-    const dropoffLat = warehouse.centerLat ? Number(warehouse.centerLat) : 0;
-    const dropoffLng = warehouse.centerLng ? Number(warehouse.centerLng) : 0;
+    const dropoffLat = decimalToNumber(warehouse.centerLat, 0);
+    const dropoffLng = decimalToNumber(warehouse.centerLng, 0);
 
     const dropoff = order.deliveryAddress as {
       name?: string;
@@ -1290,7 +1290,7 @@ export class DispatchService {
       vehicleType: p.vehicleType,
       isOnline: onlineFlags[i] ?? false,
       totalDeliveries: p.totalDeliveries,
-      rating: Number(p.rating),
+      rating: decimalToNumber(p.rating),
     }));
 
     // 在线优先，其次按接单数（熟手优先）
@@ -1311,11 +1311,11 @@ export class DispatchService {
       taskType: (t.taskType as 'delivery' | 'return') ?? 'delivery',
       refundId: t.refundId ?? null,
       pickupAddress: t.pickupAddress,
-      pickupLat: Number(t.pickupLat),
-      pickupLng: Number(t.pickupLng),
+      pickupLat: decimalToNumber(t.pickupLat, 0),
+      pickupLng: decimalToNumber(t.pickupLng, 0),
       dropoffAddress: t.dropoffAddress,
-      dropoffLat: Number(t.dropoffLat),
-      dropoffLng: Number(t.dropoffLng),
+      dropoffLat: decimalToNumber(t.dropoffLat, 0),
+      dropoffLng: decimalToNumber(t.dropoffLng, 0),
       assignedAt: t.assignedAt?.toISOString() ?? null,
       pickedUpAt: t.pickedUpAt?.toISOString() ?? null,
       deliveredAt: t.deliveredAt?.toISOString() ?? null,
@@ -1327,7 +1327,7 @@ export class DispatchService {
       order: {
         orderNo: t.order?.orderNo ?? '',
         status: t.order?.status ?? '',
-        payableAmount: t.order?.payableAmount != null ? Number(t.order.payableAmount) : null,
+        payableAmount: decimalToNumber(t.order?.payableAmount),
         paymentMethod: t.order?.paymentMethod ?? '',
       },
       rider: t.rider
@@ -1375,10 +1375,10 @@ export class DispatchService {
 
     // P6 #7 配送距离/时长（pickup → dropoff 的 Haversine 距离 + 时长推导）
     // 任一坐标缺失（含 (0,0) 哨兵——历史无坐标存 0，haversine(0,0,0,0) 返回 0 不是 null，需显式拦截）→ undefined，前端降级隐藏
-    const pLat = Number(t.pickupLat);
-    const pLng = Number(t.pickupLng);
-    const dLat = Number(t.dropoffLat);
-    const dLng = Number(t.dropoffLng);
+    const pLat = decimalToNumber(t.pickupLat, 0);
+    const pLng = decimalToNumber(t.pickupLng, 0);
+    const dLat = decimalToNumber(t.dropoffLat, 0);
+    const dLng = decimalToNumber(t.dropoffLng, 0);
     const hasCoords =
       [pLat, pLng, dLat, dLng].every(Number.isFinite) && !(pLat === 0 && pLng === 0 && dLat === 0 && dLng === 0);
     const distanceKm = hasCoords ? haversineDistanceKm(pLat, pLng, dLat, dLng) : null;
@@ -1395,11 +1395,11 @@ export class DispatchService {
       taskType: (t.taskType as 'delivery' | 'return') ?? 'delivery',
       refundId: t.refundId ?? null,
       pickupAddress: t.pickupAddress,
-      pickupLat: Number(t.pickupLat),
-      pickupLng: Number(t.pickupLng),
+      pickupLat: decimalToNumber(t.pickupLat, 0),
+      pickupLng: decimalToNumber(t.pickupLng, 0),
       dropoffAddress: t.dropoffAddress,
-      dropoffLat: Number(t.dropoffLat),
-      dropoffLng: Number(t.dropoffLng),
+      dropoffLat: decimalToNumber(t.dropoffLat, 0),
+      dropoffLng: decimalToNumber(t.dropoffLng, 0),
       assignedAt: t.assignedAt?.toISOString() ?? null,
       pickedUpAt: t.pickedUpAt?.toISOString() ?? null,
       deliveredAt: t.deliveredAt?.toISOString() ?? null,

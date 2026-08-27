@@ -17,6 +17,7 @@ import { Prisma } from '../../prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import { Address, NotificationItem } from '@meimart/api-contract';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 type AddressDTO = z.infer<typeof Address>;
 type NotificationDTO = z.infer<typeof NotificationItem>;
@@ -245,8 +246,8 @@ export class UserService {
       phone: a.phone,
       region: a.region as { province: string; city: string; district?: string },
       detail: a.detail,
-      lat: a.lat ? a.lat.toNumber() : null,
-      lng: a.lng ? a.lng.toNumber() : null,
+      lat: decimalToNumber(a.lat),
+      lng: decimalToNumber(a.lng),
       isDefault: a.isDefault,
       tag: a.tag,
       createdAt: a.createdAt.toISOString(),
@@ -770,8 +771,8 @@ export class UserService {
         phone: a.phone,
         region: a.region as { province: string; city: string; district?: string | null },
         detail: a.detail,
-        lat: a.lat !== null ? Number(a.lat) : null,
-        lng: a.lng !== null ? Number(a.lng) : null,
+        lat: decimalToNumber(a.lat),
+        lng: decimalToNumber(a.lng),
         isDefault: a.isDefault,
         tag: a.tag,
         createdAt: a.createdAt.toISOString(),

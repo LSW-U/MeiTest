@@ -11,6 +11,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { Prisma } from '../../prisma/client';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 @Injectable()
 export class ShopService {
@@ -81,8 +82,8 @@ export class ShopService {
       logoUrl: s.logoUrl,
       phone: s.phone,
       address: s.address,
-      lat: s.lat.toNumber(),
-      lng: s.lng.toNumber(),
+      lat: decimalToNumber(s.lat),
+      lng: decimalToNumber(s.lng),
       status: s.status as 'ACTIVE' | 'INACTIVE',
       businessHours: s.businessHours,
       createdAt: s.createdAt.toISOString(),

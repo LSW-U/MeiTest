@@ -25,6 +25,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { distanceSphereKm, isPointInWarehouseCoverage } from '../../shared/db/postgis-helpers';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 /** 默认起步距离（km），warehouse.free_km 为空时兜底 */
 const DEFAULT_FREE_KM = 2;
@@ -89,14 +90,9 @@ export class PricingService {
 
     const baseFee = warehouse.deliveryFee;
     const perKmFee = warehouse.perKmFee;
-    // freeKm 是 Prisma Decimal（@db.Decimal(10,2)），运行时为 Decimal 对象，需 .toNumber()
+    // freeKm 是 Prisma Decimal（@db.Decimal(10,2)），运行时为 Decimal 对象，经 decimalToNumber 归一
     // null 兜底 DEFAULT_FREE_KM（migration NOT NULL DEFAULT 2，理论不空，防御历史脏数据）
-    const freeKm =
-      warehouse.freeKm != null
-        ? typeof warehouse.freeKm === 'number'
-          ? warehouse.freeKm
-          : (warehouse.freeKm as { toNumber: () => number }).toNumber()
-        : DEFAULT_FREE_KM;
+    const freeKm = decimalToNumber(warehouse.freeKm, DEFAULT_FREE_KM);
 
     // PostGIS 球面距离（仓库中心 → 收货地址）；centerPoint 缺失 → null
     const distanceKm = await distanceSphereKm(db, warehouseId, lng, lat);
@@ -158,14 +154,9 @@ export class PricingService {
       name: w.name as Record<string, string>,
       baseFee: w.deliveryFee,
       perKmFee: w.perKmFee,
-      freeKm:
-        w.freeKm != null
-          ? typeof w.freeKm === 'number'
-            ? w.freeKm
-            : (w.freeKm as { toNumber: () => number }).toNumber()
-          : DEFAULT_FREE_KM,
+      freeKm: decimalToNumber(w.freeKm, DEFAULT_FREE_KM),
       minOrderAmount: 0,
-      center: { lat: w.centerLat.toNumber(), lng: w.centerLng.toNumber() },
+      center: { lat: decimalToNumber(w.centerLat), lng: decimalToNumber(w.centerLng) },
       status: w.status,
     }));
   }
@@ -204,13 +195,8 @@ export class PricingService {
       data,
     });
 
-    // freeKm 是 Prisma Decimal，运行时需 .toNumber() 归一为 number 返回给前端
-    const freeKm =
-      updated.freeKm != null
-        ? typeof updated.freeKm === 'number'
-          ? updated.freeKm
-          : (updated.freeKm as { toNumber: () => number }).toNumber()
-        : DEFAULT_FREE_KM;
+    // freeKm 是 Prisma Decimal，运行时经 decimalToNumber 归一为 number 返回给前端
+    const freeKm = decimalToNumber(updated.freeKm, DEFAULT_FREE_KM);
 
     return {
       warehouseId: updated.id,

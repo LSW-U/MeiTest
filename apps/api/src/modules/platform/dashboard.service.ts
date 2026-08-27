@@ -17,6 +17,7 @@ import { db } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 import { buildRange, growthPct, type Range } from './platform-time';
+import { decimalToNumber } from '@meimart/shared-utils';
 import type {
   DashboardTimeRangeType,
   TrendPointType,
@@ -164,7 +165,7 @@ export class DashboardService {
       ORDER BY ${Prisma.raw(bucketExpr)}
     `).map((row) => ({
       bucket: row.bucket,
-      gmv: Number(row.gmv),
+      gmv: decimalToNumber(row.gmv),
       orderCount: Number(row.order_count),
     }));
 

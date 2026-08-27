@@ -17,6 +17,7 @@ import {
   buildBoxPolygon,
   type GeoJSONPolygon,
 } from '../../shared/db/postgis-helpers';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 @Injectable()
 export class WarehouseService {
@@ -128,8 +129,8 @@ export class WarehouseService {
 
     // 若传入 PostGIS 字段，更新 center/coverage
     if (input.centerLat !== undefined || input.centerLng !== undefined || input.coverageArea !== undefined) {
-      const lon = input.centerLng ?? Number(updated.centerLng);
-      const lat = input.centerLat ?? Number(updated.centerLat);
+      const lon = input.centerLng ?? decimalToNumber(updated.centerLng);
+      const lat = input.centerLat ?? decimalToNumber(updated.centerLat);
       const coverage =
         input.coverageArea === null
           ? null
@@ -151,7 +152,7 @@ export class WarehouseService {
     await setWarehouseGeometry(
       db,
       id,
-      { lon: Number(existing.centerLng), lat: Number(existing.centerLat) },
+      { lon: decimalToNumber(existing.centerLng), lat: decimalToNumber(existing.centerLat) },
       coverage,
     );
     return { id, coverageArea: coverage };
@@ -197,8 +198,8 @@ export class WarehouseService {
       name: w.name as Record<string, string>,
       shopId: w.shopId,
       address: w.address,
-      centerLat: w.centerLat.toNumber(),
-      centerLng: w.centerLng.toNumber(),
+      centerLat: decimalToNumber(w.centerLat),
+      centerLng: decimalToNumber(w.centerLng),
       operatingHours: w.operatingHours,
       deliveryFee: w.deliveryFee,
       status: w.status as 'ACTIVE' | 'INACTIVE',
