@@ -123,6 +123,9 @@
   "E-WAREHOUSE-003": "Gudang tidak ditemukan",
   "E-AUTH-007": "Kata sandi belum diatur, atur melalui reset SMS terlebih dahulu",
   "E-FEEDBACK-001": "URL gambar harus dari layanan unggah kami",
+  "E-FEEDBACK-002": "Umpan balik tidak ditemukan",
+  "E-ADMIN-NOTIF-001": "Beberapa pengguna yang ditentukan tidak ditemukan",
+  "E-ADMIN-NOTIF-002": "Jumlah siaran melebihi batas (50000)",
   "E-PLATFORM-003": "Konfigurasi dukungan belum diinisialisasi",
   "E-LEGAL-001": "Dokumen hukum tidak ditemukan"
 }

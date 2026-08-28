@@ -13,11 +13,12 @@
 import { Module } from '@nestjs/common';
 import { FeedbackService } from './feedback.service';
 import { FeedbackController } from './feedback.controller';
+import { AdminFeedbackController } from './admin-feedback.controller';
 import { StorageModule } from '../../shared/storage/storage.module';
 
 @Module({
   imports: [StorageModule],
-  controllers: [FeedbackController],
+  controllers: [FeedbackController, AdminFeedbackController],
   providers: [FeedbackService],
   exports: [FeedbackService],
 })

@@ -226,9 +226,21 @@ import {
   CreateRiderReviewRequest,
   AdminListReviewsQuery,
   AdminUpdateReviewRequest,
-  // feedback（P22 反馈页 2026-08-19）
+  // feedback（P22 反馈页 2026-08-19 + admin-web 优化方案 批次2 2026-08-29 后台只读）
   Feedback,
   CreateFeedbackRequest,
+  AdminFeedbackListItem,
+  AdminFeedbackDetail,
+  AdminFeedbackListResponseData,
+  AdminListFeedbackQuery,
+  // notification（admin-web 优化方案 批次2 2026-08-29 后台发送/历史）
+  AdminSendNotificationRequest,
+  AdminSendNotificationResponseData,
+  AdminNotificationHistoryItem,
+  AdminNotificationHistoryListResponseData,
+  AdminListNotificationsQuery,
+  NotificationTarget,
+  AdminNotificationType,
   // common
   ErrorResponse,
   Id,
@@ -3762,6 +3774,98 @@ registry.registerPath({
     400: { description: '校验失败（category 枚举外 / content 长度 / images > 9）', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'E-FEEDBACK-001 图片 URL 非本服务上传（防 SSRF/外链）', content: { 'application/json': { schema: ErrorResponse } } },
     429: { description: '限流（5 次/小时/用户）', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== admin feedback（admin-web 优化方案 批次2 2026-08-29，后台只读）=====
+registry.register('AdminFeedbackListItem', AdminFeedbackListItem);
+registry.register('AdminFeedbackDetail', AdminFeedbackDetail);
+registry.register('AdminFeedbackListResponseData', AdminFeedbackListResponseData);
+registry.register('AdminListFeedbackQuery', AdminListFeedbackQuery);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/feedback',
+  tags: ['feedback'],
+  description:
+    '后台反馈列表（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。category 筛选 + keyword 模糊 content/contact + 时间范围 startDate/endDate（均含边界）+ offset 分页（page/pageSize 默认 1/20，max 100）。返回 items 含 submitter 摘要（phone/name/avatarUrl，user 软删也保留）。MVP 无处理状态字段（后续增强需 migration）。',
+  request: { query: AdminListFeedbackQuery },
+  responses: {
+    200: {
+      description: '反馈列表（offset 分页）',
+      content: { 'application/json': { schema: AdminFeedbackListResponseData } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/feedback/{id}',
+  tags: ['feedback'],
+  description:
+    '后台反馈详情（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。含 images 截图 URL + submitter 扩展信息（email/role/status）。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '反馈详情',
+      content: { 'application/json': { schema: AdminFeedbackDetail } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-FEEDBACK-002 反馈不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== admin notifications（admin-web 优化方案 批次2 2026-08-29，后台发送/历史）=====
+registry.register('AdminSendNotificationRequest', AdminSendNotificationRequest);
+registry.register('AdminSendNotificationResponseData', AdminSendNotificationResponseData);
+registry.register('AdminNotificationHistoryItem', AdminNotificationHistoryItem);
+registry.register('AdminNotificationHistoryListResponseData', AdminNotificationHistoryListResponseData);
+registry.register('AdminListNotificationsQuery', AdminListNotificationsQuery);
+registry.register('NotificationTarget', NotificationTarget);
+registry.register('AdminNotificationType', AdminNotificationType);
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/notifications',
+  tags: ['notification'],
+  description:
+    '后台发送通知（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM。title/content 多语言 JSON（至少 en）。MVP 真链路=写 Notification 表（前端 /client/notifications 拉取），PUSH 走 dev stub（mockFlag=true 提示未真实推送）。响应 deliveredCount + push 结果。',
+  request: {
+    body: { content: { 'application/json': { schema: AdminSendNotificationRequest } } },
+  },
+  responses: {
+    200: {
+      description: '发送成功，返回投递计数 + PUSH stub 结果',
+      content: { 'application/json': { schema: AdminSendNotificationResponseData } },
+    },
+    400: {
+      description: 'E-ADMIN-NOTIF-001 userIds 缺失/不存在 / E-ADMIN-NOTIF-002 群发超上限 / E-COMMON-001 校验失败',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/notifications',
+  tags: ['notification'],
+  description:
+    '后台通知发送历史（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。offset 分页 + type/target 筛选。MVP 无「批次」表，按 Notification 行倒序展示，每条 deliveredCount=1（真正按批次聚合需建 NotificationBatch 表，列暂缓增强）。',
+  request: { query: AdminListNotificationsQuery },
+  responses: {
+    200: {
+      description: '发送历史列表（offset 分页）',
+      content: { 'application/json': { schema: AdminNotificationHistoryListResponseData } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

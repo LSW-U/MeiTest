@@ -123,6 +123,9 @@
   "E-WAREHOUSE-003": "Warehouse not found",
   "E-AUTH-007": "No password set. Use SMS password reset to set one first",
   "E-FEEDBACK-001": "Image URL must be from our upload service",
+  "E-FEEDBACK-002": "Feedback not found",
+  "E-ADMIN-NOTIF-001": "Some specified users do not exist",
+  "E-ADMIN-NOTIF-002": "Broadcast size exceeds the hard limit (50000)",
   "E-PLATFORM-003": "Support config not initialized",
   "E-LEGAL-001": "Legal document not found"
 }

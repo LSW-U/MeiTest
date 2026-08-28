@@ -14808,6 +14808,431 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台反馈列表（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。category 筛选 + keyword 模糊 content/contact + 时间范围 startDate/endDate（均含边界）+ offset 分页（page/pageSize 默认 1/20，max 100）。返回 items 含 submitter 摘要（phone/name/avatarUrl，user 软删也保留）。MVP 无处理状态字段（后续增强需 migration）。 */
+        get: {
+            parameters: {
+                query?: {
+                    category?: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                    keyword?: string;
+                    startDate?: string;
+                    endDate?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 反馈列表（offset 分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                /** @enum {string} */
+                                category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                                content: string;
+                                contact: string | null;
+                                images: string[];
+                                /** Format: date-time */
+                                createdAt: string;
+                                submitter: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    phone: string | null;
+                                    name: string | null;
+                                    avatarUrl: string | null;
+                                } | null;
+                            }[];
+                            page: number;
+                            pageSize: number;
+                            total: number;
+                            hasMore: boolean;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 SUPER_ADMIN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/feedback/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台反馈详情（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。含 images 截图 URL + submitter 扩展信息（email/role/status）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 反馈详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** @enum {string} */
+                            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                            content: string;
+                            contact: string | null;
+                            images: string[];
+                            /** Format: date-time */
+                            createdAt: string;
+                            submitter: {
+                                /** Format: uuid */
+                                id: string;
+                                phone: string | null;
+                                /** Format: email */
+                                email: string | null;
+                                name: string | null;
+                                avatarUrl: string | null;
+                                role: string;
+                                status: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 SUPER_ADMIN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-FEEDBACK-002 反馈不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 后台通知发送历史（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。offset 分页 + type/target 筛选。MVP 无「批次」表，按 Notification 行倒序展示，每条 deliveredCount=1（真正按批次聚合需建 NotificationBatch 表，列暂缓增强）。 */
+        get: {
+            parameters: {
+                query?: {
+                    type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 发送历史列表（offset 分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                                deliveredCount: number;
+                                title: {
+                                    [key: string]: string;
+                                };
+                                content: {
+                                    [key: string]: string;
+                                };
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            page: number;
+                            pageSize: number;
+                            total: number;
+                            hasMore: boolean;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 SUPER_ADMIN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 后台发送通知（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM。title/content 多语言 JSON（至少 en）。MVP 真链路=写 Notification 表（前端 /client/notifications 拉取），PUSH 走 dev stub（mockFlag=true 提示未真实推送）。响应 deliveredCount + push 结果。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+                        userIds?: string[];
+                        /** @enum {string} */
+                        type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                        title: {
+                            [key: string]: string;
+                        };
+                        content: {
+                            [key: string]: string;
+                        };
+                        data?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 发送成功，返回投递计数 + PUSH stub 结果 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deliveredCount: number;
+                            push: {
+                                success: boolean;
+                                mockFlag: boolean;
+                                error: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-NOTIF-001 userIds 缺失/不存在 / E-ADMIN-NOTIF-002 群发超上限 / E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 SUPER_ADMIN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/settle/settlements": {
         parameters: {
             query?: never;
@@ -17622,6 +18047,157 @@ export interface components {
             /** @default [] */
             images: string[];
         };
+        AdminFeedbackListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+            content: string;
+            contact: string | null;
+            images: string[];
+            /** Format: date-time */
+            createdAt: string;
+            submitter: {
+                /** Format: uuid */
+                id: string;
+                phone: string | null;
+                name: string | null;
+                avatarUrl: string | null;
+            } | null;
+        };
+        AdminFeedbackDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            /** @enum {string} */
+            category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+            content: string;
+            contact: string | null;
+            images: string[];
+            /** Format: date-time */
+            createdAt: string;
+            submitter: {
+                /** Format: uuid */
+                id: string;
+                phone: string | null;
+                /** Format: email */
+                email: string | null;
+                name: string | null;
+                avatarUrl: string | null;
+                role: string;
+                status: string;
+            } | null;
+        };
+        AdminFeedbackListResponseData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                userId: string;
+                /** @enum {string} */
+                category: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+                content: string;
+                contact: string | null;
+                images: string[];
+                /** Format: date-time */
+                createdAt: string;
+                submitter: {
+                    /** Format: uuid */
+                    id: string;
+                    phone: string | null;
+                    name: string | null;
+                    avatarUrl: string | null;
+                } | null;
+            }[];
+            page: number;
+            pageSize: number;
+            total: number;
+            hasMore: boolean;
+        };
+        AdminListFeedbackQuery: {
+            /** @enum {string} */
+            category?: "feature" | "product" | "order" | "payment" | "shipping" | "other";
+            keyword?: string;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            page?: number;
+            pageSize?: number;
+        };
+        AdminSendNotificationRequest: {
+            /** @enum {string} */
+            target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+            userIds?: string[];
+            /** @enum {string} */
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            title: {
+                [key: string]: string;
+            };
+            content: {
+                [key: string]: string;
+            };
+            data?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        AdminSendNotificationResponseData: {
+            deliveredCount: number;
+            push: {
+                success: boolean;
+                mockFlag: boolean;
+                error: string | null;
+            };
+        };
+        AdminNotificationHistoryItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            deliveredCount: number;
+            title: {
+                [key: string]: string;
+            };
+            content: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminNotificationHistoryListResponseData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                deliveredCount: number;
+                title: {
+                    [key: string]: string;
+                };
+                content: {
+                    [key: string]: string;
+                };
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            page: number;
+            pageSize: number;
+            total: number;
+            hasMore: boolean;
+        };
+        AdminListNotificationsQuery: {
+            /** @enum {string} */
+            type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            page?: number;
+            pageSize?: number;
+        };
+        /** @enum {string} */
+        NotificationTarget: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+        /** @enum {string} */
+        AdminNotificationType: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
     };
     responses: never;
     parameters: never;

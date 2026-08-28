@@ -10,11 +10,24 @@
  *
  * 错误码：E-FEEDBACK-001(images 非本服务上传 409) + E-COMMON-001
  */
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
+import { z } from 'zod';
 import { db } from '../../shared/db';
 import { StorageService } from '../../shared/storage/storage.service';
-import type { Feedback as DbFeedback } from '../../prisma/client';
-import { FeedbackCategorySchema, type FeedbackView } from './feedback.types';
+import type { Feedback as DbFeedback, User as DbUser, Prisma } from '../../prisma/client';
+import {
+  FeedbackCategorySchema,
+  type FeedbackView,
+} from './feedback.types';
+import {
+  AdminFeedbackListItem,
+  AdminFeedbackDetail,
+} from '@meimart/api-contract';
+
+/** 后台反馈列表项视图（contract schema 推导，避免双源漂移） */
+type AdminFeedbackListView = z.infer<typeof AdminFeedbackListItem>;
+/** 后台反馈详情视图 */
+type AdminFeedbackDetailView = z.infer<typeof AdminFeedbackDetail>;
 
 /** 反馈创建入参（service 内部） */
 export interface CreateFeedbackInput {
@@ -68,6 +81,160 @@ export class FeedbackService {
       contact: f.contact,
       images: f.images,
       createdAt: f.createdAt.toISOString(),
+    };
+  }
+
+  // ===== Admin: 反馈管理（admin-web 优化方案 批次2 2026-08-29，只读） =====
+
+  /**
+   * 后台反馈列表（offset 分页 + category 筛选 + 时间范围 + keyword）
+   *
+   * keyword 模糊匹配 content / contact（不匹配 userId，运营视角按内容检索更自然）。
+   * 时间范围：startDate / endDate 均含边界（createdAt >= startDate && createdAt <= endDate）。
+   * include submitter：phone + name + avatarUrl（列表页展示提交人摘要，user 软删也保留）。
+   */
+  async adminListFeedback(opts: {
+    category?: string;
+    keyword?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    pageSize?: number;
+  } = {}): Promise<{
+    items: AdminFeedbackListView[];
+    page: number;
+    pageSize: number;
+    total: number;
+    hasMore: boolean;
+  }> {
+    const page = Math.max(opts.page ?? 1, 1);
+    const pageSize = Math.min(Math.max(opts.pageSize ?? 20, 1), 100);
+    const skip = (page - 1) * pageSize;
+
+    const where: Prisma.FeedbackWhereInput = {};
+    if (opts.category) where.category = opts.category;
+    if (opts.startDate || opts.endDate) {
+      where.createdAt = {};
+      if (opts.startDate) where.createdAt.gte = new Date(opts.startDate);
+      // endDate 含边界：+1 day - 1ms 等价于「当天结束」由前端传完整 ISO；这里直接 <= endDate
+      if (opts.endDate) where.createdAt.lte = new Date(opts.endDate);
+    }
+    if (opts.keyword && opts.keyword.trim().length > 0) {
+      const kw = opts.keyword.trim();
+      where.OR = [
+        { content: { contains: kw, mode: 'insensitive' } },
+        { contact: { contains: kw, mode: 'insensitive' } },
+      ];
+    }
+
+    const [rows, total] = await Promise.all([
+      db.feedback.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: { user: { select: { id: true, phone: true, name: true, avatarUrl: true } } },
+      }),
+      db.feedback.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((r) => this.toAdminListItem(r)),
+      page,
+      pageSize,
+      total,
+      hasMore: skip + rows.length < total,
+    };
+  }
+
+  /**
+   * 后台反馈详情（含 images 截图 URL + 提交人扩展信息）
+   *
+   * @throws NotFoundException E-FEEDBACK-002 反馈不存在
+   */
+  async adminGetFeedback(id: string): Promise<AdminFeedbackDetailView> {
+    const row = await db.feedback.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            phone: true,
+            email: true,
+            name: true,
+            avatarUrl: true,
+            role: true,
+            status: true,
+          },
+        },
+      },
+    });
+    if (!row) {
+      throw new NotFoundException({
+        code: 'E-FEEDBACK-002',
+        message: 'Feedback not found',
+      });
+    }
+    return this.toAdminDetail(row);
+  }
+
+  /** 列表项 DTO（submitter 摘要：phone/name/avatarUrl） */
+  private toAdminListItem(
+    r: DbFeedback & {
+      user: Pick<DbUser, 'id' | 'phone' | 'name' | 'avatarUrl'> | null;
+    },
+  ): AdminFeedbackListView {
+    const parsed = FeedbackCategorySchema.safeParse(r.category);
+    return {
+      id: r.id,
+      userId: r.userId,
+      category: parsed.success ? parsed.data : 'other',
+      content: r.content,
+      contact: r.contact,
+      images: r.images,
+      createdAt: r.createdAt.toISOString(),
+      submitter: r.user
+        ? {
+            id: r.user.id,
+            phone: r.user.phone,
+            name: r.user.name,
+            avatarUrl: r.user.avatarUrl,
+          }
+        : null,
+    };
+  }
+
+  /** 详情 DTO（submitter 扩展：含 email/role/status） */
+  private toAdminDetail(
+    r: DbFeedback & {
+      user:
+        | (Pick<
+            DbUser,
+            'id' | 'phone' | 'email' | 'name' | 'avatarUrl' | 'role' | 'status'
+          >)
+        | null;
+    },
+  ): AdminFeedbackDetailView {
+    const parsed = FeedbackCategorySchema.safeParse(r.category);
+    return {
+      id: r.id,
+      userId: r.userId,
+      category: parsed.success ? parsed.data : 'other',
+      content: r.content,
+      contact: r.contact,
+      images: r.images,
+      createdAt: r.createdAt.toISOString(),
+      submitter: r.user
+        ? {
+            id: r.user.id,
+            phone: r.user.phone,
+            email: r.user.email,
+            name: r.user.name,
+            avatarUrl: r.user.avatarUrl,
+            role: r.user.role,
+            status: r.user.status,
+          }
+        : null,
     };
   }
 }

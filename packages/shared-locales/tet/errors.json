@@ -123,6 +123,9 @@
   "E-WAREHOUSE-003": "Armazén laha iha",
   "E-AUTH-007": "Kolla password, uza reset SMS atu kria kontauk ida",
   "E-FEEDBACK-001": "[TET] URL imajen tenki husi servisu upload ami",
+  "E-FEEDBACK-002": "[TET] Feedback la hetan",
+  "E-ADMIN-NOTIF-001": "[TET] Uzuáriu ida ne'ebé hetan la eziste",
+  "E-ADMIN-NOTIF-002": "[TET] Sasukat broadcast ultraja limite (50000)",
   "E-PLATFORM-003": "Support config not initialized",
   "E-LEGAL-001": "Documentu legal la hetan"
 }

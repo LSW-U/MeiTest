@@ -18,6 +18,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { CommonModule } from './modules/common/common.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { HomeModule } from './modules/home/home.module';
 import { AboutModule } from './modules/about/about.module';
 import { ImModule } from './modules/im/im.module';
@@ -60,6 +61,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     HomeModule,
     ImModule,
     InventoryModule,
+    NotificationModule,
     OrderModule,
     PaymentModule,
     PlatformModule,
