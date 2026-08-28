@@ -214,6 +214,8 @@ import {
   // search（热搜 2026-07-31）
   HotSearchTermItem,
   HotSearchTerm,
+  HotSearchType,
+  SearchLang,
   CreateHotSearchTermRequest as CreateHotSearchTermRequestSchema,
   UpdateHotSearchTermRequest as UpdateHotSearchTermRequestSchema,
   ZeroResultTerm,
@@ -3439,6 +3441,175 @@ registry.registerPath({
       description: '建议词列表（词库 > ZSET > 商品名，BLOCKED 全链路剔除）',
       content: { 'application/json': { schema: HotSearchTermItem.array() } },
     },
+  },
+});
+
+// ===== Admin hot-search（运营管理，2026-08-28 契约补全）=====
+// 后端 AdminHotSearchController 已实现 6 端点，此处补 OpenAPI 注册（Role: SUPER_ADMIN）。
+// 统一响应包装 { success: true, data: ... }，沿用 controller 返回形态。
+
+/** Admin 热搜项（P2-1 修复 2026-08-28）：与客户端 HotSearchTermItem 分离——
+ *  adminListHot 跨语言聚合时每条带 lang 标记来源 ZSET（search.service.ts 返回
+ *  {word, lang, searchCount}），客户端 /client/search/hot 故意无 lang（语义不同），
+ *  故不复用 HotSearchTermItem，独立定义对齐实现 */
+const AdminHotListItem = z.object({
+  word: z.string(),
+  lang: SearchLang,
+  searchCount: z.number().int(),
+});
+
+/** Admin 热搜响应包装（ZSET 真实热度 top N） */
+const AdminHotListResponse = z.object({
+  success: z.literal(true),
+  data: AdminHotListItem.array(),
+});
+
+/** Admin 种子词 / 零结果词响应包装 */
+const AdminHotSearchTermsResponse = z.object({
+  success: z.literal(true),
+  data: HotSearchTerm.array(),
+});
+
+const AdminZeroResultResponse = z.object({
+  success: z.literal(true),
+  data: ZeroResultTerm.array(),
+});
+
+/** Admin 种子词操作（create/update）响应包装 */
+const AdminHotSearchTermMutationResponse = z.object({
+  success: z.literal(true),
+  data: HotSearchTerm,
+});
+
+/** Admin 删除种子词响应包装 */
+const AdminHotSearchTermDeleteResponse = z.object({
+  success: z.literal(true),
+  data: z.object({ id: Id }),
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search',
+  tags: ['search'],
+  description:
+    'ZSET 真实热搜 top N（运营看热度，Role: SUPER_ADMIN）。返 AdminHotListItem[]（word + lang + searchCount，lang 标记来源语言 ZSET）。limit 默认 50 最大 200，可按 lang 筛选。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'ZSET 真实热度排行',
+      content: { 'application/json': { schema: AdminHotListResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search/terms',
+  tags: ['search'],
+  description:
+    '运营种子词列表（HotSearchTerm 表，Role: SUPER_ADMIN）。可按 lang/type 筛选，返 HotSearchTerm[]（含 id/word/lang/type/sortOrder/status/时间戳）。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+      type: HotSearchType.optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '种子词列表',
+      content: { 'application/json': { schema: AdminHotSearchTermsResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search/zero-result',
+  tags: ['search'],
+  description:
+    '零结果词聚合（运营补商品/补词依据，Role: SUPER_ADMIN）。从 SearchLog 聚合「用户搜了但无商品」的词，返 ZeroResultTerm[]（word + lang + count）。可按 lang 筛选。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '零结果词排行',
+      content: { 'application/json': { schema: AdminZeroResultResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/hot-search/terms',
+  tags: ['search'],
+  description:
+    '新增运营种子词（Role: SUPER_ADMIN）。type=PINNED 置顶 / MANUAL 兜底 / BLOCKED 屏蔽。word 1-50 字符，lang 五语言之一。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateHotSearchTermRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '创建后的种子词',
+      content: { 'application/json': { schema: AdminHotSearchTermMutationResponse } },
+    },
+    400: { description: '请求体校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/hot-search/terms/{id}',
+  tags: ['search'],
+  description:
+    '编辑运营种子词（Role: SUPER_ADMIN）。支持 word/lang/type/sortOrder/status 局部更新。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateHotSearchTermRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的种子词',
+      content: { 'application/json': { schema: AdminHotSearchTermMutationResponse } },
+    },
+    400: { description: '请求体校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-SEARCH-001 种子词不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/hot-search/terms/{id}',
+  tags: ['search'],
+  description: '删除运营种子词（Role: SUPER_ADMIN）。返 { id }。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '删除成功',
+      content: { 'application/json': { schema: AdminHotSearchTermDeleteResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-SEARCH-001 种子词不存在', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
