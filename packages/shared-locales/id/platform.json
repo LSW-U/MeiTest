@@ -32,7 +32,10 @@
     "perspectiveLabel": "Perspektif",
     "reviews": "Reviews",
     "banners": "Banner",
-    "hotSearch": "Pencarian Populer"
+    "hotSearch": "Pencarian Populer",
+    "apps": "Pusat Aplikasi",
+    "feedback": "Umpan Balik",
+    "notifications": "Notifikasi"
   },
   "dashboard": {
     "title": "Dasbor Platform",

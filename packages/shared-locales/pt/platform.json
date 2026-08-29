@@ -32,7 +32,10 @@
     "perspectiveLabel": "Perspectiva",
     "reviews": "Reviews",
     "banners": "Banners",
-    "hotSearch": "Buscas Populares"
+    "hotSearch": "Buscas Populares",
+    "apps": "Central de Apps",
+    "feedback": "Comentários",
+    "notifications": "Notificações"
   },
   "dashboard": {
     "title": "Painel da Plataforma",

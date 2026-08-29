@@ -9,6 +9,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -47,13 +48,14 @@ export function DataTable<T extends { id?: string }>({
   rowKey,
   rowActions,
 }: DataTableProps<T>) {
+  const t = useTranslations('common');
   const getKey = (row: T, idx: number) =>
     rowKey ? rowKey(row) : row.id ?? String(idx);
 
   return (
     <div className="space-y-4">
       {toolbar && <div className="flex items-center gap-2">{toolbar}</div>}
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-white dark:bg-background">
         <Table>
           <TableHeader>
             <TableRow>
@@ -62,7 +64,7 @@ export function DataTable<T extends { id?: string }>({
                   {col.header}
                 </TableHead>
               ))}
-              {rowActions && <TableHead className="text-right">Actions</TableHead>}
+              {rowActions && <TableHead className="text-right">{t('actions')}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,7 +92,9 @@ export function DataTable<T extends { id?: string }>({
             ) : data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + (rowActions ? 1 : 0)} className="py-8">
-                  {emptyState ?? <span className="text-sm text-muted-foreground">No data.</span>}
+                  {emptyState ?? (
+                    <span className="text-sm text-muted-foreground">{t('noData')}</span>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (

@@ -41,6 +41,8 @@ import {
   CreditCard,
   Truck,
   Boxes,
+  Smartphone,
+  Bell,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -138,6 +140,24 @@ const NAV_ITEMS: NavItem[] = [
     perspectives: ['platform'],
   },
   {
+    labelKey: 'menu.apps',
+    href: '/apps',
+    icon: Smartphone,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.feedback',
+    href: '/feedback',
+    icon: MessageSquare,
+    perspectives: ['platform'],
+  },
+  {
+    labelKey: 'menu.notifications',
+    href: '/notifications',
+    icon: Bell,
+    perspectives: ['platform'],
+  },
+  {
     labelKey: 'menu.statistics',
     href: '/statistics',
     icon: BarChart3,
@@ -183,7 +203,7 @@ export function Sidebar() {
   const visibleItems = NAV_ITEMS.filter((item) => item.perspectives.includes(perspective));
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r bg-white">
+    <aside className="flex w-56 shrink-0 flex-col border-r bg-white dark:bg-background">
       <nav className="flex-1 space-y-1 p-3">
         {visibleItems.map((item) => {
           const Icon = item.icon;

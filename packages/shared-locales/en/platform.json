@@ -32,7 +32,10 @@
     "perspectiveLabel": "Perspective",
     "reviews": "Reviews",
     "banners": "Banners",
-    "hotSearch": "Hot Search"
+    "hotSearch": "Hot Search",
+    "apps": "Apps",
+    "feedback": "Feedback",
+    "notifications": "Notifications"
   },
   "dashboard": {
     "title": "Platform Dashboard",

@@ -32,7 +32,10 @@
     "perspectiveLabel": "视角",
     "reviews": "评论管理",
     "banners": "轮播图",
-    "hotSearch": "热搜"
+    "hotSearch": "热搜",
+    "apps": "应用中心",
+    "feedback": "反馈",
+    "notifications": "通知"
   },
   "dashboard": {
     "title": "平台数据看板",

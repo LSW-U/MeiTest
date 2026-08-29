@@ -32,7 +32,10 @@
     "perspectiveLabel": "Perspektiva",
     "reviews": "Reviews",
     "banners": "Banner",
-    "hotSearch": "Buka Popular"
+    "hotSearch": "Buka Popular",
+    "apps": "Apps",
+    "feedback": "Feedback",
+    "notifications": "Notifikasaun"
   },
   "dashboard": {
     "title": "Dashboard Plataforma",
