@@ -44,6 +44,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api';
+import { notifTypeSuffix } from '@/lib/notification';
 import {
   useSendNotification,
   useAdminNotificationHistory,
@@ -151,7 +152,7 @@ function SendForm({ onSent }: { onSent: () => void }) {
   }
 
   return (
-    <div className="space-y-4 rounded-md border bg-white p-6">
+    <div className="space-y-4 rounded-md border bg-white p-6 dark:bg-background">
       <div>
         <h2 className="text-base font-semibold">{t('admin.notifications.sendTitle')}</h2>
         <p className="text-xs text-muted-foreground">{t('admin.notifications.sendDesc')}</p>
@@ -273,7 +274,7 @@ function HistoryPanel() {
       header: t('admin.notifications.columnType'),
       render: (row) => (
         <Badge variant="outline">
-          {t(`admin.notifications.type${cap(row.type)}` as 'admin.notifications.typeSystem')}
+          {t(`admin.notifications.type${notifTypeSuffix(row.type)}` as 'admin.notifications.typeSystem')}
         </Badge>
       ),
     },
@@ -399,7 +400,7 @@ function HistoryPanel() {
             <div className="space-y-4">
               <DetailField label={t('admin.notifications.columnType')}>
                 <Badge variant="outline">
-                  {t(`admin.notifications.type${cap(detail.type)}` as 'admin.notifications.typeSystem')}
+                  {t(`admin.notifications.type${notifTypeSuffix(detail.type)}` as 'admin.notifications.typeSystem')}
                 </Badge>
               </DetailField>
               <DetailField label={t('admin.notifications.fieldDelivered')}>
@@ -448,15 +449,4 @@ function MultilineText({ value }: { value: I18nText }) {
       ))}
     </div>
   );
-}
-
-/** 首字母大写（type 值 → i18n key 后缀：SYSTEM → System，ORDER_UPDATE → Order_update）
- *  注意 ORDER_UPDATE 转 key 后缀为 Order_update，故 i18n key 用 typeOrderUpdate（非 typeOrder_update），
- *  这里做下划线转驼峰处理以对齐 i18n key。 */
-function cap(s: string): string {
-  // ORDER_UPDATE → OrderUpdate（对齐 typeOrderUpdate i18n key）
-  return s
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('');
 }

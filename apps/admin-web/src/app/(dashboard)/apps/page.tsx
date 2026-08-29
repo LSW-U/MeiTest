@@ -108,14 +108,16 @@ function AppCard({
   const saveMutation = useSaveAppCard();
 
   const [values, setValues] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
 
-  // 服务端数据就绪后灌入本地编辑态（每次刷新覆盖，未编辑字段也同步）
+  // 服务端数据就绪后灌入本地编辑态。加 dirty 守卫：用户正在编辑未保存时，
+  // 即使 card 因别处缓存失效被重拉，也不覆盖本地未保存值（仅首次/保存后才同步）。
   useEffect(() => {
-    if (!card) return;
+    if (!card || dirty) return;
     const next: Record<string, string> = {};
     for (const e of card.entries) next[e.key] = e.value;
     setValues(next);
-  }, [card]);
+  }, [card, dirty]);
 
   const allEmpty = card?.allEmpty ?? true;
   const lastUpdated = useMemo(() => {
@@ -148,6 +150,8 @@ function AppCard({
           variant: 'destructive',
         });
       }
+      // 保存完成：解除 dirty 守卫，让下次缓存刷新能同步最新服务端值
+      setDirty(false);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t('admin.apps.saveFailed');
       toast({ title: t('admin.apps.saveFailed'), description: message, variant: 'destructive' });
@@ -184,7 +188,10 @@ function AppCard({
               <Textarea
                 id={f.key}
                 value={values[f.key] ?? ''}
-                onChange={(e) => setValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onChange={(e) => {
+                  setValues((prev) => ({ ...prev, [f.key]: e.target.value }));
+                  setDirty(true);
+                }}
                 rows={3}
                 placeholder={t('admin.apps.placeholderUrl')}
               />
@@ -192,7 +199,10 @@ function AppCard({
               <Input
                 id={f.key}
                 value={values[f.key] ?? ''}
-                onChange={(e) => setValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onChange={(e) => {
+                  setValues((prev) => ({ ...prev, [f.key]: e.target.value }));
+                  setDirty(true);
+                }}
                 placeholder={
                   f.key.endsWith('.version') ? t('admin.apps.placeholderVersion') : t('admin.apps.placeholderUrl')
                 }

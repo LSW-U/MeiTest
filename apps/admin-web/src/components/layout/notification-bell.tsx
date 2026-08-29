@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/common/error-state';
+import { notifTypeSuffix } from '@/lib/notification';
 import { useAdminRecentNotifications } from '@/hooks/api/use-notifications';
 
 export function NotificationBell() {
@@ -85,7 +86,7 @@ export function NotificationBell() {
               <li key={it.id} className="space-y-1 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px]">
-                    {t(`admin.notifications.type${typeSuffix(it.type)}` as 'admin.notifications.typeSystem')}
+                    {t(`admin.notifications.type${notifTypeSuffix(it.type)}` as 'admin.notifications.typeSystem')}
                   </Badge>
                   <span className="text-[10px] text-muted-foreground">
                     {formatDateTime(it.createdAt)}
@@ -104,12 +105,4 @@ export function NotificationBell() {
       </PopoverContent>
     </Popover>
   );
-}
-
-/** 通知类型 → i18n key 后缀（ORDER_UPDATE → OrderUpdate，对齐 typeOrderUpdate） */
-function typeSuffix(type: string): string {
-  return type
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('');
 }

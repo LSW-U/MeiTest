@@ -82,8 +82,14 @@ export default function FeedbackPage() {
     });
   }
 
-  /** 应用时间筛选时重置回第 1 页 */
-  function applyDateFilter() {
+  // 时间筛选：改值即触发查询（queryKey 含 startDate/endDate）并重置回第 1 页，
+  // 与 category/keyword 行为一致，避免「半自动」交互歧义。
+  function changeStartDate(v: string) {
+    setStartDate(v);
+    setPage(1);
+  }
+  function changeEndDate(v: string) {
+    setEndDate(v);
     setPage(1);
   }
 
@@ -162,20 +168,17 @@ export default function FeedbackPage() {
         <Input
           type="date"
           value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
+          onChange={(e) => changeStartDate(e.target.value)}
           aria-label={t('admin.feedback.filterStart')}
           className="max-w-[160px]"
         />
         <Input
           type="date"
           value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
+          onChange={(e) => changeEndDate(e.target.value)}
           aria-label={t('admin.feedback.filterEnd')}
           className="max-w-[160px]"
         />
-        <Button size="sm" variant="outline" onClick={applyDateFilter}>
-          {t('admin.feedback.filterApply')}
-        </Button>
 
         <Input
           value={keyword}
@@ -241,7 +244,7 @@ export default function FeedbackPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t('admin.feedback.detailTitle')}</DialogTitle>
-            <DialogDescription>{t('admin.feedback.description')}</DialogDescription>
+            <DialogDescription>{t('admin.feedback.detailDesc')}</DialogDescription>
           </DialogHeader>
           {detail.isLoading ? (
             <div className="rounded-md border p-8 text-center text-muted-foreground">{t('loading')}</div>
