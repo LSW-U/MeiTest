@@ -363,6 +363,60 @@ async function main() {
       ]),
       description: 'About page social links (JSON array of {type,url}; type ∈ facebook/whatsapp/instagram)',
     },
+    // 应用中心配置（admin-web 优化方案 批次3，2026-08-29）
+    // SystemConfigService.update 是 update-only（key 不存在 → E-PLATFORM-002），故 app.* key 必须由 seed 预置。
+    // value 一律空字符串：对应 /apps 页「未配置」空态，运营首次保存即填值（upsert update:{} 不覆盖已有值）。
+    // key 白名单与 admin-web use-apps.ts APP_CONFIG_KEYS 完全对齐（客户端 5 + 骑手 5）。
+    {
+      key: 'app.client.ios.url',
+      value: '',
+      description: 'Client App iOS download URL (admin-web /apps page, first-save fills value)',
+    },
+    {
+      key: 'app.client.android.url',
+      value: '',
+      description: 'Client App Android download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.qr',
+      value: '',
+      description: 'Client App download QR image URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.version',
+      value: '',
+      description: 'Client App latest version string (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.changelog',
+      value: '',
+      description: 'Client App changelog text (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.ios.url',
+      value: '',
+      description: 'Rider App iOS download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.android.url',
+      value: '',
+      description: 'Rider App Android download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.qr',
+      value: '',
+      description: 'Rider App download QR image URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.version',
+      value: '',
+      description: 'Rider App latest version string (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.changelog',
+      value: '',
+      description: 'Rider App changelog text (admin-web /apps page)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {
