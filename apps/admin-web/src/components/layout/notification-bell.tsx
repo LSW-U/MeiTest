@@ -1,13 +1,16 @@
 /**
  * NotificationBell — Header 通知铃铛下拉
  *
- * admin-web 优化方案 批次3（2026-08-29）
+ * admin-web 优化方案 批次3（2026-08-29）+ 批次4 微调（2026-08-31）
  *
  * 复用 GET /admin/notifications（admin 发送历史，pageSize=5）。
  * 不调 /client/notifications：super_admin via admin_web 被 DeviceTypeGuard 拦截（E-AUTH-001）。
  *
  * 关键约束（批次2 审查 P2-1）：历史项无 isRead/target 字段，deliveredCount 单行近似。
- * 故铃铛语义为「最近发送历史 + 计数」，不做未读/已读/全部已读。
+ * 故铃铛语义为「最近发送历史」，不做未读/已读/全部已读。
+ *
+ * 批次4 微调：去掉 trigger 上的计数红点。原因是 total 是「累计发送历史数」（只增不减），
+ * 非未读数，长期会卡 99+ 误导用户。铃铛保持纯图标，有内容在下拉里体现。
  */
 'use client';
 
@@ -27,7 +30,6 @@ export function NotificationBell() {
   const { data, isLoading, error, refetch } = useAdminRecentNotifications(5);
 
   const items = data?.items ?? [];
-  const count = data?.total ?? 0;
 
   function formatDateTime(date: string): string {
     return format.dateTime(new Date(date), {
@@ -48,11 +50,6 @@ export function NotificationBell() {
           className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
         >
           <Bell className="h-4 w-4" />
-          {count > 0 && (
-            <span className="absolute right-1 top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
-              {count > 99 ? '99+' : count}
-            </span>
-          )}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">

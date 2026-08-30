@@ -49,6 +49,12 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
+  LayoutGrid,
+  Store,
+  Tags,
+  Megaphone,
+  Wallet as WalletIcon,
+  Cog,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -208,19 +214,21 @@ interface NavGroup {
   labelKey: string;
   /** 组 key，用于折叠状态记忆（admin_sidebar_groups） */
   groupKey: string;
+  /** 组标题左侧图标 */
+  icon: React.ComponentType<{ className?: string }>;
   /** 组内菜单项的 href 集合，按 href 匹配 NAV_ITEMS */
   hrefs: readonly string[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
-  { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', hrefs: ['/dashboard', '/statistics'] },
-  { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', hrefs: ['/products', '/categories', '/banners', '/hot-search'] },
-  { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
-  { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', hrefs: ['/dispatch', '/riders', '/warehouses', '/inventory'] },
-  { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', hrefs: ['/customers'] },
-  { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', hrefs: ['/promotions'] },
-  { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', hrefs: ['/settlements', '/withdrawals'] },
-  { labelKey: 'menu.groupSystem', groupKey: 'groupSystem', hrefs: ['/apps', '/feedback', '/notifications', '/settings', '/audit-logs'] },
+  { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', icon: LayoutGrid, hrefs: ['/dashboard', '/statistics'] },
+  { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/hot-search'] },
+  { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
+  { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/warehouses', '/inventory'] },
+  { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', icon: Users, hrefs: ['/customers'] },
+  { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions'] },
+  { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', icon: WalletIcon, hrefs: ['/settlements', '/withdrawals'] },
+  { labelKey: 'menu.groupSystem', groupKey: 'groupSystem', icon: Cog, hrefs: ['/apps', '/feedback', '/notifications', '/settings', '/audit-logs'] },
 ];
 
 /** 折叠状态记忆 key */
@@ -281,16 +289,18 @@ export function Sidebar() {
           // hydrated 前 / 无记录 → 默认展开；记录存在且为 false → 收起
           const isExpanded = !hydrated || collapsed[group.groupKey] !== false;
           const GroupChevron = isExpanded ? ChevronDown : ChevronRight;
+          const GroupIcon = group.icon;
           return (
             <div key={group.groupKey} className="space-y-1">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.groupKey)}
-                className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-base font-medium text-foreground hover:bg-accent"
                 aria-expanded={isExpanded}
               >
-                <GroupChevron className="h-3 w-3 shrink-0" />
-                <span>{t(group.labelKey)}</span>
+                <GroupIcon className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">{t(group.labelKey)}</span>
+                <GroupChevron className="h-3 w-3 shrink-0 text-muted-foreground" />
               </button>
               {isExpanded &&
                 groupItems.map((item) => {
@@ -318,12 +328,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t p-3 text-xs text-muted-foreground">
-        <p>
-          {t('menu.perspectiveLabel')}: <span className="font-medium text-foreground">{perspective}</span>
-        </p>
-        <p className="mt-1">{t('menu.footerFlow')}</p>
-      </div>
     </aside>
   );
 }

@@ -1,13 +1,13 @@
 /**
  * Header — (dashboard) 顶部栏
  *
- * 组成：Logo/标题 + PerspectiveSwitcher + LanguageSwitcher + 通知铃铛
+ * 组成：Logo/标题 + ThemeToggle + NotificationBell + LanguageSwitcher + PerspectiveSwitcher + UserMenu
  *
  * W3-W 流程：W 流程独占，不写订单/骑手等菜单（其他流程 territory）
  */
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PerspectiveSwitcher } from '@/components/PerspectiveSwitcher';
-import { LogoutButton } from '@/components/layout/logout-button';
+import { UserMenu } from '@/components/layout/user-menu';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 
@@ -25,7 +25,7 @@ export function Header() {
         <NotificationBell />
         <LanguageSwitcher />
         <PerspectiveSwitcher />
-        <LogoutButton />
+        <UserMenu />
       </div>
     </header>
   );

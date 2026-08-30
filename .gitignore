@@ -53,3 +53,8 @@ seed_test_order.js
 test_final.js
 test_rider_api.js
 test_rider_scenarios.js
+
+# 临时架构图/可视化检查产物（审查 cc 生成，不进版本库）
+docs/architecture-diagram.json
+docs/meimart-architecture.html
+docs/meimart-architecture.visual-check.json
