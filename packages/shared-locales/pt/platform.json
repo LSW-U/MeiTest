@@ -35,7 +35,15 @@
     "hotSearch": "Buscas Populares",
     "apps": "Central de Apps",
     "feedback": "Comentários",
-    "notifications": "Notificações"
+    "notifications": "Notificações",
+    "groupOverview": "",
+    "groupCatalog": "",
+    "groupTrade": "",
+    "groupFulfillment": "",
+    "groupUsers": "",
+    "groupMarketing": "",
+    "groupFinance": "",
+    "groupSystem": ""
   },
   "dashboard": {
     "title": "Painel da Plataforma",

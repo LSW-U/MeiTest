@@ -35,7 +35,15 @@
     "hotSearch": "Buka Popular",
     "apps": "Apps",
     "feedback": "Feedback",
-    "notifications": "Notifikasaun"
+    "notifications": "Notifikasaun",
+    "groupOverview": "",
+    "groupCatalog": "",
+    "groupTrade": "",
+    "groupFulfillment": "",
+    "groupUsers": "",
+    "groupMarketing": "",
+    "groupFinance": "",
+    "groupSystem": ""
   },
   "dashboard": {
     "title": "Dashboard Plataforma",

@@ -35,7 +35,15 @@
     "hotSearch": "Hot Search",
     "apps": "Apps",
     "feedback": "Feedback",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "groupOverview": "Overview",
+    "groupCatalog": "Catalog",
+    "groupTrade": "Trade",
+    "groupFulfillment": "Fulfillment",
+    "groupUsers": "Users",
+    "groupMarketing": "Marketing",
+    "groupFinance": "Finance",
+    "groupSystem": "System"
   },
   "dashboard": {
     "title": "Platform Dashboard",

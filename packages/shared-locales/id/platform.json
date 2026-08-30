@@ -35,7 +35,15 @@
     "hotSearch": "Pencarian Populer",
     "apps": "Pusat Aplikasi",
     "feedback": "Umpan Balik",
-    "notifications": "Notifikasi"
+    "notifications": "Notifikasi",
+    "groupOverview": "Ringkasan",
+    "groupCatalog": "",
+    "groupTrade": "",
+    "groupFulfillment": "",
+    "groupUsers": "",
+    "groupMarketing": "",
+    "groupFinance": "",
+    "groupSystem": ""
   },
   "dashboard": {
     "title": "Dasbor Platform",

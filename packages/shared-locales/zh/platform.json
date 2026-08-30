@@ -35,7 +35,15 @@
     "hotSearch": "热搜",
     "apps": "应用中心",
     "feedback": "反馈",
-    "notifications": "通知"
+    "notifications": "通知",
+    "groupOverview": "总览",
+    "groupCatalog": "商品",
+    "groupTrade": "交易",
+    "groupFulfillment": "履约",
+    "groupUsers": "用户",
+    "groupMarketing": "营销",
+    "groupFinance": "财务",
+    "groupSystem": "系统"
   },
   "dashboard": {
     "title": "平台数据看板",
