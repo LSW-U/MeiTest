@@ -3,6 +3,7 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD, HttpAdapterHost, Reflector } fr
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
+import { PublicUrlInterceptor } from './shared/storage/public-url.interceptor';
 import { TraceIdMiddleware } from './shared/middleware/trace-id.middleware';
 import { CsrfGuard } from './shared/guards/csrf.guard';
 import { HealthController } from './modules/health/health.controller';
@@ -112,6 +113,9 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
       useFactory: (reflector: Reflector) => new AuditInterceptor(reflector),
       inject: [Reflector],
     },
+    // 图片 URL 公网重写（方案 B，2026-08-29）：响应 JSON 里内部 OSS 地址前缀 → OSS_PUBLIC_HOST
+    //   放最后（日志/审计先记原始数据）；OSS_PUBLIC_HOST 未设置时构造函数判空直接放行，dev 零影响
+    { provide: APP_INTERCEPTOR, useClass: PublicUrlInterceptor },
     // 全局过滤器（DI 注入 HttpAdapterHost）
     {
       provide: APP_FILTER,
