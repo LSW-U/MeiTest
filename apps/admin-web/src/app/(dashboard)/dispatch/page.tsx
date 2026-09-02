@@ -16,6 +16,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
+import { WarehouseLoadPanel } from './warehouse-load-panel';
+import { DispatchCenter } from './dispatch-center';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
@@ -71,6 +73,8 @@ export default function DispatchTasksPage() {
   const [statusFilter, setStatusFilter] = useState<DeliveryTaskStatus | 'ALL'>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
   const [warehouseIdSearch, setWarehouseIdSearch] = useState('');
+  // P2-2 接线（2026-09-03）：仓负载预警卡跨仓入口 → 派单中心该仓（nonce 触发 effect）
+  const [crossSupportTarget, setCrossSupportTarget] = useState<{ warehouseId: string; nonce: number } | null>(null);
   const [detailTarget, setDetailTarget] = useState<AdminDeliveryTask | null>(null);
   const [reassignTarget, setReassignTarget] = useState<AdminDeliveryTask | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AdminDeliveryTask | null>(null);
@@ -200,7 +204,22 @@ export default function DispatchTasksPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* ===== 批 E（2026-09-03）：仓库负载面板（方案 Q12）+ 派单中心（方案 Q13） ===== */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">{t('admin.warehouseLoad.title')}</h3>
+        {/* P2-2 接线（2026-09-03）：预警卡「跨仓支援」→ 定位派单中心该仓 + 自动开跨仓确认 */}
+        <WarehouseLoadPanel onCrossSupport={(warehouseId) => setCrossSupportTarget({ warehouseId, nonce: Date.now() })} />
+      </section>
+
+      <section className="space-y-3" id="dispatch-center">
+        <h3 className="text-sm font-semibold">{t('admin.dispatchCenter.title')}</h3>
+        <DispatchCenter crossSupportTarget={crossSupportTarget} />
+      </section>
+
+      {/* ===== 既有：任务监控列表 ===== */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">{t('admin.dispatch.monitorTitle')}</h3>
+        <div className="flex flex-wrap items-center gap-3">
         <Tabs
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as DeliveryTaskStatus | 'ALL')}
@@ -226,6 +245,7 @@ export default function DispatchTasksPage() {
           className="w-48"
         />
       </div>
+      </section>
 
       {error ? (
         <ErrorState onRetry={() => refetch()} />

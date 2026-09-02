@@ -122,6 +122,25 @@ const NAV_ITEMS: NavItem[] = [
     icon: Bike,
     perspectives: ['platform', 'rider-mgmt'],
   },
+  // 保证金体系（批 E，2026-09-03）：骑手管理下三个子页入口
+  {
+    labelKey: 'menu.depositTiers',
+    href: '/riders/deposit-tiers',
+    icon: Bike,
+    perspectives: ['platform', 'rider-mgmt'],
+  },
+  {
+    labelKey: 'menu.depositLocations',
+    href: '/riders/deposit-locations',
+    icon: Bike,
+    perspectives: ['platform', 'rider-mgmt'],
+  },
+  {
+    labelKey: 'menu.depositRequests',
+    href: '/riders/deposit-requests',
+    icon: Bike,
+    perspectives: ['platform', 'rider-mgmt'],
+  },
   {
     labelKey: 'menu.dispatch',
     href: '/dispatch',
@@ -224,7 +243,7 @@ const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', icon: LayoutGrid, hrefs: ['/dashboard', '/statistics'] },
   { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/hot-search'] },
   { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
-  { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/warehouses', '/inventory'] },
+  { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/riders/deposit-tiers', '/riders/deposit-locations', '/riders/deposit-requests', '/warehouses', '/inventory'] },
   { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', icon: Users, hrefs: ['/customers'] },
   { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions'] },
   { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', icon: WalletIcon, hrefs: ['/settlements', '/withdrawals'] },

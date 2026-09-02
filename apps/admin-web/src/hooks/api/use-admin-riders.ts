@@ -27,6 +27,11 @@ export interface AdminRiderListItem {
   isOnline: boolean;
   createdAt: string;
   updatedAt: string;
+  /** 批 E 审查 P1-2（2026-09-03）：admin 列表轻量冗余（口径与聚合详情一致） */
+  depositAmount?: number;
+  /** 档位派生可接上限（分）；null=不限；0=无资格（停用档回落） */
+  maxOrderAmount?: number | null;
+  todayDeliveries?: number;
 }
 
 export interface AdminRiderDetail extends AdminRiderListItem {
