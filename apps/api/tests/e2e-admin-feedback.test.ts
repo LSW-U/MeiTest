@@ -41,7 +41,9 @@ const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 async function clearRegisterIpLimit(): Promise<void> {
   const REDIS = process.env.REDIS_URL ?? 'redis://localhost:6379';
   // rate-limit key 形如 ratelimit:register:ip:<ip>:1h（IP 在 dev 走 ::1 / 127.0.0.1，匹配前缀即可）
-  const pattern = 'ratelimit:register:ip:*:1h*';
+  // 批F收尾 P2-1（2026-09-03）：key 实际带 meimart: namespace 前缀（ratelimit.guard 统一前缀），
+  // 原 pattern 缺前缀恒不命中 → e2e 重跑自污染复现。prefix * 兜住 namespace。
+  const pattern = '*ratelimit:register:ip:*:1h*';
   try {
     // 用 docker exec 进入 redis 容器清 key（不依赖测试进程装 ioredis）
     const { execSync } = await import('node:child_process');
