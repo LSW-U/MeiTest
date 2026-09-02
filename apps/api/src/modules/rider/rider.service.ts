@@ -116,6 +116,16 @@ export interface UpdateRiderProfileInput {
   licenseImageUrl?: string | null;
 }
 
+/** 列表保证金轻量冗余字段（批 E 审查 P1-2，2026-09-03）——口径与批 C 聚合详情一致 */
+export interface DepositListFields {
+  /** 生效保证金总额（分） */
+  depositAmount: number;
+  /** 档位派生可接上限（分）；null = 不限；0 = 无资格（停用档回落） */
+  maxOrderAmount: number | null;
+  /** 今日完成单量 */
+  todayDeliveries: number;
+}
+
 /** 骑手 profile 视图（API 返回） */
 export interface RiderProfileView {
   id: string;
@@ -554,7 +564,7 @@ export class RiderService {
     warehouseId?: string;
     userStatus?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
     limit?: number;
-  }): Promise<{ items: RiderProfileView[] }> {
+  }): Promise<{ items: Array<RiderProfileView & DepositListFields> }> {
     const limit = Math.min(options.limit ?? 50, 100);
     const where: {
       applicationStatus: string;
@@ -580,13 +590,42 @@ export class RiderService {
       take: limit,
     });
 
+    // 批 E 审查 P1-2（2026-09-03 裁决：做）：列表补保证金/今日单量轻量冗余字段——
+    //   口径与批 C 聚合详情一致（maxOrderAmount = 启用档派生，停用档回落）
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const [enabledTiers, todayCounts] = await Promise.all([
+      db.riderDepositTier.findMany({
+        where: { enabled: true },
+        select: { id: true, minAmount: true, maxOrderAmount: true },
+        orderBy: { minAmount: 'desc' },
+      }),
+      db.deliveryTask.groupBy({
+        by: ['riderId'],
+        where: { status: 'DELIVERED', updatedAt: { gte: todayStart }, riderId: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+    const todayMap = new Map(todayCounts.map((c) => [c.riderId as string, c._count._all]));
+
+    /** 档位派生（停用档回落：启用档中 minAmount ≤ deposit 的最高档；无命中 = 上限 0） */
+    const deriveMax = (deposit: number): number | null => {
+      const hit = enabledTiers.find((t) => t.minAmount <= deposit);
+      return hit ? hit.maxOrderAmount : 0;
+    };
+
     // P1-2 修复（2026-08-25）：admin 列表对在线骑手补查 maybeOffline，管理员能看到谁在宽限期
     // 批量并发查 TTL，避免串行 N 次往返；离线骑手 maybeOffline=false 不查
     const withOnline = await Promise.all(
       profiles.map(async (p) => {
         const isOnline = await this.isOnline(p.userId);
         const maybeOffline = isOnline ? await this.isMaybeOffline(p.userId) : false;
-        return this.toView(p, isOnline, maybeOffline);
+        return {
+          ...this.toView(p, isOnline, maybeOffline),
+          depositAmount: p.depositAmount,
+          maxOrderAmount: deriveMax(p.depositAmount),
+          todayDeliveries: todayMap.get(p.id) ?? 0,
+        };
       }),
     );
 

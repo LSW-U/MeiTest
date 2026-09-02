@@ -14,6 +14,13 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    // 批 E 审查 P1-2（2026-09-03）：adminListRiders 增补保证金/今日单量查询
+    riderDepositTier: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    deliveryTask: {
+      groupBy: vi.fn().mockResolvedValue([]),
+    },
   },
   mockRedis: {
     exists: vi.fn(),
@@ -36,6 +43,9 @@ describe('RiderService.adminRiders (W7-ext-D)', () => {
   beforeEach(() => {
     Object.values(mockDb).forEach((table) => Object.values(table).forEach((fn) => fn.mockReset()));
     Object.values(mockRedis).forEach((fn) => fn.mockReset());
+    // P1-2 增强：reset 后补默认空结果（避免每个用例重复 mock）
+    mockDb.riderDepositTier.findMany.mockResolvedValue([]);
+    mockDb.deliveryTask.groupBy.mockResolvedValue([]);
     // @ts-expect-error - RiderService constructor signature doesn't matter for these tests
     service = new RiderService();
   });
