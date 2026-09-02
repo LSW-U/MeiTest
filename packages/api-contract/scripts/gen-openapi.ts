@@ -142,6 +142,29 @@ import {
   ApplyRiderRequest,
   UpdateRiderProfileRequest,
   ReportLocationRequest,
+  // 保证金（批 B，2026-09-02）
+  RiderDepositTier,
+  DepositLocation,
+  RiderDepositRecord,
+  CreateRiderDepositRequest,
+  RiderDepositPayMockResult,
+  RiderDepositStatusResponse,
+  RiderDepositLocationListResponse,
+  // 保证金 admin 侧（批 C，2026-09-02）
+  AdminUpsertTierRequest,
+  AdminUpdateTierRequest,
+  AdminUpsertLocationRequest,
+  AdminDepositRequestItem,
+  AdminListDepositRequestsQuery,
+  AdminDepositRequestListResponse,
+  AdminConfirmDepositRequest,
+  AdminRejectDepositRequest,
+  AdminRiderDepositDetail,
+  WarehouseLoadItem,
+  // 派单候选（批 D，2026-09-03）
+  DispatchEligibilityLabel,
+  DispatchCandidate,
+  DispatchCandidateList,
   DeliveryTask,
   AcceptTaskRequest,
   PickupTaskRequest,
@@ -155,6 +178,7 @@ import {
   TaskOrderSummary,
   TaskRiderSummary,
   ReassignTaskRequest,
+  AssignTaskRequest,
   CancelTaskRequest,
   AvailableRider,
   // 批次 5 admin inventory
@@ -405,6 +429,7 @@ const AdminDeliveryTaskViewRef = registry.register(
 registry.register('AdminTaskListResponse', AdminTaskListResponse);
 registry.register('ListAllTasksQuery', ListAllTasksQuery);
 registry.register('ReassignTaskRequest', ReassignTaskRequest);
+registry.register('AssignTaskRequest', AssignTaskRequest);
 registry.register('CancelTaskRequest', CancelTaskRequest);
 registry.register('AvailableRider', AvailableRider);
 // 批次2 审查报告 P3-1（2026-08-28）：DeliveryTask 注册到 registry 并就地 reassign，
@@ -1815,6 +1840,25 @@ registry.registerPath({
   },
 });
 
+// 批 F（2026-09-03，批E审查 P0-1 裁决方案 a）：PENDING_ASSIGN 任务 admin 直接指派
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/dispatch/tasks/{id}/assign',
+  tags: ['dispatch'],
+  description:
+    'Admin 直接指派（批 F，派单中心「确认指派」消费）：PENDING_ASSIGN → ASSIGNED。保留保证金资格校验（E-DEPOSIT-201 未缴 / 202 超上限）；不校验工作仓（跨仓支援走此通道）。事务双写 delivery_tasks + order.riderId + note 留痕 [assign]。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AssignTaskRequest } } },
+  },
+  responses: {
+    200: { description: '指派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
+    403: { description: 'E-DEPOSIT-201 未缴 / E-DEPOSIT-202 超档位上限', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DISPATCH-001 任务不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DISPATCH-002 非 PENDING_ASSIGN / E-DISPATCH-008 骑手无效', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 registry.registerPath({
   method: 'post',
   path: '/api/v1/admin/dispatch/tasks/{id}/cancel',
@@ -2780,6 +2824,350 @@ registry.registerPath({
   },
 });
 
+// ---- 保证金（批 B，2026-09-02）：骑手侧 3 端点 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/deposit/requests',
+  tags: ['rider'],
+  description:
+    '提交保证金缴纳申请（批 B 2026-09-02）。ONLINE_MOCK：创建 PENDING 待 pay-mock；OFFLINE_COD：必须带 locationId（且缴纳点 enabled=true），创建 PENDING 待 admin 确认。amount ≥ 100（分）。Role: RIDER。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateRiderDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '申请创建成功（PENDING）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositRecord }) } },
+    },
+    400: {
+      description: 'E-DEPOSIT-001 金额不足 | E-DEPOSIT-002 COD 缺缴纳点/缴纳点不可用',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    409: {
+      description: 'E-DEPOSIT-007 已有进行中的 PENDING 申请（跨通道互斥，批 B 修正）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    404: { description: 'E-RIDER-001 骑手资料不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/deposit/requests/{id}/pay-mock',
+  tags: ['rider'],
+  description:
+    '线上模拟支付回调（批 B 2026-09-02）。仅 ONLINE_MOCK + PENDING 可用：置 CONFIRMED + confirmedAmount=requestedAmount + paidAt，事务内 RiderProfile.depositAmount 累加。幂等：已 CONFIRMED 直接返回成功不重复累加。Role: RIDER。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '支付成功（或已支付幂等返回）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositPayMockResult }) } },
+    },
+    400: {
+      description: 'E-DEPOSIT-003 非 ONLINE_MOCK 通道 | E-DEPOSIT-004 非法状态流转',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    403: { description: 'E-DEPOSIT-005 非本人申请', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/status',
+  tags: ['rider'],
+  description:
+    '保证金状态查询（批 B 2026-09-02）：depositAmount（分）+ 命中档位（minAmount/maxOrderAmount，null 上限=不限；未缴 tier=null）+ 最近 10 条申请（含状态/adminNote）。Role: RIDER。',
+  responses: {
+    200: {
+      description: '保证金状态',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositStatusResponse }) } },
+    },
+    404: { description: 'E-RIDER-001 骑手资料不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 保证金骑手端只读两端点（补端点批，2026-09-03）：COD 下拉 / 档位提示 ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/locations',
+  tags: ['rider'],
+  description:
+    '启用缴纳点列表（补端点批 2026-09-03）：线下 COD Tab 下拉数据源。admin 同源只读（deposit_locations）+ enabled 过滤；字段收窄 id/name/address/note。Role: RIDER.',
+  responses: {
+    200: {
+      description: '启用缴纳点列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositLocationListResponse }) } },
+    },
+    401: { description: 'E-AUTH-002 未认证', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/tiers',
+  tags: ['rider'],
+  description:
+    '启用档位列表（补端点批 2026-09-03）：缴纳页「选 $X → 上限 $Y」提示数据源。与资格派生同口径（enabled 过滤，sortOrder 升序）。Role: RIDER.',
+  responses: {
+    200: {
+      description: '启用档位列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RiderDepositTier) }) } },
+    },
+    401: { description: 'E-AUTH-002 未认证', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 保证金 admin 侧（批 C，2026-09-02）：7 组端点 ----
+// 1. 档位 CRUD
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/tiers',
+  tags: ['rider'],
+  description: '保证金档位列表（按 sortOrder 升序）。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '档位列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RiderDepositTier) }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/tiers',
+  tags: ['rider'],
+  description:
+    '新增档位（批 C）。校验：minAmount>0；maxOrderAmount null=不限 或 > minAmount；minAmount 唯一。修改档位不动 rider.depositAmount（上限派生自动生效）。Role: SUPER_ADMIN。',
+  request: { body: { content: { 'application/json': { schema: AdminUpsertTierRequest } } } },
+  responses: {
+    201: {
+      description: '创建成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositTier }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败（maxOrderAmount ≤ minAmount）', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DEPOSIT-101 minAmount 已存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/deposit/tiers/{id}',
+  tags: ['rider'],
+  description: '编辑档位（批 C）。局部更新；上限变化实时生效（派生查询，无数据回填）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminUpdateTierRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositTier }) } },
+    },
+    404: { description: 'E-DEPOSIT-102 档位不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DEPOSIT-101 minAmount 撞已有档', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/deposit/tiers/{id}',
+  tags: ['rider'],
+  description:
+    '删除档位（批 C）。软停用语义：enabled=false（保留历史档定义，派生查询只看 enabled 档）。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '已停用',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.object({ id: Id, enabled: z.literal(false) }) }) } },
+    },
+    404: { description: 'E-DEPOSIT-102 档位不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 2. 缴纳点 CRUD
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/locations',
+  tags: ['rider'],
+  description: '缴纳点列表（批 C）。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '缴纳点列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(DepositLocation) }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/locations',
+  tags: ['rider'],
+  description: '新增缴纳点（批 C）。Role: SUPER_ADMIN。',
+  request: { body: { content: { 'application/json': { schema: AdminUpsertLocationRequest } } } },
+  responses: {
+    201: {
+      description: '创建成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DepositLocation }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/deposit/locations/{id}',
+  tags: ['rider'],
+  description: '编辑缴纳点（批 C，含启停）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminUpsertLocationRequest.partial() } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DepositLocation }) } },
+    },
+    404: { description: 'E-DEPOSIT-103 缴纳点不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/deposit/locations/{id}',
+  tags: ['rider'],
+  description:
+    '删除缴纳点（批 C）。软停用：enabled=false。已被流水引用的缴纳点不物理删（FK SET NULL 但保留历史名）。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '已停用',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.object({ id: Id, enabled: z.literal(false) }) }) } },
+    },
+    404: { description: 'E-DEPOSIT-103 缴纳点不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 3. 申请列表
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/requests',
+  tags: ['rider'],
+  description:
+    '保证金申请列表（批 C）。含骑手姓名/手机号/缴纳点名；status 过滤 + 分页（page/pageSize，默认 1/20）。Role: SUPER_ADMIN。',
+  request: { query: AdminListDepositRequestsQuery },
+  responses: {
+    200: {
+      description: '申请列表（分页）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDepositRequestListResponse }) } },
+    },
+  },
+});
+
+// 4/5. confirm / reject
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/requests/{id}/confirm',
+  tags: ['rider'],
+  description:
+    '确认收款（批 C）。仅 PENDING：事务内置 CONFIRMED + confirmedAt + RiderProfile.depositAmount += confirmedAmount ?? requestedAmount（increment 原子）。幂等：已 CONFIRMED → E-DEPOSIT-104 拒绝。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminConfirmDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '确认成功（含累加后余额）',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ deposit: AdminDepositRequestItem, depositAmount: z.number().int().nonnegative() }),
+          }),
+        },
+      },
+    },
+    409: { description: 'E-DEPOSIT-104 非 PENDING（重复 confirm 拒绝）', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/requests/{id}/reject',
+  tags: ['rider'],
+  description:
+    '拒绝申请（批 C）。仅 PENDING；adminNote 必填（骑手端可见）。REJECTED 后骑手可重新提交（新流水）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminRejectDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '已拒绝',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDepositRequestItem }) } },
+    },
+    409: { description: 'E-DEPOSIT-104 非 PENDING', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 6. 骑手聚合详情（Q8 ①-⑤）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/riders/{id}/detail',
+  tags: ['rider'],
+  description:
+    '骑手聚合详情（批 C，方案 Q8 ①-⑤）：①基础资料 ②实时状态（在线/在途） ③业务统计（今日/累计/评分） ④财务（depositAmount/档位/上限/结算余额） ⑤缴存申请（最近 20 条）。注 :id = riderProfileId。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '聚合详情',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminRiderDepositDetail }) } },
+    },
+    404: { description: 'E-RIDER-001 骑手不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 7. 各仓负载
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/warehouse-load',
+  tags: ['rider'],
+  description:
+    '各仓负载面板（批 C，方案 Q12）：每仓 { warehouseId, pendingTaskCount, availableRiderCount, estWaitMinutes }。可用骑手 = APPROVED + Redis 在线 + 工作仓（preferredWarehouseIds）含该仓；estWait = pending / max(available,1) × 30min 近似。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '各仓负载',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(WarehouseLoadItem) }) } },
+    },
+  },
+});
+
+// ---- 派单候选（批 D，2026-09-03，方案 Q10/Q13）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/tasks/{id}/candidates',
+  tags: ['dispatch'],
+  description:
+    '派单候选（批 D，方案 Q10 两段式）：资格过滤（金额≤档位上限 + 工作仓匹配）→ 排序 score=rating×0.5+距离近度×0.3−在途×0.2（平局 depositAmount 高优先）→ 资格标签（eligible/depositAmount/maxOrderAmount/requiredDeposit）。query：crossWarehouse=true 放宽工作仓（仅 admin 跨仓支援，金额资格保留）；includeIneligible=true 附带不合格候选（⛔需保证金提示）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    query: z.object({
+      crossWarehouse: z.coerce.boolean().optional(),
+      includeIneligible: z.coerce.boolean().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '候选列表（按 score 降序）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DispatchCandidateList }) } },
+    },
+    404: { description: 'E-DISPATCH-001 任务不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ---- 位置上报（后台定位 HTTP 通道，P0 规则 16）----
 registry.registerPath({
   method: 'post',
@@ -3629,6 +4017,29 @@ registry.registerPath({
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);
 registry.register('RiderReview', RiderReview);
+// 保证金（批 B，2026-09-02）：schema 注册（rider_deposit 相关）
+registry.register('RiderDepositTier', RiderDepositTier);
+registry.register('DepositLocation', DepositLocation);
+registry.register('RiderDepositRecord', RiderDepositRecord);
+registry.register('CreateRiderDepositRequest', CreateRiderDepositRequest);
+registry.register('RiderDepositPayMockResult', RiderDepositPayMockResult);
+registry.register('RiderDepositStatusResponse', RiderDepositStatusResponse);
+registry.register('RiderDepositLocationListResponse', RiderDepositLocationListResponse);
+// 保证金 admin 侧（批 C，2026-09-02）
+registry.register('AdminUpsertTierRequest', AdminUpsertTierRequest);
+registry.register('AdminUpdateTierRequest', AdminUpdateTierRequest);
+registry.register('AdminUpsertLocationRequest', AdminUpsertLocationRequest);
+registry.register('AdminDepositRequestItem', AdminDepositRequestItem);
+registry.register('AdminListDepositRequestsQuery', AdminListDepositRequestsQuery);
+registry.register('AdminDepositRequestListResponse', AdminDepositRequestListResponse);
+registry.register('AdminConfirmDepositRequest', AdminConfirmDepositRequest);
+registry.register('AdminRejectDepositRequest', AdminRejectDepositRequest);
+registry.register('AdminRiderDepositDetail', AdminRiderDepositDetail);
+registry.register('WarehouseLoadItem', WarehouseLoadItem);
+// 派单候选（批 D，2026-09-03）
+registry.register('DispatchEligibilityLabel', DispatchEligibilityLabel);
+registry.register('DispatchCandidate', DispatchCandidate);
+registry.register('DispatchCandidateList', DispatchCandidateList);
 registry.register('CreateReviewRequest', CreateReviewRequest);
 registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
 registry.register('HomeEntry', HomeEntry);

@@ -171,6 +171,12 @@ export const ReassignTaskRequest = z.object({
   reason: z.string().max(500).optional(),
 });
 
+/** Admin 直接指派请求（批 F，2026-09-03，批E审查 P0-1）：PENDING_ASSIGN → 指定骑手 */
+export const AssignTaskRequest = z.object({
+  riderId: Id,
+  reason: z.string().max(500).optional(),
+});
+
 /** 取消请求（PENDING_ASSIGN / ASSIGNED） */
 export const CancelTaskRequest = z.object({
   reason: z.string().max(500).optional(),

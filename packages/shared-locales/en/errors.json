@@ -127,5 +127,18 @@
   "E-ADMIN-NOTIF-001": "Some specified users do not exist",
   "E-ADMIN-NOTIF-002": "Broadcast size exceeds the hard limit (50000)",
   "E-PLATFORM-003": "Support config not initialized",
-  "E-LEGAL-001": "Legal document not found"
+  "E-LEGAL-001": "Legal document not found",
+  "E-DEPOSIT-001": "Deposit amount must be at least $1",
+  "E-DEPOSIT-002": "Valid deposit location required for cash payment",
+  "E-DEPOSIT-003": "This request is not an online payment",
+  "E-DEPOSIT-004": "This request cannot be paid (invalid status)",
+  "E-DEPOSIT-005": "This deposit request belongs to another rider",
+  "E-DEPOSIT-006": "Deposit request not found",
+  "E-DEPOSIT-007": "You already have a pending deposit request (pay or wait for confirmation first)",
+  "E-DEPOSIT-101": "A tier with this minimum amount already exists",
+  "E-DEPOSIT-102": "Deposit tier not found",
+  "E-DEPOSIT-103": "Deposit location not found",
+  "E-DEPOSIT-104": "This request is no longer pending",
+  "E-DEPOSIT-201": "Deposit required before accepting delivery tasks",
+  "E-DEPOSIT-202": "Order amount exceeds your deposit tier limit"
 }
