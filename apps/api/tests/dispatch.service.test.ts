@@ -73,6 +73,30 @@ vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+// 批 D（2026-09-03）：保证金资格校验注入——现有用例不触发资格逻辑
+// （listPendingTasks/acceptTask 现会走 eligibility），mock 成「全额合格」透传
+const { mockEligibility } = vi.hoisted(() => ({
+  mockEligibility: {
+    getEnabledTiers: vi.fn().mockResolvedValue([{ id: 'tier-1', minAmount: 100, maxOrderAmount: 1000 }]),
+    deriveEligibility: vi.fn().mockReturnValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' }),
+    isEligible: vi.fn().mockReturnValue(true),
+    assertCanAccept: vi.fn().mockResolvedValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' }),
+    getRequiredDeposit: vi.fn().mockResolvedValue(100),
+    toLabel: vi.fn().mockReturnValue({ eligible: true, depositAmount: 100, maxOrderAmount: 1000 }),
+  },
+}));
+
+vi.mock('../src/modules/rider/deposit-eligibility.service', () => ({
+  DepositEligibilityService: class {
+    getEnabledTiers = mockEligibility.getEnabledTiers;
+    deriveEligibility = mockEligibility.deriveEligibility;
+    isEligible = mockEligibility.isEligible;
+    assertCanAccept = mockEligibility.assertCanAccept;
+    getRequiredDeposit = mockEligibility.getRequiredDeposit;
+    toLabel = mockEligibility.toLabel;
+  },
+}));
+
 import { DispatchService } from '../src/modules/dispatch/dispatch.service';
 
 function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
@@ -106,7 +130,7 @@ describe('DispatchService', () => {
   let service: DispatchService;
 
   beforeEach(() => {
-    service = new DispatchService(mockRealtime as never);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never);
     Object.values(mockDb).forEach((table) => {
       if (typeof table === 'object') {
         Object.values(table).forEach((fn) => fn.mockReset?.());
@@ -117,7 +141,17 @@ describe('DispatchService', () => {
     mockServer.emit.mockClear();
     // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
     // 测试用 riderId='r1'，所以 mock 返回 id='r1' 保持一致
-    mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1' });
+    // 批 D：listPendingTasks 需要 preferredWarehouseIds（空=不过滤）+ depositAmount
+    mockDb.riderProfile.findUnique.mockResolvedValue({
+      id: 'r1',
+      preferredWarehouseIds: [],
+      depositAmount: 100,
+    });
+    // 资格 mock 复位到「全额合格」（个别批 D 用例单独覆盖）
+    mockEligibility.getEnabledTiers.mockResolvedValue([{ id: 'tier-1', minAmount: 100, maxOrderAmount: 1000 }]);
+    mockEligibility.deriveEligibility.mockReturnValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' });
+    mockEligibility.isEligible.mockReturnValue(true);
+    mockEligibility.assertCanAccept.mockResolvedValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' });
   });
 
   describe('listPendingTasks', () => {

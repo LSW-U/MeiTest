@@ -28,6 +28,8 @@ import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
+import { DepositEligibilityService } from '../rider/deposit-eligibility.service';
+import { DISPATCH_SCORE_WEIGHTS, SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -200,14 +202,57 @@ export interface AvailableRider {
   rating: number;
 }
 
+/** 派单候选行（批 D，方案 Q10/Q13；契约 DispatchCandidate 同步） */
+export interface DispatchCandidateItem {
+  riderProfileId: string;
+  riderName: string;
+  phone: string;
+  vehicleType: 'BICYCLE' | 'MOTORCYCLE' | 'CAR';
+  isOnline: boolean;
+  rating: number;
+  depositAmount: number;
+  /** 档位上限（分）；null = 不限；0 = 无资格 */
+  maxOrderAmount: number | null;
+  /** 在途任务数（ASSIGNED/PICKED_UP/DELIVERING） */
+  inTransitTasks: number;
+  /** 距任务取货点距离（km）；null = 无实时位置（距离分按中点计） */
+  distanceKm: number | null;
+  /** 资格标签（✅可接 / ⛔需保证金） */
+  eligibility: {
+    eligible: boolean;
+    depositAmount: number;
+    maxOrderAmount: number | null;
+    requiredDeposit?: number;
+  };
+  /** 工作仓是否含任务仓（跨仓支援时 false 的候选也可见） */
+  warehouseMatched: boolean;
+  /** 排序得分（0-100 整数，分数越高排越前） */
+  score: number;
+}
+
+/** 派单候选响应（批 D） */
+export interface DispatchCandidateList {
+  taskId: string;
+  orderAmount: number;
+  items: DispatchCandidateItem[];
+}
+
 @Injectable()
 export class DispatchService {
   constructor(
     @Inject(RealtimeGateway) private readonly realtime: RealtimeGateway,
+    // 批 D（2026-09-03）：保证金资格校验（acceptTask/大厅/派单候选三处，方案 Q9）
+    @Inject(DepositEligibilityService) private readonly eligibility: DepositEligibilityService,
   ) {}
 
   /**
    * 查询抢单大厅（待派送订单池）
+   *
+   * 批 D 过滤（2026-09-03，方案 Q9 第 2 处 + Q11 强指派）：
+   *   - 工作仓过滤：只显示骑手 preferredWarehouseIds 内仓库的任务（骑手端无仓库概念，
+   *     由后端按 profile 过滤；preferredWarehouseIds 为空 = admin 未指派 → 显示全部
+   *     ——MVP 兼容旧骑手，admin 批 E 指派后收紧）
+   *   - 档位过滤：订单金额超骑手上限的任务不出现（上限派生：停用档不命中 → 0 → 全滤）
    */
   async listPendingTasks(options: {
     riderId: string;
@@ -216,9 +261,28 @@ export class DispatchService {
   }): Promise<{ items: DeliveryTaskView[] }> {
     const limit = Math.min(options.limit ?? 50, 100);
 
+    // riderId 是 User.id（JWT sub），先转 profile（拿工作仓 + 保证金）
+    const profile = await db.riderProfile.findUnique({
+      where: { userId: options.riderId },
+      select: { id: true, preferredWarehouseIds: true, depositAmount: true },
+    });
+    if (!profile) {
+      throw new NotFoundException({
+        code: 'E-RIDER-001',
+        message: 'Rider profile not found (please apply first)',
+      });
+    }
+
+    // 工作仓过滤（空数组 = 未指派 → 不过滤，兼容期）
+    const warehouseFilter =
+      profile.preferredWarehouseIds.length > 0
+        ? { warehouseId: { in: profile.preferredWarehouseIds } }
+        : {};
+
     const tasks = await db.deliveryTask.findMany({
       where: {
         status: 'PENDING_ASSIGN',
+        ...warehouseFilter,
         ...(options.warehouseId ? { warehouseId: options.warehouseId } : {}),
       },
       orderBy: { createdAt: 'asc' },
@@ -230,8 +294,13 @@ export class DispatchService {
       },
     });
 
+    // 档位过滤（内存过滤：单次查启用档后逐单比对，SQL 不动——金额在 order 关联上）
+    const enabledTiers = await this.eligibility.getEnabledTiers();
+    const snapshot = this.eligibility.deriveEligibility(profile.id, profile.depositAmount, enabledTiers);
+    const visible = tasks.filter((t) => this.eligibility.isEligible(snapshot, t.order?.payableAmount ?? 0));
+
     return {
-      items: tasks.map((t) => this.toView(t)),
+      items: visible.map((t) => this.toView(t)),
     };
   }
 
@@ -287,6 +356,14 @@ export class DispatchService {
         message: `Task already ${taskBefore.status} (cannot be grabbed)`,
       });
     }
+
+    // 批 D 资格拦截（2026-09-03，方案 Q9 第 1 处）：订单金额 ≤ 档位上限才可接。
+    //   未缴/档全停 → E-DEPOSIT-201；超上限 → E-DEPOSIT-202（含所需保证金提示）
+    const orderForAmount = await db.order.findUnique({
+      where: { id: taskBefore.orderId },
+      select: { payableAmount: true },
+    });
+    await this.eligibility.assertCanAccept(riderId, orderForAmount?.payableAmount ?? 0);
 
     // 事务：乐观锁 UPDATE + order.riderId 同步（任一失败回滚）
     const updateResult = await withTransaction(async (tx: Tx) => {
@@ -1148,6 +1225,14 @@ export class DispatchService {
       });
     }
 
+    // 批 D（2026-09-03）：admin reassign（含跨仓支援）保留金额资格校验——
+    //   工作仓放宽只体现在候选列表（crossWarehouse=true），金额资格不放宽（方案 Q9）
+    const reassignOrder = await db.order.findUnique({
+      where: { id: taskBefore.orderId },
+      select: { payableAmount: true },
+    });
+    await this.eligibility.assertCanAccept(input.newRiderId, reassignOrder?.payableAmount ?? 0);
+
     const noteText = `[reassign] ${taskBefore.riderId ?? 'null'} → ${newRider.riderName}(${input.newRiderId}) by ${input.adminUserId}${input.reason ? ` | ${input.reason}` : ''}`;
     const newNote = taskBefore.note ? `${taskBefore.note}\n${noteText}` : noteText;
 
@@ -1180,6 +1265,106 @@ export class DispatchService {
       taskId: input.taskId,
       oldRiderId: taskBefore.riderId,
       newRiderId: input.newRiderId,
+      adminUserId: input.adminUserId,
+    });
+
+    return this.getAdminDetail(input.taskId);
+  }
+
+  /**
+   * Admin 直接指派（批 F，2026-09-03，批E审查 P0-1 裁决方案 a）
+   *
+   * POST /admin/dispatch/tasks/:id/assign — PENDING_ASSIGN 任务 admin 指派给指定骑手。
+   * 与 acceptTask（骑手抢单）的区别：
+   *   - 不做「骑手端点击竞争」语义，但状态机同样走 PENDING_ASSIGN → ASSIGNED
+   *   - **保留保证金资格校验**（assertCanAccept：未缴/超上限同样拒绝，方案 Q9 第四处拦截；
+   *     跨仓支援由 candidates 的 crossWarehouse 流程配合——本端点不校验工作仓，
+   *     金额资格不可放宽，与 reassign 同口径）
+   *   - 事务骨架复用 acceptTask：乐观锁 UPDATE（WHERE status='PENDING_ASSIGN'）+ order.riderId 同步
+   *
+   * @throws E-DISPATCH-001 任务不存在
+   * @throws E-DISPATCH-002 非 PENDING_ASSIGN（已被抢/已被派/已取消）
+   * @throws E-DISPATCH-008 骑手无效（不存在或未 APPROVED）
+   * @throws E-DEPOSIT-201/202 资格不达标（未缴/超档位上限）
+   */
+  async assignTask(input: {
+    taskId: string;
+    riderId: string; // RiderProfile.id（派单中心候选行的 riderProfileId）
+    adminUserId: string;
+    reason?: string;
+  }): Promise<AdminDeliveryTaskView> {
+    const now = new Date();
+
+    const taskBefore = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      select: { orderId: true, status: true, note: true },
+    });
+    if (!taskBefore) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: 'Task not found' });
+    }
+    if (taskBefore.status !== 'PENDING_ASSIGN') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-002',
+        message: `Assign requires PENDING_ASSIGN status (current: ${taskBefore.status}; use reassign for ASSIGNED)`,
+      });
+    }
+
+    // 骑手有效性（与 reassignTask 同款校验）
+    const rider = await db.riderProfile.findUnique({
+      where: { id: input.riderId },
+      select: { id: true, applicationStatus: true, riderName: true },
+    });
+    if (!rider || rider.applicationStatus !== 'APPROVED') {
+      throw new ConflictException({
+        code: 'E-DISPATCH-008',
+        message: 'Rider invalid (not found or not APPROVED)',
+      });
+    }
+
+    // 保证金资格（admin 指派不放宽金额资格——与 reassign 同口径，方案 Q9）
+    const order = await db.order.findUnique({
+      where: { id: taskBefore.orderId },
+      select: { payableAmount: true },
+    });
+    await this.eligibility.assertCanAccept(input.riderId, order?.payableAmount ?? 0);
+
+    // 指派留痕（note，与 reassign 的 [reassign] 前缀区分）
+    const noteText = `[assign] → ${rider.riderName}(${input.riderId}) by ${input.adminUserId}${input.reason ? ` | ${input.reason}` : ''}`;
+    const newNote = taskBefore.note ? `${taskBefore.note}\n${noteText}` : noteText;
+
+    // 事务：乐观锁 + order.riderId 同步 + note 留痕（acceptTask 同款骨架）
+    const result = await withTransaction(async (tx: Tx) => {
+      const updated = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET status = 'ASSIGNED',
+            rider_id = ${input.riderId},
+            assigned_at = ${now},
+            note = ${newNote},
+            updated_at = ${now}
+        WHERE id = ${input.taskId}
+          AND status = 'PENDING_ASSIGN'
+      `;
+      if (updated === 0) {
+        return { ok: false as const };
+      }
+      await tx.order.update({
+        where: { id: taskBefore.orderId },
+        data: { riderId: input.riderId },
+      });
+      return { ok: true as const };
+    });
+
+    if (!result.ok) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-002',
+        message: 'Assign failed (task status changed concurrently)',
+      });
+    }
+
+    logger.info({
+      msg: 'DISPATCH_TASK_ASSIGNED',
+      taskId: input.taskId,
+      riderId: input.riderId,
       adminUserId: input.adminUserId,
     });
 
@@ -1298,6 +1483,149 @@ export class DispatchService {
       if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
       return b.totalDeliveries - a.totalDeliveries;
     });
+  }
+
+  /**
+   * 派单候选（批 D，2026-09-03，方案 Q10 两段式：资格过滤 → 排序推荐）
+   *
+   * GET /admin/dispatch/tasks/:id/candidates
+   *
+   * 过滤：APPROVED + 金额资格（订单金额 ≤ 档位上限；停用档回落 → 0 → 不合格）+
+   *       工作仓匹配（preferredWarehouseIds 含任务仓；crossWarehouse=true 时放宽——
+   *       仅 admin 显式跨仓支援操作，资格校验保留）
+   * 排序：score = rating×W.rating + 距离近度×W.distance − 在途×W.inTransit
+   *       （权重 DISPATCH_SCORE_WEIGHTS 常量；距离近度 = 1 − min(dist/MAX, 1)）
+   * 平局：score 相同 → depositAmount 高者优先（方案 Q10 tie-break）
+   * 标签：每候选输出 eligibility { eligible, depositAmount, maxOrderAmount, requiredDeposit? }
+   *       ——不合格候选默认不返回；includeIneligible=true 时返回（admin 跨仓支援需看见
+   *       「⛔需保证金 $Z」提示引导升级）
+   */
+  async listDispatchCandidates(input: {
+    taskId: string;
+    crossWarehouse?: boolean;
+    includeIneligible?: boolean;
+  }): Promise<DispatchCandidateList> {
+    const task = await db.deliveryTask.findUnique({
+      where: { id: input.taskId },
+      select: { id: true, warehouseId: true, pickupLat: true, pickupLng: true, status: true, orderId: true },
+    });
+    if (!task) {
+      throw new NotFoundException({ code: 'E-DISPATCH-001', message: `Task not found (${input.taskId})` });
+    }
+
+    const order = await db.order.findUnique({
+      where: { id: task.orderId },
+      select: { payableAmount: true },
+    });
+    const orderAmount = order?.payableAmount ?? 0;
+
+    // 候选池：APPROVED + 在途数（并行）
+    const [profiles, inTransitCounts, enabledTiers, requiredDeposit] = await Promise.all([
+      db.riderProfile.findMany({
+        where: { applicationStatus: 'APPROVED' },
+        select: {
+          id: true,
+          userId: true,
+          riderName: true,
+          phone: true,
+          vehicleType: true,
+          rating: true,
+          depositAmount: true,
+          preferredWarehouseIds: true,
+        },
+      }),
+      db.deliveryTask.groupBy({
+        by: ['riderId'],
+        where: { status: { in: ['ASSIGNED', 'PICKED_UP', 'DELIVERING'] }, riderId: { not: null } },
+        _count: { _all: true },
+      }),
+      this.eligibility.getEnabledTiers(),
+      this.eligibility.getRequiredDeposit(orderAmount),
+    ]);
+
+    if (profiles.length === 0) return { taskId: task.id, orderAmount, items: [] };
+
+    // pipeline 批量在线（Redis 故障降级全离线，不阻塞）
+    let onlineFlags: boolean[];
+    try {
+      const pipeline = redis.pipeline();
+      profiles.forEach((p) => pipeline.exists(`rider:online:${p.userId}`));
+      const results = await pipeline.exec();
+      onlineFlags = (results ?? []).map((r) => (r[1] as number) > 0);
+    } catch {
+      onlineFlags = profiles.map(() => false);
+    }
+
+    const inTransitMap = new Map(inTransitCounts.map((c) => [c.riderId as string, c._count._all]));
+    const pickup = { lat: decimalToNumber(task.pickupLat), lng: decimalToNumber(task.pickupLng) };
+
+    const items: DispatchCandidateItem[] = profiles.map((p, i) => {
+      const snapshot = this.eligibility.deriveEligibility(p.id, p.depositAmount, enabledTiers);
+      const label = this.eligibility.toLabel(snapshot, orderAmount, requiredDeposit);
+      const inTransit = inTransitMap.get(p.id) ?? 0;
+      return {
+        riderProfileId: p.id,
+        riderName: p.riderName,
+        phone: p.phone,
+        vehicleType: p.vehicleType,
+        isOnline: onlineFlags[i] ?? false,
+        rating: decimalToNumber(p.rating),
+        depositAmount: p.depositAmount,
+        maxOrderAmount: snapshot.maxOrderAmount,
+        inTransitTasks: inTransit,
+        distanceKm: this.riderPickupDistanceKm(pickup),
+        eligibility: label,
+        warehouseMatched: p.preferredWarehouseIds.includes(task.warehouseId),
+        score: 0,
+      };
+    });
+
+    // 两段式：过滤（在线 + 工作仓 + 资格）→ 排序
+    // 在线过滤（批D审查观察项 2026-09-03 拍板）：离线骑手不进候选——派单推荐
+    //   应指向可立即接单的人；跨仓支援（crossWarehouse=true）同样只列在线
+    //   （isOnline 来自 Redis rider:online:{userId}，与 heartbeat/availableRiders 同源）
+    const { W, MAX_D } = { W: DISPATCH_SCORE_WEIGHTS, MAX_D: SCORE_MAX_DISTANCE_KM };
+    const eligiblePool = items.filter(
+      (c) =>
+        c.isOnline &&
+        c.eligibility.eligible &&
+        (input.crossWarehouse || c.warehouseMatched),
+    );
+
+    const scored = eligiblePool.map((c) => ({
+      ...c,
+      // 距离近度：完全无实时骑手位置（MVP 候选不带 GPS）→ 距离分按中点 0.5 计，
+      // 避免全员 0 分导致排序退化为纯 rating；批 E 接骑手实时位置后替换
+      score:
+        Math.round(
+          (c.rating / 5) * W.rating +
+          (1 - Math.min((c.distanceKm ?? MAX_D / 2) / MAX_D, 1)) * W.distance -
+          Math.min(c.inTransitTasks, 5) * (W.inTransit / 5),
+        ) * 100,
+    }));
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // 平局：保证金高者优先（方案 Q10）
+      return b.depositAmount - a.depositAmount;
+    });
+
+    // 不合格候选按需附带（admin 跨仓支援场景看「需保证金 $Z」）
+    const ineligible = input.includeIneligible
+      ? items
+          .filter((c) => !c.eligibility.eligible)
+          .map((c) => ({ ...c, score: 0 }))
+      : [];
+
+    return { taskId: task.id, orderAmount, items: [...scored, ...ineligible] };
+  }
+
+  /**
+   * 候选距离（km）：MVP 无骑手实时 GPS（位置历史表 W4.5 已删），返回 null——
+   * 距离分按中点计（见 listDispatchCandidates）。批 E 接 Redis 实时位置后实现。
+   */
+  private riderPickupDistanceKm(_pickup: { lat: number; lng: number }): number | null {
+    return null;
   }
 
   /** admin 视图转换（含 order + rider 关联） */

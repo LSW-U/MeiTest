@@ -32,6 +32,7 @@ import { z } from 'zod';
 import {
   ListAllTasksQuery,
   ReassignTaskRequest,
+  AssignTaskRequest,
   CancelTaskRequest,
 } from '@meimart/api-contract';
 import { DispatchService } from './dispatch.service';
@@ -94,6 +95,35 @@ export class AdminDispatchController {
     return { success: true as const, data: result };
   }
 
+  /**
+   * Admin 直接指派（批 F，2026-09-03，批E审查 P0-1 裁决方案 a）
+   *
+   * PENDING_ASSIGN 任务指派给指定骑手（派单中心「确认指派」消费）。
+   * 保留保证金资格校验（E-DEPOSIT-201/202）；不校验工作仓（跨仓支援走此通道）。
+   */
+  @Post('tasks/:id/assign')
+  @Roles('SUPER_ADMIN')
+  @Audit({ resource: 'DeliveryTask', resourceIdParam: 'id' })
+  async assign(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(AssignTaskRequest)) body: z.infer<typeof AssignTaskRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    if (!req.user) {
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'auth required' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const result = await this.dispatchService.assignTask({
+      taskId: id,
+      riderId: body.riderId,
+      adminUserId: req.user.sub,
+      reason: body.reason,
+    });
+    return { success: true as const, data: result };
+  }
+
   /** 取消任务（仅 SUPER_ADMIN；PENDING_ASSIGN/ASSIGNED） */
   @Post('tasks/:id/cancel')
   @Roles('SUPER_ADMIN')
@@ -121,6 +151,34 @@ export class AdminDispatchController {
   @Get('riders/available')
   async availableRiders() {
     const result = await this.dispatchService.listAvailableRiders();
+    return { success: true as const, data: result };
+  }
+
+  /**
+   * 派单候选（批 D，2026-09-03，方案 Q10/Q13）：资格过滤 + 排序推荐 + 资格标签
+   *
+   * query：crossWarehouse=true 放宽工作仓过滤（仅 admin 显式跨仓支援，资格校验保留）；
+   *        includeIneligible=true 附带不合格候选（⛔需保证金 $Z 提示，默认剔除）
+   */
+  @Get('tasks/:id/candidates')
+  @Roles('SUPER_ADMIN')
+  async candidates(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query(
+      new ZodValidationPipe(
+        z.object({
+          crossWarehouse: z.coerce.boolean().optional(),
+          includeIneligible: z.coerce.boolean().optional(),
+        }),
+      ),
+    )
+    query: { crossWarehouse?: boolean; includeIneligible?: boolean },
+  ) {
+    const result = await this.dispatchService.listDispatchCandidates({
+      taskId: id,
+      crossWarehouse: query.crossWarehouse,
+      includeIneligible: query.includeIneligible,
+    });
     return { success: true as const, data: result };
   }
 

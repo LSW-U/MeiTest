@@ -126,9 +126,18 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
         }),
       },
       riderProfile: {
-        findUnique: vi.fn().mockResolvedValue({ id: 'rider-1' }),
+        findUnique: vi.fn().mockResolvedValue({ id: 'rider-1', preferredWarehouseIds: [], depositAmount: 5000 }),
         // W3 骑手积分：deliverTask 事务内 tx.riderProfile.update（increment totalDeliveries + points）
         update: vi.fn().mockResolvedValue({}),
+      },
+      // 批 D（2026-09-03）：资格校验查启用档（seed 同构 4 档，$50 档上限 $500 → 集成链路订单金额可接）
+      riderDepositTier: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 't4', minAmount: 5000, maxOrderAmount: 50000 },
+          { id: 't3', minAmount: 1000, maxOrderAmount: 10000 },
+          { id: 't2', minAmount: 500, maxOrderAmount: 5000 },
+          { id: 't1', minAmount: 100, maxOrderAmount: 1000 },
+        ]),
       },
       $executeRaw: vi.fn(),
       _tables: tables,
@@ -182,6 +191,7 @@ vi.mock('bullmq', () => ({ Queue: class {} }));
 
 import { OrderService } from '../src/modules/order/order.service';
 import { DispatchService } from '../src/modules/dispatch/dispatch.service';
+import { DepositEligibilityService } from '../src/modules/rider/deposit-eligibility.service';
 
 describe('Order → Dispatch 全链路集成测试', () => {
   let orderService: OrderService;
@@ -242,7 +252,9 @@ describe('Order → Dispatch 全链路集成测试', () => {
       null, // notifyFactory
     );
 
-    dispatchService = new DispatchService(mockRealtime as never);
+    // 批 D（2026-09-03）：第二构造参数 DepositEligibilityService（真 DB 集成测试用真实例，
+    // 档位查真表——seed 4 档 + 测试骑手 depositAmount 由测试数据决定）
+    dispatchService = new DispatchService(mockRealtime as never, new DepositEligibilityService());
 
     // 让 orderService 拥有 dispatchService（用于 markPaid 自动建 task）
     (orderService as unknown as { dispatchService: unknown }).dispatchService = dispatchService;
