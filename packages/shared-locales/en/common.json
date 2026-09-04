@@ -8,6 +8,7 @@
     "tet": "Tetum"
   },
   "loading": "Loading...",
+  "empty": "No data",
   "retry": "Retry",
   "cancel": "Cancel",
   "confirm": "Confirm",
