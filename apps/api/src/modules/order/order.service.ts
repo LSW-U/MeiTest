@@ -51,6 +51,7 @@ import { OrderStatus } from '@meimart/api-contract';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
+import { PricingService } from '../pricing/pricing.service';
 import {
   enqueueOrderTimeout,
   cancelOrderTimeout,
@@ -149,6 +150,7 @@ export class OrderService {
     @Inject('CART_SERVICE_TOKEN')
     private readonly cartService: CartServiceLike | null,
     @Inject(PromotionService) private readonly promotionService: PromotionService,
+    @Inject(PricingService) private readonly pricingService: PricingService,
     @Inject('RealtimeGatewayToken')
     private readonly realtime: {
       broadcastOrderStatusChange: (
@@ -255,7 +257,30 @@ export class OrderService {
       };
     });
 
-    const deliveryFee = warehouse.deliveryFee;
+    // ===== Step 4.5: 计算配送费（距离计费，2026-08-27 批次1） =====
+    // 公式：deliveryFee = baseFee + max(0, distanceKm - freeKm) × perKmFee
+    // 走 PostGIS ST_DistanceSphere（pricingService.calcDeliveryFee 内部）。
+    // address.lat/lng 非空已在 Step 1 守卫，此处必有坐标 → 调用计费 + 写快照。
+    // 无 centerPoint（异常仓库）时 pricingService 退化为 baseFee + distanceKm=null，仍可下单。
+    const feeResult = await this.pricingService.calcDeliveryFee(
+      warehouse.id,
+      Number(address.lat),
+      Number(address.lng),
+    );
+    const deliveryFee = feeResult.deliveryFee;
+    const deliveryFeeBreakdown: {
+      baseFee: number;
+      distanceFee: number;
+      distanceKm: number | null;
+      perKmFee: number;
+      freeKm: number;
+    } = {
+      baseFee: feeResult.baseFee,
+      distanceFee: feeResult.distanceFee,
+      distanceKm: feeResult.distanceKm,
+      perKmFee: feeResult.perKmFee,
+      freeKm: feeResult.freeKm,
+    };
     const totalAmount = itemsSubtotal + deliveryFee;
     // discountAmount + payableAmount 在事务内计算（W7-ext-G：promo 原子 increment）
 
@@ -301,6 +326,7 @@ export class OrderService {
             status: initialStatus,
             totalAmount,
             deliveryFee,
+            deliveryFeeBreakdown,
             discountAmount,
             payableAmount,
             deliveryAddress: {

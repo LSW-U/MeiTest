@@ -10,12 +10,18 @@
  *   - POST   /admin/dispatch/orders/:orderId/recreate 补建
  *
  * 视角：platform（super_admin 写；customer_service 只读，admin-web 不做 role 隐藏，后端 RBAC 兜底）
+ *
+ * 批 C2 修复 P2-1（2026-09-04）：消费 ?warehouseId= query（仓库列表/详情跨仓支援入口带入）
+ * 初始化仓筛选；useSearchParams 按 P1-7 范式包 Suspense
  */
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
+import { WarehouseLoadPanel } from '@/components/warehouse/warehouse-load-panel';
+import { DispatchCenter } from './dispatch-center';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
@@ -65,12 +71,19 @@ const STATUS_FILTERS: { value: DeliveryTaskStatus | 'ALL'; labelKey: string }[] 
   { value: 'FAILED', labelKey: 'admin.dispatch.statusFailed' },
 ];
 
-export default function DispatchTasksPage() {
+function DispatchTasksContent() {
   const t = useTranslations('common');
   const { toast } = useToast();
+  // 批 C2 修复 P2-1（2026-09-04）：仓库列表/详情「跨仓支援」跳 /dispatch?warehouseId=xxx#dispatch-center，
+  // 此处读取 query 初始化仓筛选，把预留上下文接真（仅首挂载读一次，之后仍可手动改）
+  const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<DeliveryTaskStatus | 'ALL'>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
-  const [warehouseIdSearch, setWarehouseIdSearch] = useState('');
+  const [warehouseIdSearch, setWarehouseIdSearch] = useState(
+    () => searchParams.get('warehouseId') ?? '',
+  );
+  // P2-2 接线（2026-09-03）：仓负载预警卡跨仓入口 → 派单中心该仓（nonce 触发 effect）
+  const [crossSupportTarget, setCrossSupportTarget] = useState<{ warehouseId: string; nonce: number } | null>(null);
   const [detailTarget, setDetailTarget] = useState<AdminDeliveryTask | null>(null);
   const [reassignTarget, setReassignTarget] = useState<AdminDeliveryTask | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AdminDeliveryTask | null>(null);
@@ -200,7 +213,22 @@ export default function DispatchTasksPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* ===== 批 E（2026-09-03）：仓库负载面板（方案 Q12）+ 派单中心（方案 Q13） ===== */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">{t('admin.warehouseLoad.title')}</h3>
+        {/* P2-2 接线（2026-09-03）：预警卡「跨仓支援」→ 定位派单中心该仓 + 自动开跨仓确认 */}
+        <WarehouseLoadPanel onCrossSupport={(warehouseId) => setCrossSupportTarget({ warehouseId, nonce: Date.now() })} />
+      </section>
+
+      <section className="space-y-3" id="dispatch-center">
+        <h3 className="text-sm font-semibold">{t('admin.dispatchCenter.title')}</h3>
+        <DispatchCenter crossSupportTarget={crossSupportTarget} />
+      </section>
+
+      {/* ===== 既有：任务监控列表 ===== */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">{t('admin.dispatch.monitorTitle')}</h3>
+        <div className="flex flex-wrap items-center gap-3">
         <Tabs
           value={statusFilter}
           onValueChange={(v) => setStatusFilter(v as DeliveryTaskStatus | 'ALL')}
@@ -226,6 +254,7 @@ export default function DispatchTasksPage() {
           className="w-48"
         />
       </div>
+      </section>
 
       {error ? (
         <ErrorState onRetry={() => refetch()} />
@@ -553,5 +582,21 @@ function CancelDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// 批 C2 修复 P2-1：useSearchParams 必须包 Suspense（Next 14.2 build 要求，同 reviews/[id] P1-7 范式）
+export default function DispatchTasksPage() {
+  const t = useTranslations('common');
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
+      }
+    >
+      <DispatchTasksContent />
+    </Suspense>
   );
 }

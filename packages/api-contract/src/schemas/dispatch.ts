@@ -45,6 +45,42 @@ export const DeliveryTask = z.object({
   updatedAt: IsoTimestamp,
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
   contactPhone: z.string().optional(),
+  /**
+   * 配送费（分，P0-1 修复 2026-08-25）
+   * 从 order.deliveryFee 透传；骑手卡片展示真实配送费。历史订单可能无 → 可选。
+   */
+  deliveryFee: z.number().int().nonnegative().optional(),
+  /**
+   * 配送费基础费（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.baseFee 透传（订单快照）。
+   * breakdown 缺失（历史单/无坐标）→ undefined，前端只显总额。
+   */
+  baseFee: z.number().int().nonnegative().optional(),
+  /**
+   * 配送费距离加价（分，距离计费批次1 2026-08-27）
+   * 从 order.delivery_fee_breakdown.distanceFee 透传（订单快照）。
+   * 与 baseFee 一起展示明细「基础 $X + 距离 $Y = $Z」。
+   */
+  distanceFee: z.number().int().nonnegative().optional(),
+  /**
+   * 计费距离（km，距离计费批次1 2026-08-27 / P2-2 审查报告修复）
+   * 从 order.delivery_fee_breakdown.distanceKm 透传 = PostGIS ST_DistanceSphere(仓库中心→收货地址)。
+   * 与 distanceKm（pickup→dropoff haversine 骑行距离）语义不同：本字段是距离费的计算基准。
+   * breakdown 缺失（历史单/无坐标）→ undefined。
+   */
+  billingDistanceKm: z.number().nonnegative().optional(),
+  /**
+   * 配送直线距离（km，P6 #7 2026-08-25）
+   * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
+   * 非实时路况距离，仅作展示/排序参考。
+   */
+  distanceKm: z.number().nonnegative().optional(),
+  /**
+   * 预估配送时长（分钟，P6 #7 2026-08-25）
+   * 由 distanceKm ÷ 20km/h 推导，上限 45 分钟兜底（不做实时路况）。
+   * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
+   */
+  estimatedMinutes: z.number().int().nonnegative().optional(),
 });
 
 // Why: taskId 走 URL path param（:id），body 不重复携带。
@@ -132,6 +168,12 @@ export const AdminTaskListResponse = PaginatedResponse(AdminDeliveryTaskView);
 /** 改派请求（第一期只支持 ASSIGNED 状态） */
 export const ReassignTaskRequest = z.object({
   newRiderId: Id,
+  reason: z.string().max(500).optional(),
+});
+
+/** Admin 直接指派请求（批 F，2026-09-03，批E审查 P0-1）：PENDING_ASSIGN → 指定骑手 */
+export const AssignTaskRequest = z.object({
+  riderId: Id,
   reason: z.string().max(500).optional(),
 });
 

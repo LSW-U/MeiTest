@@ -185,42 +185,42 @@ enum NotificationType {
 // ============================================================================
 
 model User {
-  id             String      @id @default(uuid())
-  phone          String      @unique @db.VarChar(20) // +670XXXXXXXX
-  email          String?     @unique @db.VarChar(255) // 邮箱 OTP 找回密码必需
-  password       String? // bcrypt hash（密码主登录，SMS 注册可为空）
-  name           String?
-  avatarUrl      String?     @map("avatar_url")
-  role           Role        @default(CUSTOMER)
-  status         UserStatus  @default(ACTIVE)
-  phoneVerified  Boolean     @default(false) @map("phone_verified") // SMS 验证状态
-  emailVerified  Boolean     @default(false) @map("email_verified")
-  lastDeviceType DeviceType? @map("last_device_type") // 最近一次登录设备
-  lastLoginAt    DateTime?   @map("last_login_at")
+  id                      String      @id @default(uuid())
+  phone                   String      @unique @db.VarChar(20) // +670XXXXXXXX
+  email                   String?     @unique @db.VarChar(255) // 邮箱 OTP 找回密码必需
+  password                String? // bcrypt hash（密码主登录，SMS 注册可为空）
+  name                    String?
+  avatarUrl               String?     @map("avatar_url")
+  role                    Role        @default(CUSTOMER)
+  status                  UserStatus  @default(ACTIVE)
+  phoneVerified           Boolean     @default(false) @map("phone_verified") // SMS 验证状态
+  emailVerified           Boolean     @default(false) @map("email_verified")
+  lastDeviceType          DeviceType? @map("last_device_type") // 最近一次登录设备
+  lastLoginAt             DateTime?   @map("last_login_at")
   /// 会员积分（$1=1pt，即 payableAmount 100 分 = 1pt）。
   /// 字段入库为未来订单成交时 increment 缓存预留；当前 profile 实时聚合已成交订单返回，保证准确。
-  points         Int         @default(0)
+  points                  Int         @default(0)
   // W7-fix：密码重置时间戳，refresh 端点检查 token.iat < passwordChangedAt 拒绝旧 token
-  passwordChangedAt DateTime? @map("password_changed_at")
+  passwordChangedAt       DateTime?   @map("password_changed_at")
   // W7-ext-H-unified-auth：统一入口 complete 时写（服务条款 + 隐私政策确认版本）
-  agreedTermsVersion String? @map("agreed_terms_version")
+  agreedTermsVersion      String?     @map("agreed_terms_version")
   // P17 B1（2026-08-17）：通知偏好 JSON {orderUpdates, promotions, system}，null=默认全 true（列表/未读数按此过滤）
-  notificationPreferences Json? @map("notification_preferences")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  notificationPreferences Json?       @map("notification_preferences")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
 
   // 关联
-  cart            Cart?
-  orders          Order[]
-  userCoupons      UserCoupon[]
-  addresses       Address[]
-  favorites       Favorite[]
-  auditLogs       AuditLog[]
-  riderProfile    RiderProfile?
-  warehouseStaff  WarehouseStaff?
-  customerService CustomerService?
+  cart              Cart?
+  orders            Order[]
+  userCoupons       UserCoupon[]
+  addresses         Address[]
+  favorites         Favorite[]
+  auditLogs         AuditLog[]
+  riderProfile      RiderProfile?
+  warehouseStaff    WarehouseStaff?
+  customerService   CustomerService?
   // V2-S7：审核人关联（admin 审核 RiderProfile 申请时记录）
-  reviewedRiders    RiderProfile[] @relation("ReviewedRiders")
+  reviewedRiders    RiderProfile[]   @relation("ReviewedRiders")
   // reviews-1：客户发的评论 + 骑手评价（评价人反向）
   reviews           Review[]
   riderReviewsGiven RiderReview[]
@@ -301,6 +301,10 @@ model Warehouse {
   /// 多语言营业时间 JSON
   operatingHours Json?
   deliveryFee    Int                                     @default(0) @map("delivery_fee")
+  /// 每公里加价（分/km，配送费距离计费 2026-08-27）；默认 0 = 功能未启用（灰度安全网）
+  perKmFee       Int                                     @default(0) @map("per_km_fee")
+  /// 起步距离（km，baseFee 覆盖的前 N 公里）；默认 2
+  freeKm         Decimal                                 @default(2) @map("free_km") @db.Decimal(10, 2)
   status         WarehouseStatus                         @default(ACTIVE)
   createdAt      DateTime                                @default(now()) @map("created_at")
   updatedAt      DateTime                                @updatedAt @map("updated_at")
@@ -489,6 +493,11 @@ model Order {
   // 地址快照(下单时拷贝)
   deliveryAddress Json @map("delivery_address")
 
+  /// 配送费计价快照（配送费距离计费 2026-08-27）
+  /// {baseFee, distanceFee, distanceKm, perKmFee, freeKm}——骑手端明细展示 + 灰度期校准数据源
+  /// 无坐标订单（fallback baseFee）或历史订单 → null，前端只显总额
+  deliveryFeeBreakdown Json? @map("delivery_fee_breakdown")
+
   remark String?
 
   // 配送
@@ -510,26 +519,26 @@ model Order {
   cancelReason String?   @map("cancel_reason")
 
   // 关联
-  user           User            @relation(fields: [userId], references: [id])
-  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
-  items          OrderItem[]
-  events         OrderEvent[]
-  rider          RiderProfile?   @relation(fields: [riderId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
+  items           OrderItem[]
+  events          OrderEvent[]
+  rider           RiderProfile?    @relation(fields: [riderId], references: [id])
   // P14 ④：1:1 -> 1:N（同 order 可有 delivery + return 各一个 task），改 deliveryTasks 数组
-  deliveryTasks  DeliveryTask[]
-  paymentIntent  PaymentIntent?
-  reviews        Review[] // P15 多商品评价：1:1 -> 1:N（同 order 多 review，每商品一条，@@unique([orderId, productId]) 拦同订单同商品重复）
-  riderReview    RiderReview? // reviews-1：骑手评价反向
-  cashCollection CashCollection?
+  deliveryTasks   DeliveryTask[]
+  paymentIntent   PaymentIntent?
+  reviews         Review[] // P15 多商品评价：1:1 -> 1:N（同 order 多 review，每商品一条，@@unique([orderId, productId]) 拦同订单同商品重复）
+  riderReview     RiderReview? // reviews-1：骑手评价反向
+  cashCollection  CashCollection?
+  refunds         Refund[]
+  orderPromotions OrderPromotion[]
+  userCoupons     UserCoupon[]
 
   @@index([userId, createdAt])
   @@index([warehouseId, status])
-  @@index([status])
+  // DBA 批次1-4（2026-08-27）：移除 @@index([status])——被 (status, created_at DESC) 复合索引最左前缀覆盖，冗余
+  // DBA 批次1-4：移除 @@index([orderNo])——orderNo 已有 @unique 自动建 UQ B-tree，普通索引冗余
   @@index([riderId])
-  @@index([orderNo])
-  refunds Refund[]
-  orderPromotions OrderPromotion[]
-  userCoupons      UserCoupon[]
   @@map("orders")
 }
 
@@ -692,61 +701,65 @@ model RiderProfile {
   // W3 流程 C:入驻审核 + 实名认证（mock）+ 偏好仓库
   // applicationStatus: PENDING / APPROVED / REJECTED（不用 enum，TEXT 避免与流程 W/M enum 撞）
   // V2-S6 修复：去掉 ? 让 schema 与 migration (NOT NULL DEFAULT 'PENDING') 对齐
-  applicationStatus       String      @default("PENDING") @map("application_status")
-  idCardNumber            String?     @map("id_card_number")
+  applicationStatus     String    @default("PENDING") @map("application_status")
+  idCardNumber          String?   @map("id_card_number")
   // W3 骑手个人区（2026-08-24）：证件/头像 URL（apply 阶段 client_app 上传后回填，update 可改）
-  avatarUrl               String?     @map("avatar_url")
-  idCardImageUrl          String?     @map("id_card_image_url")
-  licenseImageUrl         String?     @map("license_image_url")
+  avatarUrl             String?   @map("avatar_url")
+  idCardImageUrl        String?   @map("id_card_image_url")
+  licenseImageUrl       String?   @map("license_image_url")
   // W3 骑手个人区（2026-08-24）：配送积分 + 等级（每完成 1 单 +10 分，4 档 BRONZE/SILVER/GOLD/PLATINUM）
   // F3 修复（2026-08-24 审查报告）：DB CHECK 约束见 migration 20260824141706_add_rider_tier_points_check
   //   tier 仅 4 档枚举值，points 非负；Prisma 不支持 CHECK 语法，约束在 migration raw SQL 维护
-  points                  Int         @default(0)
-  tier                    String      @default("BRONZE")
+  points                Int       @default(0)
+  tier                  String    @default("BRONZE")
   // V2-S7 修复：加 User relation（FK 约束，admin 硬删时 SET NULL）
-  reviewedById            String?     @map("reviewed_by_id")
-  reviewedBy              User?       @relation("ReviewedRiders", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt              DateTime?   @map("reviewed_at")
-  rejectReason            String?     @map("reject_reason")
-  preferredWarehouseIds   String[]    @default([]) @map("preferred_warehouse_ids")
+  reviewedById          String?   @map("reviewed_by_id")
+  reviewedBy            User?     @relation("ReviewedRiders", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt            DateTime? @map("reviewed_at")
+  rejectReason          String?   @map("reject_reason")
+  preferredWarehouseIds String[]  @default([]) @map("preferred_warehouse_ids")
+  // 保证金体系（2026-09-02 批 A）：生效总额（分）——线上 mock 即时累加 / 线下 COD CONFIRMED 时累加
+  //   可接上限不落库，实时查 RiderDepositTier 档位表派生
+  depositAmount         Int       @default(0) @map("deposit_amount")
 
-  user              User                   @relation(fields: [userId], references: [id])
-  orders            Order[]
-  deliveryTasks     DeliveryTask[]
-  cashCollections   CashCollection[]
-  riderReviews      RiderReview[] // reviews-1：骑手评价反向（rating 汇总来源）
+  user            User             @relation(fields: [userId], references: [id])
+  orders          Order[]
+  deliveryTasks   DeliveryTask[]
+  cashCollections CashCollection[]
+  riderReviews    RiderReview[] // reviews-1：骑手评价反向（rating 汇总来源）
+  deposits        RiderDeposit[] // 保证金缴存流水（批 A）
 
   @@index([applicationStatus])
   @@map("rider_profiles")
 }
 
 model DeliveryTask {
-  id             String             @id @default(uuid())
+  id               String             @id @default(uuid())
   // P14 ④：去 @unique（原 1:1），改下方 @@unique([orderId, taskType]) —— 允许同 order 同时有 delivery + return 各一个任务
-  orderId        String             @map("order_id")
-  riderId        String?            @map("rider_id")
-  warehouseId    String             @map("warehouse_id") // 取货仓库
-  status         DeliveryTaskStatus @default(PENDING_ASSIGN)
-  pickupAddress  String             @map("pickup_address")
-  pickupLat      Decimal            @map("pickup_lat") @db.Decimal(10, 7)
-  pickupLng      Decimal            @map("pickup_lng") @db.Decimal(10, 7)
-  dropoffAddress String             @map("dropoff_address")
-  dropoffLat     Decimal            @map("dropoff_lat") @db.Decimal(10, 7)
-  dropoffLng     Decimal            @map("dropoff_lng") @db.Decimal(10, 7)
-  assignedAt     DateTime?          @map("assigned_at")
-  pickedUpAt     DateTime?          @map("picked_up_at")
-  deliveredAt    DateTime?          @map("delivered_at")
+  orderId          String             @map("order_id")
+  riderId          String?            @map("rider_id")
+  warehouseId      String             @map("warehouse_id") // 取货仓库
+  status           DeliveryTaskStatus @default(PENDING_ASSIGN)
+  pickupAddress    String             @map("pickup_address")
+  pickupLat        Decimal            @map("pickup_lat") @db.Decimal(10, 7)
+  pickupLng        Decimal            @map("pickup_lng") @db.Decimal(10, 7)
+  dropoffAddress   String             @map("dropoff_address")
+  dropoffLat       Decimal            @map("dropoff_lat") @db.Decimal(10, 7)
+  dropoffLng       Decimal            @map("dropoff_lng") @db.Decimal(10, 7)
+  assignedAt       DateTime?          @map("assigned_at")
+  pickedUpAt       DateTime?          @map("picked_up_at")
+  deliveredAt      DateTime?          @map("delivered_at")
   // P11 ETA：创建任务时算 now + DEFAULT_ETA_MINUTES（dispatch.config.ts）写入；旧任务 null（前端降级 etaPlaceholder）
-  estimatedArrival DateTime?       @map("estimated_arrival")
+  estimatedArrival DateTime?          @map("estimated_arrival")
   /// 任务类型：delivery 配送（仓 -> 客户）/ return 取件退货（客户 -> 仓）
   /// P14 ④ dispatch 集成（2026-08-11）—— return 任务由 refund APPROVE + refundType=RETURN_REFUND 触发创建
-  taskType         String          @default("delivery") @map("task_type")
+  taskType         String             @default("delivery") @map("task_type")
   /// return 任务关联的 refund（仅 taskType=return 时填；delivery 任务为 null）
   /// P14 ④ refundId @unique 兜底防重（一个 refund 只能建一个 return task）
-  refundId         String?         @unique @map("refund_id")
-  note           String?
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
+  refundId         String?            @unique @map("refund_id")
+  note             String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
 
   order     Order         @relation(fields: [orderId], references: [id])
   rider     RiderProfile? @relation(fields: [riderId], references: [id])
@@ -754,9 +767,9 @@ model DeliveryTask {
   /// 反向：return 任务关联的 refund（1:1 optional；onDelete SetNull —— refund 极少删，删时 task 保留历史）
   refund    Refund?       @relation(fields: [refundId], references: [id], onDelete: SetNull)
 
+  @@unique([orderId, taskType])
   @@index([riderId, status])
   @@index([warehouseId, status])
-  @@unique([orderId, taskType])
   @@map("delivery_tasks")
 }
 
@@ -876,20 +889,20 @@ model Review {
   // P15 B1：匿名评价 + 快捷标签（2026-08-11）
   // 决策：与 RiderReview.tags 同模式 String[]，但商品评价用 GoodsReviewTag 枚举
   /// 匿名评价（提交时定死，admin 不可改 - 用户隐私权利）
-  anonymous Boolean @default(false) @map("anonymous")
+  anonymous Boolean  @default(false) @map("anonymous")
   /// 商品评价快捷标签（GoodsReviewTag 枚举：good_quality/good_price/fresh/well_packaged/accurate_description/fast_delivery；admin 可改）
   tags      String[] @default([])
 
   // reviews-1：评论中心扩展 —— 审核 + 分类 + 商家回复 + 商品绑定
   /// 审核状态（决策1：默认 APPROVED 直接发布）
-  status     ReviewStatus   @default(APPROVED) @map("status")
+  status    ReviewStatus   @default(APPROVED) @map("status")
   /// 客户评论分类（决策2：PRODUCT 商品评论 / DELIVERY 配送评论）
-  category   ReviewCategory @map("category")
+  category  ReviewCategory @map("category")
   /// 商家回复（多语言 i18n，可选）
-  reply      Json?  @map("reply")
-  repliedAt  DateTime? @map("replied_at")
+  reply     Json?          @map("reply")
+  repliedAt DateTime?      @map("replied_at")
   /// 商品评论绑定（可选；订单整体评论则空）
-  productId  String?  @map("product_id")
+  productId String?        @map("product_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -908,32 +921,32 @@ model Review {
 
 /// 评论审核状态（reviews-1）
 enum ReviewStatus {
-  PENDING  // 待审核（决策1 默认 APPROVED，PENDING 预留给后续审核流程）
+  PENDING // 待审核（决策1 默认 APPROVED，PENDING 预留给后续审核流程）
   APPROVED // 已通过
   REJECTED // 已拒绝
 }
 
 /// 客户评论分类（reviews-1，决策2）
 enum ReviewCategory {
-  PRODUCT  // 商品评论
+  PRODUCT // 商品评论
   DELIVERY // 配送评论
 }
 
 /// 骑手评价（reviews-1）：客户对骑手的评价，独立于 Review（评订单/商品）
 /// 一订单一条骑手评价（orderId unique）；评价写入锁当前 Order.riderId（F6）
 model RiderReview {
-  id        String   @id @default(uuid())
-  orderId   String   @unique @map("order_id") // 一个订单一条骑手评价
-  riderId   String   @map("rider_id") // 评价对象（RiderProfile.id）
-  userId    String   @map("user_id") // 评价人（客户）
-  userName  String   @map("user_name")
+  id        String       @id @default(uuid())
+  orderId   String       @unique @map("order_id") // 一个订单一条骑手评价
+  riderId   String       @map("rider_id") // 评价对象（RiderProfile.id）
+  userId    String       @map("user_id") // 评价人（客户）
+  userName  String       @map("user_name")
   rating    Int // 1-5 星
   /// 骑手标签固定枚举（i18n key）：on_time / polite / professional / careful（决策3）
   tags      String[]
   /// 文字评价（多语言 i18n，可选）
   comment   Json?
   status    ReviewStatus @default(APPROVED) @map("status")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime     @default(now()) @map("created_at")
 
   order Order        @relation(fields: [orderId], references: [id])
   rider RiderProfile @relation(fields: [riderId], references: [id])
@@ -983,7 +996,7 @@ model Banner {
 model Feedback {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  /// 反馈类型（与前端 FEEDBACK_TYPE_KEYS 尾段纯枚举对齐，service 层校验）
+  /// 反馈类型（纯枚举：feature/product/order/payment/shipping/other；DB CHECK 约束见 migration 20260825000002_add_feedback_category_check_c）
   category  String
   /// 反馈正文（单语言纯文本，用户当前语言，非 i18n JSON —— 反馈是用户原话，不做翻译）
   content   String
@@ -998,6 +1011,30 @@ model Feedback {
   @@index([userId, createdAt])
   @@index([category, createdAt])
   @@map("feedbacks")
+}
+
+/// 法律文档（P5 #3，2026-08-25）
+/// 服务条款(TERMS)/隐私政策(PRIVACY) 正文，按版本管理；
+/// content 为多语言 JSON（en/zh/id/pt/tet），接口按 Accept-Language 切片下发。
+/// MVP 单商家、无富文本编辑后台 → 由 seed 预置，admin 可后续扩展编辑端点。
+model LegalDocument {
+  id          String   @id @default(uuid())
+  /// 文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）
+  docType     String   @map("doc_type")
+  /// 版本号（语义版本，如 1.0.0；同一 docType 多版本共存，仅一条 isActive）
+  version     String
+  /// 多语言正文 { "en": "...", "zh": "...", "id": "...", "pt": "...", "tet": "..." }
+  content     Json
+  /// 生效时间（用于前端展示「最近更新于」）
+  effectiveAt DateTime @default(now()) @map("effective_at")
+  /// 是否当前生效版本（同 docType 仅一条 true）
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([docType, version])
+  @@index([docType, isActive])
+  @@map("legal_documents")
 }
 
 // ============================================================================
@@ -1080,34 +1117,34 @@ model WithdrawalRequest {
 
 /// 退款（W5 流程 C：客户申请退款 + 商家审核）
 model Refund {
-  id             String        @id @default(uuid())
-  orderId        String        @map("order_id")
-  userId         String        @map("user_id")
-  amount         Int           // 退款金额（分），= sum(RefundItem.subtotal) 部分退款 或 Order.payableAmount 整单退款
-  reason         String        // OUT_OF_STOCK / EXPIRED / QUALITY_ISSUE / WRONG_ITEM / SHORTAGE / DELIVERY_TOO_SLOW / CUSTOMER_CHANGE_MIND / OTHER
-  reasonDetail   String?       @map("reason_detail")
-  status         String        @default("PENDING") // PENDING / APPROVED / REJECTED / COMPLETED / FAILED / CANCELLED
-  transactionId  String?       @map("transaction_id") // 退款流水号（mock 标 MOCK_ 前缀）
-  refundMethod   String        @map("refund_method") // 与原 PaymentIntent.method 一致
-  reviewedBy     String?       @map("reviewed_by")
-  reviewedAt     DateTime?     @map("reviewed_at")
-  reviewNote     String?       @map("review_note")
-  completedAt    DateTime?     @map("completed_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt        @map("updated_at")
+  id            String    @id @default(uuid())
+  orderId       String    @map("order_id")
+  userId        String    @map("user_id")
+  amount        Int // 退款金额（分），= sum(RefundItem.subtotal) 部分退款 或 Order.payableAmount 整单退款
+  reason        String // OUT_OF_STOCK / EXPIRED / QUALITY_ISSUE / WRONG_ITEM / SHORTAGE / DELIVERY_TOO_SLOW / CUSTOMER_CHANGE_MIND / OTHER
+  reasonDetail  String?   @map("reason_detail")
+  status        String    @default("PENDING") // PENDING / APPROVED / REJECTED / COMPLETED / FAILED / CANCELLED
+  transactionId String?   @map("transaction_id") // 退款流水号（mock 标 MOCK_ 前缀）
+  refundMethod  String    @map("refund_method") // 与原 PaymentIntent.method 一致
+  reviewedBy    String?   @map("reviewed_by")
+  reviewedAt    DateTime? @map("reviewed_at")
+  reviewNote    String?   @map("review_note")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   /// 凭证照片 URL 数组（MinIO 完整 URL，同 Review.images 模式；P13 售后图片 2026-08-10）
-  photos         String[]      @default([])
+  photos        String[]  @default([])
   /// 售后类型：仅退款 / 退货退款（P13 提交传，P14 详情展示真实类型，替代 reason 启发式；P14-defer 2026-08-10）
   /// REFUND_ONLY：仅退款 / RETURN_REFUND：退货退款（骑手上门收回）
-  refundType     String        @default("REFUND_ONLY") @map("refund_type")
+  refundType    String    @default("REFUND_ONLY") @map("refund_type")
   /// 骑手接单取件时间（dispatch PICKED_UP 时写，P14 时间轴 pickupArranging 步骤展示；dispatch 集成 defer 到独立 ticket，当前 null）
-  pickupAt       DateTime?     @map("pickup_at")
+  pickupAt      DateTime? @map("pickup_at")
   /// 骑手取件完成时间（dispatch PICKED_UP->DELIVERING 时写，P14 时间轴 picked 步骤展示；dispatch 集成 defer 到独立 ticket，当前 null）
-  pickedAt       DateTime?     @map("picked_at")
+  pickedAt      DateTime? @map("picked_at")
 
-  order Order @relation(fields: [orderId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
-  items RefundItem[]
+  order      Order         @relation(fields: [orderId], references: [id])
+  user       User          @relation(fields: [userId], references: [id])
+  items      RefundItem[]
   /// 反向 relation：return 任务（taskType=return 的 DeliveryTask，1:1 optional）
   /// P14 ④ dispatch 集成（2026-08-11）—— refund APPROVE + RETURN_REFUND 触发建 return task
   returnTask DeliveryTask?
@@ -1122,18 +1159,18 @@ model Refund {
 ///     存「本次退款退了哪些 OrderItem 的多少数量」；整单退款不建子表（items 为空数组）
 ///     subtotal = unitPrice × refundQty，冗余存下单时价格快照（与 OrderItem.unitPrice 一致）
 model RefundItem {
-  id           String @id @default(uuid())
-  refundId     String @map("refund_id")
-  orderItemId  String @map("order_item_id")
-  skuId        String @map("sku_id")
+  id          String @id @default(uuid())
+  refundId    String @map("refund_id")
+  orderItemId String @map("order_item_id")
+  skuId       String @map("sku_id")
   /// 多语言商品名快照（同 OrderItem.productName，{zh,en,id,pt}）
-  productName  Json   @map("product_name")
+  productName Json   @map("product_name")
   /// 下单时单价快照（分，同 OrderItem.unitPrice）
-  unitPrice    Int    @map("unit_price")
+  unitPrice   Int    @map("unit_price")
   /// 本单退款数量（≤ OrderItem.quantity）
-  refundQty    Int    @map("refund_qty")
+  refundQty   Int    @map("refund_qty")
   /// = unitPrice × refundQty（分）
-  subtotal     Int
+  subtotal    Int
 
   refund Refund @relation(fields: [refundId], references: [id], onDelete: Cascade)
 
@@ -1159,9 +1196,9 @@ model Promotion {
   /// 起始订单金额（分），0 = 无门槛
   minOrderAmount    Int             @default(0) @map("min_order_amount")
   /// PERCENTAGE 上限（分），null = 不限
-  maxDiscountAmount Int?             @map("max_discount_amount")
+  maxDiscountAmount Int?            @map("max_discount_amount")
   /// 总配额，null = 不限
-  totalQuota        Int?             @map("total_quota")
+  totalQuota        Int?            @map("total_quota")
   /// 已使用次数（原子 increment）
   usedCount         Int             @default(0) @map("used_count")
   /// 单用户限用次数
@@ -1172,10 +1209,10 @@ model Promotion {
   /// 创建人 user.id（W7-ext-G P1-4 审计字段，纯字符串不加 FK）
   createdBy         String          @map("created_by")
   createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt        @map("updated_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  orderPromotions   OrderPromotion[]
-  userCoupons        UserCoupon[]
+  orderPromotions OrderPromotion[]
+  userCoupons     UserCoupon[]
 
   @@index([status, startAt, endAt])
   @@index([code])
@@ -1198,9 +1235,9 @@ model OrderPromotion {
   userCouponId   String?  @map("user_coupon_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
-  order       Order       @relation(fields: [orderId], references: [id])
-  promotion   Promotion   @relation(fields: [promotionId], references: [id])
-  userCoupon  UserCoupon? @relation(fields: [userCouponId], references: [id])
+  order      Order       @relation(fields: [orderId], references: [id])
+  promotion  Promotion   @relation(fields: [promotionId], references: [id])
+  userCoupon UserCoupon? @relation(fields: [userCouponId], references: [id])
 
   @@index([orderId])
   @@index([promotionId])
@@ -1210,22 +1247,22 @@ model OrderPromotion {
 
 // 23. UserCoupon（领券卡包，P1 领券体系）
 model UserCoupon {
-  id           String           @id @default(uuid())
-  userId       String           @map("user_id")
-  promotionId  String           @map("promotion_id")
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  promotionId String           @map("promotion_id")
   /// 冗余存领券时的 code（防模板改名/删除后无法追溯）
-  code         String           @db.VarChar(20)
-  status       UserCouponStatus @default(UNUSED)
-  receivedAt   DateTime         @default(now()) @map("received_at")
+  code        String           @db.VarChar(20)
+  status      UserCouponStatus @default(UNUSED)
+  receivedAt  DateTime         @default(now()) @map("received_at")
   /// 使用时间（status=USED 时）
-  usedAt       DateTime?        @map("used_at")
+  usedAt      DateTime?        @map("used_at")
   /// 关联订单（status=USED 时；阶段1 USED 终态，退款不还券）
-  orderId      String?          @map("order_id")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  orderId     String?          @map("order_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
 
-  user            User            @relation(fields: [userId], references: [id])
-  promotion       Promotion       @relation(fields: [promotionId], references: [id])
-  order           Order?          @relation(fields: [orderId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  promotion       Promotion        @relation(fields: [promotionId], references: [id])
+  order           Order?           @relation(fields: [orderId], references: [id])
   orderPromotions OrderPromotion[]
 
   // 同券每人限领 1 张（配合 Promotion.perUserLimit，替代旧 count 校验）
@@ -1260,7 +1297,7 @@ model SearchLog {
   /// normalize 后的词（trim + lowerCase + slice 50）
   word        String   @db.VarChar(50)
   /// 原始词（审计用）
-  rawWord     String   @db.VarChar(100) @map("raw_word")
+  rawWord     String   @map("raw_word") @db.VarChar(100)
   lang        String   @db.VarChar(8)
   /// 登录用户（可空，匿名也记；纯字符串不加 FK 避免 User 删除阻塞）
   userId      String?  @map("user_id")
@@ -1295,6 +1332,89 @@ enum HotSearchType {
   PINNED
   MANUAL
   BLOCKED
+}
+
+// ============================================================================
+// 保证金与派单体系（2026-09-02 方案定稿，任务书批 A）
+// ----------------------------------------------------------------------------
+
+// 25. RiderDepositTier — 保证金档位表（admin 可编，实时生效）
+//     上限 = 档位派生不落库：depositAmount 命中 minAmount 最高的档 → maxOrderAmount
+model RiderDepositTier {
+  id             String   @id @default(uuid())
+  /// 最低保证金（分，≥100 即 $1）
+  minAmount      Int      @map("min_amount")
+  /// 可接订单金额上限（分），NULL = 不限
+  maxOrderAmount Int?     @map("max_order_amount")
+  /// 列表排序（小→大）
+  sortOrder      Int      @default(0) @map("sort_order")
+  /// 软启停（DELETE = 置 false，不物理删）
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([minAmount])
+  @@map("rider_deposit_tiers")
+}
+
+// 26. DepositLocation — 线下缴纳点（admin 维护，骑手端 COD 下拉选择）
+model DepositLocation {
+  id           String         @id @default(uuid())
+  name         String
+  address      String
+  note         String?
+  enabled      Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  RiderDeposit RiderDeposit[]
+
+  @@map("deposit_locations")
+}
+
+// 27. RiderDeposit — 保证金缴存流水（双通道：线上 mock 即时生效 / 线下 COD 申请-确认）
+model RiderDeposit {
+  id              String              @id @default(uuid())
+  riderId         String              @map("rider_id")
+  channel         RiderDepositChannel
+  /// 骑手申请额（分）
+  requestedAmount Int                 @map("requested_amount")
+  /// admin 确认额（分，可修正）；ONLINE_MOCK 确认时 = requestedAmount
+  confirmedAmount Int?                @map("confirmed_amount")
+  status          RiderDepositStatus  @default(PENDING)
+  /// 线下缴纳点（OFFLINE_COD 必填）
+  locationId      String?             @map("location_id")
+  /// 骑手说明
+  note            String?
+  /// admin 备注（reject 必填 / confirm 可选）
+  adminNote       String?             @map("admin_note")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  /// 支付完成时间（pay-mock / 线下交现金的申报时间）
+  paidAt          DateTime?           @map("paid_at")
+  confirmedAt     DateTime?           @map("confirmed_at")
+
+  // FK 裁决（2026-09-02 批A遗留）：RESTRICT —— 保证金流水 = 财务审计证据，
+  //   有流水的骑手不允许直接删（强制先退款清流水再删）；修正迁移 20260902000002
+  rider    RiderProfile?    @relation(fields: [riderId], references: [id], onDelete: Restrict)
+  location DepositLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@index([riderId, createdAt])
+  @@index([status, createdAt])
+  // 批B审查 P2-1（2026-09-02）：partial unique index（同骑手最多一笔 PENDING）Prisma 不支持
+  //   声明语法，走 migration raw SQL —— 见 migrations/20260902000003_deposit_pending_unique
+  //   索引名 rider_deposits_pending_unique ON (rider_id) WHERE status='PENDING'
+  @@map("rider_deposits")
+}
+
+enum RiderDepositChannel {
+  ONLINE_MOCK
+  OFFLINE_COD
+}
+
+enum RiderDepositStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  REFUNDED
 }
 
 // ============================================================================

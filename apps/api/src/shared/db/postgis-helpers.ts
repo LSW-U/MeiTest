@@ -81,6 +81,68 @@ export async function findWarehouseByPoint(
   };
 }
 
+/**
+ * PostGIS 球面距离（km）：仓库中心点 → 收货地址点
+ *
+ * 距离计费批次1（2026-08-27）：P3-1 审查报告修复，从 pricing.service 迁移到 PostGIS 适配层集中。
+ * ⚠️ ST_MakePoint(lng, lat) 经度在前！写反距离全错（派单/计费连锁错误）。
+ * 复用 warehouses."centerPoint"（Point 4326）。
+ *
+ * @returns km（球面距离，米 / 1000）；仓库无 centerPoint 时返回 null
+ */
+export async function distanceSphereKm(
+  prisma: PrismaClient,
+  warehouseId: string,
+  lng: number,
+  lat: number,
+): Promise<number | null> {
+  const rows = await prisma.$queryRaw<Array<{ km: number | null }>>`
+    SELECT
+      ST_DistanceSphere(
+        "centerPoint",
+        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
+      ) / 1000.0 AS km
+    FROM "warehouses"
+    WHERE id = ${warehouseId}
+      AND "centerPoint" IS NOT NULL
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  const km = rows[0].km;
+  return km == null ? null : Number(km);
+}
+
+/**
+ * 校验收货地址是否在仓库覆盖范围内（ST_Within）
+ *
+ * 距离计费批次1（2026-08-27）：P3-1 审查报告修复，calcDeliveryFee 深度防御守卫。
+ * 防止未来 admin 试算/跨仓对账等调用方绕过 createOrder 的 coverage 预守卫 → 跨区计费。
+ *
+ * @returns true=在覆盖区内（或 coverageArea 为空时放宽通过，兼容历史数据）
+ */
+export async function isPointInWarehouseCoverage(
+  prisma: PrismaClient,
+  warehouseId: string,
+  lng: number,
+  lat: number,
+): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ within: boolean | null }>>`
+    SELECT
+      CASE
+        WHEN "coverageArea" IS NULL THEN TRUE
+        ELSE ST_Within(
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
+          "coverageArea"
+        )
+      END AS within
+    FROM "warehouses"
+    WHERE id = ${warehouseId}
+    LIMIT 1
+  `;
+  if (rows.length === 0) return false;
+  return rows[0].within === true;
+}
+
 /** UPSERT 仓库中心点（写入 center_point） */
 export async function setWarehouseCenter(
   prisma: PrismaClient,

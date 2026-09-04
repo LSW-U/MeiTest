@@ -16,6 +16,11 @@ import {
 import { AdminRiderController } from './admin-rider.controller';
 import { RiderLocationController } from './location.controller';
 import { RiderService } from './rider.service';
+import { RiderDepositController } from './deposit.controller';
+import { RiderDepositService } from './deposit.service';
+import { AdminDepositController, AdminDepositAggregateController } from './admin-deposit.controller';
+import { AdminDepositService } from './admin-deposit.service';
+import { DepositEligibilityService } from './deposit-eligibility.service';
 import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
@@ -28,8 +33,13 @@ import { RealtimeModule } from '../realtime/realtime.module';
     RiderApplicationAdminController,
     AdminRiderController,
     RiderLocationController,
+    // 保证金（批 B，2026-09-02）：骑手侧 3 端点
+    RiderDepositController,
+    // 保证金 admin 侧（批 C，2026-09-02）：tiers/locations/requests + 聚合详情/仓负载
+    AdminDepositController,
+    AdminDepositAggregateController,
   ],
-  providers: [RiderService],
-  exports: [RiderService],
+  providers: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService],
+  exports: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService],
 })
 export class RiderModule {}

@@ -25,7 +25,21 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import {
   CreateHotSearchTermRequest,
   UpdateHotSearchTermRequest,
+  HotSearchType,
+  SearchLang,
 } from '@meimart/api-contract';
+
+/**
+ * Admin 种子词列表 query schema（P3-3 修复 2026-08-29）
+ *
+ * 原 listTerms 用 `type as z.infer<...>` 强断言绕过类型检查，改为契约化 query schema：
+ *   - lang/type 走 HotSearchType / SearchLang zod 枚举校验，非法值直接 400（非默默透传）
+ *   - 消除 `as` 断言，类型从 schema 推导（单一真相源）
+ */
+export const AdminListTermsQuery = z.object({
+  lang: SearchLang.optional(),
+  type: HotSearchType.optional(),
+});
 
 @Controller('api/v1/client/search')
 @Public()
@@ -73,8 +87,9 @@ export class AdminHotSearchController {
 
   /** 运营种子词列表（HotSearchTerm 表，可按 lang/type 筛选） */
   @Get('terms')
-  async listTerms(@Query('lang') lang?: string, @Query('type') type?: string) {
-    const data = await this.search.listTerms(lang, type as z.infer<typeof CreateHotSearchTermRequest>['type'] | undefined);
+  async listTerms(@Query(new ZodValidationPipe(AdminListTermsQuery)) query: z.infer<typeof AdminListTermsQuery>) {
+    // P3-3：query 走 zod 枚举校验，type/lang 非法直接 400，不再用 `as` 强断言
+    const data = await this.search.listTerms(query.lang, query.type);
     return { success: true, data };
   }
 

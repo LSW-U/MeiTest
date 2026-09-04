@@ -54,6 +54,7 @@ import {
   type AdminRiderListItem,
 } from '@/hooks/api/use-admin-riders';
 import { ApiError } from '@/lib/api';
+import { formatCurrency } from '@/lib/utils';
 
 const APPLICATION_STATUS_FILTERS: ApplicationStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
 const APPLICATION_STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
@@ -203,6 +204,36 @@ function RidersListSection() {
       key: 'rating',
       header: t('admin.riders.columnRating'),
       render: (row) => <span className="font-mono text-xs">{row.rating.toFixed(2)}</span>,
+    },
+    // 批 E 审查 P1-2（2026-09-03）：保证金/上限/今日单量扩列（后端 list 轻量冗余）
+    {
+      key: 'depositAmount',
+      header: t('admin.riderDetail.depositTitle'),
+      render: (row) => (
+        <span className="font-mono text-xs">
+          {row.depositAmount === undefined ? '—' : formatCurrency(row.depositAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'maxOrderAmount',
+      header: t('admin.riderDetail.maxOrderAmount'),
+      render: (row) => (
+        <span className="font-mono text-xs">
+          {row.maxOrderAmount === undefined
+            ? '—'
+            : row.maxOrderAmount === null
+              ? t('admin.deposit.tiers.unlimited')
+              : row.maxOrderAmount === 0
+                ? t('admin.riderDetail.noEligibility')
+                : formatCurrency(row.maxOrderAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'todayDeliveries',
+      header: t('admin.riderDetail.todayDeliveries'),
+      render: (row) => <span className="font-mono text-xs">{row.todayDeliveries ?? '—'}</span>,
     },
     {
       key: 'actions',

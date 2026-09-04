@@ -24,6 +24,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RefundModule } from '../refund/refund.module';
 import { PromotionModule } from '../promotion/promotion.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrategy, WhatsAppNotifyStrategy } from '../../infrastructure';
 
 @Module({
@@ -33,6 +34,7 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
     forwardRef(() => CartModule),
     forwardRef(() => RefundModule),
     PromotionModule,
+    PricingModule,
     RealtimeModule,
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
   ],

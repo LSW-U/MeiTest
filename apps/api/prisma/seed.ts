@@ -28,7 +28,24 @@ function i18n(en: string, zh: string, id: string, pt: string): Record<string, st
   return { en, zh, id, pt };
 }
 
-/** 3 个仓库真实东帝汶坐标 + 覆盖范围 */
+/**
+ * 营业时间结构约定（Warehouse 模块完善批 A 文档化）：
+ * `{ mon..sun: { open: 'HH:mm' | '', close: 'HH:mm' | '', rest?: boolean } }`
+ * - rest: true 或 open/close 为空字符串 = 休息日（不营业）
+ * - 本期 seed 为每天 08:00–22:00、无休息日（已定沿用）；上线后由 admin-web 营业时间周表修改
+ * - 不支持跨天（close 必须 > open），为已知限制
+ */
+const OPERATING_HOURS = {
+  mon: { open: '08:00', close: '22:00' },
+  tue: { open: '08:00', close: '22:00' },
+  wed: { open: '08:00', close: '22:00' },
+  thu: { open: '08:00', close: '22:00' },
+  fri: { open: '08:00', close: '22:00' },
+  sat: { open: '08:00', close: '22:00' },
+  sun: { open: '08:00', close: '22:00' },
+} as const;
+
+/** 3 个仓库真实东帝汶坐标 + 覆盖范围（perKmFee/freeKm 为存档语义：显式写入与 schema 默认一致；单位：perKmFee 分/km，freeKm km） */
 const WAREHOUSES = [
   {
     code: 'W01',
@@ -37,6 +54,8 @@ const WAREHOUSES = [
     center: { lon: 125.56, lat: -8.5568 },
     coverage: buildBoxPolygon(125.56, -8.5568, 0.2),
     deliveryFee: 500,
+    perKmFee: 0,
+    freeKm: 2,
   },
   {
     code: 'W02',
@@ -45,6 +64,8 @@ const WAREHOUSES = [
     center: { lon: 126.45, lat: -8.4667 },
     coverage: buildBoxPolygon(126.45, -8.4667, 0.2),
     deliveryFee: 600,
+    perKmFee: 0,
+    freeKm: 2,
   },
   {
     code: 'W03',
@@ -53,6 +74,8 @@ const WAREHOUSES = [
     center: { lon: 125.3833, lat: -8.9167 },
     coverage: buildBoxPolygon(125.3833, -8.9167, 0.2),
     deliveryFee: 700,
+    perKmFee: 0,
+    freeKm: 2,
   },
 ] as const;
 
@@ -160,7 +183,13 @@ async function main() {
   for (const w of WAREHOUSES) {
     const created = await prisma.warehouse.upsert({
       where: { code: w.code },
-      update: {},
+      // 幂等补齐（批 A 收尾 P2-1，用户拍板选 c 白名单收窄）：update 仅刷新 perKmFee/freeKm 两个补齐/存档语义字段；
+      // 不覆盖 name/address/operatingHours/deliveryFee/status 等运营字段（避免 db:seed 重跑覆盖 admin 手改值，同 systemConfig/shop 惯例）；
+      // center/coverage 由下方 setWarehouseGeometry 单独重刷
+      update: {
+        perKmFee: w.perKmFee,
+        freeKm: w.freeKm,
+      },
       create: {
         code: w.code,
         name: w.name,
@@ -168,16 +197,10 @@ async function main() {
         address: w.address,
         centerLat: w.center.lat,
         centerLng: w.center.lon,
-        operatingHours: {
-          mon: { open: '08:00', close: '22:00' },
-          tue: { open: '08:00', close: '22:00' },
-          wed: { open: '08:00', close: '22:00' },
-          thu: { open: '08:00', close: '22:00' },
-          fri: { open: '08:00', close: '22:00' },
-          sat: { open: '08:00', close: '22:00' },
-          sun: { open: '08:00', close: '22:00' },
-        },
+        operatingHours: OPERATING_HOURS,
         deliveryFee: w.deliveryFee,
+        perKmFee: w.perKmFee,
+        freeKm: w.freeKm,
         status: 'ACTIVE',
       },
     });
@@ -315,21 +338,10 @@ async function main() {
       value: 'USD',
       description: 'Settlement currency (ISO 4217)',
     },
-    {
-      key: 'delivery.base_fee',
-      value: '500',
-      description: 'Delivery base fee in cents (per warehouse.surcharge added on top)',
-    },
-    {
-      key: 'delivery.per_km_fee',
-      value: '50',
-      description: 'Per-km surcharge in cents (added on top of base fee)',
-    },
-    {
-      key: 'delivery.min_order_amount',
-      value: '1000',
-      description: 'Minimum order amount in cents; below this order is rejected at checkout',
-    },
+    // P2-1/P2-3 修复（2026-08-27 审查报告）：删 delivery.base_fee / per_km_fee / min_order_amount 三条死配置
+    //   计费参数已迁移到 warehouse.deliveryFee / perKmFee / freeKm 真字段（distance fee 改造）
+    //   checkMinOrder 起送价校验本期不生效（DEFAULT_MIN_ORDER_AMOUNT=0），保留这三条会误导运营以为生效
+    //   运营改这三条 key 不生效 → 删除避免混淆（admin-web settings 页 minOrderAmount 列读 listWarehousePricingConfig，不读 system_config）
     {
       key: 'rider.per_order_commission',
       value: '300',
@@ -350,6 +362,84 @@ async function main() {
       value: '30',
       description: 'Minutes before PENDING_CONFIRM order is flagged as abnormal',
     },
+    {
+      // P5 #1 客服热线配置下发（2026-08-25）：骑手/客户端 help 页从后端读，避免硬编码
+      key: 'support.phone',
+      value: '+6707700000',
+      description: 'Customer support hotline (E.164-ish, displayed on help page; admin editable)',
+    },
+    {
+      // P5 #1 客服热线配置下发：客服工作时间（help 页展示，admin 可改）
+      key: 'support.hours',
+      value: 'Mon-Sun 08:00-20:00',
+      description: 'Customer support working hours (display only)',
+    },
+    {
+      // P25 #2 关于页社交链接配置下发（2026-08-25）：about 页 socials 从 SystemConfig 读
+      // value 为 JSON 字符串数组 [{type,url}]，type ∈ facebook/whatsapp/instagram
+      // host 白名单在后端 AboutService 校验；运营改此 key 即可更新社交链接
+      key: 'about.socials',
+      value: JSON.stringify([
+        { type: 'whatsapp', url: 'https://wa.me/67077000000' },
+        { type: 'facebook', url: 'https://facebook.com/meimart' },
+        { type: 'instagram', url: 'https://instagram.com/meimart' },
+      ]),
+      description: 'About page social links (JSON array of {type,url}; type ∈ facebook/whatsapp/instagram)',
+    },
+    // 应用中心配置（admin-web 优化方案 批次3，2026-08-29）
+    // SystemConfigService.update 是 update-only（key 不存在 → E-PLATFORM-002），故 app.* key 必须由 seed 预置。
+    // value 一律空字符串：对应 /apps 页「未配置」空态，运营首次保存即填值（upsert update:{} 不覆盖已有值）。
+    // key 白名单与 admin-web use-apps.ts APP_CONFIG_KEYS 完全对齐（客户端 5 + 骑手 5）。
+    {
+      key: 'app.client.ios.url',
+      value: '',
+      description: 'Client App iOS download URL (admin-web /apps page, first-save fills value)',
+    },
+    {
+      key: 'app.client.android.url',
+      value: '',
+      description: 'Client App Android download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.qr',
+      value: '',
+      description: 'Client App download QR image URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.version',
+      value: '',
+      description: 'Client App latest version string (admin-web /apps page)',
+    },
+    {
+      key: 'app.client.changelog',
+      value: '',
+      description: 'Client App changelog text (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.ios.url',
+      value: '',
+      description: 'Rider App iOS download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.android.url',
+      value: '',
+      description: 'Rider App Android download URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.qr',
+      value: '',
+      description: 'Rider App download QR image URL (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.version',
+      value: '',
+      description: 'Rider App latest version string (admin-web /apps page)',
+    },
+    {
+      key: 'app.rider.changelog',
+      value: '',
+      description: 'Rider App changelog text (admin-web /apps page)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {
@@ -361,6 +451,64 @@ async function main() {
   }
   console.log(`  ✅ system_configs: ${SYSTEM_CONFIGS.length} keys (commission / delivery / rider / order timeouts)`);
   // === END FLOW M ===
+
+  // === P5 #3 法律文档（2026-08-25）===
+  // 服务条款(TERMS)/隐私政策(PRIVACY) 正文预置，content 为多语言 JSON（en/zh/id/pt/tet）
+  // MVP 无 admin 编辑后台，先 seed；同 docType 仅一条 is_active=true（DB 部分唯一索引兜底）
+  console.log('\n📄 法律文档（TERMS / PRIVACY）...');
+  const LEGAL_DOCS: Array<{
+    docType: string;
+    version: string;
+    content: Record<string, string>;
+  }> = [
+    {
+      docType: 'TERMS',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Terms of Service\n\n1. By using MeiMart, you agree to place orders for personal use and pay the displayed amount (including delivery fees) via the selected payment method.\n2. Orders are confirmed once accepted by the platform/warehouse. You may cancel before confirmation; after confirmation, cancellation is subject to the refund policy.\n3. Cash-on-delivery orders must be paid to the rider upon receipt. Refused payment may affect future orders.\n4. We reserve the right to refuse service in cases of fraud, abuse, or violation of these terms.',
+        zh: 'MeiMart 服务条款\n\n1. 使用 MeiMart 即表示您同意为个人使用下单，并按显示金额（含配送费）通过所选支付方式支付。\n2. 订单在平台/仓库确认后生效。确认前可取消；确认后取消须遵守退款政策。\n3. 货到付款订单须在收货时向骑手支付。拒付可能影响后续下单。\n4. 我们保留在欺诈、滥用或违反本条款的情况下拒绝服务的权利。',
+        id: 'Syarat & Ketentuan MeiMart\n\n1. Dengan menggunakan MeiMart, Anda setuju melakukan pemesanan untuk penggunaan pribadi dan membayar sesuai jumlah yang ditampilkan (termasuk biaya pengiriman) melalui metode pembayaran yang dipilih.\n2. Pesanan dikonfirmasi setelah diterima platform/gudang. Pembatalan sebelum konfirmasi diizinkan; setelah konfirmasi tunduk pada kebijakan pengembalian dana.\n3. Pesanan bayar di tempat harus dibayar ke kurir saat diterima. Penolakan pembayaran dapat memengaruhi pesanan mendatang.\n4. Kami berhak menolak layanan dalam kasus penipuan, penyalahgunaan, atau pelanggaran ketentuan ini.',
+        pt: 'Termos de Serviço MeiMart\n\n1. Ao usar MeiMart, concorda em fazer encomendas para uso pessoal e pagar o valor exibido (incluindo taxas de entrega) pelo método de pagamento selecionado.\n2. As encomendas são confirmadas após aceitação pela plataforma/armazém. Pode cancelar antes da confirmação; após confirmação, está sujeito à política de reembolso.\n3. Encomendas pagamento na entrega devem ser pagas ao estafeta na receção. Recusa de pagamento pode afetar encomendas futuras.\n4. Reservamo-nos o direito de recusar serviço em casos de fraude, abuso ou violação destes termos.',
+        tet: 'MeiMart Terms of Service\n\n1. Uza MeiMart signifika ita konfirma hatutan order ba uza pessoál no halo pagamentu tuir valor hatudu (inklui taxa entrega) liu husi métodu pagamentu nebe ita hili.\n2. Order konfirma depois plataforma/armazem simu. bele kansa antes konfirma; depois konfirma submete ba polítika refundo.\n3. Order bayar iha lokal tenke bayar ba rider bainhira simu. labele bayare bele afeta order futuru.',
+      },
+    },
+    {
+      docType: 'PRIVACY',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Privacy Policy\n\n1. We collect your phone number, name, delivery address, and order history solely to fulfil orders and provide support.\n2. We do not sell your personal data. Location data is used only for active deliveries and is not stored beyond the delivery period.\n3. Payment credentials are handled by third-party providers; we do not store full card or account details.\n4. You may request data deletion by contacting support; we will process it within a reasonable period.',
+        zh: 'MeiMart 隐私政策\n\n1. 我们仅收集您的手机号、姓名、收货地址和订单历史，用于完成订单和提供客服支持。\n2. 我们不会出售您的个人数据。位置数据仅用于进行中的配送，配送结束后不再保留。\n3. 支付凭证由第三方支付商处理；我们不存储完整的卡号或账户信息。\n4. 您可联系客服申请删除数据；我们将在合理期限内处理。',
+        id: 'Kebijakan Privasi MeiMart\n\n1. Kami mengumpulkan nomor telepon, nama, alamat pengiriman, dan riwayat pesanan Anda semata-mata untuk memenuhi pesanan dan memberikan dukungan.\n2. Kami tidak menjual data pribadi Anda. Data lokasi hanya digunakan untuk pengiriman aktif dan tidak disimpan setelah periode pengiriman.\n3. Kredensial pembayaran ditangani oleh penyedia pihak ketiga; kami tidak menyimpan detail kartu atau akun lengkap.\n4. Anda dapat meminta penghapusan data dengan menghubungi dukungan; kami akan memprosesnya dalam waktu yang wajar.',
+        pt: 'Política de Privacidade MeiMart\n\n1. Recolhemos o seu número de telefone, nome, endereço de entrega e histórico de encomendas apenas para cumprir encomendas e fornecer suporte.\n2. Não vendemos os seus dados pessoais. Os dados de localização são usados apenas para entregas ativas e não são guardados após o período de entrega.\n3. As credenciais de pagamento são tratadas por fornecedores terceiros; não armazenamos detalhes completos de cartão ou conta.\n4. Pode solicitar a eliminação de dados contactando o suporte; processaremos dentro de um prazo razoável.',
+        tet: 'MeiMart Privacy Policy\n\n1. Ami hetan numeru telefone, naran, moris adresu, no istoria order deit atu kumpre order no fornese suporte.\n2. Ami la faan dados pessoál. dados lokalizasaun uza deit ba entrega ativa no la keeps depois periodo entrega.\n3. Kredensial pagamentu tabeke husi provider parte sira-tolu; ami la keeps kartun ka konta detalle kompleto.',
+      },
+    },
+    {
+      // P25 #1 营业资质（LICENSE）正文预置（2026-08-25）：三类法务文案同源补齐
+      docType: 'LICENSE',
+      version: '1.0.0',
+      content: {
+        en: 'MeiMart Business License\n\nMeiMart is a local e-commerce platform serving Timor-Leste, operated by MeiMart Lda. We are committed to lawful operation and are completing the registration of the required business licenses with the relevant Timor-Leste authorities. During the MVP launch period, operations are conducted under personal accounts; formal business licensing will be completed before full-scale operations. For verification or partnership inquiries, please contact support.',
+        zh: 'MeiMart 营业资质\n\nMeiMart 是服务东帝汶的本地电商平台，由 MeiMart Lda. 运营。我们承诺合法经营，正在向东帝汶相关主管部门办理所需的营业资质登记。MVP 上线阶段以个人账号运营，正式营业资质将在全面运营前补齐。如需核验或合作咨询，请联系客服。',
+        id: 'Lisensi Bisnis MeiMart\n\nMeiMart adalah platform e-commerce lokal yang melayani Timor-Leste, dioperasikan oleh MeiMart Lda. Kami berkomitmen untuk beroperasi secara sah dan sedang menyelesaikan pendaftaran lisensi bisnis yang diperlukan dengan otoritas Timor-Leste yang berwenang. Selama periode peluncuran MVP, operasi dilakukan dengan akun pribadi; lisensi bisnis formal akan diselesaikan sebelum operasi skala penuh. Untuk verifikasi atau pertanyaan kemitraan, silakan hubungi dukungan.',
+        pt: 'Licença de Negócio MeiMart\n\nMeiMart é uma plataforma de comércio eletrónico local que serve Timor-Leste, operada pela MeiMart Lda. Estamos comprometidos com a operação legal e estamos a concluir o registo das licenças de negócio necessárias junto das autoridades competentes de Timor-Leste. Durante o período de lançamento do MVP, as operações são realizadas com contas pessoais; o licenciamento comercial formal será concluído antes das operações em grande escala. Para verificação ou perguntas sobre parcerias, contacte o suporte.',
+        tet: 'MeiMart Business License\n\nMeiMart platforma e-commerce lokal nebe servisu Timor-Leste, opera husi MeiMart Lda. Ami konfirma halo operasaun legal no remata rejistu lisensi bisnis nebe presiza hamutuk autoridade Timor-Leste. Durante periodu MVP, operasaun uza konta pessoál; lisensi bisnis formal remata antes operasaun kompletu. Atu verifika ka konsulta parceria, favur kontaktu suporte.',
+      },
+    },
+  ];
+  for (const doc of LEGAL_DOCS) {
+    await prisma.legalDocument.upsert({
+      where: { docType_version: { docType: doc.docType, version: doc.version } },
+      update: {}, // 不覆盖已编辑版本
+      create: {
+        docType: doc.docType,
+        version: doc.version,
+        content: doc.content,
+        isActive: true,
+      },
+    });
+  }
+  console.log(`  ✅ legal_documents: ${LEGAL_DOCS.length} docs (TERMS v1.0.0 / PRIVACY v1.0.0 / LICENSE v1.0.0)`);
 
   // === FLOW W === W 流程扩展（2026-06-24）：地址 / 收藏 / 通知 / Banner
   // 注：分类已在 4a 步骤创建，此处不再重复

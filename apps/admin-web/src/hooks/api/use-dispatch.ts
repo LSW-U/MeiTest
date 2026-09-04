@@ -181,6 +181,28 @@ export function useCancelTask() {
   });
 }
 
+/**
+ * Admin 直接指派（批 F，2026-09-03，批E审查 P0-1）
+ * PENDING_ASSIGN → ASSIGNED；保留保证金资格校验；派单中心「确认指派」消费
+ */
+export function useAssignTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, riderId, reason }: { taskId: string; riderId: string; reason?: string }) =>
+      apiFetch<ApiSuccess<AdminDeliveryTask>>(
+        `/admin/dispatch/tasks/${taskId}/assign`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ riderId, reason }),
+        },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['dispatch-tasks'] });
+      qc.invalidateQueries({ queryKey: ['dispatch-candidates'] });
+    },
+  });
+}
+
 /** 补建任务（SUPER_ADMIN；幂等，已有则返回现有） */
 export function useRecreateTask() {
   const qc = useQueryClient();

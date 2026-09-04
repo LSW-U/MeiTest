@@ -15,9 +15,10 @@ import { AuditController } from './audit.controller';
 import { AuditService } from './audit.service';
 import { SystemConfigController } from './system-config.controller';
 import { SystemConfigService } from './system-config.service';
+import { SupportConfigController } from './support-config.controller';
 
 @Module({
-  controllers: [DashboardController, AuditController, SystemConfigController],
+  controllers: [DashboardController, AuditController, SystemConfigController, SupportConfigController],
   providers: [DashboardService, AuditService, SystemConfigService],
   exports: [SystemConfigService, AuditService],
 })

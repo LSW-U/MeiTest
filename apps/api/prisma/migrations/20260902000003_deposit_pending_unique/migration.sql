@@ -1,0 +1,22 @@
+-- 批B审查 P2-1（2026-09-02）：PENDING 互斥 DB 级兜底
+--
+-- 背景：createRequest 的 findFirst(status=PENDING) + create 是 check-then-create，
+--   并发双击可同时通过检查产生两笔 PENDING（应用层 E-DEPOSIT-007 互斥被绕过）。
+--   两笔都走 pay-mock 会双倍累加 depositAmount，破坏「同时最多一笔进行中」业务约束。
+-- 兜底：partial unique index —— 同一骑手最多一行 status='PENDING'，并发第二笔 create
+--   触发 P2002，service 捕获转 E-DEPOSIT-007。
+--
+-- Prisma 不支持 partial index 语法（schema.prisma 仅注释占位，同 catalog trgm 惯例，
+--   见 RiderDeposit model @@index 注释）。
+--
+-- 应用方式（migrate dev 被 trgm 影子库问题挡住，走 psql + resolve）：
+--   docker exec -i meimart-pg psql -U postgres -d meimart -v ON_ERROR_STOP=1 \
+--     < prisma/migrations/20260902000003_deposit_pending_unique/migration.sql
+--   pnpm exec prisma migrate resolve --applied 20260902000003_deposit_pending_unique
+--
+-- 回滚：
+--   DROP INDEX IF EXISTS "rider_deposits_pending_unique";
+--   DELETE FROM _prisma_migrations WHERE migration_name = '20260902000003_deposit_pending_unique';
+
+-- 只加不改：新增 partial unique index（CONFIRMED/REJECTED/REFUNDED 不受约束，历史多笔无影响）
+CREATE UNIQUE INDEX "rider_deposits_pending_unique" ON "rider_deposits"("rider_id") WHERE "status" = 'PENDING';

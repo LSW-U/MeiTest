@@ -25,6 +25,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { db } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
+import { decimalToNumber } from '@meimart/shared-utils';
 
 /** 骑手申请状态 */
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -115,6 +116,16 @@ export interface UpdateRiderProfileInput {
   licenseImageUrl?: string | null;
 }
 
+/** 列表保证金轻量冗余字段（批 E 审查 P1-2，2026-09-03）——口径与批 C 聚合详情一致 */
+export interface DepositListFields {
+  /** 生效保证金总额（分） */
+  depositAmount: number;
+  /** 档位派生可接上限（分）；null = 不限；0 = 无资格（停用档回落） */
+  maxOrderAmount: number | null;
+  /** 今日完成单量 */
+  todayDeliveries: number;
+}
+
 /** 骑手 profile 视图（API 返回） */
 export interface RiderProfileView {
   id: string;
@@ -134,12 +145,28 @@ export interface RiderProfileView {
   tier: RiderTier;
   preferredWarehouseIds: string[];
   isOnline: boolean;
+  /**
+   * 可能掉线标记（P6 #6，2026-08-25）
+   * 仅当 isOnline=true 且 TTL≤30s 宽限期时为 true；离线 / 正常在线均为 false。
+   */
+  maybeOffline: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 /** 骑手在线状态 Redis key TTL（60 秒，每次心跳续期） */
 const RIDER_ONLINE_TTL_SEC = 60;
+/**
+ * 心跳宽限阈值（P6 #6，2026-08-25）
+ *
+ * 剩余 TTL ≤ 此阈值视为「可能掉线」（maybeOffline）：
+ *   - 正常心跳每 < 30s 续期一次，TTL 始终 > 30s → maybeOffline=false
+ *   - 心跳延迟 / 网络抖动：TTL 跌入 (0, 30] 区间 → maybeOffline=true（骑手 App 提示「重连中」，但仍计入可派列表）
+ *   - TTL 归零：彻底离线，从可派列表移除（listAvailableRiders EXISTS=0）
+ *
+ * 设计：单 key + TTL 读，不引入第二 key；listAvailableRiders 仍用 EXISTS（宽限期内可见）。
+ */
+const RIDER_ONLINE_GRACE_THRESHOLD_SEC = 30;
 
 @Injectable()
 export class RiderService {
@@ -328,6 +355,9 @@ export class RiderService {
       acceptMode: input.acceptMode,
     });
 
+    // P1-2 修复（2026-08-25）：updateDuty 已 SET/DEL Redis 在线 key，
+    //   ONLINE/BUSY 分支刚 SETEX TTL=60s > 宽限阈值 30s → maybeOffline=false（与 heartbeat 对称）；
+    //   OFFLINE 分支已 DEL → isOnline=false → maybeOffline=false。无需再查 TTL。
     return this.toView(updated, input.status !== 'OFFLINE');
   }
 
@@ -336,25 +366,28 @@ export class RiderService {
    *
    * M4：仅 APPROVED 骑手心跳生效（PENDING/REJECTED 心跳返回 false 不污染在线列表）
    * 注意：每次心跳查 DB 会增加 QPS，可改成首次心跳查 DB + 后续只 SET Redis（依赖前端保证状态）
+   *
+   * P6 #6（2026-08-25）：返回 maybeOffline=false（刚续期，TTL 重置为 60s，远离宽限阈值）
    */
-  async heartbeat(riderId: string): Promise<{ renewed: boolean }> {
+  async heartbeat(riderId: string): Promise<{ renewed: boolean; maybeOffline: boolean }> {
     const profile = await db.riderProfile.findUnique({
       where: { userId: riderId },
       select: { applicationStatus: true },
     });
     if (!profile || profile.applicationStatus !== 'APPROVED') {
-      return { renewed: false };
+      return { renewed: false, maybeOffline: false };
     }
     try {
       await redis.set(this.onlineKey(riderId), '1', 'EX', RIDER_ONLINE_TTL_SEC);
-      return { renewed: true };
+      // 刚 SETEX，TTL=60s > 宽限阈值 30s，不在宽限期
+      return { renewed: true, maybeOffline: false };
     } catch (e) {
       logger.warn({
         msg: 'RIDER_HEARTBEAT_FAILED',
         riderId,
         error: (e as Error).message,
       });
-      return { renewed: false };
+      return { renewed: false, maybeOffline: false };
     }
   }
 
@@ -367,7 +400,14 @@ export class RiderService {
         message: 'Rider profile not found',
       });
     }
-    const isOnline = await this.isOnline(riderId);
+
+    // P2-6 修复（2026-08-25）：单次 redis.ttl 同时推 isOnline + maybeOffline，
+    //   不再先 EXISTS 再 TTL（两次 Redis 往返）。
+    //   TTL 语义：>30 在线且健康 / 0..30 在线但宽限 / <0 离线（-2 不存在 / -1 无过期异常）。
+    //   isMaybeOffline 内部本就调 getOnlineTtl，此处复用同一 TTL，避免重复往返。
+    const ttl = await this.getOnlineTtl(riderId);
+    const isOnline = ttl > 0 || ttl === -1; // ttl>0 在线；-1 无过期视为在线（异常但不误判离线）
+    const maybeOffline = isOnline ? ttl >= 0 && ttl <= RIDER_ONLINE_GRACE_THRESHOLD_SEC : false;
 
     // S6 / V2-S3 修复：DB status 与 Redis isOnline 不一致时
     //   - 客户端视角：以 Redis 为准（强制返回 OFFLINE）
@@ -391,7 +431,7 @@ export class RiderService {
 
     // F5 修复（2026-08-24 审查报告）：tier 是 points 的纯派生量，deliverTask 写积分时已同步写 DB.tier；
     //   查询路径只读不写，用 calcTier 兜底校正返回值（防御历史脏值/旧滞后），消除写放大 + 竞态
-    return withDerivedTier(this.toView(profile, isOnline));
+    return withDerivedTier(this.toView(profile, isOnline, maybeOffline));
   }
 
   /**
@@ -437,8 +477,10 @@ export class RiderService {
 
     if (Object.keys(data).length === 0) {
       const isOnline = await this.isOnline(profile.userId);
+      // P1-2 修复（2026-08-25）：空补丁路径对在线骑手补查 maybeOffline，与 getProfile 对称
+      const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
       // F6 修复（2026-08-24 审查报告）：空补丁早返回也要 calcTier 兜底，与 getProfile 对称
-      return withDerivedTier(this.toView(profile, isOnline));
+      return withDerivedTier(this.toView(profile, isOnline, maybeOffline));
     }
 
     const updated = await db.riderProfile.update({
@@ -453,8 +495,10 @@ export class RiderService {
     });
 
     const isOnline = await this.isOnline(updated.userId);
+    // P1-2 修复（2026-08-25）：非空补丁路径对在线骑手补查 maybeOffline，与 getProfile 对称
+    const maybeOffline = isOnline ? await this.isMaybeOffline(updated.userId) : false;
     // F6 修复（2026-08-24 审查报告）：非空补丁路径同样 calcTier 兜底
-    return withDerivedTier(this.toView(updated, isOnline));
+    return withDerivedTier(this.toView(updated, isOnline, maybeOffline));
   }
 
   /** 列出待审核申请（admin 用） */
@@ -483,6 +527,32 @@ export class RiderService {
     }
   }
 
+  /**
+   * 取在线 key 剩余 TTL（秒，P6 #6 宽限机制 2026-08-25）
+   *
+   * @returns TTL 秒数；-2=key 不存在（彻底离线）；-1=key 无过期时间（异常，视为在线）
+   */
+  async getOnlineTtl(riderId: string): Promise<number> {
+    try {
+      return await redis.ttl(this.onlineKey(riderId));
+    } catch {
+      return -2;
+    }
+  }
+
+  /**
+   * 骑手是否处于「可能掉线」宽限期（P6 #6，2026-08-25）
+   *
+   * 宽限期：0 < TTL ≤ RIDER_ONLINE_GRACE_THRESHOLD_SEC（30s）
+   *   - TTL=0：刚续期后理论上不存在；查询瞬间 TTL 恰为 0 视为宽限（极短窗口）
+   *   - TTL≤30：心跳延迟，骑手 App 提示重连，但仍计入可派列表
+   *   - TTL<0（不存在 / 无过期）：不在宽限期（前者已离线，后者异常在线）
+   */
+  async isMaybeOffline(riderId: string): Promise<boolean> {
+    const ttl = await this.getOnlineTtl(riderId);
+    return ttl >= 0 && ttl <= RIDER_ONLINE_GRACE_THRESHOLD_SEC;
+  }
+
   // ========================================================================
   // W7-ext-D：admin 骑手 CRUD（6 端点）
   // ========================================================================
@@ -494,7 +564,7 @@ export class RiderService {
     warehouseId?: string;
     userStatus?: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
     limit?: number;
-  }): Promise<{ items: RiderProfileView[] }> {
+  }): Promise<{ items: Array<RiderProfileView & DepositListFields> }> {
     const limit = Math.min(options.limit ?? 50, 100);
     const where: {
       applicationStatus: string;
@@ -520,8 +590,47 @@ export class RiderService {
       take: limit,
     });
 
+    // 批 E 审查 P1-2（2026-09-03 裁决：做）：列表补保证金/今日单量轻量冗余字段——
+    //   口径与批 C 聚合详情一致（maxOrderAmount = 启用档派生，停用档回落）
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const [enabledTiers, todayCounts] = await Promise.all([
+      db.riderDepositTier.findMany({
+        where: { enabled: true },
+        select: { id: true, minAmount: true, maxOrderAmount: true },
+        orderBy: { minAmount: 'desc' },
+      }),
+      db.deliveryTask.groupBy({
+        by: ['riderId'],
+        where: { status: 'DELIVERED', updatedAt: { gte: todayStart }, riderId: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+    const todayMap = new Map(todayCounts.map((c) => [c.riderId as string, c._count._all]));
+
+    /** 档位派生（停用档回落：启用档中 minAmount ≤ deposit 的最高档；无命中 = 上限 0） */
+    const deriveMax = (deposit: number): number | null => {
+      const hit = enabledTiers.find((t) => t.minAmount <= deposit);
+      return hit ? hit.maxOrderAmount : 0;
+    };
+
+    // P1-2 修复（2026-08-25）：admin 列表对在线骑手补查 maybeOffline，管理员能看到谁在宽限期
+    // 批量并发查 TTL，避免串行 N 次往返；离线骑手 maybeOffline=false 不查
+    const withOnline = await Promise.all(
+      profiles.map(async (p) => {
+        const isOnline = await this.isOnline(p.userId);
+        const maybeOffline = isOnline ? await this.isMaybeOffline(p.userId) : false;
+        return {
+          ...this.toView(p, isOnline, maybeOffline),
+          depositAmount: p.depositAmount,
+          maxOrderAmount: deriveMax(p.depositAmount),
+          todayDeliveries: todayMap.get(p.id) ?? 0,
+        };
+      }),
+    );
+
     return {
-      items: profiles.map((p) => this.toView(p, false)),
+      items: withOnline,
     };
   }
 
@@ -562,7 +671,9 @@ export class RiderService {
     }
 
     const isOnline = await this.isOnline(profile.userId);
-    const base = this.toView(profile, isOnline);
+    // P1-2 修复（2026-08-25）：admin 详情对在线骑手补查 maybeOffline，与 getProfile 对称
+    const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
+    const base = this.toView(profile, isOnline, maybeOffline);
     return {
       ...base,
       userStatus: profile.user.status,
@@ -607,11 +718,15 @@ export class RiderService {
     }
     if (Object.keys(data).length === 0) {
       const isOnline = await this.isOnline(profile.userId);
-      return this.toView(profile, isOnline);
+      // P1-2 修复（2026-08-25）：空补丁对在线骑手补查 maybeOffline
+      const maybeOffline = isOnline ? await this.isMaybeOffline(profile.userId) : false;
+      return this.toView(profile, isOnline, maybeOffline);
     }
     const updated = await db.riderProfile.update({ where: { id }, data });
     const isOnline = await this.isOnline(updated.userId);
-    return this.toView(updated, isOnline);
+    // P1-2 修复（2026-08-25）：非空补丁对在线骑手补查 maybeOffline
+    const maybeOffline = isOnline ? await this.isMaybeOffline(updated.userId) : false;
+    return this.toView(updated, isOnline, maybeOffline);
   }
 
   /** Admin 停用骑手（User.status=SUSPENDED + RiderProfile.status=OFFLINE） */
@@ -717,6 +832,7 @@ export class RiderService {
       updatedAt: Date;
     },
     isOnline: boolean,
+    maybeOffline = false,
   ): RiderProfileView {
     return {
       id: p.id,
@@ -729,7 +845,7 @@ export class RiderService {
       // V2-S6 修复：NOT NULL 后无需 ?? 兜底
       applicationStatus: p.applicationStatus as ApplicationStatus,
       totalDeliveries: p.totalDeliveries,
-      rating: typeof p.rating === 'number' ? p.rating : p.rating?.toNumber() ?? 5,
+      rating: decimalToNumber(p.rating, 5),
       avatarUrl: p.avatarUrl,
       idCardImageUrl: p.idCardImageUrl,
       licenseImageUrl: p.licenseImageUrl,
@@ -744,6 +860,8 @@ export class RiderService {
       })(),
       preferredWarehouseIds: p.preferredWarehouseIds ?? [],
       isOnline,
+      // P6 #6（2026-08-25）：maybeOffline 由调用方按 TTL 宽限期决定；默认 false（离线/普通在线）
+      maybeOffline: isOnline ? maybeOffline : false,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
     };

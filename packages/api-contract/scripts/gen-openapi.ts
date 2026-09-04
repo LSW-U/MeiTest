@@ -64,8 +64,15 @@ import {
   UpdateShopRequest,
   // warehouse
   Warehouse,
+  WarehouseDetailResponse,
   UpsertWarehouseRequest,
+  UpdateWarehouseRequest,
   MatchWarehouseRequest,
+  StockSummary,
+  WarehouseStaffItem,
+  GeoJsonPolygon,
+  UpdatePricingConfigRequest,
+  PricingConfigResponse,
   // catalog
   Product,
   ProductSummary,
@@ -123,6 +130,16 @@ import {
   SystemConfigListResponse,
   SystemConfigResponse,
   UpdateSystemConfigRequest,
+  SupportConfig,
+  SupportConfigResponse,
+  LegalDocType,
+  LegalDocument,
+  LegalDocumentResponse,
+  SocialLink,
+  SocialLinkType,
+  AboutStats,
+  AboutProfile,
+  AboutProfileResponse,
   // dispatch / rider / refund（schema 已有，path 注册放 W3-W5 联调时补）
   // W4-REVIEW P0-1 修复：admin orders + admin rider-applications path 注册
   RiderProfile,
@@ -130,6 +147,29 @@ import {
   ApplyRiderRequest,
   UpdateRiderProfileRequest,
   ReportLocationRequest,
+  // 保证金（批 B，2026-09-02）
+  RiderDepositTier,
+  DepositLocation,
+  RiderDepositRecord,
+  CreateRiderDepositRequest,
+  RiderDepositPayMockResult,
+  RiderDepositStatusResponse,
+  RiderDepositLocationListResponse,
+  // 保证金 admin 侧（批 C，2026-09-02）
+  AdminUpsertTierRequest,
+  AdminUpdateTierRequest,
+  AdminUpsertLocationRequest,
+  AdminDepositRequestItem,
+  AdminListDepositRequestsQuery,
+  AdminDepositRequestListResponse,
+  AdminConfirmDepositRequest,
+  AdminRejectDepositRequest,
+  AdminRiderDepositDetail,
+  WarehouseLoadItem,
+  // 派单候选（批 D，2026-09-03）
+  DispatchEligibilityLabel,
+  DispatchCandidate,
+  DispatchCandidateList,
   DeliveryTask,
   AcceptTaskRequest,
   PickupTaskRequest,
@@ -140,7 +180,10 @@ import {
   ListAllTasksQuery,
   AdminDeliveryTaskView,
   AdminTaskListResponse,
+  TaskOrderSummary,
+  TaskRiderSummary,
   ReassignTaskRequest,
+  AssignTaskRequest,
   CancelTaskRequest,
   AvailableRider,
   // 批次 5 admin inventory
@@ -200,6 +243,8 @@ import {
   // search（热搜 2026-07-31）
   HotSearchTermItem,
   HotSearchTerm,
+  HotSearchType,
+  SearchLang,
   CreateHotSearchTermRequest as CreateHotSearchTermRequestSchema,
   UpdateHotSearchTermRequest as UpdateHotSearchTermRequestSchema,
   ZeroResultTerm,
@@ -210,9 +255,21 @@ import {
   CreateRiderReviewRequest,
   AdminListReviewsQuery,
   AdminUpdateReviewRequest,
-  // feedback（P22 反馈页 2026-08-19）
+  // feedback（P22 反馈页 2026-08-19 + admin-web 优化方案 批次2 2026-08-29 后台只读）
   Feedback,
   CreateFeedbackRequest,
+  AdminFeedbackListItem,
+  AdminFeedbackDetail,
+  AdminFeedbackListResponseData,
+  AdminListFeedbackQuery,
+  // notification（admin-web 优化方案 批次2 2026-08-29 后台发送/历史）
+  AdminSendNotificationRequest,
+  AdminSendNotificationResponseData,
+  AdminNotificationHistoryItem,
+  AdminNotificationHistoryListResponseData,
+  AdminListNotificationsQuery,
+  NotificationTarget,
+  AdminNotificationType,
   // common
   ErrorResponse,
   Id,
@@ -264,8 +321,12 @@ registry.register('Shop', Shop);
 registry.register('UpdateShopRequest', UpdateShopRequest);
 
 registry.register('Warehouse', Warehouse);
+registry.register('WarehouseDetailResponse', WarehouseDetailResponse);
 registry.register('UpsertWarehouseRequest', UpsertWarehouseRequest);
+registry.register('UpdateWarehouseRequest', UpdateWarehouseRequest);
 registry.register('MatchWarehouseRequest', MatchWarehouseRequest);
+registry.register('StockSummary', StockSummary);
+registry.register('WarehouseStaffItem', WarehouseStaffItem);
 
 registry.register('Product', Product);
 registry.register('ProductSummary', ProductSummary);
@@ -316,12 +377,78 @@ registry.register('MarkFailedRequest', MarkFailedRequest);
 registry.register('ReconciliationItem', ReconciliationItem);
 
 // 批次 4 admin dispatch
-registry.register('AdminDeliveryTaskView', AdminDeliveryTaskView);
+// 批次4 P3-AdminDeliveryTaskView（2026-08-28）：AdminDeliveryTaskView 的 $ref 化。
+//   schema 文件里的 AdminDeliveryTaskView 是纯 DeliveryTask.extend（无 refId，
+//   schema 文件里拿不到 registry 实例），故在这里用 DeliveryTaskRef.extend
+//   重新构造同名字段集后 register → 输出 $ref:#/components/schemas/AdminDeliveryTaskView
+//   而非 inline 4 份重复字段块。
+//   ⚠️ 顺序：本块必须在 DeliveryTaskRef 定义之前只有 register 调用，
+//   DeliveryTaskRef 在此声明后，下方 extend 消费。
+//   已知残留：AdminTaskListResponse（PaginatedResponse 包裹）在 schema 文件里引用
+//   原 AdminDeliveryTaskView 构造，其 items 仍 inline —— 要全 $ref 化需在 schema
+//   文件里 extend，但那里拿不到 registry，属结构性限制，留现状。
+const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
+// AdminDeliveryTaskViewRef：register 返回的带 refId 版本，下方 4 处端点响应
+// 引用它（而非 import 的原 schema）才能输出 $ref（与 P3-1 同款 reassign 教训：
+// register 不 mutate 原 const，引用谁就用谁）
+//
+// 批次4-fix P3-1-DRIFT（审查复核报告 2026-08-28）：AdminDeliveryTaskView 字段集在
+//   schema 文件（dispatch.ts:158-163）与本脚本 DeliveryTaskRef.extend({...}）两处
+//   LIVE 定义，未来改一处另一处不同步 → 列表响应（走 schema 文件 const）与单任务
+//   响应（走本脚本 $ref）字段集漂移。
+//   方向1（让 schema 文件 const 成唯一定义源）经 POC 证伪：zod-to-openapi 的
+//   .extend() 不继承父 refId metadata，register 一个「从无 refId DeliveryTask extend
+//   来」的 schema 会输出全 inline（丢失 allOf:[$ref DeliveryTask]），比现状更差。
+//   故走方向2：build-time 校验两处字段 key 集合一致，不一致即 gen 失败（CI 红灯），
+//   把漂移风险从「静默分歧」转成「显式失败」。
+const ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS = {
+  estimatedArrival: IsoTimestamp.nullable(),
+  warehouseCode: z.string(),
+  order: TaskOrderSummary,
+  rider: TaskRiderSummary.nullable(),
+} satisfies Record<string, z.ZodTypeAny>;
+
+// 校验：schema 文件 AdminDeliveryTaskView 的【新增字段】与本脚本 extend 的字段 key 必须一致。
+// DeliveryTask.extend(extra) 产出的新字段 = extra 的 key（DeliveryTask 自身字段不在 extra），
+// 故比对 AdminDeliveryTaskView 相对 DeliveryTask 的增量字段 key 与 ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS 的 key。
+{
+  const schemaFileExtraKeys = Object.keys(
+    // AdminDeliveryTaskView 是 DeliveryTask.extend(extra)，ZodObject.shape 返回合并后全字段；
+    // 减去 DeliveryTask.shape 即得 extend 引入的增量字段 key。
+    Object.fromEntries(
+      Object.entries(AdminDeliveryTaskView.shape).filter(
+        ([k]) => !(k in DeliveryTask.shape),
+      ),
+    ),
+  ).sort();
+  const scriptExtraKeys = Object.keys(ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS).sort();
+  if (schemaFileExtraKeys.length !== scriptExtraKeys.length ||
+      !schemaFileExtraKeys.every((k, i) => k === scriptExtraKeys[i])) {
+    throw new Error(
+      `[gen-openapi] AdminDeliveryTaskView 双定义漂移：schema 文件 extend 字段 [${schemaFileExtraKeys.join(', ')}] ` +
+      `≠ gen 脚本 extend 字段 [${scriptExtraKeys.join(', ')}]。请同步两处定义（dispatch.ts:158-163 与本脚本 ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS）。`,
+    );
+  }
+}
+
+const AdminDeliveryTaskViewRef = registry.register(
+  'AdminDeliveryTaskView',
+  DeliveryTaskRef.extend(ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS),
+);
 registry.register('AdminTaskListResponse', AdminTaskListResponse);
 registry.register('ListAllTasksQuery', ListAllTasksQuery);
 registry.register('ReassignTaskRequest', ReassignTaskRequest);
+registry.register('AssignTaskRequest', AssignTaskRequest);
 registry.register('CancelTaskRequest', CancelTaskRequest);
 registry.register('AvailableRider', AvailableRider);
+// 批次2 审查报告 P3-1（2026-08-28）：DeliveryTask 注册到 registry 并就地 reassign，
+//   使 14 处 dispatch 端点响应引用带 refId 的同一 schema → gen:openapi 输出
+//   $ref:#/components/schemas/DeliveryTask 而非 inline 14 份重复字段块。
+//   ⚠️ register(refId, schema) 内部走 schemaWithRefId → schema.openapi(refId)，
+//   返回的是带 refId metadata 的【新 schema】，不就地 mutate 原 const；若只 register
+//   不 reassign，14 处引用仍指向无 refId 的原 schema → 仍 inline（已实测）。
+//   故必须 reassign，让后续所有引用（含 registerPath 响应 schema）拿到带 refId 版本。
+//   （AdminDeliveryTaskView 的 $ref 化见上方批次4 注释块，用 DeliveryTaskRef.extend 方案。）
 
 // 批次 5 admin inventory
 registry.register('BatchAdjustRequest', BatchAdjustRequest);
@@ -339,6 +466,16 @@ registry.register('AuditLogDetail', AuditLogDetail);
 registry.register('AuditLogQuery', AuditLogQuery);
 registry.register('SystemConfigItem', SystemConfigItem);
 registry.register('UpdateSystemConfigRequest', UpdateSystemConfigRequest);
+registry.register('SupportConfig', SupportConfig);
+// 批次3 灰度配置（2026-08-28）：pricing config 端点契约
+registry.register('UpdatePricingConfigRequest', UpdatePricingConfigRequest);
+registry.register('PricingConfigResponse', PricingConfigResponse);
+registry.register('LegalDocType', LegalDocType);
+registry.register('LegalDocument', LegalDocument);
+registry.register('SocialLinkType', SocialLinkType);
+registry.register('SocialLink', SocialLink);
+registry.register('AboutStats', AboutStats);
+registry.register('AboutProfile', AboutProfile);
 // Response 包装 schema 不注册到 components（gen-openapi 直接 inline 即可）
 
 // ===== Paths 占位（详细 path 在 D4+ 各模块实现时补） =====
@@ -761,7 +898,7 @@ registry.registerPath({
   tags: ['warehouse'],
   responses: {
     200: {
-      description: '后台仓库列表',
+      description: '后台仓库列表（含 perKmFee/freeKm 配送费三字段 + stockSummary 库存聚合）',
       content: { 'application/json': { schema: Warehouse.array() } },
     },
   },
@@ -773,8 +910,8 @@ registry.registerPath({
   tags: ['warehouse'],
   responses: {
     200: {
-      description: '仓库详情（含 coverageArea GeoJSON）',
-      content: { 'application/json': { schema: Warehouse } },
+      description: '仓库详情（含 coverageArea GeoJSON + 在编人员 staffList）',
+      content: { 'application/json': { schema: WarehouseDetailResponse } },
     },
     404: { description: 'WAREHOUSE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -801,9 +938,9 @@ registry.registerPath({
   method: 'patch',
   path: '/api/v1/admin/warehouses/{id}',
   tags: ['warehouse'],
-  description: '更新仓库（普通字段 + 可选 PostGIS）',
+  description: '更新仓库（普通字段 + 可选 PostGIS；部分更新只动传入字段，UpdateWarehouseRequest 全可选）',
   request: {
-    body: { content: { 'application/json': { schema: UpsertWarehouseRequest } } },
+    body: { content: { 'application/json': { schema: UpdateWarehouseRequest } } },
   },
   responses: {
     200: {
@@ -819,7 +956,8 @@ registry.registerPath({
   tags: ['warehouse'],
   description: '单独更新配送范围多边形（地图编辑器调）',
   request: {
-    body: { content: { 'application/json': { schema: z.object({ coverageArea: UpsertWarehouseRequest.shape.coverageArea.unwrap() }) } } },
+    // 批 B：UpsertWarehouseRequest 加 refine 后是 ZodEffects（无 .shape），coverage 与其字段同源，直接用 GeoJsonPolygon
+    body: { content: { 'application/json': { schema: z.object({ coverageArea: GeoJsonPolygon }) } } },
   },
   responses: {
     200: { description: '更新成功' },
@@ -1079,12 +1217,19 @@ registry.registerPath({
       description: '配送费结果',
       content: {
         'application/json': {
+          // 距离计费批次1（2026-08-27）：对齐 PricingService.DeliveryFeeResult 8 字段
+          // 删旧 distance，加 freeKm/distanceKm(nullable)/distanceFee 明细
           schema: z.object({
             warehouseId: Id,
-            baseFee: z.number(),
-            perKmFee: z.number(),
-            distance: z.number(),
-            deliveryFee: z.number(),
+            baseFee: z.number().int().nonnegative(),
+            perKmFee: z.number().int().nonnegative(),
+            /** 免费起步距离（km） */
+            freeKm: z.number().nonnegative(),
+            /** 计费距离（km，PostGIS ST_DistanceSphere 仓库中心→收货地址）；无坐标时 null */
+            distanceKm: z.number().nullable(),
+            /** 距离加价（分）= max(0, distanceKm - freeKm) × perKmFee */
+            distanceFee: z.number().int().nonnegative(),
+            deliveryFee: z.number().int().nonnegative(),
             currency: z.literal('USD'),
           }),
         },
@@ -1093,27 +1238,8 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: 'get',
-  path: '/api/v1/client/pricing/min-order-check',
-  tags: ['pricing'],
-  description: '起送价校验',
-  responses: {
-    200: {
-      description: '校验结果',
-      content: {
-        'application/json': {
-          schema: z.object({
-            ok: z.boolean(),
-            minOrderAmount: z.number(),
-            cartTotal: z.number(),
-            shortfall: z.number(),
-          }),
-        },
-      },
-    },
-  },
-});
+// P2-3 修复（2026-08-27 审查报告）：移除 /client/pricing/min-order-check 路径注册
+//   端点已删（pricing.controller），checkMinOrder 死代码清理。起送价需求激活时再恢复。
 
 registry.registerPath({
   method: 'get',
@@ -1129,12 +1255,38 @@ registry.registerPath({
   method: 'patch',
   path: '/api/v1/admin/pricing/warehouses/{warehouseId}/base-fee',
   tags: ['pricing'],
-  description: '更新某仓库的基础配送费',
+  description: '更新某仓库的基础配送费（旧端点，向后兼容；新代码用 /config）',
   request: {
     body: { content: { 'application/json': { schema: z.object({ baseFee: z.number().int().nonnegative() }) } } },
   },
   responses: {
-    200: { description: '更新成功' },
+    // 批次3 审查 P2-2（2026-08-28）：补 200 content schema，前端类型化（旧端点既有缺陷一并修）
+    200: { description: '更新成功', content: { 'application/json': { schema: PricingConfigResponse } } },
+  },
+});
+
+// 批次3 灰度配置（2026-08-28）：admin 配值端点，partial 改 baseFee/perKmFee/freeKm
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/pricing/warehouses/{warehouseId}/config',
+  tags: ['pricing'],
+  description:
+    '更新某仓库的配送费配置（批次3 灰度）。三字段全可选 partial——未传字段不动。' +
+    '灰度节奏：perKmFee=0 上线（行为=现状）→ admin 配 50 分/km 生效 → 摸底校准。' +
+    '至少传一个字段，否则 400。',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: UpdatePricingConfigRequest,
+        },
+      },
+    },
+  },
+  responses: {
+    // 批次3 审查 P2-2（2026-08-28）：补 200 content schema（PricingConfigResponse），前端返回体类型化
+    200: { description: '更新成功（返回 warehouseId/baseFee/perKmFee/freeKm）', content: { 'application/json': { schema: PricingConfigResponse } } },
+    400: { description: '至少传一个字段 / 字段非法', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -1250,6 +1402,60 @@ registry.registerPath({
       content: { 'application/json': { schema: SystemConfigResponse } },
     },
     404: { description: 'CONFIG_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P5 #1 客服配置公开下发（2026-08-25）：骑手/客户端 help 页读 support.phone
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/support/config',
+  tags: ['platform'],
+  description: '客服配置公开下发（phone + hours，help 页消费，无需登录）',
+  responses: {
+    200: {
+      description: '客服配置（phone 可拨号，hours 展示）',
+      content: { 'application/json': { schema: SupportConfigResponse } },
+    },
+    404: { description: 'SUPPORT_CONFIG_NOT_INITIALIZED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P5 #3 法律文档公开下发（2026-08-25）：注册/协议页读 TERMS / PRIVACY / LICENSE 正文
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/legal/{docType}',
+  tags: ['platform'],
+  description: '法律文档公开下发（TERMS 服务条款 / PRIVACY 隐私政策 / LICENSE 营业资质，按 Accept-Language 切片，无需登录）',
+  parameters: [
+    {
+      name: 'docType',
+      in: 'path',
+      required: true,
+      schema: { type: 'string', enum: ['TERMS', 'PRIVACY', 'LICENSE'] },
+      description: '文档类型：TERMS（服务条款）/ PRIVACY（隐私政策）/ LICENSE（营业资质）',
+    },
+  ],
+  responses: {
+    200: {
+      description: '当前生效版本（按请求语言切片的单语言正文）',
+      content: { 'application/json': { schema: LegalDocumentResponse } },
+    },
+    404: { description: 'LEGAL_DOCUMENT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// P25 #2 关于页可配置数据下发（2026-08-25）：信任数据条 stats + 社交链接 socials，无需登录
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/about/profile',
+  tags: ['platform'],
+  description: '关于页可配置数据下发（stats 信任数据条 + socials 社交链接，无需登录，Redis 缓存 1h）',
+  responses: {
+    200: {
+      description: '信任数据条（regions/merchants/orders 原始数字）+ 社交链接列表',
+      content: { 'application/json': { schema: AboutProfileResponse } },
+    },
+    404: { description: 'ABOUT_PROFILE_NOT_INITIALIZED', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -1624,7 +1830,7 @@ registry.registerPath({
   description: '任务详情（含 order + rider；批次 4）',
   request: { params: z.object({ id: Id }) },
   responses: {
-    200: { description: '任务详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '任务详情', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     404: { description: 'DISPATCH_TASK_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -1639,8 +1845,27 @@ registry.registerPath({
     body: { content: { 'application/json': { schema: ReassignTaskRequest } } },
   },
   responses: {
-    200: { description: '改派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '改派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     409: { description: 'DISPATCH_REASSIGN_STATUS_CONFLICT / RIDER_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 批 F（2026-09-03，批E审查 P0-1 裁决方案 a）：PENDING_ASSIGN 任务 admin 直接指派
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/dispatch/tasks/{id}/assign',
+  tags: ['dispatch'],
+  description:
+    'Admin 直接指派（批 F，派单中心「确认指派」消费）：PENDING_ASSIGN → ASSIGNED。保留保证金资格校验（E-DEPOSIT-201 未缴 / 202 超上限）；不校验工作仓（跨仓支援走此通道）。事务双写 delivery_tasks + order.riderId + note 留痕 [assign]。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AssignTaskRequest } } },
+  },
+  responses: {
+    200: { description: '指派成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
+    403: { description: 'E-DEPOSIT-201 未缴 / E-DEPOSIT-202 超档位上限', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DISPATCH-001 任务不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DISPATCH-002 非 PENDING_ASSIGN / E-DISPATCH-008 骑手无效', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -1654,7 +1879,7 @@ registry.registerPath({
     body: { content: { 'application/json': { schema: CancelTaskRequest } } },
   },
   responses: {
-    200: { description: '取消成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '取消成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     409: { description: 'DISPATCH_CANCEL_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -1676,7 +1901,7 @@ registry.registerPath({
   description: '补建任务（仅 SUPER_ADMIN；复用 createTaskForOrder，幂等；批次 4）',
   request: { params: z.object({ orderId: Id }) },
   responses: {
-    200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskView }) } } },
+    200: { description: '补建成功（已存在则返回现有 task）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDeliveryTaskViewRef }) } } },
     404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -2588,16 +2813,368 @@ registry.registerPath({
   method: 'post',
   path: '/api/v1/rider/heartbeat',
   tags: ['rider'],
-  description: '心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）',
+  description:
+    '心跳续期（Redis rider:online:{riderId} SETEX 60s，骑手 App 每 50s 调一次）。P6 #6（2026-08-25）：返回 maybeOffline=false（刚续期 TTL=60s 远离 30s 宽限阈值）；profile 查询接口在 TTL≤30s 时返回 maybeOffline=true 供前端提示重连。',
   responses: {
     200: {
-      description: '续期成功',
+      description: '续期结果',
       content: {
         'application/json': {
-          schema: z.object({ success: z.literal(true), data: z.object({ renewed: z.boolean() }) }),
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              renewed: z.boolean(),
+              /** 是否处于宽限期（刚续期为 false；保留字段供未来按 TTL 反算） */
+              maybeOffline: z.boolean(),
+            }),
+          }),
         },
       },
     },
+  },
+});
+
+// ---- 保证金（批 B，2026-09-02）：骑手侧 3 端点 ----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/deposit/requests',
+  tags: ['rider'],
+  description:
+    '提交保证金缴纳申请（批 B 2026-09-02）。ONLINE_MOCK：创建 PENDING 待 pay-mock；OFFLINE_COD：必须带 locationId（且缴纳点 enabled=true），创建 PENDING 待 admin 确认。amount ≥ 100（分）。Role: RIDER。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateRiderDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '申请创建成功（PENDING）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositRecord }) } },
+    },
+    400: {
+      description: 'E-DEPOSIT-001 金额不足 | E-DEPOSIT-002 COD 缺缴纳点/缴纳点不可用',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    409: {
+      description: 'E-DEPOSIT-007 已有进行中的 PENDING 申请（跨通道互斥，批 B 修正）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    404: { description: 'E-RIDER-001 骑手资料不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/deposit/requests/{id}/pay-mock',
+  tags: ['rider'],
+  description:
+    '线上模拟支付回调（批 B 2026-09-02）。仅 ONLINE_MOCK + PENDING 可用：置 CONFIRMED + confirmedAmount=requestedAmount + paidAt，事务内 RiderProfile.depositAmount 累加。幂等：已 CONFIRMED 直接返回成功不重复累加。Role: RIDER。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '支付成功（或已支付幂等返回）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositPayMockResult }) } },
+    },
+    400: {
+      description: 'E-DEPOSIT-003 非 ONLINE_MOCK 通道 | E-DEPOSIT-004 非法状态流转',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    403: { description: 'E-DEPOSIT-005 非本人申请', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/status',
+  tags: ['rider'],
+  description:
+    '保证金状态查询（批 B 2026-09-02）：depositAmount（分）+ 命中档位（minAmount/maxOrderAmount，null 上限=不限；未缴 tier=null）+ 最近 10 条申请（含状态/adminNote）。Role: RIDER。',
+  responses: {
+    200: {
+      description: '保证金状态',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositStatusResponse }) } },
+    },
+    404: { description: 'E-RIDER-001 骑手资料不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 保证金骑手端只读两端点（补端点批，2026-09-03）：COD 下拉 / 档位提示 ----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/locations',
+  tags: ['rider'],
+  description:
+    '启用缴纳点列表（补端点批 2026-09-03）：线下 COD Tab 下拉数据源。admin 同源只读（deposit_locations）+ enabled 过滤；字段收窄 id/name/address/note。Role: RIDER.',
+  responses: {
+    200: {
+      description: '启用缴纳点列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositLocationListResponse }) } },
+    },
+    401: { description: 'E-AUTH-002 未认证', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/deposit/tiers',
+  tags: ['rider'],
+  description:
+    '启用档位列表（补端点批 2026-09-03）：缴纳页「选 $X → 上限 $Y」提示数据源。与资格派生同口径（enabled 过滤，sortOrder 升序）。Role: RIDER.',
+  responses: {
+    200: {
+      description: '启用档位列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RiderDepositTier) }) } },
+    },
+    401: { description: 'E-AUTH-002 未认证', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 保证金 admin 侧（批 C，2026-09-02）：7 组端点 ----
+// 1. 档位 CRUD
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/tiers',
+  tags: ['rider'],
+  description: '保证金档位列表（按 sortOrder 升序）。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '档位列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(RiderDepositTier) }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/tiers',
+  tags: ['rider'],
+  description:
+    '新增档位（批 C）。校验：minAmount>0；maxOrderAmount null=不限 或 > minAmount；minAmount 唯一。修改档位不动 rider.depositAmount（上限派生自动生效）。Role: SUPER_ADMIN。',
+  request: { body: { content: { 'application/json': { schema: AdminUpsertTierRequest } } } },
+  responses: {
+    201: {
+      description: '创建成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositTier }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败（maxOrderAmount ≤ minAmount）', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DEPOSIT-101 minAmount 已存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/deposit/tiers/{id}',
+  tags: ['rider'],
+  description: '编辑档位（批 C）。局部更新；上限变化实时生效（派生查询，无数据回填）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminUpdateTierRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RiderDepositTier }) } },
+    },
+    404: { description: 'E-DEPOSIT-102 档位不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-DEPOSIT-101 minAmount 撞已有档', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/deposit/tiers/{id}',
+  tags: ['rider'],
+  description:
+    '删除档位（批 C）。软停用语义：enabled=false（保留历史档定义，派生查询只看 enabled 档）。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '已停用',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.object({ id: Id, enabled: z.literal(false) }) }) } },
+    },
+    404: { description: 'E-DEPOSIT-102 档位不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 2. 缴纳点 CRUD
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/locations',
+  tags: ['rider'],
+  description: '缴纳点列表（批 C）。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '缴纳点列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(DepositLocation) }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/locations',
+  tags: ['rider'],
+  description: '新增缴纳点（批 C）。Role: SUPER_ADMIN。',
+  request: { body: { content: { 'application/json': { schema: AdminUpsertLocationRequest } } } },
+  responses: {
+    201: {
+      description: '创建成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DepositLocation }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/deposit/locations/{id}',
+  tags: ['rider'],
+  description: '编辑缴纳点（批 C，含启停）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminUpsertLocationRequest.partial() } } },
+  },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DepositLocation }) } },
+    },
+    404: { description: 'E-DEPOSIT-103 缴纳点不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/deposit/locations/{id}',
+  tags: ['rider'],
+  description:
+    '删除缴纳点（批 C）。软停用：enabled=false。已被流水引用的缴纳点不物理删（FK SET NULL 但保留历史名）。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '已停用',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.object({ id: Id, enabled: z.literal(false) }) }) } },
+    },
+    404: { description: 'E-DEPOSIT-103 缴纳点不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 3. 申请列表
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/deposit/requests',
+  tags: ['rider'],
+  description:
+    '保证金申请列表（批 C）。含骑手姓名/手机号/缴纳点名；status 过滤 + 分页（page/pageSize，默认 1/20）。Role: SUPER_ADMIN。',
+  request: { query: AdminListDepositRequestsQuery },
+  responses: {
+    200: {
+      description: '申请列表（分页）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDepositRequestListResponse }) } },
+    },
+  },
+});
+
+// 4/5. confirm / reject
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/requests/{id}/confirm',
+  tags: ['rider'],
+  description:
+    '确认收款（批 C）。仅 PENDING：事务内置 CONFIRMED + confirmedAt + RiderProfile.depositAmount += confirmedAmount ?? requestedAmount（increment 原子）。幂等：已 CONFIRMED → E-DEPOSIT-104 拒绝。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminConfirmDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '确认成功（含累加后余额）',
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({ deposit: AdminDepositRequestItem, depositAmount: z.number().int().nonnegative() }),
+          }),
+        },
+      },
+    },
+    409: { description: 'E-DEPOSIT-104 非 PENDING（重复 confirm 拒绝）', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/deposit/requests/{id}/reject',
+  tags: ['rider'],
+  description:
+    '拒绝申请（批 C）。仅 PENDING；adminNote 必填（骑手端可见）。REJECTED 后骑手可重新提交（新流水）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminRejectDepositRequest } } },
+  },
+  responses: {
+    200: {
+      description: '已拒绝',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminDepositRequestItem }) } },
+    },
+    409: { description: 'E-DEPOSIT-104 非 PENDING', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 6. 骑手聚合详情（Q8 ①-⑤）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/riders/{id}/detail',
+  tags: ['rider'],
+  description:
+    '骑手聚合详情（批 C，方案 Q8 ①-⑤）：①基础资料 ②实时状态（在线/在途） ③业务统计（今日/累计/评分） ④财务（depositAmount/档位/上限/结算余额） ⑤缴存申请（最近 20 条）。注 :id = riderProfileId。Role: SUPER_ADMIN。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '聚合详情',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: AdminRiderDepositDetail }) } },
+    },
+    404: { description: 'E-RIDER-001 骑手不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 7. 各仓负载
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/warehouse-load',
+  tags: ['rider'],
+  description:
+    '各仓负载面板（批 C，方案 Q12）：每仓 { warehouseId, pendingTaskCount, availableRiderCount, estWaitMinutes }。可用骑手 = APPROVED + Redis 在线 + 工作仓（preferredWarehouseIds）含该仓；estWait = pending / max(available,1) × 30min 近似。Role: SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '各仓负载',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: z.array(WarehouseLoadItem) }) } },
+    },
+  },
+});
+
+// ---- 派单候选（批 D，2026-09-03，方案 Q10/Q13）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/dispatch/tasks/{id}/candidates',
+  tags: ['dispatch'],
+  description:
+    '派单候选（批 D，方案 Q10 两段式）：资格过滤（金额≤档位上限 + 工作仓匹配）→ 排序 score=rating×0.5+距离近度×0.3−在途×0.2（平局 depositAmount 高优先）→ 资格标签（eligible/depositAmount/maxOrderAmount/requiredDeposit）。query：crossWarehouse=true 放宽工作仓（仅 admin 跨仓支援，金额资格保留）；includeIneligible=true 附带不合格候选（⛔需保证金提示）。Role: SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    query: z.object({
+      crossWarehouse: z.coerce.boolean().optional(),
+      includeIneligible: z.coerce.boolean().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '候选列表（按 score 降序）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DispatchCandidateList }) } },
+    },
+    404: { description: 'E-DISPATCH-001 任务不存在', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -2655,7 +3232,7 @@ registry.registerPath({
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ items: z.array(DeliveryTask) }),
+            data: z.object({ items: z.array(DeliveryTaskRef) }),
           }),
         },
       },
@@ -2676,7 +3253,7 @@ registry.registerPath({
         'application/json': {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({ items: z.array(DeliveryTask) }),
+            data: z.object({ items: z.array(DeliveryTaskRef) }),
           }),
         },
       },
@@ -2697,7 +3274,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '接单成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_ALREADY_ASSIGNED', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2716,7 +3293,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '取货成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2735,7 +3312,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '送达成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     409: { description: 'TASK_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -2754,7 +3331,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '异常上报成功',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
   },
 });
@@ -2775,7 +3352,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '开始配送成功（task 进入 DELIVERING；return 任务同时写 refund.pickedAt）',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
   },
 });
@@ -2965,7 +3542,7 @@ registry.registerPath({
   responses: {
     200: {
       description: '重触发成功（返新建的 return task）',
-      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTask }) } },
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef }) } },
     },
     404: { description: 'E-REFUND-003 refund 不存在', content: { 'application/json': { schema: ErrorResponse } } },
     409: {
@@ -3277,10 +3854,202 @@ registry.registerPath({
   },
 });
 
+// ===== Admin hot-search（运营管理，2026-08-28 契约补全）=====
+// 后端 AdminHotSearchController 已实现 6 端点，此处补 OpenAPI 注册（Role: SUPER_ADMIN）。
+// 统一响应包装 { success: true, data: ... }，沿用 controller 返回形态。
+
+/** Admin 热搜项（P2-1 修复 2026-08-28）：与客户端 HotSearchTermItem 分离——
+ *  adminListHot 跨语言聚合时每条带 lang 标记来源 ZSET（search.service.ts 返回
+ *  {word, lang, searchCount}），客户端 /client/search/hot 故意无 lang（语义不同），
+ *  故不复用 HotSearchTermItem，独立定义对齐实现 */
+const AdminHotListItem = z.object({
+  word: z.string(),
+  lang: SearchLang,
+  searchCount: z.number().int(),
+});
+
+/** Admin 热搜响应包装（ZSET 真实热度 top N） */
+const AdminHotListResponse = z.object({
+  success: z.literal(true),
+  data: AdminHotListItem.array(),
+});
+
+/** Admin 种子词 / 零结果词响应包装 */
+const AdminHotSearchTermsResponse = z.object({
+  success: z.literal(true),
+  data: HotSearchTerm.array(),
+});
+
+const AdminZeroResultResponse = z.object({
+  success: z.literal(true),
+  data: ZeroResultTerm.array(),
+});
+
+/** Admin 种子词操作（create/update）响应包装 */
+const AdminHotSearchTermMutationResponse = z.object({
+  success: z.literal(true),
+  data: HotSearchTerm,
+});
+
+/** Admin 删除种子词响应包装 */
+const AdminHotSearchTermDeleteResponse = z.object({
+  success: z.literal(true),
+  data: z.object({ id: Id }),
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search',
+  tags: ['search'],
+  description:
+    'ZSET 真实热搜 top N（运营看热度，Role: SUPER_ADMIN）。返 AdminHotListItem[]（word + lang + searchCount，lang 标记来源语言 ZSET）。limit 默认 50 最大 200，可按 lang 筛选。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'ZSET 真实热度排行',
+      content: { 'application/json': { schema: AdminHotListResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search/terms',
+  tags: ['search'],
+  description:
+    '运营种子词列表（HotSearchTerm 表，Role: SUPER_ADMIN）。可按 lang/type 筛选，返 HotSearchTerm[]（含 id/word/lang/type/sortOrder/status/时间戳）。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+      type: HotSearchType.optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '种子词列表',
+      content: { 'application/json': { schema: AdminHotSearchTermsResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/hot-search/zero-result',
+  tags: ['search'],
+  description:
+    '零结果词聚合（运营补商品/补词依据，Role: SUPER_ADMIN）。从 SearchLog 聚合「用户搜了但无商品」的词，返 ZeroResultTerm[]（word + lang + count）。可按 lang 筛选。',
+  request: {
+    query: z.object({
+      lang: SearchLang.optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: '零结果词排行',
+      content: { 'application/json': { schema: AdminZeroResultResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/hot-search/terms',
+  tags: ['search'],
+  description:
+    '新增运营种子词（Role: SUPER_ADMIN）。type=PINNED 置顶 / MANUAL 兜底 / BLOCKED 屏蔽。word 1-50 字符，lang 五语言之一。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateHotSearchTermRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '创建后的种子词',
+      content: { 'application/json': { schema: AdminHotSearchTermMutationResponse } },
+    },
+    400: { description: '请求体校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/hot-search/terms/{id}',
+  tags: ['search'],
+  description:
+    '编辑运营种子词（Role: SUPER_ADMIN）。支持 word/lang/type/sortOrder/status 局部更新。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateHotSearchTermRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的种子词',
+      content: { 'application/json': { schema: AdminHotSearchTermMutationResponse } },
+    },
+    400: { description: '请求体校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-SEARCH-001 种子词不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/hot-search/terms/{id}',
+  tags: ['search'],
+  description: '删除运营种子词（Role: SUPER_ADMIN）。返 { id }。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '删除成功',
+      content: { 'application/json': { schema: AdminHotSearchTermDeleteResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-SEARCH-001 种子词不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ===== 生成 =====
 // ===== review schemas + paths（评论中心 reviews-2）=====
 registry.register('Review', Review);
 registry.register('RiderReview', RiderReview);
+// 保证金（批 B，2026-09-02）：schema 注册（rider_deposit 相关）
+registry.register('RiderDepositTier', RiderDepositTier);
+registry.register('DepositLocation', DepositLocation);
+registry.register('RiderDepositRecord', RiderDepositRecord);
+registry.register('CreateRiderDepositRequest', CreateRiderDepositRequest);
+registry.register('RiderDepositPayMockResult', RiderDepositPayMockResult);
+registry.register('RiderDepositStatusResponse', RiderDepositStatusResponse);
+registry.register('RiderDepositLocationListResponse', RiderDepositLocationListResponse);
+// 保证金 admin 侧（批 C，2026-09-02）
+registry.register('AdminUpsertTierRequest', AdminUpsertTierRequest);
+registry.register('AdminUpdateTierRequest', AdminUpdateTierRequest);
+registry.register('AdminUpsertLocationRequest', AdminUpsertLocationRequest);
+registry.register('AdminDepositRequestItem', AdminDepositRequestItem);
+registry.register('AdminListDepositRequestsQuery', AdminListDepositRequestsQuery);
+registry.register('AdminDepositRequestListResponse', AdminDepositRequestListResponse);
+registry.register('AdminConfirmDepositRequest', AdminConfirmDepositRequest);
+registry.register('AdminRejectDepositRequest', AdminRejectDepositRequest);
+registry.register('AdminRiderDepositDetail', AdminRiderDepositDetail);
+registry.register('WarehouseLoadItem', WarehouseLoadItem);
+// 派单候选（批 D，2026-09-03）
+registry.register('DispatchEligibilityLabel', DispatchEligibilityLabel);
+registry.register('DispatchCandidate', DispatchCandidate);
+registry.register('DispatchCandidateList', DispatchCandidateList);
 registry.register('CreateReviewRequest', CreateReviewRequest);
 registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
 registry.register('HomeEntry', HomeEntry);
@@ -3426,6 +4195,98 @@ registry.registerPath({
     400: { description: '校验失败（category 枚举外 / content 长度 / images > 9）', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'E-FEEDBACK-001 图片 URL 非本服务上传（防 SSRF/外链）', content: { 'application/json': { schema: ErrorResponse } } },
     429: { description: '限流（5 次/小时/用户）', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== admin feedback（admin-web 优化方案 批次2 2026-08-29，后台只读）=====
+registry.register('AdminFeedbackListItem', AdminFeedbackListItem);
+registry.register('AdminFeedbackDetail', AdminFeedbackDetail);
+registry.register('AdminFeedbackListResponseData', AdminFeedbackListResponseData);
+registry.register('AdminListFeedbackQuery', AdminListFeedbackQuery);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/feedback',
+  tags: ['feedback'],
+  description:
+    '后台反馈列表（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。category 筛选 + keyword 模糊 content/contact + 时间范围 startDate/endDate（均含边界）+ offset 分页（page/pageSize 默认 1/20，max 100）。返回 items 含 submitter 摘要（phone/name/avatarUrl，user 软删也保留）。MVP 无处理状态字段（后续增强需 migration）。',
+  request: { query: AdminListFeedbackQuery },
+  responses: {
+    200: {
+      description: '反馈列表（offset 分页）',
+      content: { 'application/json': { schema: AdminFeedbackListResponseData } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/feedback/{id}',
+  tags: ['feedback'],
+  description:
+    '后台反馈详情（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN，只读）。含 images 截图 URL + submitter 扩展信息（email/role/status）。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '反馈详情',
+      content: { 'application/json': { schema: AdminFeedbackDetail } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-FEEDBACK-002 反馈不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== admin notifications（admin-web 优化方案 批次2 2026-08-29，后台发送/历史）=====
+registry.register('AdminSendNotificationRequest', AdminSendNotificationRequest);
+registry.register('AdminSendNotificationResponseData', AdminSendNotificationResponseData);
+registry.register('AdminNotificationHistoryItem', AdminNotificationHistoryItem);
+registry.register('AdminNotificationHistoryListResponseData', AdminNotificationHistoryListResponseData);
+registry.register('AdminListNotificationsQuery', AdminListNotificationsQuery);
+registry.register('NotificationTarget', NotificationTarget);
+registry.register('AdminNotificationType', AdminNotificationType);
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/notifications',
+  tags: ['notification'],
+  description:
+    '后台发送通知（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM。title/content 多语言 JSON（至少 en）。MVP 真链路=写 Notification 表（前端 /client/notifications 拉取），PUSH 走 dev stub（mockFlag=true 提示未真实推送）。响应 deliveredCount + push 结果。',
+  request: {
+    body: { content: { 'application/json': { schema: AdminSendNotificationRequest } } },
+  },
+  responses: {
+    200: {
+      description: '发送成功，返回投递计数 + PUSH stub 结果',
+      content: { 'application/json': { schema: AdminSendNotificationResponseData } },
+    },
+    400: {
+      description: 'E-ADMIN-NOTIF-001 userIds 缺失/不存在 / E-ADMIN-NOTIF-002 群发超上限 / E-COMMON-001 校验失败',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/notifications',
+  tags: ['notification'],
+  description:
+    '后台通知发送历史（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。offset 分页 + type/target 筛选。MVP 无「批次」表，按 Notification 行倒序展示，每条 deliveredCount=1（真正按批次聚合需建 NotificationBatch 表，列暂缓增强）。',
+  request: { query: AdminListNotificationsQuery },
+  responses: {
+    200: {
+      description: '发送历史列表（offset 分页）',
+      content: { 'application/json': { schema: AdminNotificationHistoryListResponseData } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

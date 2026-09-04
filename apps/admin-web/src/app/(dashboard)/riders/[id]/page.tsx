@@ -48,6 +48,8 @@ import {
   useDeleteRider,
   type UpdateAdminRiderInput,
 } from '@/hooks/api/use-admin-riders';
+import { useRiderDepositDetail } from '@/hooks/api/use-deposit';
+import { useWarehouses } from '@/hooks/api/use-warehouses';
 import { formatCurrency } from '@/lib/utils';
 
 const VEHICLE_TYPES = ['MOTORCYCLE', 'BICYCLE', 'CAR'] as const;
@@ -60,6 +62,10 @@ export default function RiderDetailPage({ params }: { params: { id: string } }) 
   const { toast } = useToast();
 
   const { data: rider, isLoading, error, refetch } = useAdminRiderDetail(id);
+  // 批 E（2026-09-03）：聚合详情（批 C GET /admin/riders/:id/detail ①-⑤）
+  const { data: depositDetail } = useRiderDepositDetail(id);
+  const { data: warehousesRes } = useWarehouses();
+  const warehouses = warehousesRes?.data;
   const updateMutation = useUpdateAdminRider();
   const suspendMutation = useSuspendRider();
   const activateMutation = useActivateRider();
@@ -309,6 +315,143 @@ export default function RiderDetailPage({ params }: { params: { id: string } }) 
         </Card>
       </div>
 
+      {/* ===== 批 E（2026-09-03）：保证金聚合视图（批 C GET /admin/riders/:id/detail ①-⑤） ===== */}
+      {depositDetail && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* ② 实时状态（补：在途任务数 + Redis 在线） */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.riderDetail.realtimeTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.online')}</span>
+                  <Badge variant={depositDetail.realtime.isOnline ? 'default' : 'outline'}>
+                    {depositDetail.realtime.isOnline
+                      ? t('admin.riderDetail.onlineYes')
+                      : t('admin.riderDetail.onlineNo')}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.activeTasks')}</span>
+                  <span className="font-mono">{depositDetail.realtime.activeTaskCount}</span>
+                </div>
+              </CardContent>
+            </Card>
+            {/* ③ 业务统计（今日完成单） */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.riderDetail.todayDeliveries')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">{depositDetail.stats.todayDeliveries}</span>
+              </CardContent>
+            </Card>
+            {/* ④ 财务：保证金 */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.riderDetail.depositTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.depositAmount')}</span>
+                  <span className="font-medium">{formatCurrency(depositDetail.finance.depositAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.tier')}</span>
+                  <span>
+                    {depositDetail.finance.tier
+                      ? `${formatCurrency(depositDetail.finance.tier.minAmount)} → ${
+                          depositDetail.finance.tier.maxOrderAmount === null
+                            ? t('admin.deposit.tiers.unlimited')
+                            : formatCurrency(depositDetail.finance.tier.maxOrderAmount)
+                        }`
+                      : t('admin.riderDetail.noTier')}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+            {/* ④ 财务：可接上限 + 结算余额 */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.riderDetail.financeTitle')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.maxOrderAmount')}</span>
+                  <span className="font-medium">
+                    {depositDetail.finance.maxOrderAmount === null
+                      ? t('admin.deposit.tiers.unlimited')
+                      : depositDetail.finance.maxOrderAmount === 0
+                        ? t('admin.riderDetail.noEligibility')
+                        : formatCurrency(depositDetail.finance.maxOrderAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('admin.riderDetail.settleBalance')}</span>
+                  <span>{formatCurrency(depositDetail.finance.settleBalance)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ⑤ 缴存申请时间线（状态/金额/adminNote 倒序） */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('admin.riderDetail.depositHistoryTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {depositDetail.depositRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('admin.riderDetail.noDepositHistory')}</p>
+              ) : (
+                <div className="space-y-3">
+                  {depositDetail.depositRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className="flex items-start justify-between gap-4 border-b pb-3 last:border-0 last:pb-0"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge
+                            status={
+                              req.status === 'PENDING' ? 'PENDING' : req.status === 'CONFIRMED' ? 'ACTIVE' : 'REJECTED'
+                            }
+                            label={t(
+                              `admin.deposit.requests.status${req.status.charAt(0)}${req.status.slice(1).toLowerCase()}` as 'admin.deposit.requests.statusPending',
+                            )}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {req.channel === 'OFFLINE_COD'
+                              ? t('admin.deposit.requests.channelCod')
+                              : t('admin.deposit.requests.channelOnline')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{formatDateTime(req.createdAt)}</p>
+                        {req.adminNote && (
+                          <p className="text-xs text-muted-foreground">
+                            {t('admin.deposit.requests.adminNotePrefix')}
+                            {req.adminNote}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="font-medium">{formatCurrency(req.requestedAmount)}</div>
+                        {req.confirmedAmount !== null && req.confirmedAmount !== req.requestedAmount && (
+                          <div className="text-xs text-muted-foreground">
+                            {t('admin.deposit.requests.confirmedAs', { amount: formatCurrency(req.confirmedAmount) })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
       {/* 最近订单 */}
       <Card>
         <CardHeader>
@@ -371,13 +514,35 @@ export default function RiderDetailPage({ params }: { params: { id: string } }) 
             </div>
             <div className="space-y-2">
               <Label htmlFor="preferredWarehouseIds">{t('admin.riders.preferredWarehouses')}</Label>
-              <Textarea
-                id="preferredWarehouseIds"
-                value={preferredWarehouseIdsText}
-                onChange={(e) => setPreferredWarehouseIdsText(e.target.value)}
-                placeholder={t('admin.riders.preferredWarehousesPlaceholder')}
-                rows={4}
-              />
+              {/* 批 E（2026-09-03）：textarea 手填 uuid → 仓库多选（Q11 强指派入口，复用 PATCH） */}
+              <div className="space-y-2 rounded-md border p-3">
+                {(warehouses ?? []).map((wh) => (
+                  <label key={wh.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={preferredWarehouseIdsText.split(/[\n,]/).map((s) => s.trim()).includes(wh.id)}
+                      onChange={(e) => {
+                        const current = new Set(parseWarehouseIds(preferredWarehouseIdsText));
+                        if (e.target.checked) current.add(wh.id);
+                        else current.delete(wh.id);
+                        setPreferredWarehouseIdsText(Array.from(current).join('\n'));
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <span className="font-mono text-xs">{wh.code}</span>
+                    <span>{wh.name?.zh || wh.name?.en || wh.id}</span>
+                  </label>
+                ))}
+                {(!warehouses || warehouses.length === 0) && (
+                  <Textarea
+                    id="preferredWarehouseIds"
+                    value={preferredWarehouseIdsText}
+                    onChange={(e) => setPreferredWarehouseIdsText(e.target.value)}
+                    placeholder={t('admin.riders.preferredWarehousesPlaceholder')}
+                    rows={4}
+                  />
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {t('admin.riders.preferredWarehousesHint')}
               </p>

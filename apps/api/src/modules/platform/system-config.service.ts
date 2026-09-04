@@ -17,6 +17,23 @@ import type { SystemConfigItemType } from '@meimart/api-contract';
 const CACHE_TTL_SEC = 300;
 const cacheKey = (key: string) => `SystemConfig:${key}`;
 
+/**
+ * 派生缓存 key 清单（P1-3 修复，2026-08-25）
+ *
+ * 某些 SystemConfig key 被其他 service 二次加工后缓存到独立 Redis key。
+ * SystemConfigService.update 只清自己的 `SystemConfig:{key}`，不知道派生缓存存在，
+ * 导致运营改配置后派生缓存最长陈旧到自身 TTL。此处显式登记派生缓存，
+ * update 时一并 DEL。
+ *
+ * 当前登记：
+ *   - `about.socials` → AboutService 的 `AboutProfile` 缓存（TTL 1h，含解析后的 socials）
+ *
+ * 如未来新增更多派生缓存，在此 push 即可。
+ */
+const DERIVED_CACHE_KEYS: Array<{ keyPrefix: string; cacheKey: string }> = [
+  { keyPrefix: 'about.', cacheKey: 'AboutProfile' },
+];
+
 @Injectable()
 export class SystemConfigService {
   async list(): Promise<SystemConfigItemType[]> {
@@ -60,6 +77,18 @@ export class SystemConfigService {
 
     /** 写后失效缓存（而不是更新，避免与并发读竞争） */
     await redis.del(cacheKey(key));
+
+    /**
+     * P1-3 修复（2026-08-25）：同步失效派生缓存。
+     * 如 `about.socials` 被 AboutService 解析后缓存在 `AboutProfile`，
+     * 仅清 `SystemConfig:about.socials` 会导致关于页最长 1h 显示旧 socials。
+     */
+    const derivedKeys = DERIVED_CACHE_KEYS
+      .filter((d) => key === d.keyPrefix || key.startsWith(d.keyPrefix))
+      .map((d) => d.cacheKey);
+    if (derivedKeys.length > 0) {
+      await redis.del(...derivedKeys);
+    }
 
     /**
      * 审计由 @Audit() 装饰器 + AuditInterceptor 统一负责

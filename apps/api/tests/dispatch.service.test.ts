@@ -73,6 +73,30 @@ vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+// 批 D（2026-09-03）：保证金资格校验注入——现有用例不触发资格逻辑
+// （listPendingTasks/acceptTask 现会走 eligibility），mock 成「全额合格」透传
+const { mockEligibility } = vi.hoisted(() => ({
+  mockEligibility: {
+    getEnabledTiers: vi.fn().mockResolvedValue([{ id: 'tier-1', minAmount: 100, maxOrderAmount: 1000 }]),
+    deriveEligibility: vi.fn().mockReturnValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' }),
+    isEligible: vi.fn().mockReturnValue(true),
+    assertCanAccept: vi.fn().mockResolvedValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' }),
+    getRequiredDeposit: vi.fn().mockResolvedValue(100),
+    toLabel: vi.fn().mockReturnValue({ eligible: true, depositAmount: 100, maxOrderAmount: 1000 }),
+  },
+}));
+
+vi.mock('../src/modules/rider/deposit-eligibility.service', () => ({
+  DepositEligibilityService: class {
+    getEnabledTiers = mockEligibility.getEnabledTiers;
+    deriveEligibility = mockEligibility.deriveEligibility;
+    isEligible = mockEligibility.isEligible;
+    assertCanAccept = mockEligibility.assertCanAccept;
+    getRequiredDeposit = mockEligibility.getRequiredDeposit;
+    toLabel = mockEligibility.toLabel;
+  },
+}));
+
 import { DispatchService } from '../src/modules/dispatch/dispatch.service';
 
 function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
@@ -96,7 +120,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     note: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD' },
+    order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 },
     warehouse: { code: 'W01' },
     ...overrides,
   };
@@ -106,7 +130,7 @@ describe('DispatchService', () => {
   let service: DispatchService;
 
   beforeEach(() => {
-    service = new DispatchService(mockRealtime as never);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never);
     Object.values(mockDb).forEach((table) => {
       if (typeof table === 'object') {
         Object.values(table).forEach((fn) => fn.mockReset?.());
@@ -117,7 +141,17 @@ describe('DispatchService', () => {
     mockServer.emit.mockClear();
     // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
     // 测试用 riderId='r1'，所以 mock 返回 id='r1' 保持一致
-    mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1' });
+    // 批 D：listPendingTasks 需要 preferredWarehouseIds（空=不过滤）+ depositAmount
+    mockDb.riderProfile.findUnique.mockResolvedValue({
+      id: 'r1',
+      preferredWarehouseIds: [],
+      depositAmount: 100,
+    });
+    // 资格 mock 复位到「全额合格」（个别批 D 用例单独覆盖）
+    mockEligibility.getEnabledTiers.mockResolvedValue([{ id: 'tier-1', minAmount: 100, maxOrderAmount: 1000 }]);
+    mockEligibility.deriveEligibility.mockReturnValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' });
+    mockEligibility.isEligible.mockReturnValue(true);
+    mockEligibility.assertCanAccept.mockResolvedValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' });
   });
 
   describe('listPendingTasks', () => {
@@ -150,6 +184,46 @@ describe('DispatchService', () => {
       const result = await service.listPendingTasks({ riderId: 'r1' });
       expect(result.items[0]?.contactPhone).toBeUndefined();
       expect(result.items[1]?.contactPhone).toBeUndefined();
+    });
+
+    it('P0-1 修复：order.deliveryFee 透传 → toView 返回 deliveryFee（骑手卡片展示真实配送费）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({ order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 } }),
+        buildTask({ order: { orderNo: 'MM2', payableAmount: 100, paymentMethod: 'COD' } }), // 无 deliveryFee → undefined
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      expect(result.items[0]?.deliveryFee).toBe(250);
+      expect(result.items[1]?.deliveryFee).toBeUndefined();
+    });
+
+    it('P6 #7：pickup/dropoff 坐标齐全 → 透传 distanceKm + estimatedMinutes', async () => {
+      // 用 number 直接覆盖（绕过 buildTask 的 Decimal mock，Number(number) 正常）
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({
+          pickupLat: -8.5568,
+          pickupLng: 125.5600,
+          dropoffLat: -8.5500,
+          dropoffLng: 125.5660,
+        }),
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      const view = result.items[0]!;
+      expect(view.distanceKm).toBeGreaterThan(0.5);
+      expect(view.distanceKm).toBeLessThan(1.5);
+      // ~1km @ 20km/h ≈ 3 分钟
+      expect(view.estimatedMinutes).toBeGreaterThan(0);
+      expect(view.estimatedMinutes).toBeLessThanOrEqual(45);
+    });
+
+    it('P6 #7：坐标缺失（0 历史数据）→ distanceKm/estimatedMinutes undefined（前端降级隐藏）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([
+        buildTask({ pickupLat: 0, pickupLng: 0, dropoffLat: 0, dropoffLng: 0 }),
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1' });
+      // P3-7 修复：(0,0) 视为历史无坐标哨兵，toView 返回 undefined（非 0）
+      // 避免骑手卡片显示「0.0km · 0 分钟」，前端降级隐藏 ETA
+      expect(result.items[0]?.distanceKm).toBeUndefined();
+      expect(result.items[0]?.estimatedMinutes).toBeUndefined();
     });
 
     it('传 warehouseId 时按仓库过滤', async () => {

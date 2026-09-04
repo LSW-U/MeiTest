@@ -24,7 +24,7 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { Inject, Logger, UnauthorizedException } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import type { Role, DeviceType } from '@meimart/api-contract';
@@ -105,7 +105,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly jwt: JwtService) {}
+  // 修复(2026-09-02)：tsx(esbuild) 不输出 design:paramtypes → 裸类型注入的 JwtService 为 undefined，
+  // 导致每次 WS 握手都在 verify 处抛 TypeError，被 catch 吞成 E-AUTH-002，骑手端永远显示断线重连。
+  // 显式 @Inject 与其余 controller/service（全仓用 @Inject 的惯例）对齐。
+  constructor(@Inject(JwtService) private readonly jwt: JwtService) {}
 
   /**
    * 连接握手：校验 JWT，加入对应 room

@@ -3,7 +3,8 @@
  *
  * 后端三组接口：
  *   1. Shop：GET/PATCH /admin/shop
- *   2. Pricing：GET /admin/pricing/config + PATCH /admin/pricing/warehouses/:id/base-fee
+ *   2. Pricing：GET /admin/pricing/config + PATCH /admin/pricing/warehouses/:warehouseId/config（批次3 灰度配置，三字段 partial）
+ *      旧 PATCH .../base-fee 保留向后兼容（@deprecated 转调），新代码用 /config
  *   3. SystemConfig：GET /admin/platform/system-configs + PUT /admin/platform/system-configs/:key
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -66,6 +67,8 @@ export interface WarehousePricing {
   name: Record<string, string>;
   baseFee: number;
   perKmFee: number;
+  /** 起步免费距离 km（批次3 灰度配置 2026-08-28）—— max(0, distanceKm - freeKm) 才计距离费 */
+  freeKm: number;
   minOrderAmount: number;
   status: string;
 }
@@ -89,6 +92,37 @@ export function useUpdateWarehouseBaseFee() {
         {
           method: 'PATCH',
           body: JSON.stringify({ baseFee }),
+        },
+      ).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'pricing'] });
+    },
+  });
+}
+
+/**
+ * 更新仓库配送费配置（批次3 灰度配置 2026-08-28）
+ *
+ * PATCH /admin/pricing/warehouses/:warehouseId/config —— 三字段 partial：
+ * baseFee/perKmFee（分，整数 ≥0）/ freeKm（km，≥0）。至少传一个字段（后端 zod refine 拦截空对象 → 400）。
+ * 灰度切换路径：admin 在弹窗配 perKmFee=50 → 后端写 warehouse.perKmFee → 距离费生效。
+ */
+export interface UpdateWarehousePricingConfigInput {
+  warehouseId: string;
+  baseFee?: number;
+  perKmFee?: number;
+  freeKm?: number;
+}
+
+export function useUpdateWarehousePricingConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ warehouseId, ...body }: UpdateWarehousePricingConfigInput) =>
+      apiFetch<ApiSuccess<WarehousePricing>>(
+        `/admin/pricing/warehouses/${warehouseId}/config`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(body),
         },
       ).then((res) => res.data),
     onSuccess: () => {

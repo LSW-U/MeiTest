@@ -23,7 +23,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { UpsertWarehouseRequest } from '@meimart/api-contract';
+import { UpsertWarehouseRequest, UpdateWarehouseRequest } from '@meimart/api-contract';
 import { WarehouseService } from './warehouse.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -47,9 +47,16 @@ export class WarehouseController {
     return { success: true, data };
   }
 
+  // 请求校验失败（含 operatingHours 结构/语义）→ E-WAREHOUSE-004（errors.json 五语言）
+  // create 用全必填 UpsertWarehouseRequest；update 用全可选 UpdateWarehouseRequest（批 B 审查 P2-1，
+  // 用户拍板选 a：PATCH 部分更新只动传入字段，admin-web 启停开关/基础信息保存不再 400）
+  // static 公开：单测直测 pipe 校验行为（tests/warehouse.service.test.ts）
+  static readonly UPSERT_PIPE = new ZodValidationPipe(UpsertWarehouseRequest, 'E-WAREHOUSE-004');
+  static readonly UPDATE_PIPE = new ZodValidationPipe(UpdateWarehouseRequest, 'E-WAREHOUSE-004');
+
   @Post()
   @Audit({ resource: 'Warehouse' })
-  async create(@Body(new ZodValidationPipe(UpsertWarehouseRequest)) body: {
+  async create(@Body(WarehouseController.UPSERT_PIPE) body: {
     code: string;
     name: Record<string, string>;
     coverageArea: { type: 'Polygon'; coordinates: number[][][] } | null;
@@ -58,6 +65,8 @@ export class WarehouseController {
     address: string;
     operatingHours: unknown;
     deliveryFee: number;
+    perKmFee?: number;
+    freeKm?: number;
     isActive: boolean;
   }) {
     // shopId 取 db.shop.findFirst（单一商家）
@@ -75,6 +84,8 @@ export class WarehouseController {
       coverageArea: body.coverageArea,
       operatingHours: body.operatingHours,
       deliveryFee: body.deliveryFee,
+      perKmFee: body.perKmFee,
+      freeKm: body.freeKm,
       status: body.isActive ? 'ACTIVE' : 'INACTIVE',
     });
     return { success: true, data };
@@ -84,7 +95,7 @@ export class WarehouseController {
   @Audit({ resource: 'Warehouse' })
   async update(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(UpsertWarehouseRequest)) body: Partial<{
+    @Body(WarehouseController.UPDATE_PIPE) body: Partial<{
       name: Record<string, string>;
       coverageArea: { type: 'Polygon'; coordinates: number[][][] } | null;
       centerLat: number;
@@ -92,6 +103,8 @@ export class WarehouseController {
       address: string;
       operatingHours: unknown;
       deliveryFee: number;
+      perKmFee: number;
+      freeKm: number;
       isActive: boolean;
     }>,
   ) {
@@ -103,6 +116,8 @@ export class WarehouseController {
       ...(body.address !== undefined && { address: body.address }),
       ...(body.operatingHours !== undefined && { operatingHours: body.operatingHours }),
       ...(body.deliveryFee !== undefined && { deliveryFee: body.deliveryFee }),
+      ...(body.perKmFee !== undefined && { perKmFee: body.perKmFee }),
+      ...(body.freeKm !== undefined && { freeKm: body.freeKm }),
       ...(body.isActive !== undefined && { status: body.isActive ? 'ACTIVE' : 'INACTIVE' }),
     });
     return { success: true, data };

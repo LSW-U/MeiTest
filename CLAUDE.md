@@ -493,3 +493,46 @@ pnpm --filter @meimart/api-contract mock
 - 项目负责人:linsuwei(你)
 - 任务跟踪:Claude Code 内置 TaskCreate(本会话内)+ Obsidian 文档(跨会话)
 - 任何方案变更 → 同步更新对应 Obsidian md + 本 CLAUDE.md
+
+---
+
+## 🤖 跨 Agent 协作约定（DSH / Claude Code / 其它 agent 必读）
+
+> ⚠️ 本机 Claude Code **不能裸调 `claude` 命令**，会报"未注册 / 认证失败"。
+> 必须通过 `ccp` shell function 启动，它会注入 ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN + ANTHROPIC_MODEL。
+
+### ccp 用法
+
+```bash
+# 交互式（你在终端里用）
+ccp work          # 公司 GLM 代理（默认推荐）
+ccp personal      # DeepSeek 官方兼容端点
+ccp proxy         # 第三方中转
+
+# 非交互式（DSH agent / 脚本里用，必须 zsh -ic 让 function 生效）
+zsh -ic 'ccp work -p "任务描述"'
+```
+
+### 三个 profile
+
+| profile | base URL | 主模型 | 用途 |
+|---------|----------|--------|------|
+| work | http://101.35.53.53:3030 | glm-5.3 | 公司 GLM 代理，默认 |
+| personal | https://api.deepseek.com/anthropic | deepseek-v4-flash | DeepSeek 官方 |
+| proxy | https://taotoken.net/api | glm_for_coding | 第三方中转 |
+
+### DSH agent 派活给 Claude Code
+
+- **小任务**（单文件/单函数）：`zsh -ic 'ccp work -p "具体任务"'`，-p 模式跑完输出结果。
+- **大任务**（跨多文件/整模块）：走 Orca worktree（`orca worktree create --name <n> --prompt "..." --agent <id>`），与主工作区隔离。
+
+### 为什么裸调 claude 会失败
+
+1. 没有 ANTHROPIC_BASE_URL → 打到默认 api.anthropic.com（官方）
+2. 没有 ANTHROPIC_AUTH_TOKEN → 官方 endpoint 不认
+3. ~/.claude/settings.json 的 env 只改了模型名映射，没有 base URL 和 token
+4. ccp 是 zsh function 不是可执行文件，直接 bash 跑会 command not found，必须 zsh -ic
+
+### 安全
+
+~/.claude-profiles.sh 明文存了 API token，不要提交 git，不要贴到聊天/issue 里。

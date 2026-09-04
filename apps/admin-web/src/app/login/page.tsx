@@ -3,9 +3,27 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import type { components } from '@meimart/shared-types';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type LoginPasswordRequest = components['schemas']['LoginPasswordRequest'];
 
+/**
+ * LoginPage — admin-web 账号密码登录页
+ *
+ * 约束 6：token 走 httpOnly cookie（credentials: 'include' 收 set-cookie），
+ * 前端 localStorage 只记非敏感登录标志（admin_session / admin_perspective）。
+ */
 export default function LoginPage() {
   const t = useTranslations('auth');
   const [phone, setPhone] = useState('');
@@ -39,7 +57,7 @@ export default function LoginPage() {
       // 同时同步 zustand store（与 PerspectiveSwitcher/Sidebar 一致）
       const { usePerspectiveStore } = await import('@/stores/perspective');
       usePerspectiveStore.getState().setPerspective('platform');
-      // 跳 dashboard 内容页（/ 是 server component 永远 redirect /login，跳 /products）
+      // 跳 dashboard 内容页（/ 是 server component 永远 redirect /login，跳 /dashboard）
       window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
@@ -49,109 +67,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 400,
-        margin: '60px auto',
-        padding: 32,
-        background: 'white',
-        borderRadius: 8,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-      }}
-    >
-      <h1
-        style={{
-          marginTop: 0,
-          marginBottom: 24,
-          fontSize: 24,
-          fontWeight: 600,
-        }}
-      >
-        {t('login.title')}
-      </h1>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12 dark:bg-background">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">{t('login.title')}</CardTitle>
+          <CardDescription>{t('login.identifier')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="login-phone">{t('login.identifier')}</Label>
+              <Input
+                id="login-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+670999999999"
+                required
+                autoComplete="tel"
+              />
+            </div>
 
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 16 }}>
-        <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-          <span>{t('login.identifier')}</span>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+670999999999"
-            required
-            autoComplete="tel"
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d5d5d5',
-              borderRadius: 4,
-              fontSize: 14,
-            }}
-          />
-        </label>
+            <div className="grid gap-2">
+              <Label htmlFor="login-password">{t('login.password')}</Label>
+              <Input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t('login.passwordPlaceholder')}
+                required
+                autoComplete="current-password"
+                minLength={8}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-          <span>{t('login.password')}</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('login.passwordPlaceholder')}
-            required
-            autoComplete="current-password"
-            minLength={8}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d5d5d5',
-              borderRadius: 4,
-              fontSize: 14,
-            }}
-          />
-        </label>
+            {error && (
+              <Alert className="border-destructive/50 bg-destructive/5 text-destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-        {error && (
-          <div
-            role="alert"
-            style={{
-              padding: '8px 12px',
-              background: '#fff4f4',
-              border: '1px solid #ffb4b4',
-              borderRadius: 4,
-              color: '#a02020',
-              fontSize: 13,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            padding: '10px 16px',
-            background: submitting ? '#9bb8e0' : '#1a5dc2',
-            color: 'white',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: submitting ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {submitting ? t('login.submitting') : t('login.submit')}
-        </button>
-      </form>
-
-      <p
-        style={{
-          marginTop: 24,
-          fontSize: 12,
-          color: '#888',
-          textAlign: 'center',
-        }}
-      >
-        {t('login.seedAccountHint')}
-      </p>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? t('login.submitting') : t('login.submit')}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <p className="text-xs text-muted-foreground">{t('login.seedAccountHint')}</p>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

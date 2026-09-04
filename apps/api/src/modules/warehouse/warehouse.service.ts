@@ -17,27 +17,81 @@ import {
   buildBoxPolygon,
   type GeoJSONPolygon,
 } from '../../shared/db/postgis-helpers';
+import { decimalToNumber } from '@meimart/shared-utils';
+
+/**
+ * 库存聚合行 → warehouseId → StockSummary 映射（批 B，纯函数便于单测）
+ *
+ * 口径：skuCount=SKU 数；totalQuantity=全部 SKU quantity 之和（含 0）；
+ * sellableQuantity=仅 quantity>0 的 quantity 之和。空仓（无行）由调用方补 0/0/0。
+ */
+export function buildStockSummaryMap(
+  rows: Array<{ warehouse_id: string; sku_count: number; total: number; sellable: number }>,
+): Map<string, { skuCount: number; totalQuantity: number; sellableQuantity: number }> {
+  const map = new Map<string, { skuCount: number; totalQuantity: number; sellableQuantity: number }>();
+  for (const r of rows) {
+    map.set(r.warehouse_id, {
+      skuCount: Number(r.sku_count),
+      totalQuantity: Number(r.total),
+      sellableQuantity: Number(r.sellable),
+    });
+  }
+  return map;
+}
+
+/** WarehouseStaff 关联行 → staffList 项（批 B，纯函数；roles 取 user.role 单值数组） */
+export function toStaffList(
+  rows: Array<{ id: string; userId: string; user: { name: string | null; role: string } }>,
+): Array<{ id: string; userId: string; name: string | null; roles: string[] }> {
+  return rows.map((s) => ({
+    id: s.id,
+    userId: s.userId,
+    name: s.user.name,
+    roles: [s.user.role],
+  }));
+}
 
 @Injectable()
 export class WarehouseService {
-  /** 仓库列表（不含 coverageArea GeoJSON，admin 列表用） */
+  /** 仓库列表（不含 coverageArea GeoJSON，admin 列表用；批 B 附 stockSummary 库存聚合） */
   async listWarehouses() {
     const items = await db.warehouse.findMany({
       orderBy: [{ status: 'asc' }, { code: 'asc' }],
     });
-    return items.map((w) => this.toSummaryDTO(w));
+    // 一次查询聚合全部仓的库存（raw SQL：sellable 用 FILTER 条件求和，Prisma groupBy 做不了）
+    const rows = await db.$queryRaw<
+      Array<{ warehouse_id: string; sku_count: number; total: number; sellable: number }>
+    >`
+      SELECT warehouse_id,
+             COUNT(*)::int AS sku_count,
+             COALESCE(SUM(quantity), 0)::int AS total,
+             COALESCE(SUM(quantity) FILTER (WHERE quantity > 0), 0)::int AS sellable
+      FROM "stocks"
+      GROUP BY warehouse_id
+    `;
+    const summaryMap = buildStockSummaryMap(rows);
+    return items.map((w) => ({
+      ...this.toSummaryDTO(w),
+      stockSummary: summaryMap.get(w.id) ?? { skuCount: 0, totalQuantity: 0, sellableQuantity: 0 },
+    }));
   }
 
-  /** 单个仓库详情（含 coverageArea GeoJSON，admin 编辑页用） */
+  /** 单个仓库详情（含 coverageArea GeoJSON + staffList，admin 编辑页用） */
   async getWarehouse(id: string) {
     const w = await db.warehouse.findUnique({ where: { id } });
     if (!w) {
       throw new NotFoundException({ code: 'E-WAREHOUSE-003', message: 'Warehouse not found' });
     }
     const coverage = await this.getCoverageGeoJson(id);
+    // 在编人员（批 B）：WarehouseStaff → user 姓名 + 角色
+    const staffRows = await db.warehouseStaff.findMany({
+      where: { warehouseId: id },
+      include: { user: { select: { name: true, role: true } } },
+    });
     return {
       ...this.toSummaryDTO(w),
       coverageArea: coverage,
+      staffList: toStaffList(staffRows),
     };
   }
 
@@ -57,6 +111,8 @@ export class WarehouseService {
     coverageArea?: GeoJSONPolygon | null;
     operatingHours?: unknown;
     deliveryFee?: number;
+    perKmFee?: number;
+    freeKm?: number;
     status?: 'ACTIVE' | 'INACTIVE';
   }) {
     // 校验 code 唯一
@@ -78,6 +134,9 @@ export class WarehouseService {
         centerLng: input.centerLng,
         operatingHours: (input.operatingHours ?? null) as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue,
         deliveryFee: input.deliveryFee ?? 0,
+        // 缺省与 schema 默认一致（perKmFee 0=距离计费未启用；freeKm 2km 起步免费距离）
+        perKmFee: input.perKmFee ?? 0,
+        freeKm: input.freeKm ?? 2,
         status: input.status ?? 'ACTIVE',
       },
     });
@@ -105,6 +164,8 @@ export class WarehouseService {
       coverageArea: GeoJSONPolygon | null;
       operatingHours: unknown;
       deliveryFee: number;
+      perKmFee: number;
+      freeKm: number;
       status: 'ACTIVE' | 'INACTIVE';
     }>,
   ) {
@@ -122,14 +183,16 @@ export class WarehouseService {
         ...(input.centerLng !== undefined && { centerLng: input.centerLng }),
         ...(input.operatingHours !== undefined && { operatingHours: input.operatingHours as Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue }),
         ...(input.deliveryFee !== undefined && { deliveryFee: input.deliveryFee }),
+        ...(input.perKmFee !== undefined && { perKmFee: input.perKmFee }),
+        ...(input.freeKm !== undefined && { freeKm: input.freeKm }),
         ...(input.status !== undefined && { status: input.status }),
       },
     });
 
     // 若传入 PostGIS 字段，更新 center/coverage
     if (input.centerLat !== undefined || input.centerLng !== undefined || input.coverageArea !== undefined) {
-      const lon = input.centerLng ?? Number(updated.centerLng);
-      const lat = input.centerLat ?? Number(updated.centerLat);
+      const lon = input.centerLng ?? decimalToNumber(updated.centerLng);
+      const lat = input.centerLat ?? decimalToNumber(updated.centerLat);
       const coverage =
         input.coverageArea === null
           ? null
@@ -151,7 +214,7 @@ export class WarehouseService {
     await setWarehouseGeometry(
       db,
       id,
-      { lon: Number(existing.centerLng), lat: Number(existing.centerLat) },
+      { lon: decimalToNumber(existing.centerLng), lat: decimalToNumber(existing.centerLat) },
       coverage,
     );
     return { id, coverageArea: coverage };
@@ -187,6 +250,8 @@ export class WarehouseService {
     centerLng: { toNumber(): number };
     operatingHours: unknown;
     deliveryFee: number;
+    perKmFee: number;
+    freeKm: { toNumber(): number };
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -197,10 +262,13 @@ export class WarehouseService {
       name: w.name as Record<string, string>,
       shopId: w.shopId,
       address: w.address,
-      centerLat: w.centerLat.toNumber(),
-      centerLng: w.centerLng.toNumber(),
+      centerLat: decimalToNumber(w.centerLat),
+      centerLng: decimalToNumber(w.centerLng),
       operatingHours: w.operatingHours,
       deliveryFee: w.deliveryFee,
+      // 批 B 透出：perKmFee 分/km（int）、freeKm km（Decimal → number）
+      perKmFee: w.perKmFee,
+      freeKm: decimalToNumber(w.freeKm),
       status: w.status as 'ACTIVE' | 'INACTIVE',
       createdAt: w.createdAt.toISOString(),
       updatedAt: w.updatedAt.toISOString(),

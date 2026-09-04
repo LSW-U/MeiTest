@@ -109,6 +109,41 @@ describe('SystemConfigService', () => {
     expect(redisMock.del).toHaveBeenCalledWith('SystemConfig:k');
   });
 
+  it('P1-3 修复：update about.socials 时一并 del 派生缓存 AboutProfile', async () => {
+    dbMock.findUnique.mockResolvedValueOnce({ key: 'about.socials', value: 'old' });
+    dbMock.update.mockResolvedValueOnce({
+      key: 'about.socials',
+      value: 'new',
+      description: 'desc',
+      updatedAt: new Date('2026-06-23T10:00:00Z'),
+      updatedBy: 'user-1',
+    });
+    redisMock.del.mockResolvedValueOnce(1);
+
+    await service.update('about.socials', 'new', 'desc', 'user-1');
+
+    // 先 del 自身 SystemConfig 缓存，再 del 派生 AboutProfile
+    expect(redisMock.del).toHaveBeenCalledWith('SystemConfig:about.socials');
+    expect(redisMock.del).toHaveBeenCalledWith('AboutProfile');
+  });
+
+  it('P1-3 修复：update 非 about. 的 key 不动 AboutProfile', async () => {
+    dbMock.findUnique.mockResolvedValueOnce({ key: 'support.phone', value: 'old' });
+    dbMock.update.mockResolvedValueOnce({
+      key: 'support.phone',
+      value: 'new',
+      description: 'desc',
+      updatedAt: new Date(),
+      updatedBy: 'u',
+    });
+    redisMock.del.mockResolvedValueOnce(1);
+
+    await service.update('support.phone', 'new', 'desc', 'u');
+
+    expect(redisMock.del).toHaveBeenCalledWith('SystemConfig:support.phone');
+    expect(redisMock.del).not.toHaveBeenCalledWith('AboutProfile');
+  });
+
   it('update: key 不存在 → NotFoundException + E-PLATFORM-002', async () => {
     dbMock.findUnique.mockResolvedValueOnce(null);
     await expect(service.update('missing', 'x', undefined, 'u')).rejects.toThrow(

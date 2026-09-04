@@ -16,10 +16,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockWithTransaction, mockTx, mockRedis } = vi.hoisted(() => ({
+const { mockDb, mockWithTransaction, mockTx, mockRedis, mockEligibility } = vi.hoisted(() => ({
   mockDb: {
     deliveryTask: { findUnique: vi.fn() },
     riderProfile: { findUnique: vi.fn(), findMany: vi.fn() },
+    // 批 D（2026-09-03）：reassign 加金额资格校验 → 查 order.payableAmount
+    order: { findUnique: vi.fn() },
   },
   mockWithTransaction: vi.fn(),
   mockTx: {
@@ -31,6 +33,17 @@ const { mockDb, mockWithTransaction, mockTx, mockRedis } = vi.hoisted(() => ({
       exists: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     }),
+  },
+  // 批 D：资格校验 mock——默认「全额合格」（reassign 资格边界由 dispatch-deposit.test.ts 覆盖）
+  mockEligibility: {
+    assertCanAccept: vi.fn().mockResolvedValue({ riderProfileId: 'r-new', depositAmount: 5000, maxOrderAmount: null, tierId: 't4' }),
+  },
+}));
+
+// 批 D：DepositEligibilityService mock（reassign 注入第二构造参数）
+vi.mock('../src/modules/rider/deposit-eligibility.service', () => ({
+  DepositEligibilityService: class {
+    assertCanAccept = mockEligibility.assertCanAccept;
   },
 }));
 
@@ -88,7 +101,10 @@ describe('DispatchService.reassignTask + cancelTask（批次 4 事务编排）',
     );
     // 默认 findUnique 返回完整 task（ASSIGNED）
     mockDb.deliveryTask.findUnique.mockResolvedValue(mockTaskComplete);
-    service = new DispatchService(undefined as never);
+    // 批 D：reassign 资格校验默认放行（order 金额查询 + assertCanAccept 全合格）
+    mockDb.order.findUnique.mockResolvedValue({ payableAmount: 5800 });
+    mockEligibility.assertCanAccept.mockResolvedValue({ riderProfileId: 'r-new', depositAmount: 5000, maxOrderAmount: null, tierId: 't4' });
+    service = new DispatchService(undefined as never, mockEligibility as never);
   });
 
   it('reassign 成功：事务内 $executeRaw UPDATE WHERE ASSIGNED + order.update riderId 同事务 + note 追加', async () => {
