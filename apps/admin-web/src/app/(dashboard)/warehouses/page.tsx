@@ -6,20 +6,22 @@
  * 批 C1（Codex设计 §2）：
  * - toolbar：code/name 搜索 + ACTIVE/INACTIVE 状态筛选（前端过滤，仓库量少）
  * - 新增列：SKU 数 / 总库存量 / 仅可售（stockSummary 缺失显示 —）
- * - 负载列：C2 占位 Badge，不请求 dispatch 接口（拍板：C1 不做负载）
+ *
+ * 批 C2（2026-09-04）：
+ * - 负载列替换 C2 占位为真实数据（useWarehouseLoad 30s 轮询，warehouseId 匹配，无匹配 —）
+ * - 预警（isAlert，保证金批 C 定稿）→ 红高亮 + 跨仓支援入口（跳 /dispatch?warehouseId=xxx#dispatch-center）
  */
 'use client';
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { StatusBadge } from '@/components/common/status-badge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,6 +32,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useWarehouses, type Warehouse } from '@/hooks/api/use-warehouses';
+import { useWarehouseLoad, type WarehouseLoadItem } from '@/hooks/api/use-deposit';
+import { isAlert } from '@/components/warehouse/warehouse-load-panel';
+import { goDispatchCenter } from '@/components/warehouse/warehouse-load-card';
 import { formatCurrency } from '@/lib/utils';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -52,10 +57,19 @@ export default function WarehousesListPage() {
   const t = useTranslations('common');
   const router = useRouter();
   const { data, isLoading, error, refetch } = useWarehouses();
+  // 批 C2：负载列数据源（与派单中心共用同一 query，30s 轮询保鲜）
+  const loadQ = useWarehouseLoad();
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
   const items: Warehouse[] = useMemo(() => data?.data ?? [], [data]);
+
+  /** warehouseId → 负载数据（列表列精确匹配；无匹配显示 —） */
+  const loadMap = useMemo(() => {
+    const map = new Map<string, WarehouseLoadItem>();
+    for (const l of loadQ.data ?? []) map.set(l.warehouseId, l);
+    return map;
+  }, [loadQ.data]);
 
   const filtered = useMemo(() => {
     return items.filter((row) => {
@@ -137,12 +151,54 @@ export default function WarehousesListPage() {
     {
       key: 'load',
       header: t('w.warehouses.columnLoad'),
-      // C2 占位：不请求 dispatch 接口（Codex设计 §7）
-      render: () => (
-        <Badge variant="outline" className="text-muted-foreground">
-          {t('w.warehouses.loadPlaceholderC2')}
-        </Badge>
-      ),
+      // 批 C2：按 warehouseId 匹配负载（useWarehouseLoad 30s 轮询）；无匹配显示 —；
+      // 预警沿用保证金批 C 定稿（isAlert）→ 红高亮 + 跨仓支援入口（跳派单中心）
+      render: (row) => {
+        // 负载 query 出错：⚠ 提示与「该仓无数据」（—）区分（批 C2 修复 💭1）
+        if (loadQ.isError) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 text-xs text-destructive"
+              title={t('w.warehouses.loadErrorTip')}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {t('w.warehouses.loadErrorTip')}
+            </span>
+          );
+        }
+        const load = loadMap.get(row.id);
+        if (!load) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        const alert = isAlert(load);
+        return (
+          <div className={`space-y-0.5 text-xs ${alert ? 'font-medium text-destructive' : ''}`}>
+            <div>
+              {t('admin.warehouseLoad.pending')} {load.pendingTaskCount}
+            </div>
+            <div>
+              {t('admin.warehouseLoad.available')} {load.availableRiderCount}
+            </div>
+            <div className={alert ? undefined : 'text-muted-foreground'}>
+              {load.estWaitMinutes} · {t('admin.warehouseLoad.estWait')}
+            </div>
+            {alert && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 w-full px-2 text-xs"
+                onClick={(e) => {
+                  // 行点击跳详情，按钮跳派单中心：阻止冒泡
+                  e.stopPropagation();
+                  goDispatchCenter(router, row.id);
+                }}
+              >
+                {t('admin.warehouseLoad.crossSupport')}
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

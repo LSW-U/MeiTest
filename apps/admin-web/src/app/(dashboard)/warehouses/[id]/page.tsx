@@ -25,7 +25,7 @@ import { WarehouseFeeCard, type WarehouseFeeSaveInput } from '@/components/wareh
 import { WarehouseCoverageCard } from '@/components/warehouse/warehouse-coverage-card';
 import { WarehouseInventoryCard } from '@/components/warehouse/warehouse-inventory-card';
 import { WarehouseStaffCard } from '@/components/warehouse/warehouse-staff-card';
-import { WarehouseLoadPlaceholderCard } from '@/components/warehouse/warehouse-load-placeholder-card';
+import { WarehouseLoadCard } from '@/components/warehouse/warehouse-load-card';
 import {
   useWarehouse,
   useUpdateWarehouse,
@@ -168,7 +168,7 @@ export default function WarehouseDetailPage() {
 
         <WarehouseStaffCard staffList={warehouse.staffList} />
 
-        <WarehouseLoadPlaceholderCard warehouseId={id} />
+        <WarehouseLoadCard warehouseId={id} />
       </div>
     </>
   );
