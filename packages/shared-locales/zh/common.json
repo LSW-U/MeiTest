@@ -1461,11 +1461,6 @@
   "theme": {
     "toggle": "切换深色模式"
   },
-  "menu": {
-    "depositTiers": "保证金规则",
-    "depositLocations": "缴纳点管理",
-    "depositRequests": "保证金申请"
-  },
   "common": {
     "error": {
       "generic": "操作失败，请重试"

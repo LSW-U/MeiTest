@@ -1461,11 +1461,6 @@
       "crossSupport": "Cross Support"
     }
   },
-  "menu": {
-    "depositTiers": "Deposit Tiers",
-    "depositLocations": "Deposit Locations",
-    "depositRequests": "Deposit Requests"
-  },
   "common": {
     "error": {
       "generic": "Operation failed, please retry"

@@ -1461,11 +1461,6 @@
   "theme": {
     "toggle": "Ganti mode gelap"
   },
-  "menu": {
-    "depositTiers": "Deposit Tiers",
-    "depositLocations": "Deposit Locations",
-    "depositRequests": "Deposit Requests"
-  },
   "common": {
     "error": {
       "generic": "Operation failed, please retry"
