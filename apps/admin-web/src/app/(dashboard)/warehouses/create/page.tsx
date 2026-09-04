@@ -1,7 +1,12 @@
 /**
  * 新建仓库表单页 — /warehouses/create
  *
- * 后端：POST /admin/warehouses
+ * 后端：POST /admin/warehouses（UpsertWarehouseRequest 全必填）
+ *
+ * 批 C1（Codex设计 §5）：
+ * - 新增配送费区：deliveryFee（USD）/ perKmFee（默认 0，USD/分切换）/ freeKm（默认 2）
+ * - 新增默认营业时间开关（默认开启）：提交 mon..sun 08:00–22:00；关闭不提交 operatingHours
+ * - 覆盖区不在创建页绘制（拍板 6-A），创建成功跳详情页
  */
 'use client';
 
@@ -26,7 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreateWarehouse } from '@/hooks/api/use-warehouses';
+import { useCreateWarehouse, OPERATING_DAYS, type OperatingHours } from '@/hooks/api/use-warehouses';
+import {
+  WarehouseFeeFields,
+  usdToCents,
+  perKmFeeToCents,
+  freeKmToNumber,
+  convertPerKmFeeValue,
+  type PerKmUnit,
+} from '@/components/warehouse/warehouse-fee-fields';
 import type { I18nText } from '@/hooks/api/use-products';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
@@ -34,6 +47,13 @@ type Locale = 'en' | 'zh' | 'id' | 'pt';
 const WAREHOUSE_CODES = Array.from({ length: 10 }, (_, i) =>
   `W${String(i + 1).padStart(2, '0')}`,
 );
+
+/** 默认营业时间模板：mon..sun 08:00–22:00（拍板 1-A） */
+function buildDefaultOperatingHours(): OperatingHours {
+  return Object.fromEntries(
+    OPERATING_DAYS.map((day) => [day, { open: '08:00', close: '22:00', rest: false }]),
+  ) as OperatingHours;
+}
 
 export default function CreateWarehousePage() {
   const t = useTranslations('common');
@@ -46,14 +66,40 @@ export default function CreateWarehousePage() {
   const [centerLat, setCenterLat] = useState('');
   const [centerLng, setCenterLng] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
+  const [perKmFee, setPerKmFee] = useState('0');
+  const [perKmUnit, setPerKmUnit] = useState<PerKmUnit>('USD');
+  const [freeKm, setFreeKm] = useState('2');
+  const [useDefaultHours, setUseDefaultHours] = useState(true);
   const [isActive, setIsActive] = useState(true);
+
+  /** perKmUnit 切换只转换展示值（非法字符串保留原样，Codex设计 §5.4） */
+  const handlePerKmUnitChange = (next: PerKmUnit) => {
+    const converted = convertPerKmFeeValue(perKmFee, perKmUnit, next);
+    setPerKmFee(converted);
+    setPerKmUnit(next);
+  };
+
+  // 审查 P3-1：非法输入显性化（提交禁用 + 费用卡错误提示），不再静默 return / 静默归 0
+  const feesValid =
+    usdToCents(deliveryFee) !== null &&
+    perKmFeeToCents(perKmFee, perKmUnit) !== null &&
+    freeKmToNumber(freeKm) !== null;
+  const formValid =
+    feesValid &&
+    !Number.isNaN(Number.parseFloat(centerLat)) &&
+    !Number.isNaN(Number.parseFloat(centerLng));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(centerLat);
     const lng = parseFloat(centerLng);
-    const fee = Math.round(parseFloat(deliveryFee) * 100);
-    if (isNaN(lat) || isNaN(lng) || isNaN(fee)) return;
+    const deliveryFeeCents = usdToCents(deliveryFee);
+    const perKmFeeCents = perKmFeeToCents(perKmFee, perKmUnit);
+    const freeKmValue = freeKmToNumber(freeKm);
+    // 审查 P3-1：非法输入不再静默 return / 静默归 0，提交按钮已按 formValid 禁用
+    if (isNaN(lat) || isNaN(lng) || deliveryFeeCents === null || perKmFeeCents === null || freeKmValue === null) {
+      return;
+    }
     try {
       const res = await createMutation.mutateAsync({
         code,
@@ -61,8 +107,15 @@ export default function CreateWarehousePage() {
         address,
         centerLat: lat,
         centerLng: lng,
-        deliveryFee: fee,
+        deliveryFee: deliveryFeeCents,
+        perKmFee: perKmFeeCents,
+        freeKm: freeKmValue,
         isActive,
+        // 审查 P1-1：UpsertWarehouseRequest 的 coverageArea/operatingHours 是必填键（nullable 但键必须出现），
+        // 缺键 400 E-WAREHOUSE-004。coverageArea 恒传 null（service 有 5km 兜底框）；hours 关传 null，
+        // 创建后到详情页编辑（Codex设计 §5.1）
+        coverageArea: null,
+        operatingHours: useDefaultHours ? buildDefaultOperatingHours() : null,
       });
       router.push(`/warehouses/${res.data.id}`);
     } catch {
@@ -83,7 +136,7 @@ export default function CreateWarehousePage() {
             <Button type="button" variant="outline" onClick={() => router.back()}>
               {t('w.form.cancel')}
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit" disabled={createMutation.isPending || !formValid}>
               {createMutation.isPending ? t('w.form.saving') : t('w.form.save')}
             </Button>
           </div>
@@ -178,19 +231,50 @@ export default function CreateWarehousePage() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <Label>{t('w.warehouses.deliveryFeeUsd')}</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(e.target.value)}
-              placeholder="2.00"
-              required
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('w.warehouses.sectionFees')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!feesValid && (
+            <p className="mb-2 text-xs text-destructive">
+              {t('w.warehouses.feeInvalidHint')}
+            </p>
+          )}
+          <WarehouseFeeFields
+            deliveryFee={deliveryFee}
+            perKmFee={perKmFee}
+            perKmUnit={perKmUnit}
+            freeKm={freeKm}
+            disabled={createMutation.isPending}
+            onDeliveryFeeChange={setDeliveryFee}
+            onPerKmFeeChange={setPerKmFee}
+            onPerKmUnitChange={handlePerKmUnitChange}
+            onFreeKmChange={setFreeKm}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('w.warehouses.sectionOperatingHours')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={useDefaultHours}
+              onCheckedChange={setUseDefaultHours}
+              disabled={createMutation.isPending}
             />
-            <p className="text-xs text-muted-foreground">{t('w.warehouses.deliveryFeeHint')}</p>
+            <Label>{t('w.warehouses.useDefaultHours')}</Label>
           </div>
+          <p className="text-sm text-muted-foreground">
+            {t('w.warehouses.defaultHoursSummary')}
+          </p>
+          <p className="text-xs text-muted-foreground">{t('w.warehouses.defaultHoursHint')}</p>
         </CardContent>
       </Card>
 
