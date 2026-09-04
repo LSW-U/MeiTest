@@ -17,7 +17,16 @@ import { ZodSchema, ZodError } from 'zod';
 
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private schema: ZodSchema) {}
+  /**
+   * @param schema    契约 Zod schema
+   * @param errorCode 可选：校验失败返回的业务错误码（默认 E-COMMON-001）。
+   *                  模块级 pipe 可传本模块错误码段（如 warehouse 用 E-WAREHOUSE-004），
+   *                  前端按 code 查 errors.json 显示本地化文案。
+   */
+  constructor(
+    private schema: ZodSchema,
+    private errorCode: string = 'E-COMMON-001',
+  ) {}
 
   transform(value: unknown, _metadata: ArgumentMetadata) {
     try {
@@ -30,7 +39,7 @@ export class ZodValidationPipe implements PipeTransform {
           code: err.code,
         }));
         throw new BadRequestException({
-          code: 'E-COMMON-001',
+          code: this.errorCode,
           message: 'Validation failed',
           details,
         });

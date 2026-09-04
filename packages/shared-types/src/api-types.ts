@@ -1628,36 +1628,52 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
@@ -1693,7 +1709,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 后台仓库列表 */
+                /** @description 后台仓库列表（含 perKmFee/freeKm 配送费三字段 + stockSummary 库存聚合） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1721,36 +1737,52 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
@@ -1788,35 +1820,44 @@ export interface paths {
                         address: string;
                         operatingHours: {
                             mon?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             tue?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             wed?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             thu?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             fri?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             sat?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             sun?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                         } | null;
                         deliveryFee: number;
+                        perKmFee?: number;
+                        freeKm?: number;
                         isActive: boolean;
                     };
                 };
@@ -1850,36 +1891,52 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
@@ -1932,7 +1989,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 仓库详情（含 coverageArea GeoJSON） */
+                /** @description 仓库详情（含 coverageArea GeoJSON + 在编人员 staffList） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1960,42 +2017,66 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
+                            staffList: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                name: string | null;
+                                roles: string[];
+                            }[];
                         };
                     };
                 };
@@ -2061,7 +2142,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** @description 更新仓库（普通字段 + 可选 PostGIS） */
+        /** @description 更新仓库（普通字段 + 可选 PostGIS；部分更新只动传入字段，UpdateWarehouseRequest 全可选） */
         patch: {
             parameters: {
                 query?: never;
@@ -2073,49 +2154,58 @@ export interface paths {
                 content: {
                     "application/json": {
                         code?: string;
-                        name: {
+                        name?: {
                             [key: string]: string;
                         };
-                        coverageArea: {
+                        coverageArea?: {
                             /** @enum {string} */
                             type: "Polygon";
                             coordinates: number[][][];
                         } | null;
-                        centerLat: number;
-                        centerLng: number;
-                        address: string;
-                        operatingHours: {
+                        centerLat?: number;
+                        centerLng?: number;
+                        address?: string;
+                        operatingHours?: {
                             mon?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             tue?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             wed?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             thu?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             fri?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             sat?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                             sun?: {
-                                open: string;
-                                close: string;
+                                open: string | "";
+                                close: string | "";
+                                rest?: boolean;
                             };
                         } | null;
-                        deliveryFee: number;
-                        isActive: boolean;
+                        deliveryFee?: number;
+                        perKmFee?: number;
+                        freeKm?: number;
+                        isActive?: boolean;
                     };
                 };
             };
@@ -2148,36 +2238,52 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
@@ -2289,36 +2395,52 @@ export interface paths {
                             address: string;
                             operatingHours: {
                                 mon?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 tue?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 wed?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 thu?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 fri?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sat?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                                 sun?: {
-                                    open: string;
-                                    close: string;
+                                    open: string | "";
+                                    close: string | "";
+                                    rest?: boolean;
                                 };
                             } | null;
                             /** @default 0 */
                             deliveryFee: number;
+                            /** @default 0 */
+                            perKmFee: number;
+                            /** @default 2 */
+                            freeKm: number;
+                            stockSummary?: {
+                                skuCount: number;
+                                totalQuantity: number;
+                                sellableQuantity: number;
+                            };
                             /** @default true */
                             isActive: boolean;
                             /** Format: date-time */
@@ -18247,42 +18369,141 @@ export interface components {
             address: string;
             operatingHours: {
                 mon?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 tue?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 wed?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 thu?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 fri?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 sat?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 sun?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
             } | null;
             /** @default 0 */
             deliveryFee: number;
+            /** @default 0 */
+            perKmFee: number;
+            /** @default 2 */
+            freeKm: number;
+            stockSummary?: {
+                skuCount: number;
+                totalQuantity: number;
+                sellableQuantity: number;
+            };
             /** @default true */
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        WarehouseDetailResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: {
+                [key: string]: string;
+            };
+            coverageArea: {
+                /** @enum {string} */
+                type: "Polygon";
+                coordinates: number[][][];
+            } | null;
+            centerPoint: {
+                /** @enum {string} */
+                type: "Point";
+                coordinates: number[];
+            } | null;
+            centerLat: number | null;
+            centerLng: number | null;
+            address: string;
+            operatingHours: {
+                mon?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                tue?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                wed?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                thu?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                fri?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                sat?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                sun?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+            } | null;
+            /** @default 0 */
+            deliveryFee: number;
+            /** @default 0 */
+            perKmFee: number;
+            /** @default 2 */
+            freeKm: number;
+            stockSummary?: {
+                skuCount: number;
+                totalQuantity: number;
+                sellableQuantity: number;
+            };
+            /** @default true */
+            isActive: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            staffList: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                userId: string;
+                name: string | null;
+                roles: string[];
+            }[];
         };
         UpsertWarehouseRequest: {
             code?: string;
@@ -18299,40 +18520,117 @@ export interface components {
             address: string;
             operatingHours: {
                 mon?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 tue?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 wed?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 thu?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 fri?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 sat?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
                 sun?: {
-                    open: string;
-                    close: string;
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
                 };
             } | null;
             deliveryFee: number;
+            perKmFee?: number;
+            freeKm?: number;
             isActive: boolean;
+        };
+        UpdateWarehouseRequest: {
+            code?: string;
+            name?: {
+                [key: string]: string;
+            };
+            coverageArea?: {
+                /** @enum {string} */
+                type: "Polygon";
+                coordinates: number[][][];
+            } | null;
+            centerLat?: number;
+            centerLng?: number;
+            address?: string;
+            operatingHours?: {
+                mon?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                tue?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                wed?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                thu?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                fri?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                sat?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+                sun?: {
+                    open: string | "";
+                    close: string | "";
+                    rest?: boolean;
+                };
+            } | null;
+            deliveryFee?: number;
+            perKmFee?: number;
+            freeKm?: number;
+            isActive?: boolean;
         };
         MatchWarehouseRequest: {
             lat: number;
             lng: number;
+        };
+        StockSummary: {
+            skuCount: number;
+            totalQuantity: number;
+            sellableQuantity: number;
+        };
+        WarehouseStaffItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            name: string | null;
+            roles: string[];
         };
         Product: {
             /** Format: uuid */

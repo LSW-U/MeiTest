@@ -121,6 +121,7 @@
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
   "E-WAREHOUSE-003": "Warehouse not found",
+  "E-WAREHOUSE-004": "Invalid warehouse request parameters",
   "E-AUTH-007": "No password set. Use SMS password reset to set one first",
   "E-FEEDBACK-001": "Image URL must be from our upload service",
   "E-FEEDBACK-002": "Feedback not found",

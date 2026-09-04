@@ -64,8 +64,13 @@ import {
   UpdateShopRequest,
   // warehouse
   Warehouse,
+  WarehouseDetailResponse,
   UpsertWarehouseRequest,
+  UpdateWarehouseRequest,
   MatchWarehouseRequest,
+  StockSummary,
+  WarehouseStaffItem,
+  GeoJsonPolygon,
   UpdatePricingConfigRequest,
   PricingConfigResponse,
   // catalog
@@ -316,8 +321,12 @@ registry.register('Shop', Shop);
 registry.register('UpdateShopRequest', UpdateShopRequest);
 
 registry.register('Warehouse', Warehouse);
+registry.register('WarehouseDetailResponse', WarehouseDetailResponse);
 registry.register('UpsertWarehouseRequest', UpsertWarehouseRequest);
+registry.register('UpdateWarehouseRequest', UpdateWarehouseRequest);
 registry.register('MatchWarehouseRequest', MatchWarehouseRequest);
+registry.register('StockSummary', StockSummary);
+registry.register('WarehouseStaffItem', WarehouseStaffItem);
 
 registry.register('Product', Product);
 registry.register('ProductSummary', ProductSummary);
@@ -889,7 +898,7 @@ registry.registerPath({
   tags: ['warehouse'],
   responses: {
     200: {
-      description: '后台仓库列表',
+      description: '后台仓库列表（含 perKmFee/freeKm 配送费三字段 + stockSummary 库存聚合）',
       content: { 'application/json': { schema: Warehouse.array() } },
     },
   },
@@ -901,8 +910,8 @@ registry.registerPath({
   tags: ['warehouse'],
   responses: {
     200: {
-      description: '仓库详情（含 coverageArea GeoJSON）',
-      content: { 'application/json': { schema: Warehouse } },
+      description: '仓库详情（含 coverageArea GeoJSON + 在编人员 staffList）',
+      content: { 'application/json': { schema: WarehouseDetailResponse } },
     },
     404: { description: 'WAREHOUSE_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
   },
@@ -929,9 +938,9 @@ registry.registerPath({
   method: 'patch',
   path: '/api/v1/admin/warehouses/{id}',
   tags: ['warehouse'],
-  description: '更新仓库（普通字段 + 可选 PostGIS）',
+  description: '更新仓库（普通字段 + 可选 PostGIS；部分更新只动传入字段，UpdateWarehouseRequest 全可选）',
   request: {
-    body: { content: { 'application/json': { schema: UpsertWarehouseRequest } } },
+    body: { content: { 'application/json': { schema: UpdateWarehouseRequest } } },
   },
   responses: {
     200: {
@@ -947,7 +956,8 @@ registry.registerPath({
   tags: ['warehouse'],
   description: '单独更新配送范围多边形（地图编辑器调）',
   request: {
-    body: { content: { 'application/json': { schema: z.object({ coverageArea: UpsertWarehouseRequest.shape.coverageArea.unwrap() }) } } },
+    // 批 B：UpsertWarehouseRequest 加 refine 后是 ZodEffects（无 .shape），coverage 与其字段同源，直接用 GeoJsonPolygon
+    body: { content: { 'application/json': { schema: z.object({ coverageArea: GeoJsonPolygon }) } } },
   },
   responses: {
     200: { description: '更新成功' },
