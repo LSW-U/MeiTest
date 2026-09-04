@@ -28,7 +28,24 @@ function i18n(en: string, zh: string, id: string, pt: string): Record<string, st
   return { en, zh, id, pt };
 }
 
-/** 3 个仓库真实东帝汶坐标 + 覆盖范围 */
+/**
+ * 营业时间结构约定（Warehouse 模块完善批 A 文档化）：
+ * `{ mon..sun: { open: 'HH:mm' | '', close: 'HH:mm' | '', rest?: boolean } }`
+ * - rest: true 或 open/close 为空字符串 = 休息日（不营业）
+ * - 本期 seed 为每天 08:00–22:00、无休息日（已定沿用）；上线后由 admin-web 营业时间周表修改
+ * - 不支持跨天（close 必须 > open），为已知限制
+ */
+const OPERATING_HOURS = {
+  mon: { open: '08:00', close: '22:00' },
+  tue: { open: '08:00', close: '22:00' },
+  wed: { open: '08:00', close: '22:00' },
+  thu: { open: '08:00', close: '22:00' },
+  fri: { open: '08:00', close: '22:00' },
+  sat: { open: '08:00', close: '22:00' },
+  sun: { open: '08:00', close: '22:00' },
+} as const;
+
+/** 3 个仓库真实东帝汶坐标 + 覆盖范围（perKmFee/freeKm 为存档语义：显式写入与 schema 默认一致；单位：perKmFee 分/km，freeKm km） */
 const WAREHOUSES = [
   {
     code: 'W01',
@@ -37,6 +54,8 @@ const WAREHOUSES = [
     center: { lon: 125.56, lat: -8.5568 },
     coverage: buildBoxPolygon(125.56, -8.5568, 0.2),
     deliveryFee: 500,
+    perKmFee: 0,
+    freeKm: 2,
   },
   {
     code: 'W02',
@@ -45,6 +64,8 @@ const WAREHOUSES = [
     center: { lon: 126.45, lat: -8.4667 },
     coverage: buildBoxPolygon(126.45, -8.4667, 0.2),
     deliveryFee: 600,
+    perKmFee: 0,
+    freeKm: 2,
   },
   {
     code: 'W03',
@@ -53,6 +74,8 @@ const WAREHOUSES = [
     center: { lon: 125.3833, lat: -8.9167 },
     coverage: buildBoxPolygon(125.3833, -8.9167, 0.2),
     deliveryFee: 700,
+    perKmFee: 0,
+    freeKm: 2,
   },
 ] as const;
 
@@ -160,7 +183,13 @@ async function main() {
   for (const w of WAREHOUSES) {
     const created = await prisma.warehouse.upsert({
       where: { code: w.code },
-      update: {},
+      // 幂等补齐（批 A 收尾 P2-1，用户拍板选 c 白名单收窄）：update 仅刷新 perKmFee/freeKm 两个补齐/存档语义字段；
+      // 不覆盖 name/address/operatingHours/deliveryFee/status 等运营字段（避免 db:seed 重跑覆盖 admin 手改值，同 systemConfig/shop 惯例）；
+      // center/coverage 由下方 setWarehouseGeometry 单独重刷
+      update: {
+        perKmFee: w.perKmFee,
+        freeKm: w.freeKm,
+      },
       create: {
         code: w.code,
         name: w.name,
@@ -168,16 +197,10 @@ async function main() {
         address: w.address,
         centerLat: w.center.lat,
         centerLng: w.center.lon,
-        operatingHours: {
-          mon: { open: '08:00', close: '22:00' },
-          tue: { open: '08:00', close: '22:00' },
-          wed: { open: '08:00', close: '22:00' },
-          thu: { open: '08:00', close: '22:00' },
-          fri: { open: '08:00', close: '22:00' },
-          sat: { open: '08:00', close: '22:00' },
-          sun: { open: '08:00', close: '22:00' },
-        },
+        operatingHours: OPERATING_HOURS,
         deliveryFee: w.deliveryFee,
+        perKmFee: w.perKmFee,
+        freeKm: w.freeKm,
         status: 'ACTIVE',
       },
     });
