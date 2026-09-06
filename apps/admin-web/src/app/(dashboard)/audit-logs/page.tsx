@@ -13,9 +13,10 @@
 'use client';
 
 import { useState, useDeferredValue } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
+import { formatLocaleDateTime } from '@/lib/utils';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ function formatJson(v: unknown): string {
 
 export default function AuditLogsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
 
   // 筛选 state（action/userId/resourceType 输入用 useDeferredValue 防抖）
@@ -113,7 +115,7 @@ export default function AuditLogsListPage() {
       header: t('admin.auditLogs.columnCreatedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground font-mono">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

@@ -6,4 +6,5 @@
  */
 export const SUPPORTED_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
-export const DEFAULT_LOCALE: SupportedLocale = 'en';
+/** 默认语言（Q1：后台默认中文开箱即用；手动选择后经 locale cookie 记忆） */
+export const DEFAULT_LOCALE: SupportedLocale = 'zh';

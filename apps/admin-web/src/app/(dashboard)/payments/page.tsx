@@ -13,7 +13,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -53,7 +53,7 @@ import {
   type PaymentMethod,
 } from '@/hooks/api/use-payments';
 import { ApiError } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 const STATUS_FILTERS: { value: PaymentStatus | 'ALL'; labelKey: string }[] = [
@@ -83,6 +83,7 @@ const METHOD_LABEL_KEY: Record<PaymentMethod, string> = {
 
 export default function PaymentsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'ALL'>('ALL');
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'ALL'>('ALL');
@@ -189,7 +190,7 @@ export default function PaymentsListPage() {
       header: t('admin.payments.columnCreatedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

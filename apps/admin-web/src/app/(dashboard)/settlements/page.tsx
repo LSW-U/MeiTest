@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -48,7 +48,7 @@ import {
   type SettlementSubjectType,
   type RunSettlementInput,
 } from '@/hooks/api/use-settlements';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDate } from '@/lib/utils';
 import { ApiError } from '@/lib/api';
 
 const PAGE_SIZE = 20;
@@ -68,6 +68,7 @@ const SUBJECT_TYPE_LABEL_KEY: Record<SettlementSubjectType, string> = {
 
 export default function SettlementsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
 
   const [statusFilter, setStatusFilter] = useState<SettlementStatus | 'ALL'>('ALL');
@@ -204,7 +205,7 @@ export default function SettlementsListPage() {
           </Button>
         ) : row.confirmedAt ? (
           <span className="text-xs text-muted-foreground">
-            {new Date(row.confirmedAt).toLocaleDateString()}
+            {formatLocaleDate(row.confirmedAt, locale)}
           </span>
         ) : null,
     },

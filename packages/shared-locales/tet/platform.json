@@ -60,6 +60,7 @@
       "month": "Fulan ne'e"
     },
     "trendTitle": "Tendénsia GMV / Order",
+    "trendTooltip": "[TET] {bucket}: {gmv} ({orders} orders)",
     "warehouseBreakdownTitle": "Distribuisaun tuir Armazéng",
     "warehouseName": "Armazéng",
     "abnormalCount": "Anormal",

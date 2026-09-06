@@ -7,7 +7,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
@@ -33,7 +33,7 @@ import {
   type Refund,
   type RefundStatus,
 } from '@/hooks/api/use-refunds';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 
 type RefundReason =
   | 'OUT_OF_STOCK'
@@ -62,6 +62,7 @@ const REASON_LABEL_KEY: Record<RefundReason, string> = {
 
 export default function RefundsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const [statusFilter, setStatusFilter] = useState<RefundStatus | 'ALL'>('PENDING');
   const [rejectTarget, setRejectTarget] = useState<Refund | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -142,7 +143,7 @@ export default function RefundsListPage() {
       header: t('admin.refunds.columnAppliedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

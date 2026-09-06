@@ -14,10 +14,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { EmptyState } from '@/components/common/empty-state';
+import { formatLocaleDateTime } from '@/lib/utils';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,6 +63,7 @@ interface TransferRow {
 
 export default function InventoryPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
   const [warehouseId, setWarehouseId] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -247,7 +249,7 @@ export default function InventoryPage() {
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-muted-foreground">{tr.referenceId.slice(0, 8)}</span>
                     <span>{tr.fromWarehouseId.slice(0, 8)} → {tr.toWarehouseId.slice(0, 8)}</span>
-                    <span className="text-muted-foreground">{new Date(tr.createdAt).toLocaleString()}</span>
+                    <span className="text-muted-foreground">{formatLocaleDateTime(tr.createdAt, locale)}</span>
                   </div>
                   <div className="mt-1 text-muted-foreground">
                     {tr.items.map((it, i) => (

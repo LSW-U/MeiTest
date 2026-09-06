@@ -60,6 +60,7 @@
       "month": "本月"
     },
     "trendTitle": "GMV / 订单趋势",
+    "trendTooltip": "{bucket}: {gmv}（{orders} 单）",
     "warehouseBreakdownTitle": "仓库维度钻取",
     "warehouseName": "仓库",
     "abnormalCount": "异常数",

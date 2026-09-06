@@ -60,6 +60,7 @@
       "month": "Bulan Ini"
     },
     "trendTitle": "Tren GMV / Pesanan",
+    "trendTooltip": "{bucket}: {gmv} ({orders} pesanan)",
     "warehouseBreakdownTitle": "Rincian per Gudang",
     "warehouseName": "Gudang",
     "abnormalCount": "Abnormal",

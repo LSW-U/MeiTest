@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -54,7 +54,7 @@ import {
   type AdminRiderListItem,
 } from '@/hooks/api/use-admin-riders';
 import { ApiError } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 
 const APPLICATION_STATUS_FILTERS: ApplicationStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
 const APPLICATION_STATUS_LABEL_KEY: Record<ApplicationStatus, string> = {
@@ -400,6 +400,7 @@ function RidersListSection() {
 
 function ApplicationsSection() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus>('PENDING');
   const [approveTarget, setApproveTarget] = useState<RiderApplication | null>(null);
   const [rejectTarget, setRejectTarget] = useState<RiderApplication | null>(null);
@@ -463,7 +464,7 @@ function ApplicationsSection() {
       header: t('admin.riders.columnAppliedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

@@ -87,6 +87,12 @@ import tetErrors from './tet/errors.json';
 
 export const SUPPORTED_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
+/**
+ * 默认语言（en）= API 错误消息兜底语义（apps/api all-exceptions.filter 在请求无
+ * Accept-Language 时用它取错误文案）。
+ * 注意：与 apps/admin-web/src/i18n/config.ts 的 DEFAULT_LOCALE（'zh'，admin UI 默认语言）
+ * 不同源不同义，改这里不影响 admin UI 默认语言，反之亦然。
+ */
 export const DEFAULT_LOCALE: Locale = 'en';
 
 /** 单语言的所有模块 */

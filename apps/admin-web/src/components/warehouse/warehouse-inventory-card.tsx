@@ -8,9 +8,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatLocaleDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export function WarehouseInventoryCard({ warehouseId }: { warehouseId: string }) {
   const t = useTranslations('common');
+  const locale = useLocale();
   const stocksQ = useStocks({ warehouseId });
   const logsQ = useStockLogs(warehouseId);
 
@@ -64,7 +66,7 @@ export function WarehouseInventoryCard({ warehouseId }: { warehouseId: string })
       header: t('w.warehouses.columnTime'),
       render: (row) => (
         <span className="font-mono text-xs">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

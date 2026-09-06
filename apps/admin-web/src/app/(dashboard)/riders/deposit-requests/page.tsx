@@ -12,7 +12,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -46,7 +46,7 @@ import {
   useRejectDepositRequest,
   type RiderDepositRequestItem,
 } from '@/hooks/api/use-deposit';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import { ApiError } from '@/lib/api';
 
 type StatusFilter = 'ALL' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'REFUNDED';
@@ -55,6 +55,7 @@ const PAGE_SIZE = 20;
 
 export default function DepositRequestsPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
 
   const [status, setStatus] = useState<StatusFilter>('PENDING');
@@ -182,7 +183,7 @@ export default function DepositRequestsPage() {
             label={t(`admin.deposit.requests.status${req.status.charAt(0)}${req.status.slice(1).toLowerCase()}`)} />
           {req.status === 'CONFIRMED' && req.confirmedAt && (
             <div className="text-xs text-muted-foreground">
-              {new Date(req.confirmedAt).toLocaleString()}
+              {formatLocaleDateTime(req.confirmedAt, locale)}
             </div>
           )}
           {req.adminNote && (

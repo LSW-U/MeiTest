@@ -17,7 +17,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { WarehouseLoadPanel } from '@/components/warehouse/warehouse-load-panel';
@@ -58,7 +58,7 @@ import {
   type DeliveryTaskStatus,
 } from '@/hooks/api/use-dispatch';
 import { ApiError } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 const STATUS_FILTERS: { value: DeliveryTaskStatus | 'ALL'; labelKey: string }[] = [
@@ -73,6 +73,7 @@ const STATUS_FILTERS: { value: DeliveryTaskStatus | 'ALL'; labelKey: string }[] 
 
 function DispatchTasksContent() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
   // 批 C2 修复 P2-1（2026-09-04）：仓库列表/详情「跨仓支援」跳 /dispatch?warehouseId=xxx#dispatch-center，
   // 此处读取 query 初始化仓筛选，把预留上下文接真（仅首挂载读一次，之后仍可手动改）
@@ -172,7 +173,7 @@ function DispatchTasksContent() {
       header: t('admin.dispatch.columnAssignedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.assignedAt ? new Date(row.assignedAt).toLocaleString() : '-'}
+          {row.assignedAt ? formatLocaleDateTime(row.assignedAt, locale) : '-'}
         </span>
       ),
     },
@@ -347,6 +348,7 @@ function TaskDetailDialog({
   onClose: () => void;
 }) {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { data, isPending } = useDispatchTaskDetail(target?.id);
   const detail = data ?? target;
 
@@ -397,7 +399,7 @@ function TaskDetailDialog({
               {detail.estimatedArrival && (
                 <div className="col-span-2">
                   <span className="text-muted-foreground">{t('admin.dispatch.detailEta')}:</span>{' '}
-                  {new Date(detail.estimatedArrival).toLocaleString()}
+                  {formatLocaleDateTime(detail.estimatedArrival, locale)}
                 </div>
               )}
             </div>

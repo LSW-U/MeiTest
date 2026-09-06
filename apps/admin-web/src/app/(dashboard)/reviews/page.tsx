@@ -9,10 +9,11 @@
 
 import { useState, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
+import { formatLocaleDateTime } from '@/lib/utils';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ const RATING_FILTERS = ['ALL', '5', '4', '3', '2', '1'] as const;
 
 export default function ReviewsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const [tab, setTab] = useState<ReviewType>('customer');
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'ALL'>('ALL');
@@ -139,7 +141,7 @@ export default function ReviewsListPage() {
       header: t('admin.reviews.columnCreatedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

@@ -60,6 +60,7 @@
       "month": "This Month"
     },
     "trendTitle": "GMV / Order Trend",
+    "trendTooltip": "{bucket}: {gmv} ({orders} orders)",
     "warehouseBreakdownTitle": "Warehouse Breakdown",
     "warehouseName": "Warehouse",
     "abnormalCount": "Abnormal",

@@ -14,7 +14,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -53,7 +53,7 @@ import {
   type PayoutChannel,
   type PayoutAccount,
 } from '@/hooks/api/use-withdrawals';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import { ApiError } from '@/lib/api';
 
 const PAGE_SIZE = 20;
@@ -81,6 +81,7 @@ const CHANNEL_LABEL_KEY: Record<PayoutChannel, string> = {
 
 export default function WithdrawalsListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const { toast } = useToast();
 
   const [statusFilter, setStatusFilter] = useState<WithdrawalStatus | 'ALL'>('PENDING');
@@ -253,7 +254,7 @@ export default function WithdrawalsListPage() {
       header: t('admin.withdrawals.columnAppliedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

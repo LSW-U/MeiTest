@@ -60,6 +60,7 @@
       "month": "Este Mês"
     },
     "trendTitle": "Tendência GMV / Encomendas",
+    "trendTooltip": "{bucket}: {gmv} ({orders} pedidos)",
     "warehouseBreakdownTitle": "Distribuição por Armazém",
     "warehouseName": "Armazém",
     "abnormalCount": "Anormal",

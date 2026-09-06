@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -25,7 +25,7 @@ import {
   type OrderListItem,
   type OrderStatus,
 } from '@/hooks/api/use-orders';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 
 const STATUS_FILTERS: { value: OrderStatus | 'ALL'; labelKey: string }[] = [
   { value: 'ALL', labelKey: 'admin.orders.statusAll' },
@@ -39,6 +39,7 @@ const STATUS_FILTERS: { value: OrderStatus | 'ALL'; labelKey: string }[] = [
 
 export default function OrdersListPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL');
   const [orderNoSearch, setOrderNoSearch] = useState('');
@@ -101,7 +102,7 @@ export default function OrdersListPage() {
       header: t('admin.orders.columnCreatedAt'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {new Date(row.createdAt).toLocaleString()}
+          {formatLocaleDateTime(row.createdAt, locale)}
         </span>
       ),
     },

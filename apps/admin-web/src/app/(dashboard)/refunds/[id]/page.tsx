@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import {
   useRefundDetail,
   useRetriggerReturnTask,
@@ -50,6 +50,7 @@ function pickProductName(productName: Record<string, string>, skuId: string): st
 
 export default function RefundDetailPage() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -133,7 +134,7 @@ export default function RefundDetailPage() {
           />
           <Field
             label={t('admin.refunds.columnAppliedAt')}
-            value={new Date(refund.createdAt).toLocaleString()}
+            value={formatLocaleDateTime(refund.createdAt, locale)}
           />
           <Field
             label={t('admin.refunds.fieldOrderId')}
@@ -220,7 +221,7 @@ export default function RefundDetailPage() {
             />
             <Field
               label={t('admin.refunds.fieldReviewedAt')}
-              value={refund.reviewedAt ? new Date(refund.reviewedAt).toLocaleString() : '—'}
+              value={refund.reviewedAt ? formatLocaleDateTime(refund.reviewedAt, locale) : '—'}
             />
             {refund.reviewNote && (
               <div className="space-y-1 sm:col-span-2">

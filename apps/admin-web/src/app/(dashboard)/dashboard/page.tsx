@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, AlertCircle, ShoppingCart, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
@@ -24,20 +24,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { apiFetch, type ApiSuccess, type Perspective } from '@/lib/api';
 import { usePerspectiveStore } from '@/stores/perspective';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, formatLocaleDateTime } from '@/lib/utils';
 import type { components } from '@meimart/shared-types';
 
 type DashboardSummary = components['schemas']['DashboardSummary'];
 type TimeRange = 'today' | 'week' | 'month';
 
 const RANGES: TimeRange[] = ['today', 'week', 'month'];
-
-function formatMoney(cents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(cents / 100);
-}
 
 function formatGrowth(pct: number): string {
   if (pct === 0) return '—';
@@ -83,7 +76,7 @@ const KPI_CONFIG: Record<
   gmv: {
     titleKey: 'dashboard.gmv',
     icon: TrendingUp,
-    getValue: (d) => formatMoney(d.gmv),
+    getValue: (d) => formatCurrency(d.gmv),
     getGrowth: (d) => d.gmvGrowthPct,
   },
   orderCount: {
@@ -142,6 +135,7 @@ const PERSPECTIVE_ACTIONS: Record<
 
 export default function DashboardPage() {
   const t = useTranslations('platform');
+  const locale = useLocale();
   const perspective = usePerspectiveStore((s) => s.perspective);
   const [range, setRange] = useState<TimeRange>('today');
 
@@ -192,7 +186,7 @@ export default function DashboardPage() {
             <KpiCard
               title={t('dashboard.gmv')}
               icon={TrendingUp}
-              value={data ? formatMoney(data.gmv) : undefined}
+              value={data ? formatCurrency(data.gmv) : undefined}
               growth={data?.gmvGrowthPct}
               loading={isLoading}
             />
@@ -255,7 +249,7 @@ export default function DashboardPage() {
                       >
                         <span className="font-medium">{displayName(w.warehouseName)}</span>
                         <div className="text-right">
-                          <div className="font-mono text-xs">{formatMoney(w.gmv)}</div>
+                          <div className="font-mono text-xs">{formatCurrency(w.gmv)}</div>
                           <div className="text-xs text-muted-foreground">
                             {t('dashboard.breakdownItem', {
                               orders: w.orderCount,
@@ -278,8 +272,8 @@ export default function DashboardPage() {
           {/* 时间范围信息 */}
           {data && (
             <div className="text-xs text-muted-foreground">
-              {t('dashboard.dataRangeLabel')} {new Date(data.from).toLocaleString()} ~{' '}
-              {new Date(data.to).toLocaleString()}
+              {t('dashboard.dataRangeLabel')} {formatLocaleDateTime(data.from, locale)} ~{' '}
+              {formatLocaleDateTime(data.to, locale)}
             </div>
           )}
         </>
@@ -307,6 +301,7 @@ function PerspectiveDashboard({
   setRange: (r: TimeRange) => void;
 }) {
   const t = useTranslations('platform');
+  const locale = useLocale();
   // i18n key 用驼峰（rider-mgmt → riderMgmt）
   const subKey = perspective === 'rider-mgmt' ? 'riderMgmt' : perspective;
   const kpis = PERSPECTIVE_KPI[perspective];
@@ -371,8 +366,8 @@ function PerspectiveDashboard({
 
           {data && (
             <div className="text-xs text-muted-foreground">
-              {t('dashboard.dataRangeLabel')} {new Date(data.from).toLocaleString()} ~{' '}
-              {new Date(data.to).toLocaleString()}
+              {t('dashboard.dataRangeLabel')} {formatLocaleDateTime(data.from, locale)} ~{' '}
+              {formatLocaleDateTime(data.to, locale)}
             </div>
           )}
         </>
@@ -433,13 +428,18 @@ function TrendBars({
 }: {
   points: Array<{ bucket: string; gmv: number; orderCount: number }>;
 }) {
+  const t = useTranslations('platform');
   const maxGmv = Math.max(...points.map((p) => p.gmv), 1);
   return (
     <div className="flex h-40 items-end gap-1">
       {points.map((p) => (
         <div
           key={p.bucket}
-          title={`${p.bucket}: ${formatMoney(p.gmv)} (${p.orderCount} orders)`}
+          title={t('dashboard.trendTooltip', {
+            bucket: p.bucket,
+            gmv: formatCurrency(p.gmv),
+            orders: p.orderCount,
+          })}
           className={cn(
             'flex-1 min-w-[2px] rounded-t',
             p.gmv > 0 ? 'bg-primary' : 'bg-muted',

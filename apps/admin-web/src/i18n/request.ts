@@ -4,16 +4,19 @@ import { cookies } from 'next/headers';
 import {
   messages,
   SUPPORTED_LOCALES,
-  DEFAULT_LOCALE,
   type Locale,
 } from '@meimart/shared-locales';
-import { SUPPORTED_LOCALES as WEB_LOCALES, type SupportedLocale } from './config';
+import {
+  SUPPORTED_LOCALES as WEB_LOCALES,
+  DEFAULT_LOCALE,
+  type SupportedLocale,
+} from './config';
 
 export { WEB_LOCALES as SUPPORTED_LOCALES, DEFAULT_LOCALE };
 export type { SupportedLocale };
 
 export default getRequestConfig(async () => {
-  // 从 cookie 读 locale（客户端切换时写入），fallback en
+  // 从 cookie 读 locale（客户端切换时写入），fallback DEFAULT_LOCALE（i18n/config，默认 zh）
   const cookieStore = await cookies();
   const raw = cookieStore.get('locale')?.value;
   const locale: Locale =

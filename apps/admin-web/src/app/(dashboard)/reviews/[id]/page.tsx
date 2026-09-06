@@ -8,10 +8,11 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
+import { formatLocaleDateTime } from '@/lib/utils';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,6 +28,7 @@ import {
 
 function ReviewDetailContent() {
   const t = useTranslations('common');
+  const locale = useLocale();
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
@@ -156,7 +158,7 @@ function ReviewDetailContent() {
             </span>
           )}
           <span>
-            {t('admin.reviews.columnCreatedAt')}: {new Date(data.createdAt).toLocaleString()}
+            {t('admin.reviews.columnCreatedAt')}: {formatLocaleDateTime(data.createdAt, locale)}
           </span>
         </div>
       </div>
@@ -198,7 +200,7 @@ function ReviewDetailContent() {
             {review.reply && review.repliedAt && (
               <p className="text-xs text-muted-foreground">
                 {t('admin.reviews.repliedAt', {
-                  time: new Date(review.repliedAt).toLocaleString(),
+                  time: formatLocaleDateTime(review.repliedAt, locale),
                 })}
               </p>
             )}
