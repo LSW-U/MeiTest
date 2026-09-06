@@ -164,7 +164,7 @@ function ParentCategorySelect({
 }) {
   const t = useTranslations('common');
   const categoriesQ = useCategories();
-  const flat = categoriesQ.data?.data ?? [];
+  const flat = useMemo(() => categoriesQ.data?.data ?? [], [categoriesQ.data?.data]);
   const roots = flat
     .filter((c) => !c.parentId)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
