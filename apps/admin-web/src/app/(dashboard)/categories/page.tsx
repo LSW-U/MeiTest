@@ -222,7 +222,7 @@ export default function CategoriesPage() {
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
 
-  const flat = categoriesQ.data?.data ?? [];
+  const flat = useMemo(() => categoriesQ.data?.data ?? [], [categoriesQ.data?.data]);
   const tree = useMemo(() => buildCategoryTree(flat), [flat]);
   /** id → 父分类名（F2 显示父名而非 uuid） */
   const nameMap = useMemo(() => {
