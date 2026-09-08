@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export interface Column<T> {
   key: string;
@@ -33,9 +34,16 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   rowKey?: (row: T) => string;
   rowActions?: (row: T) => ReactNode;
+  /**
+   * 行选择（批C 批量通道用）。三 prop 同时传才启用：selectable + selectedIds + onSelectedIdsChange。
+   * 选择 key 复用 rowKey/row.id（与行 key 一致）
+   */
+  selectable?: boolean;
+  selectedIds?: string[];
+  onSelectedIdsChange?: (next: string[]) => void;
 }
 
-export function DataTable<T extends { id?: string }>({
+export function DataTable<T extends object>({
   data,
   columns,
   isLoading,
@@ -47,10 +55,41 @@ export function DataTable<T extends { id?: string }>({
   onRowClick,
   rowKey,
   rowActions,
+  selectable,
+  selectedIds,
+  onSelectedIdsChange,
 }: DataTableProps<T>) {
   const t = useTranslations('common');
   const getKey = (row: T, idx: number) =>
-    rowKey ? rowKey(row) : row.id ?? String(idx);
+    rowKey ? rowKey(row) : (row as { id?: string }).id ?? String(idx);
+
+  const selectionEnabled = !!(selectable && selectedIds && onSelectedIdsChange);
+  const selectedSet = new Set(selectedIds ?? []);
+  const allPageSelected = data.length > 0 && data.every((row, idx) => selectedSet.has(getKey(row, idx)));
+  const somePageSelected = data.some((row, idx) => selectedSet.has(getKey(row, idx)));
+
+  const toggleRow = (row: T, idx: number) => {
+    if (!onSelectedIdsChange || !selectedIds) return;
+    const key = getKey(row, idx);
+    onSelectedIdsChange(
+      selectedSet.has(key)
+        ? selectedIds.filter((k) => k !== key)
+        : [...selectedIds, key],
+    );
+  };
+
+  const toggleAllPage = () => {
+    if (!onSelectedIdsChange || !selectedIds) return;
+    const pageKeys = data.map((row, idx) => getKey(row, idx));
+    onSelectedIdsChange(
+      allPageSelected
+        ? selectedIds.filter((k) => !pageKeys.includes(k))
+        : [...new Set([...selectedIds, ...pageKeys])],
+    );
+  };
+
+  // 选择列插在最前，影响空态/错误态 colSpan
+  const colSpan = columns.length + (selectionEnabled ? 1 : 0) + (rowActions ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -59,6 +98,15 @@ export function DataTable<T extends { id?: string }>({
         <Table>
           <TableHeader>
             <TableRow>
+              {selectionEnabled && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={allPageSelected || (somePageSelected && 'indeterminate')}
+                    onCheckedChange={toggleAllPage}
+                    aria-label={t('w.table.selectAll')}
+                  />
+                </TableHead>
+              )}
               {columns.map((col) => (
                 <TableHead key={col.key} className={col.headClassName}>
                   {col.header}
@@ -71,6 +119,11 @@ export function DataTable<T extends { id?: string }>({
             {isLoading ? (
               Array.from({ length: loadingRows }).map((_, i) => (
                 <TableRow key={`skeleton-${i}`}>
+                  {selectionEnabled && (
+                    <TableCell>
+                      <Skeleton className="h-5 w-5" />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       <Skeleton className="h-5 w-full" />
@@ -85,13 +138,13 @@ export function DataTable<T extends { id?: string }>({
               ))
             ) : errorState ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (rowActions ? 1 : 0)} className="py-8">
+                <TableCell colSpan={colSpan} className="py-8">
                   {errorState}
                 </TableCell>
               </TableRow>
             ) : data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (rowActions ? 1 : 0)} className="py-8">
+                <TableCell colSpan={colSpan} className="py-8">
                   {emptyState ?? (
                     <span className="text-sm text-muted-foreground">{t('noData')}</span>
                   )}
@@ -104,6 +157,18 @@ export function DataTable<T extends { id?: string }>({
                   className={onRowClick ? 'cursor-pointer' : undefined}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >
+                  {selectionEnabled && (
+                    <TableCell
+                      className="w-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={selectedSet.has(getKey(row, idx))}
+                        onCheckedChange={() => toggleRow(row, idx)}
+                        aria-label={t('w.table.selectRow')}
+                      />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key} className={col.className}>
                       {col.render ? col.render(row) : null}

@@ -21,6 +21,7 @@ import { useProducts, type Product } from '@/hooks/api/use-products';
 import { useUpdateProductStatus } from '@/hooks/api/use-products';
 import { ProductImportDialog } from '@/components/import/product-import-dialog';
 import { ImportHistoryCard } from '@/components/import/import-history-card';
+import { BatchSalesDialog } from '@/components/products/batch-sales-dialog';
 import { formatCurrency } from '@/lib/utils';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
@@ -29,11 +30,15 @@ export default function ProductsListPage() {
   const router = useRouter();
   const { immediateValue, debouncedValue, setImmediateValue } = useDebouncedSearch('');
   const [importOpen, setImportOpen] = useState(false);
+  // 批C：销量批量修改通道（勾选 → 弹窗设值 → PATCH /admin/products/sales-batch）
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [batchOpen, setBatchOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useProducts({ search: debouncedValue });
   const statusMutation = useUpdateProductStatus();
 
   const items: Product[] = Array.isArray(data?.data) ? data.data : [];
+  const selectedProducts = items.filter((p) => selectedIds.includes(p.id));
 
   const columns: Column<Product>[] = [
     {
@@ -117,6 +122,8 @@ export default function ProductsListPage() {
         columns={columns}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/products/${row.id}`)}
+        selectable
+        selectedIds={selectedIds}
         onSelectedIdsChange={setSelectedIds}
         toolbar={
           <>
@@ -127,8 +134,11 @@ export default function ProductsListPage() {
             />
             <Button
               variant="outline"
+              disabled={selectedProducts.length === 0}
               onClick={() => setBatchOpen(true)}
             >
+              {t('w.products.batchAdjustSales')}
+              {selectedProducts.length > 0 && ` (${selectedProducts.length})`}
             </Button>
           </>
         }
@@ -165,7 +175,11 @@ export default function ProductsListPage() {
       <ProductImportDialog open={importOpen} onOpenChange={setImportOpen} />
       <ImportHistoryCard resourceType="Product" />
 
+      {/* 批C：销量批量调整（设值落库 + SalesCountLog ADMIN_ADJUST 审计） */}
+      <BatchSalesDialog
+        open={batchOpen}
         onOpenChange={setBatchOpen}
+        selected={selectedProducts}
         onDone={() => {
           setSelectedIds([]);
           setBatchOpen(false);

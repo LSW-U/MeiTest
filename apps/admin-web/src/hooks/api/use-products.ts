@@ -121,6 +121,64 @@ export function useUpdateProductStatus() {
   });
 }
 
+// ----- 聚合详情（批B：GET /client/products/:id/detail，admin 复用同一公开端点，不筛商品 status）-----
+
+/** 按仓库存条目（批B WarehouseStock） */
+export interface WarehouseStockView {
+  warehouseId: string;
+  name?: I18nText;
+  quantity: number;
+}
+
+/**
+ * 聚合详情（批B ProductDetail 契约镜像）
+ * 已知语义（契约注释）：stocks 无记录=空数组、totalStock 恒 number（0=无库存）；
+ * isCategoryTop3 非在售商品恒 false（有意设计）
+ */
+export interface ProductDetailData extends Product {
+  /** 按仓库存数组（warehouseId 升序） */
+  stocks: WarehouseStockView[];
+  /** 全仓库存总量 */
+  totalStock: number;
+  /** 评分样本数（APPROVED 评论数），0=无评论 */
+  ratingCount: number;
+  /** 是否同分类销量 Top3（ACTIVE 商品），无分类商品恒 false */
+  isCategoryTop3: boolean;
+  /** ACTIVE SKU 列表（price 升序） */
+  skus: Sku[];
+}
+
+export function useProductDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: ['product-detail', id],
+    queryFn: () => apiFetch<ApiSuccess<ProductDetailData>>(`/client/products/${id}/detail`),
+    enabled: !!id,
+  });
+}
+
+// ----- 销量批量调整（批C：PATCH /admin/products/sales-batch，设值语义 + ADMIN_ADJUST 审计）-----
+
+export interface SalesBatchAdjustResult {
+  adjusted: string[];
+  skipped: string[];
+}
+
+export function useAdjustSalesCountBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: Array<{ id: string; salesCount: number }>) =>
+      apiFetch<ApiSuccess<SalesBatchAdjustResult>>('/admin/products/sales-batch', {
+        method: 'PATCH',
+        body: JSON.stringify({ items }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['product'] });
+      qc.invalidateQueries({ queryKey: ['product-detail'] });
+    },
+  });
+}
+
 // ----- SKU -----
 
 export interface Sku {
