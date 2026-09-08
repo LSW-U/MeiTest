@@ -8,3 +8,9 @@ export {
   type StockChangeContext,
 } from './transaction';
 export * from './postgis-helpers';
+export {
+  incrementSalesCountForOrder,
+  rollbackSalesCountForRefundItems,
+  rollbackSalesCountForFullOrder,
+  type SalesCountOperatorOptions,
+} from './sales-count';

@@ -13,12 +13,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
+const { mockDb, mockHelpers, mockRealtime, mockServer, mockSalesIncrement } = vi.hoisted(() => {
   const server = {
     to: vi.fn(() => server),
     emit: vi.fn(),
   };
   return {
+    // 批A 销量真实统计：deliverTask COD 送达收款累加（helper 逻辑在 sales-count.helper.test.ts）
+    mockSalesIncrement: vi.fn(),
     mockDb: {
       deliveryTask: {
         findMany: vi.fn(),
@@ -61,6 +63,7 @@ const { mockDb, mockHelpers, mockRealtime, mockServer } = vi.hoisted(() => {
 vi.mock('../src/shared/db', () => ({
   db: mockDb,
   withTransaction: mockHelpers.withTransaction,
+  incrementSalesCountForOrder: mockSalesIncrement,
 }));
 
 vi.mock('../src/modules/realtime/realtime.gateway', () => ({
@@ -137,6 +140,8 @@ describe('DispatchService', () => {
       }
     });
     mockHelpers.withTransaction.mockReset();
+    // 批A 销量真实统计：reset 累加 mock
+    mockSalesIncrement.mockReset();
     mockServer.to.mockClear();
     mockServer.emit.mockClear();
     // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
@@ -488,6 +493,62 @@ describe('DispatchService', () => {
           data: expect.objectContaining({ status: 'DELIVERED_UNPAID' }),
         }),
       );
+    });
+  });
+
+  describe('deliverTask - 批A 销量真实统计（COD 送达收款累加）', () => {
+    function setupForDeliver(opts: { collectedAmount?: number; payableAmount?: number; paymentMethod?: string }) {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'PICKED_UP',
+          orderId: 'order-1',
+          order: {
+            orderNo: 'MM1',
+            payableAmount: opts.payableAmount ?? 100,
+            paymentMethod: opts.paymentMethod ?? 'COD',
+          },
+        }),
+      );
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED' }),
+      );
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
+    }
+
+    it('COD 收款 PAID → incrementSalesCountForOrder（与订单状态推进同事务，operatorId=riderId）', async () => {
+      setupForDeliver({ collectedAmount: 100, payableAmount: 100 });
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+      expect(mockSalesIncrement).toHaveBeenCalledTimes(1);
+      expect(mockSalesIncrement).toHaveBeenCalledWith(mockDb, 'order-1', { operatorId: 'r1' });
+    });
+
+    it('COD 少收 SHORT → 仍累加（状态为 DELIVERED_PAID，销量按数量计）', async () => {
+      setupForDeliver({ collectedAmount: 80, payableAmount: 100 });
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 80 });
+
+      expect(mockSalesIncrement).toHaveBeenCalledTimes(1);
+    });
+
+    it('COD 拒付 UNPAID → 不累加', async () => {
+      setupForDeliver({ collectedAmount: 0, payableAmount: 100 });
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 0 });
+
+      expect(mockSalesIncrement).not.toHaveBeenCalled();
+    });
+
+    it('预付单送达（DELIVERED）→ 不在此累加（已在 markPaidTx 累加过）', async () => {
+      setupForDeliver({ paymentMethod: 'WECHAT' });
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(mockSalesIncrement).not.toHaveBeenCalled();
     });
   });
 

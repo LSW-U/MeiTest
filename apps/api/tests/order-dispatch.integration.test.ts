@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mockPricing, mockRealtime, mockServer } = vi.hoisted(() => {
+const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mockPricing, mockRealtime, mockServer, mockSalesIncrement } = vi.hoisted(() => {
   const server = {
     to: vi.fn(() => server),
     emit: vi.fn(),
@@ -29,6 +29,7 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
   return {
     mockDb: {
       address: { findUnique: vi.fn() },
+      // 批A 汇率体系：createOrder 汇率快照钩子查询（返回 null → 兜底 FALLBACK，不阻断主流程断言）
       sku: { findMany: vi.fn() },
       order: {
         findUnique: vi.fn(({ where }: { where: { id?: string; orderId?: string } }) => {
@@ -41,6 +42,17 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
           const updated = { ...existing, ...data };
           tables.orders.set(where.id, updated);
           return updated;
+        }),
+        // 批A P2-1：markPaidTx 条件翻转（状态作 WHERE 前置），内存实现同语义
+        updateMany: vi.fn(({ where, data }: { where: { id: string; OR?: any }; data: any }) => {
+          const existing = tables.orders.get(where.id);
+          if (!existing) return { count: 0 };
+          const allowed =
+            existing.status === 'PENDING_PAYMENT' ||
+            (existing.status === 'PENDING_CONFIRM' && existing.paymentMethod === 'BANK_TRANSFER');
+          if (!allowed) return { count: 0 };
+          tables.orders.set(where.id, { ...existing, ...data });
+          return { count: 1 };
         }),
         create: vi.fn(({ data }: { data: any }) => {
           const id = `order-${tables.orders.size + 1}`;
@@ -156,6 +168,8 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
     mockPricing: { calcDeliveryFee: vi.fn() },
     mockRealtime: { server },
     mockServer: server,
+    // 批A 销量真实统计：markPaidTx 累加（helper 逻辑单测在 sales-count.helper.test.ts）
+    mockSalesIncrement: vi.fn(),
   };
 });
 
@@ -165,6 +179,7 @@ vi.mock('../src/shared/db', () => ({
   deductStock: mockHelpers.deductStock,
   releaseStock: mockHelpers.releaseStock,
   findWarehouseByPoint: mockHelpers.findWarehouseByPoint,
+  incrementSalesCountForOrder: mockSalesIncrement,
 }));
 
 vi.mock('../src/modules/realtime/realtime.gateway', () => ({
@@ -362,9 +377,10 @@ describe('Order → Dispatch 全链路集成测试', () => {
     // dispatch.createTaskForOrder 应被调（markPaid 内部）
     // 因为 mockDb.order.findUnique 的 include 不真返 warehouse，createTask 会抛
     // 我们用 expect 错误日志来验证，不阻塞主流程
-    expect(mockDb.order.update).toHaveBeenCalledWith(
+    // 批A P2-1：markPaidTx 状态翻转改 updateMany 条件更新，断言随之切换
+    expect(mockDb.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'order-1' },
+        where: expect.objectContaining({ id: 'order-1' }),
         data: expect.objectContaining({ status: 'CONFIRMED', paymentStatus: 'PAID' }),
       }),
     );

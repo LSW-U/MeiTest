@@ -144,6 +144,13 @@ enum StockChangeType {
   RETURN // 退货入库
 }
 
+/// 销量变更类型(SalesCountLog 用,批A 销量真实统计 2026-09-07)
+enum SalesCountChangeType {
+  ORDER // 支付成功累加(预付 markPaidTx + COD 送达收款)
+  REFUND // 退款完成回滚
+  ADMIN_ADJUST // 人工调整(批C 预留,本批不建接口)
+}
+
 /// 骑手状态
 enum RiderStatus {
   OFFLINE
@@ -1177,6 +1184,33 @@ model RefundItem {
   @@index([refundId])
   @@index([orderItemId])
   @@map("refund_items")
+}
+
+// ============================================================================
+// 20.5 SalesCountLog（商品详情整合 批A 销量真实统计 2026-09-07）
+//     salesCount 从僵尸字段变真实统计的全程审计：
+//       ORDER  = 支付成功累加（预付 markPaidTx 三路径 + COD deliverTask 送达收款）
+//       REFUND = 退款完成回滚（autoApprove / review approve 共用 completeRefundTx）
+//       ADMIN_ADJUST = 人工调整（批C 预留，本批不建接口）
+//     不建 FK：审计日志独立于商品/订单生命周期（商品或订单被清理后日志仍可查）
+// ----------------------------------------------------------------------------
+model SalesCountLog {
+  id         String               @id @default(uuid())
+  productId  String               @map("product_id")
+  /// 触发变更的订单（ORDER/REFUND 必有；ADMIN_ADJUST 可空）
+  orderId    String?              @map("order_id")
+  changeType SalesCountChangeType @map("change_type")
+  /// 变更数量：正=累加 负=回滚
+  changeQty  Int                  @map("change_qty")
+  beforeQty  Int                  @map("before_qty")
+  afterQty   Int                  @map("after_qty")
+  /// 操作人 userId（系统动作/支付回调可空）
+  operatorId String?              @map("operator_id")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  @@index([productId, createdAt])
+  @@index([orderId])
+  @@map("sales_count_logs")
 }
 
 // ============================================================================

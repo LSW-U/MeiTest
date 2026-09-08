@@ -31,7 +31,7 @@
  */
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
-import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint } from '../../shared/db';
+import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, incrementSalesCountForOrder } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderNoService } from './order-no.service';
@@ -756,7 +756,7 @@ export class OrderService {
   /**
    * markPaid 事务内核心（抽出来供 admin payment confirm-receipt 编排复用，避嵌套事务）
    *
-   * 做的事：order update CONFIRMED + orderEvent PAYMENT_SUCCESS
+   * 做的事：order update CONFIRMED + orderEvent PAYMENT_SUCCESS + 销量累加（批A，与状态同事务）
    * 不做的事：事务后副作用（cancelTimeout / createTask / broadcast / notify）→ postMarkPaidEffects
    *
    * 一致性陷阱：payment.service.ts:262-278 注释警告，markPaidByAdmin 必须与 markPaid 同事务，
@@ -778,8 +778,13 @@ export class OrderService {
     if (order.paymentStatus === 'PAID') {
       return;
     }
-    // 状态机校验：仅 PENDING_PAYMENT 可走支付成功路径
-    if (order.status !== 'PENDING_PAYMENT') {
+    // 状态门：预付单仅 PENDING_PAYMENT 可走支付成功路径；BANK_TRANSFER 例外——
+    // 初始即 PENDING_CONFIRM（order-status.machine getInitialState）且状态机无
+    // PENDING_CONFIRM→PENDING_PAYMENT 流转，admin confirm-receipt（转账凭证人工审核）
+    // 在此确认收款（P1-1，审查 2026-09-07）。COD 仍走 deliverTask 送达收款，不放行。
+    const isBankTransferConfirm =
+      order.paymentMethod === 'BANK_TRANSFER' && order.status === 'PENDING_CONFIRM';
+    if (order.status !== 'PENDING_PAYMENT' && !isBankTransferConfirm) {
       throw new ConflictException({
         code: 'E-ORDER-003',
         message: `Order status ${order.status} cannot be marked as paid`,
@@ -788,8 +793,17 @@ export class OrderService {
 
     assertCanTransition(order.status, 'CONFIRMED');
 
-    await tx.order.update({
-      where: { id: orderId },
+    // P2-1（审查 2026-09-07）：条件翻转封并发 TOCTOU——双击支付/回调重发并发时两事务
+    // 都可能读到未付快照，这里以状态条件作 UPDATE 前置（行锁 + 提交后 WHERE 复核），
+    // 只有一笔能翻走；输家 count=0：并发赢家已置 PAID → 幂等 return，否则状态非法
+    const flipped = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        OR: [
+          { status: 'PENDING_PAYMENT' },
+          { status: 'PENDING_CONFIRM', paymentMethod: 'BANK_TRANSFER' },
+        ],
+      },
       data: {
         status: 'CONFIRMED',
         confirmedAt: new Date(),
@@ -797,6 +811,20 @@ export class OrderService {
         paidAt: new Date(),
       },
     });
+    if (flipped.count === 0) {
+      const latest = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true, paymentStatus: true },
+      });
+      if (latest?.paymentStatus === 'PAID') {
+        // 并发赢家已完成支付确认 → 幂等（销量只随赢家那笔累加一次）
+        return;
+      }
+      throw new ConflictException({
+        code: 'E-ORDER-003',
+        message: `Order status ${latest?.status ?? order.status} cannot be marked as paid`,
+      });
+    }
 
     await tx.orderEvent.create({
       data: {
@@ -809,6 +837,13 @@ export class OrderService {
         perspective: eventCtx.perspective ?? null,
         metadata: (eventCtx.metadata as Prisma.InputJsonValue | undefined) ?? Prisma.JsonNull,
       },
+    });
+
+    // 批A 销量真实统计（2026-09-07）：支付成功按订单行累加 Product.salesCount（与订单状态同事务）
+    // 单点覆盖三条 PAID 路径：mock 回调 / 客户端 confirm 轮询 / admin confirm-receipt 编排
+    // 幂等：本方法入口 order.paymentStatus === 'PAID' 提前 return，重复回调不会二次累加
+    await incrementSalesCountForOrder(tx, orderId, {
+      operatorId: eventCtx.operatorId ?? null,
     });
   }
 

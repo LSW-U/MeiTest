@@ -20,11 +20,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Prisma } from '../src/prisma/client';
 
-const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mockPricing } = vi.hoisted(() => ({
+const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mockPricing, mockSalesIncrement } = vi.hoisted(() => ({
   mockDb: {
     address: { findUnique: vi.fn() },
+    // 批A 汇率快照（审查 P3-2）：WECHAT 下单 Step 5.5 查当日汇率
     sku: { findMany: vi.fn() },
-    order: { findUnique: vi.fn(), update: vi.fn() },
+    order: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderItem: { findMany: vi.fn() },
     orderEvent: { create: vi.fn() },
   },
@@ -40,6 +41,8 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mock
   mockCart: { clearOrderedItems: vi.fn() },
   // 距离计费批次1（2026-08-27）：createOrder Step 4.5 调 pricingService.calcDeliveryFee
   mockPricing: { calcDeliveryFee: vi.fn() },
+  // 批A 销量真实统计：markPaidTx 支付成功累加（helper 逻辑在 sales-count.helper.test.ts）
+  mockSalesIncrement: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -48,6 +51,7 @@ vi.mock('../src/shared/db', () => ({
   deductStock: mockHelpers.deductStock,
   releaseStock: mockHelpers.releaseStock,
   findWarehouseByPoint: mockHelpers.findWarehouseByPoint,
+  incrementSalesCountForOrder: mockSalesIncrement,
 }));
 
 vi.mock('../src/modules/order/order-no.service', () => ({
@@ -894,5 +898,122 @@ describe('OrderService.getOrderDetail (P10/P11 rider 嵌套)', () => {
       vehicleType: 'MOTORCYCLE',
       avatarUrl: null, // user 为 null → 兜底 null
     });
+  });
+});
+
+// ============================================================
+// 批A 销量真实统计（2026-09-07）：markPaidTx 支付成功累加
+// 单点覆盖三条 PAID 路径（mock 回调 / 客户端 confirm 轮询 / admin confirm-receipt），
+// 三路径都收敛到本方法；累加 helper 逻辑在 sales-count.helper.test.ts 单测
+// ============================================================
+describe('OrderService.markPaidTx - 批A 销量真实统计', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    Object.values(mockDb).forEach((table) => {
+      Object.values(table).forEach((fn) => fn.mockReset());
+    });
+    Object.values(mockHelpers).forEach((fn) => fn.mockReset());
+    mockSalesIncrement.mockReset();
+    service = new OrderService(
+      new (class { nextOrderNo = mockOrderNo.nextOrderNo })(),
+      mockPayment,
+      mockQueue,
+      null, // dispatchService
+      mockCart, // cartService
+      {} as never, // promotionService
+      new (class { calcDeliveryFee = mockPricing.calcDeliveryFee })(), // pricingService
+      null, // realtime
+      null, // notifyFactory
+    );
+  });
+
+  function mockPaidOrder(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'order-1',
+      orderNo: 'MM20260907010000001',
+      userId: 'user-1',
+      warehouseId: 'wh-1',
+      status: 'PENDING_PAYMENT',
+      paymentStatus: 'PENDING',
+      paymentMethod: 'WECHAT',
+      payableAmount: 500,
+      ...overrides,
+    };
+  }
+
+  it('PENDING_PAYMENT 支付成功 → 条件翻转 CONFIRMED + 累加销量（operatorId 透传 eventCtx）', async () => {
+    mockDb.order.findUnique.mockResolvedValue(mockPaidOrder());
+    mockDb.order.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.orderEvent.create.mockResolvedValue({});
+
+    await service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'user-1' });
+
+    // P2-1：COMPLETED 翻转走 updateMany 条件更新（状态作 WHERE 前置封并发）
+    expect(mockDb.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'order-1' }),
+        data: expect.objectContaining({ status: 'CONFIRMED', paymentStatus: 'PAID' }),
+      }),
+    );
+    expect(mockSalesIncrement).toHaveBeenCalledTimes(1);
+    expect(mockSalesIncrement).toHaveBeenCalledWith(mockDb, 'order-1', { operatorId: 'user-1' });
+  });
+
+  it('P1-1：BANK_TRANSFER PENDING_CONFIRM（admin confirm-receipt）→ 放行 + 累加销量', async () => {
+    mockDb.order.findUnique.mockResolvedValue(
+      mockPaidOrder({ status: 'PENDING_CONFIRM', paymentMethod: 'BANK_TRANSFER' }),
+    );
+    mockDb.order.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.orderEvent.create.mockResolvedValue({});
+
+    await service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'admin-1' });
+
+    expect(mockDb.order.updateMany).toHaveBeenCalledTimes(1);
+    expect(mockSalesIncrement).toHaveBeenCalledTimes(1);
+    expect(mockSalesIncrement).toHaveBeenCalledWith(mockDb, 'order-1', { operatorId: 'admin-1' });
+  });
+
+  it('P1-1 守卫：COD PENDING_CONFIRM 不放行（收款走 deliverTask，防双路径）', async () => {
+    mockDb.order.findUnique.mockResolvedValue(
+      mockPaidOrder({ status: 'PENDING_CONFIRM', paymentMethod: 'COD' }),
+    );
+
+    await expect(
+      service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({ response: { code: 'E-ORDER-003' } });
+
+    expect(mockSalesIncrement).not.toHaveBeenCalled();
+  });
+
+  it('P2-1 并发输家：条件翻转 count=0 且最新状态已 PAID → 幂等 return 不重复累加', async () => {
+    mockDb.order.findUnique
+      .mockResolvedValueOnce(mockPaidOrder()) // 首读：未付（并发窗口内）
+      .mockResolvedValueOnce(mockPaidOrder({ paymentStatus: 'PAID', status: 'CONFIRMED' })); // count=0 后重读
+    mockDb.order.updateMany.mockResolvedValue({ count: 0 }); // 并发赢家已翻走
+
+    await service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'user-1' });
+
+    expect(mockSalesIncrement).not.toHaveBeenCalled();
+    expect(mockDb.orderEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('重复回调幂等：paymentStatus 已 PAID → 提前 return 不重复累加', async () => {
+    mockDb.order.findUnique.mockResolvedValue(mockPaidOrder({ paymentStatus: 'PAID' }));
+
+    await service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'user-1' });
+
+    expect(mockDb.order.updateMany).not.toHaveBeenCalled();
+    expect(mockSalesIncrement).not.toHaveBeenCalled();
+  });
+
+  it('状态机拒绝（CONFIRMED 非 PENDING_PAYMENT）→ 抛 E-ORDER-003 且不累加', async () => {
+    mockDb.order.findUnique.mockResolvedValue(mockPaidOrder({ status: 'DELIVERING' }));
+
+    await expect(
+      service.markPaidTx(mockDb as never, 'order-1', { operatorId: 'user-1' }),
+    ).rejects.toMatchObject({ response: { code: 'E-ORDER-003' } });
+
+    expect(mockSalesIncrement).not.toHaveBeenCalled();
   });
 });

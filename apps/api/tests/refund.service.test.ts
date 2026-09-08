@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreateRefundRequest } from '@meimart/api-contract';
 
-const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDispatchService } = vi.hoisted(() => ({
+const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDispatchService, mockHelpers } = vi.hoisted(() => ({
   mockDb: {
     order: {
       findUnique: vi.fn(),
@@ -27,6 +27,10 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDi
       findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      // 批A P2-1：completeRefundTx 条件翻转（status='PENDING' 作 WHERE 前置）
+      updateMany: vi.fn(),
+      // 批A P2-2：整单退款金额累计校验（Σ COMPLETED refund.amount）
+      aggregate: vi.fn(),
       findMany: vi.fn(),
     },
     refundItem: {
@@ -35,6 +39,17 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDi
     paymentIntent: {
       findUnique: vi.fn(),
     },
+    // 批A 销量真实统计：completeRefundTx COD 守卫查收款成功记录
+    cashCollection: {
+      findFirst: vi.fn(),
+    },
+  },
+  // 批A 销量真实统计：withTransaction 让 tx 复用 mockDb；回滚 helper mock 掉（helper 逻辑在
+  // sales-count.helper.test.ts 单测，本文件只断言接线与守卫分支）
+  mockHelpers: {
+    withTransaction: vi.fn(),
+    rollbackSalesCountForRefundItems: vi.fn(),
+    rollbackSalesCountForFullOrder: vi.fn(),
   },
   mockLogger: {
     info: vi.fn(),
@@ -61,7 +76,12 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDi
   },
 }));
 
-vi.mock('../src/shared/db', () => ({ db: mockDb }));
+vi.mock('../src/shared/db', () => ({
+  db: mockDb,
+  withTransaction: mockHelpers.withTransaction,
+  rollbackSalesCountForRefundItems: mockHelpers.rollbackSalesCountForRefundItems,
+  rollbackSalesCountForFullOrder: mockHelpers.rollbackSalesCountForFullOrder,
+}));
 vi.mock('../src/shared/logger/logger', () => ({ logger: mockLogger }));
 vi.mock('../src/modules/order/order.service', () => ({
   OrderService: class {
@@ -112,6 +132,8 @@ const baseRefund = {
   refundType: 'REFUND_ONLY',
   pickupAt: null,
   pickedAt: null,
+  // 批A：completeRefundTx 重查 refund 带 items（整单退款为空数组）
+  items: [],
 };
 
 describe('RefundService', () => {
@@ -128,6 +150,18 @@ describe('RefundService', () => {
     mockModuleRef.get.mockReset();
     // P14 ④：reset DispatchService mock
     mockDispatchService.createTaskForReturn.mockReset();
+    // 批A 销量真实统计：reset helper mocks + withTransaction 默认 tx 复用 mockDb
+    mockHelpers.rollbackSalesCountForRefundItems.mockReset();
+    mockHelpers.rollbackSalesCountForFullOrder.mockReset();
+    mockHelpers.withTransaction.mockReset();
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
+    Object.values(mockDb.cashCollection).forEach((fn) => fn.mockReset());
+    // 批A P2-2：整单退款累计校验默认「无已完成退款」（可被具体 case 覆盖）
+    mockDb.refund.aggregate.mockResolvedValue({ _sum: { amount: null } });
+    // 批A P2-1：completeRefundTx 条件翻转默认成功（count=1），并发输家 case 单独覆盖 count=0
+    mockDb.refund.updateMany.mockResolvedValue({ count: 1 });
   });
 
   describe('createRefund', () => {
@@ -318,10 +352,10 @@ describe('RefundService', () => {
       mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'COD' });
       mockDb.refund.create.mockResolvedValue({
         ...baseRefund,
-        status: 'COMPLETED',
-        transactionId: 'MOCK_REFUND_x',
-        completedAt: new Date('2026-07-05T00:00:00Z'),
+        status: 'PENDING',
       });
+      // 批A：autoApprove 经 completeRefundTx —— 事务内重查 refund + 条件翻转标 COMPLETED
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, status: 'PENDING' });
       mockModuleRef.get.mockReturnValue(mockOrderService);
       mockOrderService.cancelOrderInternal.mockResolvedValue(undefined);
 
@@ -333,6 +367,21 @@ describe('RefundService', () => {
 
       expect(result.status).toBe('COMPLETED');
       expect(result.transactionId).toMatch(/^MOCK_REFUND_/);
+      // 批A：create 先 PENDING，COMPLETED 由 completeRefundTx 的条件翻转写入
+      expect(mockDb.refund.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'PENDING' }),
+        }),
+      );
+      expect(mockDb.refund.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: expect.any(String), status: 'PENDING' },
+          data: expect.objectContaining({ status: 'COMPLETED' }),
+        }),
+      );
+      // 批A：未支付订单（PENDING_CONFIRM）从未累加销量 → 不回滚
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
       expect(mockOrderService.cancelOrderInternal).toHaveBeenCalledWith(
         'order-1',
         expect.objectContaining({ reason: 'REFUND_AUTO_APPROVED' }),
@@ -474,14 +523,6 @@ describe('RefundService', () => {
         payableAmount: 10000,
         status: 'CONFIRMED',
       });
-      mockDb.refund.update.mockResolvedValue({
-        ...baseRefund,
-        status: 'COMPLETED',
-        transactionId: 'MOCK_REFUND_x',
-        reviewedBy: 'admin-1',
-        reviewedAt: new Date('2026-07-05T01:00:00Z'),
-        completedAt: new Date('2026-07-05T01:00:00Z'),
-      });
 
       const result = await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
 
@@ -575,11 +616,6 @@ describe('RefundService', () => {
     it('APPROVE + RETURN_REFUND → 触发 createTaskForReturn(refundId)', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND' });
       mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
-      mockDb.refund.update.mockResolvedValue({
-        ...baseRefund,
-        refundType: 'RETURN_REFUND',
-        status: 'COMPLETED',
-      });
       mockDispatchService.createTaskForReturn.mockResolvedValue({} as never);
 
       await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
@@ -590,11 +626,6 @@ describe('RefundService', () => {
     it('APPROVE + REFUND_ONLY → 不触发 createTaskForReturn（向后兼容）', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'REFUND_ONLY' });
       mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED' });
-      mockDb.refund.update.mockResolvedValue({
-        ...baseRefund,
-        refundType: 'REFUND_ONLY',
-        status: 'COMPLETED',
-      });
 
       await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
 
@@ -629,6 +660,168 @@ describe('RefundService', () => {
       await expect(
         service.reviewRefund('refund-1', 'admin-1', 'APPROVE'),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // ============================================================
+  // 批A 销量真实统计（2026-09-07）：completeRefundTx 守卫与回滚接线
+  // 回滚 helper 逻辑在 sales-count.helper.test.ts 单测，此处断言接线与守卫分支
+  // ============================================================
+  describe('批A 销量真实统计 - reviewRefund APPROVE 销量回滚', () => {
+    /** APPROVE 场景公共 mock（order 同时供金额断言 + 销量守卫两次查询） */
+    function setupApprove(refundOverrides: Record<string, unknown>, orderOverrides: Record<string, unknown>) {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, ...refundOverrides });
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 10000,
+        status: 'CONFIRMED',
+        ...orderOverrides,
+      });
+      // updateMany 默认 count=1（beforeEach），并发输家 case 单独覆盖
+    }
+
+    it('预付已支付（paymentStatus=PAID）+ 部分退款 items → 按 RefundItem 回滚', async () => {
+      setupApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 2 }] },
+        { paymentStatus: 'PAID', paymentMethod: 'WECHAT' },
+      );
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.rollbackSalesCountForRefundItems).toHaveBeenCalledTimes(1);
+      expect(mockHelpers.rollbackSalesCountForRefundItems).toHaveBeenCalledWith(
+        mockDb,
+        'order-1',
+        [{ skuId: 'sku-1', refundQty: 2 }],
+        { operatorId: 'admin-1' },
+      );
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+    });
+
+    it('预付已支付 + 整单退款（items=[]）→ rollbackSalesCountForFullOrder', async () => {
+      setupApprove({ items: [] }, { paymentStatus: 'PAID', paymentMethod: 'WECHAT' });
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.rollbackSalesCountForFullOrder).toHaveBeenCalledTimes(1);
+      expect(mockHelpers.rollbackSalesCountForFullOrder).toHaveBeenCalledWith(mockDb, 'order-1', {
+        operatorId: 'admin-1',
+      });
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+    });
+
+    it('未支付订单（paymentStatus=PENDING，非 COD）→ 守卫跳过不回滚（销量从未累加）', async () => {
+      setupApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 2 }] },
+        { status: 'PENDING_PAYMENT', paymentStatus: 'PENDING', paymentMethod: 'WECHAT' },
+      );
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+    });
+
+    it('COD 订单有收款成功记录（PAID/SHORT）→ 回滚（deliverTask 累加过）', async () => {
+      setupApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 1 }] },
+        { status: 'DELIVERED_PAID', paymentStatus: 'PENDING', paymentMethod: 'COD' },
+      );
+      mockDb.cashCollection.findFirst.mockResolvedValue({ id: 'cash-1' });
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockDb.cashCollection.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ orderId: 'order-1', result: { in: ['PAID', 'SHORT'] } }),
+        }),
+      );
+      expect(mockHelpers.rollbackSalesCountForRefundItems).toHaveBeenCalledTimes(1);
+    });
+
+    it('COD 订单无收款成功记录（拒付 DELIVERED_UNPAID）→ 不回滚', async () => {
+      setupApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 1 }] },
+        { status: 'DELIVERED_UNPAID', paymentStatus: 'PENDING', paymentMethod: 'COD' },
+      );
+      mockDb.cashCollection.findFirst.mockResolvedValue(null);
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+    });
+
+    it('P2-1 并发双批输家：条件翻转 count=0 → E-REFUND-004 且不回滚', async () => {
+      setupApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 1 }] },
+        { paymentStatus: 'PAID', paymentMethod: 'WECHAT' },
+      );
+      mockDb.refund.updateMany.mockResolvedValue({ count: 0 }); // 并发赢家已翻走 PENDING
+
+      await expect(service.reviewRefund('refund-1', 'admin-1', 'APPROVE')).rejects.toMatchObject({
+        response: { code: 'E-REFUND-004' },
+      });
+
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================
+  // 批A P2-2（审查 2026-09-07）：整单退款 ↔ 部分退款 双向封口
+  // ============================================================
+  describe('批A P2-2 - 整单/部分退款互斥封口', () => {
+    it('整单退款完成后再申请部分退款 → E-REFUND-009（销量/金额双重退口子）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      // E-REFUND-002 在途检查（status in PENDING/APPROVED）→ 无；P2-2 整单存在检查（items none）→ 有
+      mockDb.refund.findFirst.mockImplementation(((args: {
+        where: { status?: { in?: string[] } };
+      }) => {
+        if (args?.where?.status?.in) return Promise.resolve(null);
+        return Promise.resolve({ id: 'refund-full' });
+      }) as never);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+          items: [{ orderItemId: 'oi-1', refundQty: 1 }],
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-REFUND-009' } });
+    });
+
+    it('部分退款完成后再申请整单退款 → E-REFUND-009（Σ COMPLETED 金额 + 本次 > payable）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder); // payable 10000
+      mockDb.refund.findFirst.mockResolvedValue(null); // 无在途退款
+      mockDb.refund.aggregate.mockResolvedValue({ _sum: { amount: 6000 } }); // 已部分退 6000
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+
+      await expect(
+        service.createRefund({
+          orderId: 'order-1',
+          userId: 'user-1',
+          reason: 'QUALITY_ISSUE',
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-REFUND-009' } });
+    });
+
+    it('无历史退款 → 整单退款正常放行（累计校验不误伤）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(baseOrder);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.refund.aggregate.mockResolvedValue({ _sum: { amount: null } }); // 0
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue(baseRefund);
+
+      const result = await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+      });
+
+      expect(result.status).toBe('PENDING');
+      expect(mockDb.refund.create).toHaveBeenCalled();
     });
   });
 

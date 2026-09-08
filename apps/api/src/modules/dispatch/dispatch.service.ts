@@ -20,7 +20,7 @@
  */
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
-import { db, withTransaction } from '../../shared/db';
+import { db, withTransaction, incrementSalesCountForOrder } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -605,6 +605,16 @@ export class DispatchService {
         where: { id: task.orderId },
         data: { status: nextOrderStatus, deliveredAt: new Date() },
       });
+
+      // 批A 销量真实统计（2026-09-07）：COD 送达收款成功（PAID/SHORT）→ 累加销量（与订单状态推进同事务）
+      // COD 不经过 markPaidTx（状态机 PENDING_CONFIRM → CONFIRMED → OUT_FOR_DELIVERY → DELIVERED_PAID），
+      // 累加点在此补齐；预付单已在 markPaidTx 累加过，此分支不会命中（isCod 才进）
+      // 幂等：deliverTask 入口断言 task 仍为 PICKED_UP/DELIVERING，送达后不可重入，不会二次累加
+      if (isCod && (cashResult === 'PAID' || cashResult === 'SHORT')) {
+        await incrementSalesCountForOrder(tx, task.orderId, {
+          operatorId: input.riderId,
+        });
+      }
 
       if (isCod && input.collectedAmount !== undefined) {
         await tx.cashCollection.create({

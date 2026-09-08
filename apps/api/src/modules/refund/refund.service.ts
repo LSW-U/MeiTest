@@ -14,7 +14,13 @@
  */
 import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { db } from '../../shared/db';
+import {
+  db,
+  withTransaction,
+  rollbackSalesCountForRefundItems,
+  rollbackSalesCountForFullOrder,
+} from '../../shared/db';
+import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderService } from '../order/order.service';
 // P14 ④：refund APPROVE + RETURN_REFUND 触发建 return task（DispatchService via ModuleRef，避免循环依赖）
@@ -150,6 +156,19 @@ export class RefundService {
     let refundItemsData: { orderItemId: string; refundQty: number; subtotal: number }[] = [];
 
     if (input.items && input.items.length > 0) {
+      // P2-2（审查 2026-09-07）：整单退款（无 RefundItem）不落逐行痕迹，部分退款累计校验
+      // 对其失明 → 「整单退款完成后再申请部分退款」会二次退款/二次回滚销量，显式拒绝
+      const completedFullRefund = await db.refund.findFirst({
+        where: { orderId: input.orderId, status: 'COMPLETED', items: { none: {} } },
+        select: { id: true },
+      });
+      if (completedFullRefund) {
+        throw new ConflictException({
+          code: 'E-REFUND-009',
+          message: 'Order already fully refunded (completed full refund exists)',
+        });
+      }
+
       // P1 累计校验（审查报告 B.7，金额安全）：existing 只防 PENDING/APPROVED 的进行中退款，
       // 不防已 COMPLETED 的历史部分退款 -> 查累计 refundQty，防同一 OrderItem 超额退款
       const previousItems = await db.refundItem.findMany({
@@ -217,39 +236,62 @@ export class RefundService {
         message: `Refund amount ${amount} exceeds order payable ${order.payableAmount}`,
       });
     }
+    // P2-2（审查 2026-09-07）：整单退款金额累计校验——Σ 已 COMPLETED 退款金额 + 本次 amount
+    // 不得超过 payableAmount，封死「部分退款后再整单退款」「整单退款后再整单退款」的
+    // 重复退款（金额超额退 + 销量双重回滚）口子。整单退款 amount=payableAmount，
+    // 该校验为精确口径；部分退款已有逐行 qty 累计校验（E-REFUND-009），不在此重复
+    if (!input.items || input.items.length === 0) {
+      const completedSum = await db.refund.aggregate({
+        where: { orderId: input.orderId, status: 'COMPLETED' },
+        _sum: { amount: true },
+      });
+      const refundedAmount = completedSum._sum.amount ?? 0;
+      if (refundedAmount + amount > order.payableAmount) {
+        throw new ConflictException({
+          code: 'E-REFUND-009',
+          message: `Order already refunded ${refundedAmount} of ${order.payableAmount}; full refund would exceed payable`,
+        });
+      }
+    }
 
-    const refund = await db.refund.create({
-      data: {
-        orderId: input.orderId,
-        userId: input.userId,
-        amount,
-        reason: input.reason,
-        reasonDetail: input.reasonDetail ?? null,
-        photos: input.photos ?? [],
-        refundType: input.refundType ?? 'REFUND_ONLY',
-        status: autoApprove ? 'COMPLETED' : 'PENDING',
-        refundMethod,
-        transactionId: autoApprove ? this.generateMockTransactionId() : null,
-        reviewedBy: autoApprove ? null : null,
-        completedAt: autoApprove ? new Date() : null,
-        items:
-          input.items && input.items.length > 0
-            ? {
-                create: refundItemsData.map((ri) => {
-                  const oi = order.items.find((x) => x.id === ri.orderItemId)!;
-                  return {
-                    orderItemId: ri.orderItemId,
-                    skuId: oi.skuId,
-                    productName: oi.productName as Prisma.InputJsonValue,
-                    unitPrice: oi.unitPrice,
-                    refundQty: ri.refundQty,
-                    subtotal: ri.subtotal,
-                  };
-                }),
-              }
-            : undefined,
-      },
-      include: { items: true },
+    // 批A（2026-09-07）：autoApprove 经 completeRefundTx 单点标 COMPLETED（销量回滚守卫同事务）
+    // 未支付订单（PENDING_PAYMENT/PENDING_CONFIRM）从未累加过销量，completeRefundTx 内守卫会跳过回滚
+    const refund = await withTransaction(async (tx) => {
+      const created = await tx.refund.create({
+        data: {
+          orderId: input.orderId,
+          userId: input.userId,
+          amount,
+          reason: input.reason,
+          reasonDetail: input.reasonDetail ?? null,
+          photos: input.photos ?? [],
+          refundType: input.refundType ?? 'REFUND_ONLY',
+          status: 'PENDING',
+          refundMethod,
+          items:
+            input.items && input.items.length > 0
+              ? {
+                  create: refundItemsData.map((ri) => {
+                    const oi = order.items.find((x) => x.id === ri.orderItemId)!;
+                    return {
+                      orderItemId: ri.orderItemId,
+                      skuId: oi.skuId,
+                      productName: oi.productName as Prisma.InputJsonValue,
+                      unitPrice: oi.unitPrice,
+                      refundQty: ri.refundQty,
+                      subtotal: ri.subtotal,
+                    };
+                  }),
+                }
+              : undefined,
+        },
+        include: { items: true },
+      });
+
+      if (autoApprove) {
+        return this.completeRefundTx(tx, created.id, { reviewerId: null, reviewNote: null });
+      }
+      return created;
     });
 
     // 自动通过时同步取消订单 + 释放库存
@@ -305,6 +347,122 @@ export class RefundService {
     }
 
     return this.toView(refund);
+  }
+
+  /**
+   * 退款完成单点（批A 销量真实统计 2026-09-07）
+   *
+   * 两条 COMPLETED 路径共用（调用方各自包 withTransaction）：
+   *   - createRefund autoApprove（接单前自动通过，reviewerId=null）
+   *   - reviewRefund APPROVE（商家审核通过）
+   *
+   * 做的事：
+   *   1. refund → COMPLETED（写 transactionId / completedAt / 审核字段）
+   *   2. 销量回滚（与 COMPLETED 同事务，任一失败整体回滚）：
+   *      - 仅对「曾累加过销量」的订单回滚：预付 paymentStatus=PAID（markPaidTx 累加）
+   *        或 COD 有收款成功记录（deliverTask 累加）；未支付订单从未累加，跳过防误减
+   *      - 有 RefundItem（部分退款）→ 按 skuId→productId × refundQty 递减
+   *      - 无 RefundItem（整单退款）→ 按 OrderItem 剩余未回滚数量递减
+   *
+   * 不做：return task 创建（dispatch 集成，事务外）、通知
+   *
+   * APPROVED → FAILED（第三方退款失败）不走本方法，不回滚
+   */
+  private async completeRefundTx(
+    tx: Tx,
+    refundId: string,
+    opts: { reviewerId?: string | null; reviewNote?: string | null },
+  ): Promise<Prisma.RefundGetPayload<{ include: { items: true } }>> {
+    const refund = await tx.refund.findUnique({
+      where: { id: refundId },
+      include: { items: true },
+    });
+    if (!refund) {
+      throw new NotFoundException({
+        code: 'E-REFUND-003',
+        message: `Refund not found: ${refundId}`,
+      });
+    }
+
+    const order = await tx.order.findUnique({
+      where: { id: refund.orderId },
+      select: { id: true, paymentStatus: true, paymentMethod: true },
+    });
+    if (!order) {
+      throw new NotFoundException({
+        code: 'E-REFUND-005',
+        message: `Order not found for refund: ${refund.orderId}`,
+      });
+    }
+
+    // 1. 标记 COMPLETED（审核字段仅商家审核路径写入，autoApprove 保持 reviewedBy/reviewedAt 空）
+    //    P2-1（审查 2026-09-07）：条件翻转封并发双批 TOCTOU——双击审批 / admin cancel 自动
+    //    通过与人工审批赛跑时，两事务都可能读到 PENDING 快照；以 status='PENDING' 作
+    //    UPDATE 前置（行锁 + 提交后 WHERE 复核）只有一笔能翻走，输家 count=0 抛 E-REFUND-004。
+    //    autoApprove 同事务新建场景 status 本就是 PENDING，count=1 兼容。
+    const flipData = {
+      status: 'COMPLETED' as const,
+      transactionId: this.generateMockTransactionId(),
+      completedAt: new Date(),
+      ...(opts.reviewerId
+        ? {
+            reviewedBy: opts.reviewerId,
+            reviewedAt: new Date(),
+            reviewNote: opts.reviewNote ?? null,
+          }
+        : {}),
+    };
+    const flipped = await tx.refund.updateMany({
+      where: { id: refundId, status: 'PENDING' },
+      data: flipData,
+    });
+    if (flipped.count === 0) {
+      throw new ConflictException({
+        code: 'E-REFUND-004',
+        message: `Refund is no longer pending (concurrent review or status changed, read as ${refund.status})`,
+      });
+    }
+    // updateMany 不回传记录：用同事务已读快照 + 写入字段合成（回滚守卫/审计需要 items 与状态一致）
+    const updated = { ...refund, ...flipData };
+
+    // 2. 销量回滚（guard：仅曾累加过的订单）
+    //    - 预付：markPaidTx 置 paymentStatus=PAID 时累加过
+    //    - COD：paymentStatus 全程 PENDING，以收款成功记录（PAID/SHORT）为准
+    let salesCounted = order.paymentStatus === 'PAID';
+    if (!salesCounted && order.paymentMethod === 'COD') {
+      const cash = await tx.cashCollection.findFirst({
+        where: { orderId: refund.orderId, result: { in: ['PAID', 'SHORT'] } },
+        select: { id: true },
+      });
+      salesCounted = !!cash;
+    }
+
+    if (salesCounted) {
+      const operatorId = opts.reviewerId ?? refund.userId;
+      if (refund.items.length > 0) {
+        // 部分退款：按 RefundItem 递减
+        await rollbackSalesCountForRefundItems(
+          tx,
+          refund.orderId,
+          refund.items.map((i) => ({ skuId: i.skuId, refundQty: i.refundQty })),
+          { operatorId },
+        );
+      } else {
+        // 整单退款：按 OrderItem 剩余未回滚数量递减
+        await rollbackSalesCountForFullOrder(tx, refund.orderId, { operatorId });
+      }
+    }
+
+    logger.info({
+      msg: 'REFUND_COMPLETED_TX',
+      refundId,
+      orderId: refund.orderId,
+      amount: refund.amount,
+      salesCountRolledBack: salesCounted,
+      reviewerId: opts.reviewerId ?? null,
+    });
+
+    return updated;
   }
 
   /**
@@ -383,19 +541,10 @@ export class RefundService {
         });
       }
 
-      // 通过 → mock 原路回款 → COMPLETED
-      const updated = await db.refund.update({
-        where: { id: refundId },
-        data: {
-          status: 'COMPLETED',
-          reviewedBy: reviewerId,
-          reviewedAt: new Date(),
-          reviewNote: reviewNote ?? null,
-          transactionId: this.generateMockTransactionId(),
-          completedAt: new Date(),
-        },
-        include: { items: true },
-      });
+      // 通过 → mock 原路回款 → COMPLETED（批A：经 completeRefundTx 单点，销量回滚同事务）
+      const updated = await withTransaction((tx) =>
+        this.completeRefundTx(tx, refundId, { reviewerId, reviewNote: reviewNote ?? null }),
+      );
 
       logger.info({
         msg: 'REFUND_APPROVED_AND_COMPLETED',
