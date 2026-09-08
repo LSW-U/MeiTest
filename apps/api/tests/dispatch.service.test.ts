@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockHelpers, mockRealtime, mockServer, mockSalesIncrement } = vi.hoisted(() => {
+const { mockDb, mockHelpers, mockRealtime, mockServer, mockSalesIncrement, mockLedgerWrite } = vi.hoisted(() => {
   const server = {
     to: vi.fn(() => server),
     emit: vi.fn(),
@@ -21,6 +21,8 @@ const { mockDb, mockHelpers, mockRealtime, mockServer, mockSalesIncrement } = vi
   return {
     // 批A 销量真实统计：deliverTask COD 送达收款累加（helper 逻辑在 sales-count.helper.test.ts）
     mockSalesIncrement: vi.fn(),
+    // 批C 对账分流：deliverTask COD 送达写台账（writer 逻辑在 reconciliation-ledger.test.ts）
+    mockLedgerWrite: vi.fn(),
     mockDb: {
       deliveryTask: {
         findMany: vi.fn(),
@@ -64,6 +66,11 @@ vi.mock('../src/shared/db', () => ({
   db: mockDb,
   withTransaction: mockHelpers.withTransaction,
   incrementSalesCountForOrder: mockSalesIncrement,
+}));
+
+// 批C：dispatch.service 走直连文件路径 import（非 barrel），单独 mock 本模块
+vi.mock('../src/shared/db/reconciliation-ledger', () => ({
+  writeReconciliationLedgerTx: mockLedgerWrite,
 }));
 
 vi.mock('../src/modules/realtime/realtime.gateway', () => ({
@@ -142,6 +149,8 @@ describe('DispatchService', () => {
     mockHelpers.withTransaction.mockReset();
     // 批A 销量真实统计：reset 累加 mock
     mockSalesIncrement.mockReset();
+    // 批C 对账分流：reset 台账写入 mock
+    mockLedgerWrite.mockReset();
     mockServer.to.mockClear();
     mockServer.emit.mockClear();
     // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
@@ -493,6 +502,53 @@ describe('DispatchService', () => {
           data: expect.objectContaining({ status: 'DELIVERED_UNPAID' }),
         }),
       );
+    });
+
+    it('批C 对账分流：COD 送达 → 同事务写台账（R8 落点，拒付 amountUsd=0 也写）', async () => {
+      // PAID 场景：amountUsd=实收
+      setupForDeliver({ collectedAmount: 100, payableAmount: 100 });
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+      expect(mockLedgerWrite).toHaveBeenCalledTimes(1);
+      expect(mockLedgerWrite).toHaveBeenCalledWith(mockDb, {
+        orderId: 'order-1',
+        orderNo: 'MM1',
+        paymentMethod: 'COD',
+        amountUsd: 100,
+        cashResult: 'PAID',
+      });
+
+      // 拒付场景（collectedAmount=0 → UNPAID）：台账仍写（T3 未支付口径），amountUsd=0
+      mockLedgerWrite.mockClear();
+      setupForDeliver({ collectedAmount: 0, payableAmount: 100 });
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 0 });
+      expect(mockLedgerWrite).toHaveBeenCalledWith(mockDb, {
+        orderId: 'order-1',
+        orderNo: 'MM1',
+        paymentMethod: 'COD',
+        amountUsd: 0,
+        cashResult: 'UNPAID',
+      });
+    });
+
+    it('批C 对账分流：非 COD（预付单送达）→ 不写台账', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status: 'PICKED_UP',
+          orderId: 'order-1',
+          order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'WECHAT' },
+        }),
+      );
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED' }),
+      );
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(mockLedgerWrite).not.toHaveBeenCalled();
     });
   });
 

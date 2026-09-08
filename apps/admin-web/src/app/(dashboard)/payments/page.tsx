@@ -1,5 +1,5 @@
 /**
- * 支付管理页 — /payments（批次 3）
+ * 支付管理页 — /payments（批次 3 + 批C 对账分流）
  *
  * 后端：apps/api/src/modules/payment/admin-payment.controller.ts
  *   - GET    /admin/payments                          列表（游标 + join order）
@@ -7,6 +7,10 @@
  *   - POST   /admin/payments/:orderId/confirm-receipt 确认收款（PAID + Order CONFIRMED 同事务）
  *   - POST   /admin/payments/:orderId/mark-failed     标失败
  *   - GET    /admin/payments/reconciliation           对账汇总
+ * 后端：apps/api/src/modules/reconciliation/reconciliation.controller.ts（批C）
+ *   - GET    /admin/reconciliation/ledgers            对账台账列表（筛选 + offset 分页）
+ *   - GET    /admin/reconciliation/summary            台账分区汇总（三区展示数据源）
+ *   - GET    /admin/reconciliation/import-batches     对账单导入批次（预留入口）
  *
  * 视角：platform（super_admin 写 / customer_service 读）
  */
@@ -53,8 +57,17 @@ import {
   type PaymentMethod,
 } from '@/hooks/api/use-payments';
 import { ApiError } from '@/lib/api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatCny } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import {
+  useReconciliationLedger,
+  useLedgerSummary,
+  useImportBatches,
+  type ReconciliationLedgerItem,
+  type ReconciliationLedgerSummaryItem,
+  type LedgerStatus,
+  type LedgerCashResult,
+} from '@/hooks/api/use-payments';
 
 const STATUS_FILTERS: { value: PaymentStatus | 'ALL'; labelKey: string }[] = [
   { value: 'ALL', labelKey: 'admin.payments.statusAll' },
@@ -81,6 +94,50 @@ const METHOD_LABEL_KEY: Record<PaymentMethod, string> = {
   STRIPE: 'admin.payments.methodStripe',
 };
 
+// 批C 台账筛选用：全 8 渠道（含未来线上渠道行，批B 补位枚举）
+const LEDGER_METHODS: string[] = [
+  'COD',
+  'BANK_TRANSFER',
+  'WECHAT',
+  'PAYPAL',
+  'STRIPE',
+  'WECHAT_GLOBAL',
+  'ALIPAY_CN',
+  'LOCAL_PSP',
+];
+
+const LEDGER_METHOD_LABEL: Record<string, string> = {
+  ...METHOD_LABEL_KEY,
+  WECHAT_GLOBAL: 'admin.payments.methodWechatGlobal',
+  ALIPAY_CN: 'admin.payments.methodAlipayCn',
+  LOCAL_PSP: 'admin.payments.methodLocalPsp',
+};
+
+const LEDGER_STATUS_LABEL: Record<LedgerStatus, string> = {
+  PENDING: 'admin.payments.ledgerStatusPending',
+  MATCHED: 'admin.payments.ledgerStatusMatched',
+  DIFF: 'admin.payments.ledgerStatusDiff',
+  SETTLED: 'admin.payments.ledgerStatusSettled',
+};
+
+const CASH_RESULT_LABEL: Record<LedgerCashResult, string> = {
+  PAID: 'admin.payments.ledgerCashPaid',
+  SHORT: 'admin.payments.ledgerCashShort',
+  UNPAID: 'admin.payments.ledgerCashUnpaid',
+};
+
+const BATCH_FORMAT_LABEL: Record<string, string> = {
+  WECHAT: 'admin.payments.formatWechat',
+  ALIPAY: 'admin.payments.formatAlipay',
+  BANK: 'admin.payments.formatBank',
+};
+
+const BATCH_STATUS_LABEL: Record<string, string> = {
+  IMPORTED: 'admin.payments.batchStatusImported',
+  PARTIAL: 'admin.payments.batchStatusPartial',
+  FAILED: 'admin.payments.batchStatusFailed',
+};
+
 export default function PaymentsListPage() {
   const t = useTranslations('common');
   const { toast } = useToast();
@@ -92,6 +149,7 @@ export default function PaymentsListPage() {
   const [failTarget, setFailTarget] = useState<PaymentIntentListItem | null>(null);
   const [failReason, setFailReason] = useState('');
   const [showReconciliation, setShowReconciliation] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
 
   const {
     data,
@@ -231,9 +289,14 @@ export default function PaymentsListPage() {
         title={t('admin.payments.title')}
         description={t('admin.payments.description')}
         action={
-          <Button variant="outline" onClick={() => setShowReconciliation((v) => !v)}>
-            {t('admin.payments.reconciliationTitle')}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowLedger((v) => !v)}>
+              {t('admin.payments.ledgerTitle')}
+            </Button>
+            <Button variant="outline" onClick={() => setShowReconciliation((v) => !v)}>
+              {t('admin.payments.reconciliationTitle')}
+            </Button>
+          </div>
         }
       />
 
@@ -274,6 +337,8 @@ export default function PaymentsListPage() {
       </div>
 
       {showReconciliation && <ReconciliationCard />}
+
+      {showLedger && <ReconciliationLedgerSection />}
 
       {error ? (
         <ErrorState onRetry={() => refetch()} />
@@ -511,6 +576,337 @@ function ReconciliationCard() {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">{t('admin.payments.empty')}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// 对账台账区（批C 对账分流，微信支付预留 2026-09-08）
+//   三区汇总（COD 现金 / 银行转账 / 线上预留）+ 台账列表（筛选 + 分页）+ 导入批次（预留）
+// ============================================================================
+
+const LEDGER_PAGE_SIZE = 10;
+
+/** 单个分区卡：按 method + cashResult 聚合行渲染（COD 行带收款结果拆分） */
+function LedgerSummaryCard({
+  titleKey,
+  rows,
+  emptyText,
+}: {
+  titleKey: string;
+  rows: ReconciliationLedgerSummaryItem[];
+  emptyText: string;
+}) {
+  const t = useTranslations('common');
+  const totalUsd = rows.reduce((sum, r) => sum + r.totalAmountUsd, 0);
+  const totalCny = rows.reduce((sum, r) => sum + r.totalAmountCny, 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{t(titleKey)}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{emptyText}</p>
+        ) : (
+          <div className="space-y-1">
+            {rows.map((r, i) => (
+              <div
+                key={`${r.method}-${r.cashResult ?? 'na'}-${i}`}
+                className="flex items-center justify-between border-b pb-1 text-xs last:border-0"
+              >
+                <span className="text-muted-foreground">
+                  {r.cashResult ? t(CASH_RESULT_LABEL[r.cashResult]) : '—'}
+                </span>
+                <div className="flex items-center gap-3 font-mono">
+                  <span>{t('admin.payments.reconciliationCount', { count: r.count })}</span>
+                  <span>{formatCurrency(r.totalAmountUsd)}</span>
+                  {r.totalAmountCny > 0 && <span className="text-amber-600">{formatCny(r.totalAmountCny)}</span>}
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-1 text-xs font-medium">
+              <span>{t('admin.payments.reconciliationCount', { count: rows.reduce((s, r) => s + r.count, 0) })}</span>
+              <div className="flex items-center gap-3 font-mono">
+                <span>{formatCurrency(totalUsd)}</span>
+                {totalCny > 0 && <span className="text-amber-600">{formatCny(totalCny)}</span>}
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** 对账台账区：三区汇总 + 台账列表（筛选/分页）+ 导入批次（预留入口） */
+function ReconciliationLedgerSection() {
+  const t = useTranslations('common');
+
+  // 三区汇总
+  const summary = useLedgerSummary();
+  const summaryItems = summary.data ?? [];
+  const codRows = summaryItems.filter((r) => r.method === 'COD');
+  const bankRows = summaryItems.filter((r) => r.method === 'BANK_TRANSFER');
+  const onlineRows = summaryItems.filter((r) => r.method !== 'COD' && r.method !== 'BANK_TRANSFER');
+
+  // 台账筛选
+  const [methodFilter, setMethodFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<LedgerStatus | 'ALL'>('ALL');
+  const [orderNoSearch, setOrderNoSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
+
+  /** 改任一筛选回第 1 页 */
+  function withPageReset<V>(setter: (v: V) => void) {
+    return (v: V) => {
+      setter(v);
+      setPage(1);
+    };
+  }
+
+  const { data, isPending, error, refetch } = useReconciliationLedger({
+    method: methodFilter === 'ALL' ? undefined : methodFilter,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    orderNo: orderNoSearch || undefined,
+    // date input 值为 YYYY-MM-DD：from 取当日 0 点起（含），to 取当日末尾前（lt）
+    dateFrom: dateFrom ? new Date(`${dateFrom}T00:00:00.000Z`).toISOString() : undefined,
+    dateTo: dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : undefined,
+    page,
+    pageSize: LEDGER_PAGE_SIZE,
+  });
+
+  const total = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / LEDGER_PAGE_SIZE));
+
+  const columns: Column<ReconciliationLedgerItem>[] = [
+    {
+      key: 'orderNo',
+      header: t('admin.payments.columnOrderNo'),
+      render: (row) => <span className="font-mono text-xs">{row.orderNo}</span>,
+    },
+    {
+      key: 'method',
+      header: t('admin.payments.columnMethod'),
+      render: (row) => <span className="text-sm">{t(LEDGER_METHOD_LABEL[row.method] ?? row.method)}</span>,
+    },
+    {
+      key: 'amountUsd',
+      header: t('admin.payments.ledgerColAmountUsd'),
+      render: (row) => <span className="font-mono text-xs">{formatCurrency(row.amountUsd)}</span>,
+    },
+    {
+      key: 'amountCny',
+      header: t('admin.payments.ledgerColAmountCny'),
+      render: (row) =>
+        row.amountCny != null ? (
+          <span className="font-mono text-xs text-amber-600">{formatCny(row.amountCny)}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'cashResult',
+      header: t('admin.payments.ledgerColCashResult'),
+      render: (row) =>
+        row.cashResult ? (
+          <span className="text-xs">{t(CASH_RESULT_LABEL[row.cashResult])}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'status',
+      header: t('admin.payments.columnStatus'),
+      render: (row) => <StatusBadge status={row.status} label={t(LEDGER_STATUS_LABEL[row.status])} />,
+    },
+    {
+      key: 'createdAt',
+      header: t('admin.payments.columnCreatedAt'),
+      render: (row) => (
+        <span className="text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* 三区汇总：COD 现金 / 银行转账 / 线上（预留）——资金流分开展示（验收 T1） */}
+      <div className="grid gap-3 md:grid-cols-3">
+        <LedgerSummaryCard
+          titleKey="admin.payments.ledgerSectionCod"
+          rows={codRows}
+          emptyText={t('admin.payments.ledgerEmpty')}
+        />
+        <LedgerSummaryCard
+          titleKey="admin.payments.ledgerSectionBank"
+          rows={bankRows}
+          emptyText={t('admin.payments.ledgerEmpty')}
+        />
+        <LedgerSummaryCard
+          titleKey="admin.payments.ledgerSectionOnline"
+          rows={onlineRows}
+          emptyText={t('admin.payments.ledgerOnlinePlaceholder')}
+        />
+      </div>
+
+      {/* 台账列表：筛选（method/status/orderNo/日期）+ 分页 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t('admin.payments.ledgerTitle')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={methodFilter}
+              onValueChange={withPageReset((v: string) => setMethodFilter(v))}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t('admin.payments.methodAll')}</SelectItem>
+                {LEDGER_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {t(LEDGER_METHOD_LABEL[m])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={statusFilter}
+              onValueChange={withPageReset((v: string) => setStatusFilter(v as LedgerStatus | 'ALL'))}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t('admin.payments.ledgerFilterAll')}</SelectItem>
+                {(Object.keys(LEDGER_STATUS_LABEL) as LedgerStatus[]).map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {t(LEDGER_STATUS_LABEL[s])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder={t('admin.payments.searchOrderNoPlaceholder')}
+              value={orderNoSearch}
+              onChange={(e) => withPageReset(setOrderNoSearch)(e.target.value)}
+              className="w-56"
+            />
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">{t('admin.payments.ledgerFilterDateFrom')}</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => withPageReset(setDateFrom)(e.target.value)}
+                className="w-36"
+              />
+              <Label className="text-xs text-muted-foreground">{t('admin.payments.ledgerFilterDateTo')}</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => withPageReset(setDateTo)(e.target.value)}
+                className="w-36"
+              />
+            </div>
+          </div>
+
+          {error ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : isPending ? (
+            <Skeleton className="h-32 w-full" />
+          ) : (data?.items.length ?? 0) === 0 ? (
+            <EmptyState title={t('admin.payments.ledgerEmpty')} description="" />
+          ) : (
+            <>
+              <DataTable data={data!.items} columns={columns} />
+              <div className="flex items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  {t('admin.payments.ledgerPrevPage')}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.payments.ledgerPageInfo', { page, pages, total })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= pages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  {t('admin.payments.ledgerNextPage')}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 导入批次列表（预留入口：本轮不做真实上传 UI，验收 T2） */}
+      <ImportBatchesCard />
+    </div>
+  );
+}
+
+/** 导入批次卡（预留入口：按钮禁用 + 提示文案） */
+function ImportBatchesCard() {
+  const t = useTranslations('common');
+  const { data, isPending } = useImportBatches({ page: 1, pageSize: 10 });
+  const items = data?.items ?? [];
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-sm">{t('admin.payments.batchTitle')}</CardTitle>
+        <Button size="sm" disabled title={t('admin.payments.batchImportPlaceholder')}>
+          {t('admin.payments.batchImportButton')}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <p className="pb-2 text-xs text-muted-foreground">{t('admin.payments.batchImportPlaceholder')}</p>
+        {isPending ? (
+          <Skeleton className="h-20 w-full" />
+        ) : items.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('admin.payments.batchEmpty')}</p>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between border-b pb-1 text-xs font-medium text-muted-foreground">
+              <span className="flex-1">{t('admin.payments.batchColFileName')}</span>
+              <span className="w-20">{t('admin.payments.batchColFormat')}</span>
+              <span className="w-14 text-right">{t('admin.payments.batchColRows')}</span>
+              <span className="w-14 text-right">{t('admin.payments.batchColSuccess')}</span>
+              <span className="w-14 text-right">{t('admin.payments.batchColFailed')}</span>
+              <span className="w-24 text-right">{t('admin.payments.batchColStatus')}</span>
+              <span className="w-36 text-right">{t('admin.payments.columnCreatedAt')}</span>
+            </div>
+            {items.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between border-b pb-1 text-xs last:border-0"
+              >
+                <span className="flex-1 truncate font-mono">{b.fileName}</span>
+                <span className="w-20">{t(BATCH_FORMAT_LABEL[b.format] ?? b.format)}</span>
+                <span className="w-14 text-right font-mono">{b.rowCount}</span>
+                <span className="w-14 text-right font-mono">{b.successCount}</span>
+                <span className="w-14 text-right font-mono">{b.failedCount}</span>
+                <span className="w-24 text-right">
+                  {t(BATCH_STATUS_LABEL[b.status] ?? b.status)}
+                </span>
+                <span className="w-36 text-right text-muted-foreground">
+                  {new Date(b.createdAt).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

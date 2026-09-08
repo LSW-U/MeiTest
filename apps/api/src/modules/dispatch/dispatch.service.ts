@@ -21,6 +21,7 @@
 import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, incrementSalesCountForOrder } from '../../shared/db';
+import { writeReconciliationLedgerTx } from '../../shared/db/reconciliation-ledger';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -626,6 +627,21 @@ export class DispatchService {
             note: input.note,
           },
           select: { id: true },
+        });
+      }
+
+      // 批C 对账分流（微信支付预留 2026-09-08，R8 精确落点）：COD 送达 → 同事务写对账台账
+      //   - 覆盖 PAID/SHORT/UNPAID 三态（拒付也入台账，T3 未支付口径；未实收 amountUsd=0），
+      //     故条件挂在 isCod 而非 cashCollection 分支（拒付单无 CashCollection 行但有台账行）
+      //   - COD 纯 USD 现金流：exchangeRate/amountCny 恒 null（快照仅人民币线上通道有值）
+      //   - 幂等：orderId @unique + writer 先查后写；失败只 warn 不阻断送达主流程
+      if (isCod) {
+        await writeReconciliationLedgerTx(tx, {
+          orderId: task.orderId,
+          orderNo: order.orderNo,
+          paymentMethod: 'COD',
+          amountUsd: input.collectedAmount ?? 0,
+          cashResult,
         });
       }
 

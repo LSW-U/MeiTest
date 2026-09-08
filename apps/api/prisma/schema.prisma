@@ -552,6 +552,8 @@ model Order {
   reviews         Review[] // P15 多商品评价：1:1 -> 1:N（同 order 多 review，每商品一条，@@unique([orderId, productId]) 拦同订单同商品重复）
   riderReview     RiderReview? // reviews-1：骑手评价反向
   cashCollection  CashCollection?
+  // 批C 对账分流（微信支付预留 2026-09-08）：1:1 台账行（orderId @unique 幂等，同单只写一行）
+  reconciliationLedger ReconciliationLedger?
   refunds         Refund[]
   orderPromotions OrderPromotion[]
   userCoupons     UserCoupon[]
@@ -1491,7 +1493,6 @@ model ImportLog {
 }
 
 // ============================================================================
-// ============================================================================
 // ExchangeRate（批A 汇率体系，微信支付预留 2026-09-08，方案 D4）
 //   USD→CNY 每日汇率，运营按日维护（SUPER_ADMIN upsert）；
 //   当日无表时下单/查询回退固定兜底值（EXCHANGE_FALLBACK_RATE，不入库仅查询时标记 FALLBACK）
@@ -1516,6 +1517,82 @@ model ExchangeRate {
   /// 每币种对每日一条（按日 upsert 落点）
   @@unique([rateDate, fromCurrency, toCurrency])
   @@map("exchange_rates")
+}
+
+// ============================================================================
+// ReconciliationLedger / StatementImportBatch（批C 对账分流，微信支付预留 2026-09-08，方案V2 §3.3）
+//   台账统一承载 COD 现金与线上两股资金流（D6：不动现有 Settlement 结算单，对账走本表）；
+//   对账单导入只预留表结构 + 映射文档（D7：本轮不做真实导入解析）
+//   错误码段：E-RECON-001~099 预留（本轮仅只读端点，无业务异常）
+// ============================================================================
+
+/// 台账状态机:PENDING(待对账) → MATCHED(对平)/DIFF(差异) → SETTLED(已随结算闭环)
+enum ReconciliationStatus {
+  PENDING
+  MATCHED
+  DIFF
+  SETTLED
+}
+
+/// 对账单格式（StatementImportBatch.format）
+enum StatementFormat {
+  WECHAT // 微信商户平台对账单 CSV
+  ALIPAY // 支付宝商家账单 CSV
+  BANK // 银行流水单（BANK_TRANSFER 人工对账）
+}
+
+model ReconciliationLedger {
+  id     String @id @default(uuid())
+  /// 订单 ID（@unique 幂等锚点：同单多事件只写一行，与 CashCollection.orderId @unique 同构）
+  orderId String @unique @map("order_id")
+  /// 订单号快照（对账单匹配 + 人工排查主键，免 join orders）
+  orderNo String @map("order_no")
+  /// 资金渠道：COD=骑手现金实收 / BANK_TRANSFER=银行转账审核 / 线上渠道=对账单导入 MATCHED 时写（本轮预留）
+  paymentMethod PaymentMethod @map("payment_method")
+  /// 实收金额（分，USD）：COD=骑手实收（UNPAID 拒付=0）；BANK_TRANSFER/线上=PaymentIntent.amount
+  amountUsd Int @map("amount_usd")
+  /// 汇率快照（万分位，同 Order.exchangeRate 口径）；纯 USD 资金流（COD/BANK_TRANSFER）为 null
+  exchangeRate Int? @map("exchange_rate")
+  /// 人民币金额（分）= amountUsd × exchangeRate / 10000；纯 USD 资金流为 null
+  amountCny Int? @map("amount_cny")
+  /// COD 收款结果:PAID(足额) / SHORT(少收) / UNPAID(拒付)；线上渠道为 null（口径同 CashCollection.result）
+  cashResult String? @map("cash_result")
+  /// 台账状态机（见 ReconciliationStatus；两写入钩子初始 PENDING，MATCHED/SETTLED 由未来对账单导入推进）
+  status ReconciliationStatus @default(PENDING)
+  /// 对账单导入批次（statement_import_batches.id；导入 MATCHED 时回填，本轮预留）
+  statementBatchId String? @map("statement_batch_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order          Order                 @relation(fields: [orderId], references: [id])
+  statementBatch StatementImportBatch? @relation(fields: [statementBatchId], references: [id])
+
+  /// 台账列表筛选（paymentMethod/status/orderNo/日期区间）走组合查询
+  @@index([paymentMethod, status])
+  @@index([orderNo])
+  @@index([createdAt])
+  @@map("reconciliation_ledger")
+}
+
+model StatementImportBatch {
+  id       String @id @default(uuid())
+  /// 原始文件名（对账单 CSV，对齐 ImportLog.fileName 模式）
+  fileName String @map("file_name")
+  /// 对账单格式（见 StatementFormat）
+  format   StatementFormat
+  /// 文件总行数 / 解析成功数 / 失败数（口径同 ImportLog.successCount/failedCount）
+  rowCount     Int @map("row_count")
+  successCount Int @map("success_count")
+  failedCount  Int @map("failed_count")
+  /// 批次状态：IMPORTED(全部成功) / PARTIAL(部分失败) / FAILED(整体失败)（String 预留，复用 ImportLog 宽松模式）
+  status    String  @db.VarChar(16)
+  /// 操作人（裸列无 FK，对齐 ImportLog.operatorId）
+  operatorId String? @map("operator_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ledgers ReconciliationLedger[]
+
+  @@index([format, createdAt])
+  @@map("statement_import_batches")
 }
 
 // ============================================================================

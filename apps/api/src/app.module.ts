@@ -31,6 +31,7 @@ import { PlatformModule } from './modules/platform/platform.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { RateModule } from './modules/rate/rate.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { RefundModule } from './modules/refund/refund.module';
 import { ReviewModule } from './modules/review/review.module';
 import { RiderModule } from './modules/rider/rider.module';
@@ -72,6 +73,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     PricingModule,
     RateModule,
     RealtimeModule,
+    ReconciliationModule,
     RefundModule,
     ReviewModule,
     RiderModule,

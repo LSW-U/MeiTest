@@ -123,6 +123,14 @@ import {
   MarkFailedRequest,
   ReconciliationItem,
   PaymentMethodListResponseData,
+  // 批C 对账分流
+  ReconciliationLedgerView,
+  ListReconciliationLedgersQuery,
+  ReconciliationLedgerListResponse,
+  ReconciliationLedgerSummaryItem,
+  ReconciliationLedgerSummaryResponseData,
+  StatementImportBatchView,
+  StatementImportBatchListResponse,
   // platform
   DashboardSummary,
   DashboardTimeRange,
@@ -400,6 +408,14 @@ registry.register('PaymentIntentAdminView', PaymentIntentAdminView);
 registry.register('PaymentIntentAdminDetail', PaymentIntentAdminDetail);
 registry.register('ListPaymentIntentsQuery', ListPaymentIntentsQuery);
 registry.register('PaymentIntentListResponse', PaymentIntentListResponse);
+// 批C 对账分流
+registry.register('ReconciliationLedgerView', ReconciliationLedgerView);
+registry.register('ListReconciliationLedgersQuery', ListReconciliationLedgersQuery);
+registry.register('ReconciliationLedgerListResponse', ReconciliationLedgerListResponse);
+registry.register('ReconciliationLedgerSummaryItem', ReconciliationLedgerSummaryItem);
+registry.register('ReconciliationLedgerSummaryResponseData', ReconciliationLedgerSummaryResponseData);
+registry.register('StatementImportBatchView', StatementImportBatchView);
+registry.register('StatementImportBatchListResponse', StatementImportBatchListResponse);
 registry.register('MarkFailedRequest', MarkFailedRequest);
 registry.register('ReconciliationItem', ReconciliationItem);
 
@@ -1873,6 +1889,48 @@ registry.registerPath({
       content: { 'application/json': { schema: z.object({ success: z.literal(true), data: PaymentIntent }) } },
     },
     409: { description: 'PAYMENT_STATUS_CONFLICT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// Admin Reconciliation（批C 对账分流：台账列表 / 分区汇总 / 导入批次，微信支付预留 2026-09-08）
+// ============================================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/reconciliation/ledgers',
+  tags: ['payment'],
+  description: '对账台账列表（offset 分页，可按 method/status/orderNo/日期区间筛选；批C）',
+  request: { query: ListReconciliationLedgersQuery },
+  responses: {
+    200: { description: '台账列表', content: { 'application/json': { schema: ReconciliationLedgerListResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/reconciliation/summary',
+  tags: ['payment'],
+  description: '台账分区汇总（group by method + cashResult，admin 三区展示数据源；批C）',
+  responses: {
+    200: {
+      description: '分区汇总',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.literal(true), data: ReconciliationLedgerSummaryResponseData }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/reconciliation/import-batches',
+  tags: ['payment'],
+  description: '对账单导入批次列表（预留入口，本轮不做真实上传 UI；批C）',
+  responses: {
+    200: { description: '导入批次列表', content: { 'application/json': { schema: StatementImportBatchListResponse } } },
   },
 });
 

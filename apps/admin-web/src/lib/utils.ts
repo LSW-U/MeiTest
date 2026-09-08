@@ -18,3 +18,17 @@ export function formatCurrency(cents: number | undefined | null, locale = 'en-US
     currency: 'USD',
   }).format(cents / 100);
 }
+
+/**
+ * 人民币格式化（CNY cents → ¥X.XX）
+ *
+ * 批C 对账台账用：台账 amountCny 为可空（纯 USD 资金流 null → 显示 —）；
+ * 快照口径（批A 下单锁汇率），非实时汇率。
+ */
+export function formatCny(cents: number | undefined | null, locale = 'en-US'): string {
+  if (cents == null) return '—';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'CNY',
+  }).format(cents / 100);
+}
