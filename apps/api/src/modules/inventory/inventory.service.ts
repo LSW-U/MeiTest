@@ -18,7 +18,7 @@
  *   - 所有写库存操作走 withTransaction（保证 StockLog 与 Stock 一致）
  *   - 库存不存在时按需创建（首次入库用）
  */
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { db, withTransaction, deductStock, releaseStock, type Tx } from '../../shared/db';
 import { findWarehouseByPoint } from '../../shared/db/postgis-helpers';
 import { randomUUID } from 'node:crypto';
@@ -45,6 +45,8 @@ export interface StockAdjustInput {
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
+
   // ===== 客户端：地址匹配 =====
 
   /** 按收货地址匹配最近仓库（PostGIS ST_Within + ST_Distance） */
@@ -534,10 +536,14 @@ export class InventoryService {
    *
    * 逐条 adjustStock（独立事务），失败收集 failedRows（部分成功语义，不阻塞成功的）
    * 与 batchAdjustStock（全事务）语义不同 —— CSV 导入容忍单行错误
+   *
+   * D5 v2（批E）：fileName 由 controller 传 file.originalname，成功路径统一写一条
+   * ImportLog（resourceType='Stock'，部分成功也记）——写历史失败不阻断导入主流程
    */
   async importStocksCsv(
     buffer: Buffer,
     operatorId?: string,
+    fileName?: string,
   ): Promise<{
     successCount: number;
     failedRows: Array<{ row: number; error: string }>;
@@ -631,6 +637,25 @@ export class InventoryService {
       } catch (e) {
         failedRows.push({ row, error: (e as Error).message });
       }
+    }
+
+    // D5 v2（批E）：导入历史后端统一写（前端只查不补记）——部分成功也记一条；
+    // 写历史失败不阻断导入主流程（catch 记 warn，与 @Audit 异步写同策略）
+    try {
+      await db.importLog.create({
+        data: {
+          fileName: fileName || 'unknown.csv',
+          resourceType: 'Stock',
+          successCount,
+          failedCount: failedRows.length,
+          failedRows,
+          operatorId,
+        },
+      });
+    } catch (e) {
+      this.logger.warn(
+        `importStocksCsv: write ImportLog failed (import itself succeeded): ${(e as Error).message}`,
+      );
     }
 
     return { successCount, failedRows };

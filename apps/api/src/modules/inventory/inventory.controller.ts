@@ -235,7 +235,11 @@ export class AdminInventoryController {
     if (!file) {
       throw new BadRequestException('未收到文件（field name 必须为 "file"）');
     }
-    const data = await this.inventory.importStocksCsv(file.buffer, req?.user?.sub);
+    const data = await this.inventory.importStocksCsv(
+      file.buffer,
+      req?.user?.sub,
+      file.originalname, // D5 v2：ImportLog 记录原始文件名
+    );
     return { success: true as const, data };
   }
 }

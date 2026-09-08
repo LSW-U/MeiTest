@@ -16,6 +16,7 @@ const m = vi.hoisted(() => ({
   findWarehouseByPoint: vi.fn(),
   deductStock: vi.fn(),
   releaseStock: vi.fn(),
+  importLogCreate: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -26,6 +27,7 @@ vi.mock('../src/shared/db', () => ({
       create: m.stockCreate,
     },
     stockLog: { findMany: m.stockLogFindMany, create: m.stockLogCreate },
+    importLog: { create: m.importLogCreate },
     $queryRaw: m.queryRaw,
     $executeRaw: m.executeRaw,
     $transaction: m.transaction,
@@ -351,6 +353,66 @@ describe('InventoryService', () => {
       expect(result.failedRows[0].row).toBe(2);
       expect(result.failedRows[0].error).toContain('not uuid');
       expect(result.successCount).toBe(0);
+    });
+
+    // ===== 批E D5 v2（审查 P2-1）：ImportLog 后端统一写 =====
+
+    it('导入成功（含部分成功）→ 写 ImportLog，failedCount=failedRows.length（批E P2-1 ①）', async () => {
+      const wh = '11111111-1111-1111-1111-111111111111';
+      const sku1 = '22222222-2222-2222-2222-222222222222';
+      const sku2 = '33333333-3333-3333-3333-333333333333';
+      const csv = Buffer.from(
+        `warehouseId,skuId,deltaQty\n${wh},${sku1},0\n${wh},${sku2},5`,
+      );
+      m.stockFindUnique.mockResolvedValue({ warehouseId: wh, skuId: sku2, quantity: 10 });
+      m.releaseStock.mockResolvedValue(undefined);
+      m.importLogCreate.mockResolvedValue({});
+
+      const result = await service.importStocksCsv(csv, 'admin-1', 'stock-adjust.csv');
+
+      // 部分成功语义：1 成功 + 1 失败（deltaQty=0）
+      expect(result.successCount).toBe(1);
+      expect(result.failedRows).toHaveLength(1);
+      expect(m.importLogCreate).toHaveBeenCalledTimes(1);
+      expect(m.importLogCreate).toHaveBeenCalledWith({
+        data: {
+          fileName: 'stock-adjust.csv',
+          resourceType: 'Stock',
+          successCount: 1,
+          failedCount: 1, // 部分成功也记，failedCount = failedRows.length
+          failedRows: [{ row: 2, error: 'deltaQty cannot be 0' }],
+          operatorId: 'admin-1',
+        },
+      });
+    });
+
+    it('fileName 缺省 → fallback unknown.csv；全失败也写一条（批E P2-1 ① 补充）', async () => {
+      const csv = Buffer.from('warehouseId,skuId,deltaQty\nnot-uuid,also-bad,5');
+      m.importLogCreate.mockResolvedValue({});
+
+      const result = await service.importStocksCsv(csv);
+
+      expect(result.successCount).toBe(0);
+      expect(m.importLogCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          fileName: 'unknown.csv',
+          successCount: 0,
+          failedCount: 1,
+        }),
+      });
+    });
+
+    it('写 ImportLog 失败 → 仅 warn 不抛，导入结果照常返回（批E P2-1 ② 不阻断主流程）', async () => {
+      const wh = '11111111-1111-1111-1111-111111111111';
+      const sku = '33333333-3333-3333-3333-333333333333';
+      const csv = Buffer.from(`warehouseId,skuId,deltaQty\n${wh},${sku},5`);
+      m.stockFindUnique.mockResolvedValue({ warehouseId: wh, skuId: sku, quantity: 10 });
+      m.releaseStock.mockResolvedValue(undefined);
+      m.importLogCreate.mockRejectedValue(new Error('db down'));
+
+      // 不抛：写历史失败不阻断导入主流程（与 @Audit 异步写同策略）
+      const result = await service.importStocksCsv(csv, 'admin-1', 'a.csv');
+      expect(result).toEqual({ successCount: 1, failedRows: [] });
     });
   });
 

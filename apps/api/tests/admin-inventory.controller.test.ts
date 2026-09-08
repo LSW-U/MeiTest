@@ -142,10 +142,13 @@ describe('AdminInventoryController - 5 端点装配（第五批审查 P2-2）', 
     expect(result).toBe(mockCsv);
   });
 
-  it('POST /stocks/import - 调 inventory.importStocksCsv 传 file.buffer + req.user.sub', async () => {
+  it('POST /stocks/import - 调 inventory.importStocksCsv 传 file.buffer + req.user.sub + file.originalname（批E D5：ImportLog 记录文件名）', async () => {
     const mockData = { successCount: 3, failedRows: [] };
     mockInventoryService.importStocksCsv.mockResolvedValue(mockData);
-    const file = { buffer: Buffer.from('warehouseId,skuId,deltaQty\n...') } as never;
+    const file = {
+      buffer: Buffer.from('warehouseId,skuId,deltaQty\n...'),
+      originalname: 'stock-adjust.csv',
+    } as never;
 
     const result = await controller.importStocksCsv(file, {
       user: { sub: 'admin-1', role: 'SUPER_ADMIN' },
@@ -154,6 +157,7 @@ describe('AdminInventoryController - 5 端点装配（第五批审查 P2-2）', 
     expect(mockInventoryService.importStocksCsv).toHaveBeenCalledWith(
       expect.any(Buffer),
       'admin-1',
+      'stock-adjust.csv',
     );
     expect(result).toEqual({ success: true, data: mockData });
   });

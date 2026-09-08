@@ -23,6 +23,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { HomeModule } from './modules/home/home.module';
 import { AboutModule } from './modules/about/about.module';
 import { ImModule } from './modules/im/im.module';
+import { ImportLogModule } from './modules/import-log/import-log.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
@@ -61,6 +62,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     FeedbackModule,
     HomeModule,
     ImModule,
+    ImportLogModule,
     InventoryModule,
     NotificationModule,
     OrderModule,

@@ -1451,6 +1451,31 @@ enum RiderDepositStatus {
   REFUNDED
 }
 
+// 28. ImportLog — 导入历史（批E/批F 方案 D5 v2：后端统一写，前端只查不补记）
+//   stocks/import（resourceType='Stock'）与 products/import（'Product'）成功路径各写一条，
+//   部分成功也记（failedCount=failedRows.length）；AuditLog（安全审计）与本表（业务运营历史）并存
+model ImportLog {
+  id           String   @id @default(uuid())
+  /// 原始文件名（controller 传 file.originalname）
+  fileName     String   @map("file_name")
+  /// 'Product' | 'Stock'
+  resourceType String   @map("resource_type")
+  successCount Int      @map("success_count")
+  failedCount  Int      @map("failed_count")
+  /// 失败明细 [{row, error}]，与导入响应 failedRows 同构（写入方必传）
+  failedRows   Json     @map("failed_rows")
+  /// 操作人（裸列无 FK，对齐 StockLog.operatorId）
+  operatorId   String?  @map("operator_id")
+  /// 重复策略（批F 商品导入 skip|overwrite|error；库存导入为空）
+  mode         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([resourceType, createdAt])
+  @@index([operatorId])
+  @@map("import_logs")
+}
+
+// ============================================================================
 // ============================================================================
 // 文档说明 — W1-D2-T3 任务执行时的注意事项
 // ----------------------------------------------------------------------------

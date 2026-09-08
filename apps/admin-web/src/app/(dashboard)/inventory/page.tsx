@@ -13,8 +13,9 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import Papa from 'papaparse';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { EmptyState } from '@/components/common/empty-state';
@@ -31,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Download, Loader2, Plus, Trash2 } from 'lucide-react';
 import {
   useStocks,
   useBatchAdjustStock,
@@ -45,6 +46,7 @@ import {
   type TransferRecord,
   type ImportResultData,
 } from '@/hooks/api/use-inventory';
+import { ImportHistoryCard } from '@/components/import/import-history-card';
 import { ApiError } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,6 +55,76 @@ interface BatchRow {
   skuId: string;
   deltaQty: string;
   reason: string;
+}
+
+// ============================================================================
+// 批E：CSV 导入预览（papaparse 本地解析）+ 失败明细下载 + 导入历史
+//
+// 预览校验对齐后端行为（inventory.service.importStocksCsv，R4）：
+//   表头 warehouseId,skuId,deltaQty（reason 可选）/ 1000 行上限 /
+//   warehouseId、skuId 强制 uuid（不是 W01 这种 code）/ deltaQty 整数且非 0
+// 预览 ≠ 后端手写 split 的最终结果——结果页如实展示 failedRows
+// ============================================================================
+
+/** 预览展示的数据行数（表头之外的前 8 行） */
+const IMPORT_PREVIEW_ROWS = 8;
+/** 与后端 MAX_IMPORT_ROWS 一致（超出后端直接 400 E-INVENTORY-009） */
+const IMPORT_MAX_ROWS = 1000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface ImportPreview {
+  headers: string[];
+  /** 预览数据行（不含表头，前 IMPORT_PREVIEW_ROWS 行） */
+  rows: string[][];
+  totalDataRows: number;
+  /** 表头缺 warehouseId/skuId/deltaQty 必填列 */
+  headerError: boolean;
+  /** 首个错误行（row 为含表头的 1-based 行号，对齐后端 failedRows.row） */
+  firstError: { row: number; error: string } | null;
+}
+
+/** 单行校验（错误文案与后端 failedRows.error 同款，保持一致便于对照） */
+function validateImportRow(
+  cols: string[],
+  idxWh: number,
+  idxSku: number,
+  idxDelta: number,
+): string | null {
+  const warehouseId = cols[idxWh];
+  const skuId = cols[idxSku];
+  const deltaQtyStr = cols[idxDelta];
+  if (!warehouseId || !skuId || !deltaQtyStr) {
+    return 'missing required field (warehouseId/skuId/deltaQty)';
+  }
+  if (!UUID_RE.test(warehouseId)) {
+    return `warehouseId not uuid: ${warehouseId}`;
+  }
+  if (!UUID_RE.test(skuId)) {
+    return `skuId not uuid: ${skuId}`;
+  }
+  const deltaQty = Number(deltaQtyStr);
+  if (!Number.isInteger(deltaQty)) {
+    return `deltaQty not integer: ${deltaQtyStr}`;
+  }
+  if (deltaQty === 0) {
+    return 'deltaQty cannot be 0';
+  }
+  return null;
+}
+
+/** 失败明细下载 CSV（row,error 两列；BOM 前缀保 Excel 打开不乱码；文件名含日期） */
+function downloadFailedRowsCsv(failedRows: Array<{ row: number; error: string }>): void {
+  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const lines = ['row,error', ...failedRows.map((f) => `${f.row},${esc(f.error)}`)];
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `import-failed-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 interface TransferRow {
@@ -81,6 +153,7 @@ export default function InventoryPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<ImportResultData | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
 
   const stocksQuery = useStocks({
     warehouseId: warehouseId || undefined,
@@ -152,6 +225,46 @@ export default function InventoryPage() {
     } catch (err) {
       toastError(err, 'admin.inventory.toastFailed');
     }
+  }
+
+  /** 选文件后 papaparse 本地解析预览（不提交，校验对齐后端 R4 行为） */
+  function handleImportFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setImportFile(file);
+    setImportResult(null);
+    setImportPreview(null);
+    if (!file) return;
+    Papa.parse<string[]>(file, {
+      skipEmptyLines: 'greedy',
+      complete: (results) => {
+        const all = results.data.filter((r) => r.some((c) => (c ?? '').trim() !== ''));
+        const header = all[0] ?? [];
+        const lowerHeader = header.map((h) => (h ?? '').trim().toLowerCase());
+        const idxWh = lowerHeader.indexOf('warehouseid');
+        const idxSku = lowerHeader.indexOf('skuid');
+        const idxDelta = lowerHeader.indexOf('deltaqty');
+        const headerError = idxWh < 0 || idxSku < 0 || idxDelta < 0;
+        const dataRows = all.slice(1);
+        let firstError: ImportPreview['firstError'] = null;
+        if (!headerError) {
+          for (let i = 0; i < dataRows.length; i++) {
+            const err = validateImportRow(dataRows[i]!, idxWh, idxSku, idxDelta);
+            if (err) {
+              // 行号含表头（1-based），对齐后端 failedRows.row 语义
+              firstError = { row: i + 2, error: err };
+              break;
+            }
+          }
+        }
+        setImportPreview({
+          headers: header,
+          rows: dataRows.slice(0, IMPORT_PREVIEW_ROWS),
+          totalDataRows: dataRows.length,
+          headerError,
+          firstError,
+        });
+      },
+    });
   }
 
   async function handleImportSubmit() {
@@ -261,6 +374,9 @@ export default function InventoryPage() {
         </CardContent>
       </Card>
 
+      {/* 导入历史（批E D5 v2 → 批F 提取共用组件 ImportHistoryCard，resourceType=Stock） */}
+      <ImportHistoryCard resourceType="Stock" />
+
       {/* 批量调整 Dialog */}
       <Dialog open={batchOpen} onOpenChange={(open) => !open && setBatchOpen(false)}>
         <DialogContent className="sm:max-w-[700px]">
@@ -336,21 +452,85 @@ export default function InventoryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* CSV 导入 Dialog */}
-      <Dialog open={importOpen} onOpenChange={(open) => { if (!open) { setImportOpen(false); setImportFile(null); setImportResult(null); } }}>
+      {/* CSV 导入 Dialog（批E：选文件 → papaparse 本地预览 → 确认提交 → 结果 + 失败明细下载） */}
+      <Dialog open={importOpen} onOpenChange={(open) => { if (!open) { setImportOpen(false); setImportFile(null); setImportResult(null); setImportPreview(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('admin.inventory.importDialogTitle')}</DialogTitle>
             <DialogDescription>{t('admin.inventory.importDialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Input type="file" accept=".csv" onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportResult(null); }} />
+            <Input type="file" accept=".csv" onChange={handleImportFileChange} />
+
+            {/* 预览区（D6：前端本地解析，展示前 8 行 + 表头校验 + 首个错误行提示） */}
+            {importPreview && (
+              <div className="space-y-2 rounded border p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold">{t('admin.inventory.importPreviewTitle')}</span>
+                  <span className="text-muted-foreground">
+                    {t('admin.inventory.importPreviewRowsTotal', { count: importPreview.totalDataRows })}
+                  </span>
+                </div>
+                {importPreview.headerError ? (
+                  <div className="font-bold text-destructive">{t('admin.inventory.importPreviewHeaderError')}</div>
+                ) : (
+                  <>
+                    {importPreview.totalDataRows > IMPORT_MAX_ROWS && (
+                      <div className="font-bold text-destructive">
+                        {t('admin.inventory.importPreviewOverLimit', { max: IMPORT_MAX_ROWS })}
+                      </div>
+                    )}
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[480px] border-collapse">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            {importPreview.headers.map((h, i) => (
+                              <th key={i} className="border px-2 py-1 text-left font-mono font-bold">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.rows.map((row, i) => (
+                            <tr key={i}>
+                              {importPreview.headers.map((_, j) => (
+                                <td key={j} className="border px-2 py-1 font-mono">{row[j] ?? ''}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {importPreview.firstError && (
+                      <div className="text-destructive">
+                        {t('admin.inventory.importPreviewRowError', {
+                          row: importPreview.firstError.row,
+                          error: importPreview.firstError.error,
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="text-muted-foreground">{t('admin.inventory.importPreviewHint')}</div>
+              </div>
+            )}
+
             {importResult && (
               <div className="space-y-2 rounded border p-3 text-xs">
                 <div>{t('admin.inventory.importSuccessCount', { count: importResult.successCount })}</div>
                 {importResult.failedRows.length > 0 && (
                   <div className="space-y-1">
-                    <Label className="text-xs font-bold text-destructive">{t('admin.inventory.importFailedRows')}</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-destructive">{t('admin.inventory.importFailedRows')}</Label>
+                      {/* 批E 真增量：失败明细下载 CSV（row/error 两列，文件名含日期） */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadFailedRowsCsv(importResult.failedRows)}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {t('admin.inventory.importDownloadFailed')}
+                      </Button>
+                    </div>
                     {importResult.failedRows.map((f, i) => (
                       <div key={i} className="font-mono text-destructive">row {f.row}: {f.error}</div>
                     ))}
@@ -360,8 +540,16 @@ export default function InventoryPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null); setImportResult(null); }}>{t('admin.inventory.commonCancel')}</Button>
-            <Button onClick={handleImportSubmit} disabled={!importFile || importMutation.isPending}>
+            <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null); setImportResult(null); setImportPreview(null); }}>{t('admin.inventory.commonCancel')}</Button>
+            <Button
+              onClick={handleImportSubmit}
+              disabled={
+                !importFile ||
+                !!importPreview?.headerError ||
+                (importPreview?.totalDataRows ?? 0) > IMPORT_MAX_ROWS ||
+                importMutation.isPending
+              }
+            >
               {importMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</> : t('admin.inventory.importSubmit')}
             </Button>
           </DialogFooter>

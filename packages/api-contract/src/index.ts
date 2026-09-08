@@ -15,6 +15,7 @@ export * from './schemas/feedback';
 export * from './schemas/geo';
 export * from './schemas/home';
 export * from './schemas/im';
+export * from './schemas/import-log';
 export * from './schemas/inventory';
 export * from './schemas/order';
 export * from './schemas/payment';

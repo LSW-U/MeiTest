@@ -216,7 +216,49 @@ export function useImportStocksCsv() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['stocks'] });
       qc.invalidateQueries({ queryKey: ['stock-logs'] });
+      qc.invalidateQueries({ queryKey: ['import-logs'] }); // 批E：历史区块同步刷新
     },
+  });
+}
+
+// ============================================================================
+// 批E D5 v2：导入历史（GET /admin/import-logs 跨批通用，resourceType 过滤，批F 复用）
+// ============================================================================
+
+export interface ImportLogItem {
+  id: string;
+  fileName: string;
+  resourceType: 'Product' | 'Stock';
+  successCount: number;
+  failedCount: number;
+  failedRows: Array<{ row: number; error: string }>;
+  operatorId: string | null;
+  mode: string | null;
+  createdAt: string;
+}
+
+export interface ImportLogList {
+  items: ImportLogItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** 导入历史分页查询（批E 库存页传 resourceType='Stock'；批F 商品页传 'Product'） */
+export function useImportLogs(
+  filter: { resourceType?: 'Product' | 'Stock'; page?: number; pageSize?: number } = {},
+) {
+  const query = new URLSearchParams();
+  if (filter.resourceType) query.set('resourceType', filter.resourceType);
+  if (filter.page) query.set('page', String(filter.page));
+  if (filter.pageSize) query.set('pageSize', String(filter.pageSize));
+  const qs = query.toString();
+  return useQuery({
+    queryKey: ['import-logs', filter],
+    queryFn: () =>
+      apiFetch<ApiSuccess<ImportLogList>>(`/admin/import-logs${qs ? `?${qs}` : ''}`).then(
+        (res) => res.data,
+      ),
   });
 }
 
