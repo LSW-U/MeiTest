@@ -24,6 +24,7 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mock
   mockDb: {
     address: { findUnique: vi.fn() },
     // 批A 汇率快照（审查 P3-2）：WECHAT 下单 Step 5.5 查当日汇率
+    exchangeRate: { findUnique: vi.fn() },
     sku: { findMany: vi.fn() },
     order: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderItem: { findMany: vi.fn() },
@@ -585,6 +586,134 @@ describe('OrderService.createOrder', () => {
 
     expect(result.id).toBe('order-1');
     expect(mockCart.clearOrderedItems).toHaveBeenCalled();
+  });
+
+  // ===== 批A 汇率快照接线（审查 P3-2）：Step 5.5 → order.create data 回归 =====
+
+  it('批A 汇率快照：WECHAT 下单 → 查当日汇率 1 次，order.create data 含 exchangeRate/estimatedCnyAmount', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260908010000001');
+    // 人民币通道（WECHAT）Step 5.5 查当日汇率：OPERATOR 行，万分位 72345 = 7.2345
+    mockDb.exchangeRate.findUnique.mockResolvedValue({
+      id: 'rate-1',
+      rateDate: new Date('2026-09-08T00:00:00.000Z'),
+      fromCurrency: 'USD',
+      toCurrency: 'CNY',
+      rate: 72345,
+      source: 'OPERATOR',
+      operatorId: 'admin-1',
+      createdAt: new Date('2026-09-08T01:00:00.000Z'),
+    });
+    const txOrderCreate = vi
+      .fn()
+      .mockResolvedValue(mockCreatedOrder({ paymentMethod: 'WECHAT', status: 'PENDING_PAYMENT' }));
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: txOrderCreate },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+
+    await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 2 }],
+      paymentMethod: 'WECHAT',
+      deviceType: 'client_app',
+    });
+
+    // Step 5.5 查当日汇率恰 1 次（CNY_PAYMENT_METHODS 命中）
+    expect(mockDb.exchangeRate.findUnique).toHaveBeenCalledTimes(1);
+    // payable 200 分 × 72345 / 10000 = 1446.9 → 1447 分，快照锁进 order.create data
+    expect(txOrderCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ exchangeRate: 72345, estimatedCnyAmount: 1447 }),
+      }),
+    );
+  });
+
+  it('批A 汇率快照：COD 下单 → 不查库，order.create data 汇率双字段 null（非人民币零影响回归）', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260908010000001');
+    const txOrderCreate = vi.fn().mockResolvedValue(mockCreatedOrder());
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: txOrderCreate },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+
+    await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 2 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+
+    // 非人民币通道：Step 5.5 返回 null 且不查库
+    expect(mockDb.exchangeRate.findUnique).not.toHaveBeenCalled();
+    expect(txOrderCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ exchangeRate: null, estimatedCnyAmount: null }),
+      }),
+    );
   });
 });
 

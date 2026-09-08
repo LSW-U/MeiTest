@@ -29,6 +29,7 @@ import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { RateModule } from './modules/rate/rate.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { RefundModule } from './modules/refund/refund.module';
 import { ReviewModule } from './modules/review/review.module';
@@ -69,6 +70,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     PaymentModule,
     PlatformModule,
     PricingModule,
+    RateModule,
     RealtimeModule,
     RefundModule,
     ReviewModule,

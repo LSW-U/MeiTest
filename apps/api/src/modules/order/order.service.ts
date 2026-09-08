@@ -52,6 +52,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
 import { PricingService } from '../pricing/pricing.service';
+import { resolveOrderEffectiveRate, buildOrderRateFields } from '../rate/rate.service';
+import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
 import {
   enqueueOrderTimeout,
   cancelOrderTimeout,
@@ -101,6 +103,10 @@ export interface OrderWithRelations {
   paymentMethod: PaymentMethodValue;
   paymentStatus: string;
   paidAt: string | null;
+  /** 批A 汇率快照（万分位）：人民币通道订单下单锁定值；非人民币通道 null */
+  exchangeRate: number | null;
+  /** 批A 人民币估算金额（分）= payableAmount × exchangeRate / 10000；非人民币通道 null */
+  estimatedCnyAmount: number | null;
   createdAt: string;
   confirmedAt: string | null;
   pickedAt: string | null;
@@ -290,6 +296,11 @@ export class OrderService {
 
     const initialStatus = getInitialState(input.paymentMethod);
 
+    // ===== Step 5.5: 汇率快照（批A 汇率体系，微信支付预留）：人民币通道取当日汇率 =====
+    // 事务外 IO（同 Step 5 orderNo 模式）；非人民币通道返回 null 且不查库（本地用户纯 USD 零影响）。
+    // WECHAT_GLOBAL/ALIPAY_CN 枚举批B 补位，钩子按字符串集合判定，批B 落地零改动。
+    const cnyEffective = await resolveOrderEffectiveRate(input.paymentMethod);
+
     // ===== Step 6: 事务创建 Order + Items + 扣库存 + Event =====
     try {
       const created = await withTransaction(async (tx: Tx) => {
@@ -317,6 +328,9 @@ export class OrderService {
         }
         const payableAmount = totalAmount - discountAmount;
 
+        // 汇率快照字段（批A）：人民币通道锁当日汇率，estimatedCnyAmount = payableAmount × rate / 10000
+        const rateFields = buildOrderRateFields(payableAmount, cnyEffective);
+
         // 6.1 创建 Order
         const order = await tx.order.create({
           data: {
@@ -339,6 +353,8 @@ export class OrderService {
             remark: input.remark ?? null,
             paymentMethod: input.paymentMethod,
             paymentStatus: 'PENDING',
+            exchangeRate: rateFields.exchangeRate,
+            estimatedCnyAmount: rateFields.estimatedCnyAmount,
           },
         });
 
@@ -1366,6 +1382,8 @@ export class OrderService {
       paymentMethod: PaymentMethodValue;
       paymentStatus: string;
       paidAt: Date | null;
+      exchangeRate: number | null;
+      estimatedCnyAmount: number | null;
       createdAt: Date;
       confirmedAt: Date | null;
       pickedAt: Date | null;
@@ -1418,6 +1436,9 @@ export class OrderService {
       paymentMethod: o.paymentMethod,
       paymentStatus: o.paymentStatus,
       paidAt: toIso(o.paidAt),
+      // 批A 汇率快照（人民币通道下单锁定值；非人民币通道 null）
+      exchangeRate: o.exchangeRate,
+      estimatedCnyAmount: o.estimatedCnyAmount,
       createdAt: o.createdAt.toISOString(),
       confirmedAt: toIso(o.confirmedAt),
       pickedAt: toIso(o.pickedAt),

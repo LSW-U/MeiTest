@@ -21,6 +21,7 @@ export * from './schemas/order';
 export * from './schemas/payment';
 export * from './schemas/platform';
 export * from './schemas/promotion';
+export * from './schemas/rate';
 export * from './schemas/refund';
 export * from './schemas/review';
 export * from './schemas/rider';

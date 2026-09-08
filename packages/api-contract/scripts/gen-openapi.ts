@@ -275,6 +275,15 @@ import {
   AdminFeedbackDetail,
   AdminFeedbackListResponseData,
   AdminListFeedbackQuery,
+  // rate（批A 汇率体系，微信支付预留 2026-09-08）
+  ExchangeRateView,
+  ExchangeRateSource,
+  UpsertExchangeRateRequest,
+  UpsertExchangeRateResponseData,
+  ClientExchangeRateQuery,
+  ClientExchangeRateResponseData,
+  ListExchangeRatesQuery,
+  ExchangeRateListResponseData,
   // notification（admin-web 优化方案 批次2 2026-08-29 后台发送/历史）
   AdminSendNotificationRequest,
   AdminSendNotificationResponseData,
@@ -4505,6 +4514,73 @@ registry.registerPath({
   },
 });
 
+// ===== rate（批A 汇率体系，微信支付预留 2026-09-08） =====
+registry.register('ExchangeRateView', ExchangeRateView);
+registry.register('ExchangeRateSource', ExchangeRateSource);
+registry.register('UpsertExchangeRateRequest', UpsertExchangeRateRequest);
+registry.register('UpsertExchangeRateResponseData', UpsertExchangeRateResponseData);
+registry.register('ClientExchangeRateQuery', ClientExchangeRateQuery);
+registry.register('ClientExchangeRateResponseData', ClientExchangeRateResponseData);
+registry.register('ListExchangeRatesQuery', ListExchangeRatesQuery);
+registry.register('ExchangeRateListResponseData', ExchangeRateListResponseData);
+
+// admin：按日维护汇率（upsert）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/rates/exchange',
+  tags: ['rate'],
+  description:
+    '按日维护 USD→CNY 汇率（upsert，仅 SUPER_ADMIN，@Audit）。rate 传十进制（如 7.2345），服务端转万分位落库（72345）。同日重复提交覆盖原值。',
+  request: {
+    body: { content: { 'application/json': { schema: UpsertExchangeRateRequest } } },
+  },
+  responses: {
+    200: { description: '维护成功（含 upsert 后记录）', content: { 'application/json': { schema: UpsertExchangeRateResponseData } } },
+    400: { description: 'E-RATE-001 rate 区间非法 / E-RATE-002 rateDate 非真实日历日', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// admin：同 POST（幂等语义）
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/admin/rates/exchange',
+  tags: ['rate'],
+  description: '同 POST /admin/rates/exchange（restful 幂等语义，同一 handler，仅 SUPER_ADMIN）。',
+  request: {
+    body: { content: { 'application/json': { schema: UpsertExchangeRateRequest } } },
+  },
+  responses: {
+    200: { description: '维护成功（含 upsert 后记录）', content: { 'application/json': { schema: UpsertExchangeRateResponseData } } },
+    400: { description: 'E-RATE-001 / E-RATE-002', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// admin：汇率历史
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/rates/exchange',
+  tags: ['rate'],
+  description: '汇率历史（生效日期倒序 + 游标分页，游标为上一页最后一条 rateDate；可按 startDate/endDate 过滤）。仅 SUPER_ADMIN。',
+  request: { query: ListExchangeRatesQuery },
+  responses: {
+    200: { description: '汇率历史列表', content: { 'application/json': { schema: ExchangeRateListResponseData } } },
+  },
+});
+
+// client：当日生效汇率（含 FALLBACK 标记）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/rates/exchange',
+  tags: ['rate'],
+  description:
+    '当日生效汇率（USD→CNY，批A）。当日无运营维护记录 → 返回兜底值（EXCHANGE_FALLBACK_RATE，初值 7.2）且 source=FALLBACK，前端应提示"按固定汇率估算"。展示用 rateDecimal；结算/对账以订单快照（Order.exchangeRate/estimatedCnyAmount）为准。',
+  request: { query: ClientExchangeRateQuery },
+  responses: {
+    200: { description: '当日生效汇率', content: { 'application/json': { schema: ClientExchangeRateResponseData } } },
+    400: { description: 'E-RATE-001 to 币种不支持（MVP 仅 CNY）', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({
   openapi: '3.0.3',
@@ -4543,6 +4619,7 @@ const openapi = generator.generateDocument({
     { name: 'feedback', description: '用户反馈（P22 反馈页）' },
     { name: 'home', description: '首页活动入口（PromoDock）' },
     { name: 'search', description: '热搜词（Redis ZSET + 运营种子词）' },
+    { name: 'rate', description: '汇率（批A USD→CNY 每日汇率 + 下单快照兜底）' },
   ],
 });
 

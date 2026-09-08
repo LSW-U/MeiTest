@@ -520,6 +520,13 @@ model Order {
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
   paidAt        DateTime?     @map("paid_at")
 
+  // 批A 汇率快照（微信支付预留 2026-09-08）：人民币通道（WECHAT/WECHAT_GLOBAL/ALIPAY_CN）
+  // 下单时锁定当日汇率，保证显示/结算/对账三者一致（方案 D5）；非人民币通道两字段均 null（本地用户纯 USD 零影响）
+  /// 汇率万分位整数：7.2345 → 72345（避免浮点误差）
+  exchangeRate Int? @map("exchange_rate")
+  /// 人民币估算金额（分）= payableAmount × exchangeRate / 10000
+  estimatedCnyAmount Int? @map("estimated_cny_amount")
+
   // 时间线
   createdAt    DateTime  @default(now()) @map("created_at")
   confirmedAt  DateTime? @map("confirmed_at")
@@ -1481,6 +1488,33 @@ model ImportLog {
 }
 
 // ============================================================================
+// ============================================================================
+// ExchangeRate（批A 汇率体系，微信支付预留 2026-09-08，方案 D4）
+//   USD→CNY 每日汇率，运营按日维护（SUPER_ADMIN upsert）；
+//   当日无表时下单/查询回退固定兜底值（EXCHANGE_FALLBACK_RATE，不入库仅查询时标记 FALLBACK）
+// ============================================================================
+
+model ExchangeRate {
+  id String @id @default(uuid())
+  /// 生效日期（Asia/Dili 业务日，UTC 零点存 date）
+  rateDate DateTime @db.Date @map("rate_date")
+  /// 源币种（MVP 固定 USD）
+  fromCurrency String @default("USD") @db.VarChar(3) @map("from_currency")
+  /// 目标币种（MVP 固定 CNY）
+  toCurrency String @default("CNY") @db.VarChar(3) @map("to_currency")
+  /// 汇率万分位整数：7.2345 → 72345（避免浮点误差）
+  rate Int
+  /// OPERATOR=运营当日维护 / FALLBACK=兜底值（兜底不入库，仅查询标记；预留字段保持口径完整）
+  source String @db.VarChar(16)
+  /// 录入人（SUPER_ADMIN user.id；裸列无 FK，对齐 ImportLog.operatorId）
+  operatorId String? @map("operator_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// 每币种对每日一条（按日 upsert 落点）
+  @@unique([rateDate, fromCurrency, toCurrency])
+  @@map("exchange_rates")
+}
+
 // ============================================================================
 // 文档说明 — W1-D2-T3 任务执行时的注意事项
 // ----------------------------------------------------------------------------

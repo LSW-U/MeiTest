@@ -101,6 +101,10 @@ export const Order = z.object({
   paymentMethod: PaymentMethod,
   paymentStatus: PaymentStatus,
   paidAt: IsoTimestamp.nullable(),
+  /** 批A 汇率快照（万分位，7.2345 → 72345）：人民币通道（WECHAT/WECHAT_GLOBAL/ALIPAY_CN）下单锁定值；非人民币通道 null */
+  exchangeRate: z.number().int().nullable(),
+  /** 批A 人民币估算金额（分）= payableAmount × exchangeRate / 10000；非人民币通道 null */
+  estimatedCnyAmount: z.number().int().nullable(),
   createdAt: IsoTimestamp,
   confirmedAt: IsoTimestamp.nullable(),
   pickedAt: IsoTimestamp.nullable(),
