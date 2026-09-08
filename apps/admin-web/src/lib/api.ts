@@ -75,6 +75,8 @@ export class ApiError extends Error {
     public code: string,
     message: string,
     public status: number,
+    /** 后端 4xx 附加明细（如商品导入 400 的 details.failedRows），可选 */
+    public details?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -117,6 +119,7 @@ export async function apiFetch<T = unknown>(
       errorBody?.error?.code ?? `E-HTTP-${res.status}`,
       errorBody?.error?.message ?? res.statusText,
       res.status,
+      errorBody?.error?.details,
     );
   }
 
@@ -169,6 +172,7 @@ export async function apiUploadFile<T = unknown>(
       errorBody?.error?.code ?? `E-HTTP-${res.status}`,
       errorBody?.error?.message ?? res.statusText,
       res.status,
+      errorBody?.error?.details,
     );
   }
 

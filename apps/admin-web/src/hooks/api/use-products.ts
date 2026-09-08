@@ -12,7 +12,7 @@
  *   - POST   /admin/products/:id/skus       新建 SKU
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, type ApiSuccess } from '@/lib/api';
+import { apiFetch, apiUploadFile, type ApiSuccess } from '@/lib/api';
 
 export interface I18nText {
   en?: string;
@@ -159,5 +159,42 @@ export function useCreateSku() {
       }),
     onSuccess: (res) =>
       qc.invalidateQueries({ queryKey: ['product-skus', res.data.productId] }),
+  });
+}
+
+// ============================================================================
+// 批F：商品批量导入（POST /admin/products/import，multipart，全错全不写）
+// 后端：apps/api/src/modules/catalog/product-import.controller.ts
+// ============================================================================
+
+export type ImportMode = 'skip' | 'overwrite' | 'error';
+
+/** 成功响应（全通过才写库；失败走 400 ApiError.details.failedRows） */
+export interface ProductImportResultData {
+  successCount: number;
+  failedCount: number;
+  failedRows: Array<{ line: number; field: string; reason: string }>;
+  /** D8 skip 模式被跳过的重复行 */
+  skippedRows: Array<{ line: number; key: string }>;
+  /** D8 overwrite 模式只覆盖目标仓库存的行 */
+  overwrittenRows: Array<{ line: number; key: string }>;
+  createdProducts: Array<{ id: string; name: string; skuCode: string | null }>;
+  mode: ImportMode;
+}
+
+/** 商品批量导入 CSV（multipart file；?mode=skip|overwrite|error 默认 skip） */
+export function useImportProductsCsv(mode: ImportMode) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) =>
+      apiUploadFile<ApiSuccess<ProductImportResultData>>(
+        `/admin/products/import?mode=${mode}`,
+        file,
+        'file',
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['import-logs'] }); // 导入历史同步刷新
+    },
   });
 }

@@ -6,9 +6,10 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -18,6 +19,8 @@ import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
 import { useProducts, type Product } from '@/hooks/api/use-products';
 import { useUpdateProductStatus } from '@/hooks/api/use-products';
+import { ProductImportDialog } from '@/components/import/product-import-dialog';
+import { ImportHistoryCard } from '@/components/import/import-history-card';
 import { formatCurrency } from '@/lib/utils';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
@@ -25,6 +28,7 @@ export default function ProductsListPage() {
   const t = useTranslations('common');
   const router = useRouter();
   const { immediateValue, debouncedValue, setImmediateValue } = useDebouncedSearch('');
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data, isLoading, error, refetch } = useProducts({ search: debouncedValue });
   const statusMutation = useUpdateProductStatus();
@@ -96,10 +100,16 @@ export default function ProductsListPage() {
         title={t('w.products.title')}
         description={t('w.products.listDesc')}
         action={
-          <Button onClick={() => router.push('/products/create')}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('w.products.create')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t('w.products.importButton')}
+            </Button>
+            <Button onClick={() => router.push('/products/create')}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('w.products.create')}
+            </Button>
+          </div>
         }
       />
       <DataTable
@@ -107,12 +117,20 @@ export default function ProductsListPage() {
         columns={columns}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/products/${row.id}`)}
+        onSelectedIdsChange={setSelectedIds}
         toolbar={
-          <DataTableToolbar
-            searchValue={immediateValue}
-            onSearchChange={setImmediateValue}
-            searchPlaceholder={t('w.products.searchPlaceholder')}
-          />
+          <>
+            <DataTableToolbar
+              searchValue={immediateValue}
+              onSearchChange={setImmediateValue}
+              searchPlaceholder={t('w.products.searchPlaceholder')}
+            />
+            <Button
+              variant="outline"
+              onClick={() => setBatchOpen(true)}
+            >
+            </Button>
+          </>
         }
         emptyState={
           <EmptyState
@@ -141,6 +159,17 @@ export default function ProductsListPage() {
             </Button>
           </div>
         )}
+      />
+
+      {/* 批F：商品批量导入 Dialog（全错全不写，D8 三模式）+ 导入历史（共用组件，resourceType=Product） */}
+      <ProductImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ImportHistoryCard resourceType="Product" />
+
+        onOpenChange={setBatchOpen}
+        onDone={() => {
+          setSelectedIds([]);
+          setBatchOpen(false);
+        }}
       />
     </>
   );

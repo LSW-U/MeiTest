@@ -395,6 +395,11 @@ model Sku {
   name       Json
   attributes Json // SkuAttribute[] 结构化
   price      Int // 单价(分)
+  // 批F 商品批量导入（2026-09-07）：判重双键，均可空唯一（Postgres 允许多 NULL，向后兼容既有数据/批B/C 无感）
+  /// 导入判重编码（可选列；填了 skuCode 的行 dedupeHash 置 NULL）
+  skuCode    String?   @unique @map("sku_code")
+  /// 归一化判重哈希：无 skuCode 行 = sha256(normalize(name 主语言) + 归一化 attributes)；D1
+  dedupeHash String?   @unique @map("dedupe_hash")
   imageUrl   String?   @map("image_url")
   status     SkuStatus @default(ACTIVE)
   createdAt  DateTime  @default(now()) @map("created_at")
