@@ -1177,6 +1177,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description 收藏列表（批D P2-1 修正响应形状：此前误用 FavoriteToggleResponse 占位） */
         get: {
             parameters: {
                 query?: never;
@@ -1193,8 +1194,30 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            isFavorite: boolean;
-                        };
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            product: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                                isCategoryTop3: boolean;
+                                stock?: number;
+                                rating?: number;
+                            };
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
                     };
                 };
             };
@@ -2514,6 +2537,7 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
                             }[];
@@ -2589,6 +2613,125 @@ export interface paths {
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
+                        };
+                    };
+                };
+                /** @description PRODUCT_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/products/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品聚合详情（批B：stocks 按仓库存 + totalStock + ratingCount + isCategoryTop3；公开可读，admin/client 复用同一契约） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 聚合详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            shopId: string;
+                            /** Format: uuid */
+                            categoryId: string | null;
+                            categoryName: {
+                                [key: string]: string;
+                            } | null;
+                            name: {
+                                [key: string]: string;
+                            };
+                            description: {
+                                [key: string]: string;
+                            } | null;
+                            mainImage: string;
+                            images: string[];
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            unit: {
+                                [key: string]: string;
+                            };
+                            priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
+                            salesCount: number;
+                            stock?: number;
+                            rating?: number;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                            stocks: {
+                                /** Format: uuid */
+                                warehouseId: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                quantity: number;
+                            }[];
+                            totalStock: number;
+                            ratingCount: number;
+                            isCategoryTop3: boolean;
+                            skus: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                attributes: {
+                                    [key: string]: unknown;
+                                };
+                                price: number;
+                                imageUrl: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE";
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
                         };
                     };
                 };
@@ -2731,6 +2874,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            isCategoryTop3: boolean;
                             stock?: number;
                             rating?: number;
                         }[];
@@ -2782,6 +2926,7 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            isCategoryTop3: boolean;
                             stock?: number;
                             rating?: number;
                         }[];
@@ -3176,6 +3321,55 @@ export interface paths {
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/products/sales-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 销量批量调整（批C：列表勾选 → 设值落库，delta 推导写 SalesCountLog changeType=ADMIN_ADJUST） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            salesCount: number;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 调整完成（adjusted=成功，skipped=商品不存在被跳过） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            adjusted: string[];
+                            skipped: string[];
                         };
                     };
                 };
@@ -3860,11 +4054,13 @@ export interface paths {
                             /** Format: uuid */
                             riderId: string | null;
                             /** @enum {string} */
-                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
                             paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                             /** Format: date-time */
                             paidAt: string | null;
+                            exchangeRate: number | null;
+                            estimatedCnyAmount: number | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -3910,7 +4106,7 @@ export interface paths {
                         }[];
                         remark?: string;
                         /** @enum {string} */
-                        paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                        paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                         /** Format: uuid */
                         couponId?: string;
                     };
@@ -3964,11 +4160,13 @@ export interface paths {
                             /** Format: uuid */
                             riderId: string | null;
                             /** @enum {string} */
-                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
                             paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                             /** Format: date-time */
                             paidAt: string | null;
+                            exchangeRate: number | null;
+                            estimatedCnyAmount: number | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -4727,11 +4925,13 @@ export interface paths {
                             /** Format: uuid */
                             riderId: string | null;
                             /** @enum {string} */
-                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
                             paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                             /** Format: date-time */
                             paidAt: string | null;
+                            exchangeRate: number | null;
+                            estimatedCnyAmount: number | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -5664,7 +5864,7 @@ export interface paths {
                         "application/json": {
                             items: {
                                 /** @enum {string} */
-                                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 name: {
                                     [key: string]: string;
                                 };
@@ -5674,6 +5874,7 @@ export interface paths {
                                 icon: string;
                                 isDefault: boolean;
                                 enabled: boolean;
+                                available: boolean;
                                 mockFlag: boolean;
                             }[];
                         };
@@ -5718,7 +5919,7 @@ export interface paths {
                             /** Format: uuid */
                             orderId: string;
                             /** @enum {string} */
-                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
                             status: "UNPAID" | "PAID" | "REFUNDED";
                             amount: number;
@@ -5856,7 +6057,7 @@ export interface paths {
                             /** Format: uuid */
                             orderId: string;
                             /** @enum {string} */
-                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
                             status: "UNPAID" | "PAID" | "REFUNDED";
                             amount: number;
@@ -5947,7 +6148,7 @@ export interface paths {
             parameters: {
                 query?: {
                     status?: "UNPAID" | "PAID" | "REFUNDED";
-                    method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                    method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                     orderId?: string;
                     orderNo?: string;
                     mockFlag?: "true" | "false";
@@ -5976,7 +6177,7 @@ export interface paths {
                                     /** Format: uuid */
                                     orderId: string;
                                     /** @enum {string} */
-                                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                     /** @enum {string} */
                                     status: "UNPAID" | "PAID" | "REFUNDED";
                                     amount: number;
@@ -6044,7 +6245,7 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "UNPAID" | "PAID" | "REFUNDED";
                                 /** @enum {string} */
-                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 count: number;
                                 totalAmount: number;
                             }[];
@@ -6095,7 +6296,7 @@ export interface paths {
                                 /** Format: uuid */
                                 orderId: string;
                                 /** @enum {string} */
-                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
                                 status: "UNPAID" | "PAID" | "REFUNDED";
                                 amount: number;
@@ -6200,7 +6401,7 @@ export interface paths {
                                 /** Format: uuid */
                                 orderId: string;
                                 /** @enum {string} */
-                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
                                 status: "UNPAID" | "PAID" | "REFUNDED";
                                 amount: number;
@@ -6288,7 +6489,7 @@ export interface paths {
                                 /** Format: uuid */
                                 orderId: string;
                                 /** @enum {string} */
-                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
                                 status: "UNPAID" | "PAID" | "REFUNDED";
                                 amount: number;
@@ -6328,6 +6529,186 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reconciliation/ledgers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 对账台账列表（offset 分页，可按 method/status/orderNo/日期区间筛选；批C） */
+        get: {
+            parameters: {
+                query?: {
+                    method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+                    status?: "PENDING" | "MATCHED" | "DIFF" | "SETTLED";
+                    orderNo?: string;
+                    dateFrom?: string;
+                    dateTo?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 台账列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    orderId: string;
+                                    orderNo: string;
+                                    /** @enum {string} */
+                                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+                                    amountUsd: number;
+                                    exchangeRate: number | null;
+                                    amountCny: number | null;
+                                    /** @enum {string|null} */
+                                    cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "MATCHED" | "DIFF" | "SETTLED";
+                                    /** Format: uuid */
+                                    statementBatchId: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reconciliation/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 台账分区汇总（group by method + cashResult，admin 三区展示数据源；批C） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 分区汇总 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** @enum {string} */
+                                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+                                    /** @enum {string|null} */
+                                    cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+                                    count: number;
+                                    totalAmountUsd: number;
+                                    totalAmountCny: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reconciliation/import-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 对账单导入批次列表（预留入口，本轮不做真实上传 UI；批C） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 导入批次列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    fileName: string;
+                                    /** @enum {string} */
+                                    format: "WECHAT" | "ALIPAY" | "BANK";
+                                    rowCount: number;
+                                    successCount: number;
+                                    failedCount: number;
+                                    status: string;
+                                    operatorId: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7160,6 +7541,160 @@ export interface paths {
                     };
                 };
                 /** @description E-INVENTORY-009 CSV 格式错 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/import-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 导入历史列表（批E D5 v2：后端统一写，前端只查不补记；时间/文件名/成功失败数/操作人，分页；resourceType 过滤，批F 商品导入复用） */
+        get: {
+            parameters: {
+                query?: {
+                    resourceType?: "Product" | "Stock";
+                    operatorId?: string;
+                    from?: string;
+                    to?: string;
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 导入历史列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    fileName: string;
+                                    /** @enum {string} */
+                                    resourceType: "Product" | "Stock";
+                                    successCount: number;
+                                    failedCount: number;
+                                    failedRows: {
+                                        row: number;
+                                        error: string;
+                                    }[];
+                                    /** Format: uuid */
+                                    operatorId: string | null;
+                                    mode: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                page: number;
+                                pageSize: number;
+                                total: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 商品批量导入 CSV（批F D12：全错全不写——校验/判重错误 400 E-PRODUCT-IMPORT-001 返 details.failedRows[{line,field,reason}]，一个都不写；全通过单事务 Product+默认Sku+Stock+StockLog；D8 重复三模式默认跳过；表头中英文别名；≤1000 行/≤2MB；列 name_en/name_zh/name_tet/price(元)/category/stock/skuCode/warehouseCode/mainImage/unit_*\/desc_*） */
+        post: {
+            parameters: {
+                query?: {
+                    mode?: "skip" | "overwrite" | "error";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 导入结果（全通过） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                successCount: number;
+                                failedCount: number;
+                                failedRows: {
+                                    line: number;
+                                    field: string;
+                                    reason: string;
+                                }[];
+                                skippedRows: {
+                                    line: number;
+                                    key: string;
+                                }[];
+                                overwrittenRows: {
+                                    line: number;
+                                    key: string;
+                                }[];
+                                createdProducts: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    skuCode: string | null;
+                                }[];
+                                /** @enum {string} */
+                                mode: "skip" | "overwrite" | "error";
+                            };
+                        };
+                    };
+                };
+                /** @description E-PRODUCT-IMPORT-001 校验/判重失败（details.failedRows） */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -8201,11 +8736,13 @@ export interface paths {
                                     /** Format: uuid */
                                     riderId: string | null;
                                     /** @enum {string} */
-                                    paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                    paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                     /** @enum {string} */
                                     paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                                     /** Format: date-time */
                                     paidAt: string | null;
+                                    exchangeRate: number | null;
+                                    estimatedCnyAmount: number | null;
                                     /** Format: date-time */
                                     createdAt: string;
                                     /** Format: date-time */
@@ -8350,11 +8887,13 @@ export interface paths {
                                 /** Format: uuid */
                                 riderId: string | null;
                                 /** @enum {string} */
-                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
                                 paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                                 /** Format: date-time */
                                 paidAt: string | null;
+                                exchangeRate: number | null;
+                                estimatedCnyAmount: number | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -8472,11 +9011,13 @@ export interface paths {
                                 /** Format: uuid */
                                 riderId: string | null;
                                 /** @enum {string} */
-                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                                paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
                                 paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
                                 /** Format: date-time */
                                 paidAt: string | null;
+                                exchangeRate: number | null;
+                                estimatedCnyAmount: number | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -17954,6 +18495,253 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/rates/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 汇率历史（生效日期倒序 + 游标分页，游标为上一页最后一条 rateDate；可按 startDate/endDate 过滤）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: {
+                    startDate?: string;
+                    endDate?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 汇率历史列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                rateDate: string;
+                                fromCurrency: string;
+                                toCurrency: string;
+                                rate: number;
+                                rateDecimal: number;
+                                /** @enum {string} */
+                                source: "OPERATOR" | "FALLBACK";
+                                /** Format: uuid */
+                                operatorId: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        /** @description 同 POST /admin/rates/exchange（restful 幂等语义，同一 handler，仅 SUPER_ADMIN）。 */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        rateDate: string;
+                        rate: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 维护成功（含 upsert 后记录） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rate: {
+                                /** Format: uuid */
+                                id: string;
+                                rateDate: string;
+                                fromCurrency: string;
+                                toCurrency: string;
+                                rate: number;
+                                rateDecimal: number;
+                                /** @enum {string} */
+                                source: "OPERATOR" | "FALLBACK";
+                                /** Format: uuid */
+                                operatorId: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-RATE-001 / E-RATE-002 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        /** @description 按日维护 USD→CNY 汇率（upsert，仅 SUPER_ADMIN，@Audit）。rate 传十进制（如 7.2345），服务端转万分位落库（72345）。同日重复提交覆盖原值。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        rateDate: string;
+                        rate: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 维护成功（含 upsert 后记录） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rate: {
+                                /** Format: uuid */
+                                id: string;
+                                rateDate: string;
+                                fromCurrency: string;
+                                toCurrency: string;
+                                rate: number;
+                                rateDecimal: number;
+                                /** @enum {string} */
+                                source: "OPERATOR" | "FALLBACK";
+                                /** Format: uuid */
+                                operatorId: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-RATE-001 rate 区间非法 / E-RATE-002 rateDate 非真实日历日 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/rates/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 当日生效汇率（USD→CNY，批A）。当日无运营维护记录 → 返回兜底值（EXCHANGE_FALLBACK_RATE，初值 7.2）且 source=FALLBACK，前端应提示"按固定汇率估算"。展示用 rateDecimal；结算/对账以订单快照（Order.exchangeRate/estimatedCnyAmount）为准。 */
+        get: {
+            parameters: {
+                query?: {
+                    to?: "CNY";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 当日生效汇率 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rateDate: string;
+                            fromCurrency: string;
+                            toCurrency: string;
+                            rate: number;
+                            rateDecimal: number;
+                            /** @enum {string} */
+                            source: "OPERATOR" | "FALLBACK";
+                        };
+                    };
+                };
+                /** @description E-RATE-001 to 币种不支持（MVP 仅 CNY） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -18139,6 +18927,31 @@ export interface components {
         };
         FavoriteToggleResponse: {
             isFavorite: boolean;
+        };
+        FavoriteListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            product: {
+                /** Format: uuid */
+                id: string;
+                name: {
+                    [key: string]: string;
+                };
+                mainImage: string;
+                priceMin: number;
+                /** Format: uuid */
+                defaultSkuId: string | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                salesCount: number;
+                isCategoryTop3: boolean;
+                stock?: number;
+                rating?: number;
+            };
+            /** Format: date-time */
+            createdAt: string;
         };
         NotificationItem: {
             /** Format: uuid */
@@ -18679,8 +19492,82 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
             salesCount: number;
+            isCategoryTop3: boolean;
             stock?: number;
             rating?: number;
+        };
+        ProductDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            shopId: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            categoryName: {
+                [key: string]: string;
+            } | null;
+            name: {
+                [key: string]: string;
+            };
+            description: {
+                [key: string]: string;
+            } | null;
+            mainImage: string;
+            images: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+            unit: {
+                [key: string]: string;
+            };
+            priceMin: number;
+            /** Format: uuid */
+            defaultSkuId: string | null;
+            salesCount: number;
+            stock?: number;
+            rating?: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            stocks: {
+                /** Format: uuid */
+                warehouseId: string;
+                name: {
+                    [key: string]: string;
+                };
+                quantity: number;
+            }[];
+            totalStock: number;
+            ratingCount: number;
+            isCategoryTop3: boolean;
+            skus: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                productId: string;
+                name: {
+                    [key: string]: string;
+                };
+                attributes: {
+                    [key: string]: unknown;
+                };
+                price: number;
+                imageUrl: string | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE";
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            }[];
+        };
+        WarehouseStock: {
+            /** Format: uuid */
+            warehouseId: string;
+            name: {
+                [key: string]: string;
+            };
+            quantity: number;
         };
         CreateProductRequest: {
             /** Format: uuid */
@@ -18721,6 +19608,17 @@ export interface components {
         UpdateProductStatusRequest: {
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+        };
+        AdminSalesBatchAdjustRequest: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                salesCount: number;
+            }[];
+        };
+        AdminSalesBatchAdjustResponse: {
+            adjusted: string[];
+            skipped: string[];
         };
         Sku: {
             /** Format: uuid */
@@ -18897,11 +19795,13 @@ export interface components {
             /** Format: uuid */
             riderId: string | null;
             /** @enum {string} */
-            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** @enum {string} */
             paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
             /** Format: date-time */
             paidAt: string | null;
+            exchangeRate: number | null;
+            estimatedCnyAmount: number | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -18947,7 +19847,7 @@ export interface components {
             }[];
             remark?: string;
             /** @enum {string} */
-            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** Format: uuid */
             couponId?: string;
         };
@@ -18959,7 +19859,7 @@ export interface components {
         };
         OrderNo: string;
         /** @enum {string} */
-        PaymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+        PaymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
         /** @enum {string} */
         OrderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
         OrderCounts: {
@@ -19137,7 +20037,7 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             /** @enum {string} */
-            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** @enum {string} */
             status: "UNPAID" | "PAID" | "REFUNDED";
             amount: number;
@@ -19159,7 +20059,7 @@ export interface components {
         };
         PaymentMethodItem: {
             /** @enum {string} */
-            code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             name: {
                 [key: string]: string;
             };
@@ -19169,12 +20069,13 @@ export interface components {
             icon: string;
             isDefault: boolean;
             enabled: boolean;
+            available: boolean;
             mockFlag: boolean;
         };
         PaymentMethodListResponseData: {
             items: {
                 /** @enum {string} */
-                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                code: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                 name: {
                     [key: string]: string;
                 };
@@ -19184,6 +20085,7 @@ export interface components {
                 icon: string;
                 isDefault: boolean;
                 enabled: boolean;
+                available: boolean;
                 mockFlag: boolean;
             }[];
         };
@@ -19193,7 +20095,7 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             /** @enum {string} */
-            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** @enum {string} */
             status: "UNPAID" | "PAID" | "REFUNDED";
             amount: number;
@@ -19220,7 +20122,7 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             /** @enum {string} */
-            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** @enum {string} */
             status: "UNPAID" | "PAID" | "REFUNDED";
             amount: number;
@@ -19261,7 +20163,7 @@ export interface components {
             /** @enum {string} */
             status?: "UNPAID" | "PAID" | "REFUNDED";
             /** @enum {string} */
-            method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** Format: uuid */
             orderId?: string;
             orderNo?: string;
@@ -19280,7 +20182,7 @@ export interface components {
                     /** Format: uuid */
                     orderId: string;
                     /** @enum {string} */
-                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                     /** @enum {string} */
                     status: "UNPAID" | "PAID" | "REFUNDED";
                     amount: number;
@@ -19306,6 +20208,123 @@ export interface components {
                 total?: number;
             };
         };
+        ReconciliationLedgerView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            orderNo: string;
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+            amountUsd: number;
+            exchangeRate: number | null;
+            amountCny: number | null;
+            /** @enum {string|null} */
+            cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+            /** @enum {string} */
+            status: "PENDING" | "MATCHED" | "DIFF" | "SETTLED";
+            /** Format: uuid */
+            statementBatchId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ListReconciliationLedgersQuery: {
+            /** @enum {string} */
+            method?: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+            /** @enum {string} */
+            status?: "PENDING" | "MATCHED" | "DIFF" | "SETTLED";
+            orderNo?: string;
+            dateFrom?: string;
+            dateTo?: string;
+            page?: number;
+            pageSize?: number;
+        };
+        ReconciliationLedgerListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    orderId: string;
+                    orderNo: string;
+                    /** @enum {string} */
+                    method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+                    amountUsd: number;
+                    exchangeRate: number | null;
+                    amountCny: number | null;
+                    /** @enum {string|null} */
+                    cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+                    /** @enum {string} */
+                    status: "PENDING" | "MATCHED" | "DIFF" | "SETTLED";
+                    /** Format: uuid */
+                    statementBatchId: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                }[];
+                total: number;
+                page: number;
+                pageSize: number;
+            };
+        };
+        ReconciliationLedgerSummaryItem: {
+            /** @enum {string} */
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+            /** @enum {string|null} */
+            cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+            count: number;
+            totalAmountUsd: number;
+            totalAmountCny: number;
+        };
+        ReconciliationLedgerSummaryResponseData: {
+            items: {
+                /** @enum {string} */
+                method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
+                /** @enum {string|null} */
+                cashResult: "PAID" | "SHORT" | "UNPAID" | null;
+                count: number;
+                totalAmountUsd: number;
+                totalAmountCny: number;
+            }[];
+        };
+        StatementImportBatchView: {
+            /** Format: uuid */
+            id: string;
+            fileName: string;
+            /** @enum {string} */
+            format: "WECHAT" | "ALIPAY" | "BANK";
+            rowCount: number;
+            successCount: number;
+            failedCount: number;
+            status: string;
+            operatorId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StatementImportBatchListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    fileName: string;
+                    /** @enum {string} */
+                    format: "WECHAT" | "ALIPAY" | "BANK";
+                    rowCount: number;
+                    successCount: number;
+                    failedCount: number;
+                    status: string;
+                    operatorId: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                }[];
+                total: number;
+                page: number;
+                pageSize: number;
+            };
+        };
         MarkFailedRequest: {
             reason: string;
         };
@@ -19313,7 +20332,7 @@ export interface components {
             /** @enum {string} */
             status: "UNPAID" | "PAID" | "REFUNDED";
             /** @enum {string} */
-            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE";
+            method: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             count: number;
             totalAmount: number;
         };
@@ -19556,6 +20575,88 @@ export interface components {
                 row: number;
                 error: string;
             }[];
+        };
+        /** @enum {string} */
+        ImportLogResourceType: "Product" | "Stock";
+        ImportLogItem: {
+            /** Format: uuid */
+            id: string;
+            fileName: string;
+            /** @enum {string} */
+            resourceType: "Product" | "Stock";
+            successCount: number;
+            failedCount: number;
+            failedRows: {
+                row: number;
+                error: string;
+            }[];
+            /** Format: uuid */
+            operatorId: string | null;
+            mode: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ListImportLogsQuery: {
+            /** @enum {string} */
+            resourceType?: "Product" | "Stock";
+            /** Format: uuid */
+            operatorId?: string;
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
+            page?: number;
+            pageSize?: number;
+        };
+        ImportLogListResponse: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                fileName: string;
+                /** @enum {string} */
+                resourceType: "Product" | "Stock";
+                successCount: number;
+                failedCount: number;
+                failedRows: {
+                    row: number;
+                    error: string;
+                }[];
+                /** Format: uuid */
+                operatorId: string | null;
+                mode: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        /** @enum {string} */
+        ImportMode: "skip" | "overwrite" | "error";
+        ProductImportResult: {
+            successCount: number;
+            failedCount: number;
+            failedRows: {
+                line: number;
+                field: string;
+                reason: string;
+            }[];
+            skippedRows: {
+                line: number;
+                key: string;
+            }[];
+            overwrittenRows: {
+                line: number;
+                key: string;
+            }[];
+            createdProducts: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                skuCode: string | null;
+            }[];
+            /** @enum {string} */
+            mode: "skip" | "overwrite" | "error";
         };
         DashboardSummary: {
             /** @enum {string} */
@@ -20508,6 +21609,85 @@ export interface components {
         NotificationTarget: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
         /** @enum {string} */
         AdminNotificationType: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+        ExchangeRateView: {
+            /** Format: uuid */
+            id: string;
+            rateDate: string;
+            fromCurrency: string;
+            toCurrency: string;
+            rate: number;
+            rateDecimal: number;
+            /** @enum {string} */
+            source: "OPERATOR" | "FALLBACK";
+            /** Format: uuid */
+            operatorId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {string} */
+        ExchangeRateSource: "OPERATOR" | "FALLBACK";
+        UpsertExchangeRateRequest: {
+            rateDate: string;
+            rate: number;
+        };
+        UpsertExchangeRateResponseData: {
+            rate: {
+                /** Format: uuid */
+                id: string;
+                rateDate: string;
+                fromCurrency: string;
+                toCurrency: string;
+                rate: number;
+                rateDecimal: number;
+                /** @enum {string} */
+                source: "OPERATOR" | "FALLBACK";
+                /** Format: uuid */
+                operatorId: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            };
+        };
+        ClientExchangeRateQuery: {
+            /**
+             * @default CNY
+             * @enum {string}
+             */
+            to: "CNY";
+        };
+        ClientExchangeRateResponseData: {
+            rateDate: string;
+            fromCurrency: string;
+            toCurrency: string;
+            rate: number;
+            rateDecimal: number;
+            /** @enum {string} */
+            source: "OPERATOR" | "FALLBACK";
+        };
+        ListExchangeRatesQuery: {
+            startDate?: string;
+            endDate?: string;
+            cursor?: string;
+            /** @default 20 */
+            limit: number;
+        };
+        ExchangeRateListResponseData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                rateDate: string;
+                fromCurrency: string;
+                toCurrency: string;
+                rate: number;
+                rateDecimal: number;
+                /** @enum {string} */
+                source: "OPERATOR" | "FALLBACK";
+                /** Format: uuid */
+                operatorId: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            nextCursor: string | null;
+        };
     };
     responses: never;
     parameters: never;

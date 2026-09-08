@@ -775,8 +775,6 @@ describe('OrderService.createOrder', () => {
   });
 });
 
-});
-
 describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {
   let service: OrderService;
 
