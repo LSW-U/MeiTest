@@ -103,7 +103,7 @@ export interface ReconciliationItem {
   totalAmount: number;
 }
 
-/** 支付方式列表项（W7 P1-1） */
+/** 支付方式列表项（W7 P1-1 + 批B available） */
 export interface PaymentMethodView {
   code: PaymentMethodCode;
   name: Record<string, string>;
@@ -111,7 +111,9 @@ export interface PaymentMethodView {
   icon: string;
   isDefault: boolean;
   enabled: boolean;
-  /** 是否为 mock/stub 实现（WECHAT/PAYPAL/STRIPE 当前为 true） */
+  /** 是否可下单（批B：false = 占位渠道，前端渲染"即将上线"区且不可选中） */
+  available: boolean;
+  /** 是否为 mock/stub 实现（WECHAT/PAYPAL/STRIPE/WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP 当前为 true） */
   mockFlag: boolean;
 }
 
@@ -570,11 +572,14 @@ export class PaymentService {
   }
 
   /**
-   * 列出可用支付方式（W7 P1-1）
+   * 列出可用支付方式（W7 P1-1 + 批B 枚举补位）
    *
-   * 返回 5 种方式的多语言 name/subtitle + icon + isDefault + enabled + mockFlag。
-   * mockFlag 从 strategy.isMock 派生（dev/staging WECHAT/PAYPAL/STRIPE 为 true），
+   * 返回 8 种方式的多语言 name/subtitle + icon + isDefault + enabled + available + mockFlag。
+   * mockFlag 从 strategy.isMock 派生（WECHAT/PAYPAL/STRIPE/WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP 为 true），
    * 其他字段在 payment-methods.config.ts 静态配置。
+   *
+   * available（批B 新增）：false = 占位渠道（WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP），
+   * 列表可见"即将上线"但前端不可选中，服务端 createOrder 拒绝（R2，E-PAYMENT-011）。
    *
    * 前端下单页用此接口渲染选项，避免硬编码方式列表。
    *
@@ -590,6 +595,7 @@ export class PaymentService {
         icon: cfg.icon,
         isDefault: cfg.isDefault,
         enabled: cfg.enabled,
+        available: cfg.available,
         mockFlag: strategy.isMock,
       };
     });

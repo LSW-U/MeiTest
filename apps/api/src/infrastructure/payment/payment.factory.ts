@@ -12,13 +12,21 @@ import { BankTransferStrategy } from './bank-transfer.strategy';
 import { WechatStrategy } from './wechat.strategy';
 import { PaypalStrategy } from './paypal.strategy';
 import { StripeStrategy } from './stripe.strategy';
+import { WechatGlobalStrategy } from './wechat-global.strategy';
+import { AlipayCnStrategy } from './alipay-cn.strategy';
+import { LocalPspStrategy } from './local-psp.strategy';
 
+// 批B 补位 3 渠道（WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP）为 stub 占位，config available=false
+// 挡住下单（R2）；注册在此保证 PaymentProvider 抽象完整（切真时加实现即可）
 const STRATEGIES: Record<PaymentMethodCode, PaymentStrategy> = {
   COD: new CodStrategy(),
   BANK_TRANSFER: new BankTransferStrategy(),
   WECHAT: new WechatStrategy(),
   PAYPAL: new PaypalStrategy(),
   STRIPE: new StripeStrategy(),
+  WECHAT_GLOBAL: new WechatGlobalStrategy(),
+  ALIPAY_CN: new AlipayCnStrategy(),
+  LOCAL_PSP: new LocalPspStrategy(),
 };
 
 export function getPaymentStrategy(method: PaymentMethodCode): PaymentStrategy {

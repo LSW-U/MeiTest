@@ -3,7 +3,7 @@
  *
  * 决策依据：
  * - 契约 v0.3 决策 A：orderNo 16 位 = MM + yyyyMMdd + warehouseId(2位) + 序号(4位)
- * - 契约 v0.3 决策 D：5 枚举 PaymentMethod（COD/BANK/WECHAT/PAYPAL/STRIPE）
+ * - 契约 v0.3 决策 D：5 枚举 PaymentMethod（COD/BANK/WECHAT/PAYPAL/STRIPE）+ 批B 补位 3 占位渠道（WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP）
  * - 契约 v0.3 冲突 6：Order 加 warehouseId
  * - 契约 v0.3 冲突 10：订单状态机扩展（PENDING_PAYMENT 预付起点 / DELIVERED_PAID / DELIVERED_UNPAID）
  * - 业务决策 2：多仓库，order 实体含 warehouseId
@@ -15,13 +15,21 @@ import { Id, IsoTimestamp, Money } from './common';
 /** 16 位订单号：MM + yyyyMMdd(8) + warehouseId(2) + 序号(4) */
 export const OrderNo = z.string().regex(/^MM\d{14}$/, 'ORDER_NO_FORMAT: 16 位');
 
-/** 5 种支付方式（v0.3 决策 D） */
+/**
+ * 支付方式（v0.3 决策 D 5 枚举 + 批B 补位 3 占位渠道，方案V2 §3.2）
+ *
+ * WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP 为占位渠道：列表可见"即将上线"（available=false），
+ * createOrder 服务端拒绝（E-PAYMENT-011），切真前不下真实单。
+ */
 export const PaymentMethod = z.enum([
   'COD',
   'BANK_TRANSFER',
   'WECHAT',
   'PAYPAL',
   'STRIPE',
+  'WECHAT_GLOBAL',
+  'ALIPAY_CN',
+  'LOCAL_PSP',
 ]);
 
 /**

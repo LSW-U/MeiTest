@@ -2,14 +2,32 @@
  * 支付策略抽象（v0.3 决策 D：5 枚举全预留）
  *
  * 决策依据：
- * - CLAUDE.md §测试阶段支付完整方案 + 契约 v0.3 决策 D
- * - 5 个实现：COD（真实）/ BANK_TRANSFER（真实）/ WECHAT（mock）/ PAYPAL（stub）/ STRIPE（stub）
+ * - CLAUDE.md §测试阶段支付完整方案 + 契约 v0.3 决策 D + 批B 枚举补位（方案V2 §3.2）
+ * - 8 个实现：COD（真实）/ BANK_TRANSFER（真实）/ WECHAT（mock）/ PAYPAL（stub）/ STRIPE（stub）
+ *   / WECHAT_GLOBAL / ALIPAY_CN / LOCAL_PSP（批B stub 占位，available=false 挡下单）
  * - mock/stub 实现日志标 [MOCK] / [STUB]，便于排查
  *
  * 切换策略只改 .env 的 PAYMENT_STRATEGY，不改代码
  */
 
-export type PaymentMethodCode = 'COD' | 'BANK_TRANSFER' | 'WECHAT' | 'PAYPAL' | 'STRIPE';
+/**
+ * 支付方式编码（与 Prisma PaymentMethod 枚举 / 契约 PaymentMethod z.enum 同步）
+ *
+ * 批B 补位 3 渠道（微信支付预留 2026-09-08，方案V2 §3.2）：
+ * - WECHAT_GLOBAL：国际版微信——东帝汶不受理（微信跨境 49 国名单不含），仅占位
+ * - ALIPAY_CN：支付宝（中国主体）——接口预留
+ * - LOCAL_PSP：东帝汶本地支付服务商（Timor Telecom/Telkomcel 电子钱包等）——W6 后调研接入
+ * 三者 enabled=true + available=false：列表可见"即将上线"，下单服务端拒绝（R2）。
+ */
+export type PaymentMethodCode =
+  | 'COD'
+  | 'BANK_TRANSFER'
+  | 'WECHAT'
+  | 'PAYPAL'
+  | 'STRIPE'
+  | 'WECHAT_GLOBAL'
+  | 'ALIPAY_CN'
+  | 'LOCAL_PSP';
 
 export interface CreatePaymentInput {
   orderId: string;

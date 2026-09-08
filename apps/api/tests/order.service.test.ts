@@ -715,6 +715,66 @@ describe('OrderService.createOrder', () => {
       }),
     );
   });
+
+  // ===== 批B 支付枚举补位（微信支付预留 2026-09-08，方案V2 §3.2）：R2 下单可用性校验 =====
+
+  it('批B R2：下单拒绝占位渠道 WECHAT_GLOBAL（available=false）→ 400 E-PAYMENT-011，且先于任何 DB 查询', async () => {
+    await expect(
+      service.createOrder({
+        userId: 'user-1',
+        addressId: 'a1',
+        items: [{ skuId: 'sku-1', quantity: 1 }],
+        paymentMethod: 'WECHAT_GLOBAL',
+        deviceType: 'client_app',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'E-PAYMENT-011' } });
+
+    // Step 0 校验在 getInitialState 分流 + Step 1 查地址之前：零 DB 触达
+    expect(mockDb.address.findUnique).not.toHaveBeenCalled();
+    expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+    expect(mockPayment.createIntentForOrder).not.toHaveBeenCalled();
+  });
+
+  it('批B R2：下单拒绝占位渠道 ALIPAY_CN / LOCAL_PSP（同口径 400 E-PAYMENT-011）', async () => {
+    for (const method of ['ALIPAY_CN', 'LOCAL_PSP'] as const) {
+      await expect(
+        service.createOrder({
+          userId: 'user-1',
+          addressId: 'a1',
+          items: [{ skuId: 'sku-1', quantity: 1 }],
+          paymentMethod: method,
+          deviceType: 'client_app',
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-PAYMENT-011' } });
+    }
+    expect(mockDb.address.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('批B R2：现有渠道放行——COD/WECHAT 经 Step 0 校验后继续走正常下单链路', async () => {
+    // 放行证据 = Step 0 不拦截（异常码非 E-PAYMENT-011）；完整链路由上方 COD/WECHAT 汇率快照用例覆盖
+    await expect(
+      service.createOrder({
+        userId: 'user-1',
+        addressId: 'a1',
+        items: [{ skuId: 'sku-1', quantity: 1 }],
+        paymentMethod: 'COD',
+        deviceType: 'client_app',
+      }),
+    ).rejects.not.toMatchObject({ response: { code: 'E-PAYMENT-011' } });
+    await expect(
+      service.createOrder({
+        userId: 'user-1',
+        addressId: 'a1',
+        items: [{ skuId: 'sku-1', quantity: 1 }],
+        paymentMethod: 'WECHAT',
+        deviceType: 'client_app',
+      }),
+    ).rejects.not.toMatchObject({ response: { code: 'E-PAYMENT-011' } });
+    // 两个用例都通过了 Step 0，进入 Step 1 查地址
+    expect(mockDb.address.findUnique).toHaveBeenCalled();
+  });
+});
+
 });
 
 describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {

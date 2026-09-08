@@ -29,7 +29,7 @@
  *      c. 写 OrderEvent(CANCELLED)
  *   3. （预付场景）W5 接入 RefundService：触发 refund，标 PaymentIntent.REFUNDED
  */
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, incrementSalesCountForOrder } from '../../shared/db';
 import type { Tx } from '../../shared/db';
@@ -187,12 +187,24 @@ export class OrderService {
    * 创建订单（同步事务）
    *
    * 业务异常：
+   *   - E-PAYMENT-011 支付渠道不可用（占位渠道 available=false，批B R2）
    *   - E-ORDER-001 地址不在配送范围（含地址不存在 / 无仓库覆盖）
    *   - E-ORDER-002 库存不足
    *   - E-ORDER-005 SKU 无效或已下架
    *   - E-COMMON-002 内部错误（事务异常）
    */
   async createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
+    // ===== Step 0: 支付渠道可用性校验（批B R2🔴，微信支付预留 2026-09-08，方案V2 §3.2 第 6 条）=====
+    // 占位渠道（WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP，available=false）或不在 config 的渠道 → 400 拒绝。
+    // 校验在 getInitialState 分流前（也先于任何 DB 查询），避免占位渠道进状态机产生死单。
+    // 契约 zod 已挡未知枚举值，此处防御 config 漏配 / 直调 service。
+    if (!isPaymentMethodOrderable(input.paymentMethod)) {
+      throw new BadRequestException({
+        code: 'E-PAYMENT-011',
+        message: `Payment method ${input.paymentMethod} is not available yet`,
+      });
+    }
+
     // ===== Step 1: 查地址 =====
     const address = await db.address.findUnique({
       where: { id: input.addressId },

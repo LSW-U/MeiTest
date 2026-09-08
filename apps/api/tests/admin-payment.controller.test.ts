@@ -7,6 +7,8 @@
  *   3. postMarkPaidEffects 抛错 → 主事务方法仍被调用（副作用容忍，主事务不回滚）
  *   4. mark-failed 成功：调 markFailedByAdmin + reason 透传
  *   5. req.user 缺失 → E-AUTH-002（confirm-receipt + mark-failed 双兜底）
+ *   6. P2-1（批C 审查 2026-09-08）：非 BANK_TRANSFER 订单调 confirm-receipt → 409 E-PAYMENT-012
+ *      且不进事务、不写台账（防渠道错标对账分流口径）
  *
  * service 层状态机/校验由 payment.service.test.ts 覆盖，这里只测 controller 装配 + 事务编排
  *
@@ -15,7 +17,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockPaymentService, mockOrderService, mockDb, mockWithTransaction, mockTx } =
+const { mockPaymentService, mockOrderService, mockDb, mockWithTransaction, mockTx, mockLedgerWrite } =
   vi.hoisted(() => ({
     mockPaymentService: {
       markPaidByAdminTx: vi.fn(),
@@ -31,9 +33,15 @@ const { mockPaymentService, mockOrderService, mockDb, mockWithTransaction, mockT
     mockWithTransaction: vi.fn(),
     // fake tx：仅用于断言「同事务方法都拿到同一个 tx」，不实际访问 DB
     mockTx: { __isTx: true } as unknown as import('../src/shared/db/transaction').Tx,
+    // 批C 对账分流：confirm-receipt BANK_TRANSFER 审核通过写台账（writer 逻辑在 reconciliation-ledger.test.ts）
+    mockLedgerWrite: vi.fn(),
   }));
 
 vi.mock('../src/shared/db', () => ({ db: mockDb }));
+// 批C：admin-payment.controller 走直连文件路径 import（非 barrel），单独 mock 本模块
+vi.mock('../src/shared/db/reconciliation-ledger', () => ({
+  writeReconciliationLedgerTx: mockLedgerWrite,
+}));
 vi.mock('../src/shared/db/transaction', () => ({
   withTransaction: mockWithTransaction,
 }));
@@ -60,17 +68,19 @@ describe('AdminPaymentController - 事务编排 + 装配（批次 3 审查 P2）
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLedgerWrite.mockReset();
     // 默认 withTransaction：执行 fn 传 mockTx（fn 内抛错则 withTransaction 抛错，模拟真实回滚）
     mockWithTransaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) =>
       fn(mockTx),
     );
-    // 默认事务外查 order 返回 mock order（postMarkPaidEffects 通知用）
+    // 默认事务外查 order 返回 mock order（postMarkPaidEffects 通知用 + P2-1 渠道断言）
     mockDb.order.findUnique.mockResolvedValue({
       id: 'o-1',
       userId: 'u-1',
       orderNo: 'MM20260810W01000001',
       status: 'PENDING_PAYMENT',
       paymentStatus: 'PENDING',
+      paymentMethod: 'BANK_TRANSFER',
     });
     controller = new AdminPaymentController(
       new PaymentService() as never,
@@ -90,10 +100,10 @@ describe('AdminPaymentController - 事务编排 + 装配（批次 3 审查 P2）
       'platform',
     );
 
-    // 事务外查 order（通知用）
+    // 事务外查 order（通知用 + P2-1 渠道断言读 paymentMethod）
     expect(mockDb.order.findUnique).toHaveBeenCalledWith({
       where: { id: 'o-1' },
-      select: expect.objectContaining({ userId: true, orderNo: true }),
+      select: expect.objectContaining({ userId: true, orderNo: true, paymentMethod: true }),
     });
     // 事务内：markPaidByAdminTx + markPaidTx 用同一 tx（原子性核心）
     expect(mockWithTransaction).toHaveBeenCalledTimes(1);
@@ -118,8 +128,45 @@ describe('AdminPaymentController - 事务编排 + 装配（批次 3 审查 P2）
       expect.objectContaining({ operatorId: 'admin-1' }),
       expect.objectContaining({ id: 'o-1', orderNo: 'MM20260810W01000001' }),
     );
+    // 批C 对账分流：同事务写台账（method 从 order 读取=P2-1 双保险，amountUsd=PaymentIntent.amount）
+    expect(mockLedgerWrite).toHaveBeenCalledTimes(1);
+    expect(mockLedgerWrite).toHaveBeenCalledWith(mockTx, {
+      orderId: 'o-1',
+      orderNo: 'MM20260810W01000001',
+      paymentMethod: 'BANK_TRANSFER',
+      amountUsd: 5800,
+    });
     // 返回 intentView
     expect(result).toEqual({ success: true as const, data: intentView });
+  });
+
+  it('confirm-receipt P2-1：非 BANK_TRANSFER 订单（WECHAT 预付单误走）→ 409 E-PAYMENT-012 + 不进事务 + 不写台账', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'o-2',
+      userId: 'u-1',
+      orderNo: 'MM20260810W01000002',
+      status: 'PENDING_PAYMENT',
+      paymentStatus: 'PENDING',
+      paymentMethod: 'WECHAT',
+    });
+
+    await expect(
+      controller.confirmReceipt(
+        'o-2',
+        { user: { sub: 'admin-1', role: 'SUPER_ADMIN' } } as never,
+        'platform',
+      ),
+    ).rejects.toMatchObject({
+      response: { code: 'E-PAYMENT-012' },
+      status: 409,
+    });
+
+    // 渠道断言在事务前拦截：markPaidByAdminTx / markPaidTx / 台账写入全部未触达
+    expect(mockWithTransaction).not.toHaveBeenCalled();
+    expect(mockPaymentService.markPaidByAdminTx).not.toHaveBeenCalled();
+    expect(mockOrderService.markPaidTx).not.toHaveBeenCalled();
+    expect(mockOrderService.postMarkPaidEffects).not.toHaveBeenCalled();
+    expect(mockLedgerWrite).not.toHaveBeenCalled();
   });
 
   it('confirm-receipt：markPaidTx 抛错 → 整事务抛错 + postMarkPaidEffects 不调（原子性，PaymentIntent 不留 PAID）', async () => {
@@ -138,6 +185,8 @@ describe('AdminPaymentController - 事务编排 + 装配（批次 3 审查 P2）
     expect(mockPaymentService.markPaidByAdminTx).toHaveBeenCalledTimes(1);
     expect(mockOrderService.markPaidTx).toHaveBeenCalledTimes(1);
     expect(mockOrderService.postMarkPaidEffects).not.toHaveBeenCalled();
+    // 批C：markPaidTx 抛错 → 台账写入未触达（钩子在其后，整事务回滚不留台账行）
+    expect(mockLedgerWrite).not.toHaveBeenCalled();
   });
 
   it('confirm-receipt：postMarkPaidEffects 抛错 → 主事务方法仍被调用（副作用容忍，主事务不回滚）', async () => {

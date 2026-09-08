@@ -116,13 +116,16 @@ enum OrderEventType {
   ISSUE_REPORTED // W3-C S5:骑手异常上报（CUSTOMER_UNREACHABLE / REJECTED 等）
 }
 
-/// 支付方式(v0.3 决策 D:全预留 5 枚举,2 真实 + 3 mock/stub)
+/// 支付方式(v0.3 决策 D 全预留 + 批B 补位 3 渠道,2 真实 + 6 mock/stub)
 enum PaymentMethod {
   COD // ✅ 真实:骑手送达收款
   BANK_TRANSFER // ✅ 真实:凭证上传 + 人工对账
-  WECHAT // 🟡 mock:返回支付成功假数据
+  WECHAT // 🟡 mock:国内微信支付(中国主体商户号,接口预留)
   PAYPAL // 🟡 stub:返回 mock URL
   STRIPE // 🟡 stub:返回 mock client_secret
+  WECHAT_GLOBAL // 🟡 stub:国际版微信——东帝汶不受理,仅占位(available=false)
+  ALIPAY_CN // 🟡 stub:支付宝(中国)——接口预留(available=false)
+  LOCAL_PSP // 🟡 stub:东帝汶本地支付服务商——W6 后调研接入(available=false)
 }
 
 /// 支付状态

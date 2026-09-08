@@ -77,7 +77,11 @@ export function assertCanTransition(from: OrderStatusValue, to: OrderStatusValue
  * 根据 PaymentMethod 决定订单初始状态
  *
  * - COD / BANK_TRANSFER → PENDING_CONFIRM（不预付）
- * - WECHAT / PAYPAL / STRIPE → PENDING_PAYMENT（必须先预付）
+ * - WECHAT / PAYPAL / STRIPE / WECHAT_GLOBAL / ALIPAY_CN / LOCAL_PSP → PENDING_PAYMENT（必须先预付）
+ *
+ * 批B 备注：WECHAT_GLOBAL/ALIPAY_CN/LOCAL_PSP 为占位渠道（available=false），
+ * createOrder Step 0 已拒绝（E-PAYMENT-011），正常到不了这里；列出是为状态机
+ * 语义完备（未来切真后零改动），其支付形态均为预付。
  */
 export function getInitialState(paymentMethod: PaymentMethodValue): OrderStatusValue {
   switch (paymentMethod) {
@@ -87,6 +91,9 @@ export function getInitialState(paymentMethod: PaymentMethodValue): OrderStatusV
     case 'WECHAT':
     case 'PAYPAL':
     case 'STRIPE':
+    case 'WECHAT_GLOBAL':
+    case 'ALIPAY_CN':
+    case 'LOCAL_PSP':
       return 'PENDING_PAYMENT';
     default: {
       // 运行时兜底（typescript 编译时已穷尽，运行时若有非法值也不会沉默失败）

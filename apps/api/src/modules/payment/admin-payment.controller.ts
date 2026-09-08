@@ -39,6 +39,8 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import { withTransaction } from '../../shared/db/transaction';
 import { db } from '../../shared/db';
+import { writeReconciliationLedgerTx } from '../../shared/db/reconciliation-ledger';
+import { logger } from '../../shared/logger/logger';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
 
 interface RequestWithUser {
@@ -136,11 +138,30 @@ export class AdminPaymentController {
       );
     }
 
-    // 事务外查 order（postMarkPaidEffects 通知用）
+    // 事务外查 order（postMarkPaidEffects 通知用 + P2-1 渠道断言）
     const orderForNotify = await db.order.findUnique({
       where: { id: orderId },
-      select: { userId: true, orderNo: true, status: true, paymentStatus: true },
+      select: {
+        userId: true,
+        orderNo: true,
+        status: true,
+        paymentStatus: true,
+        paymentMethod: true,
+      },
     });
+
+    // P2-1 渠道断言（批C 审查 2026-09-08）：本端点仅 BANK_TRANSFER 凭证审核专用。
+    // markPaidTx 状态门放行"任意 PENDING_PAYMENT"，不校验渠道——WECHAT/PAYPAL 预付单
+    // 误走此端点会静默把台账错标 BANK_TRANSFER（对账分流口径被污染），故在此硬拦。
+    if (orderForNotify && orderForNotify.paymentMethod !== 'BANK_TRANSFER') {
+      throw new HttpException(
+        {
+          code: 'E-PAYMENT-012',
+          message: `Confirm receipt only available for BANK_TRANSFER, got ${orderForNotify.paymentMethod}`,
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
 
     const eventCtx: OrderEventContext = {
       operatorId: req.user.sub,
@@ -156,6 +177,25 @@ export class AdminPaymentController {
         req.user!.sub,
       );
       await this.orderService.markPaidTx(tx, orderId, eventCtx);
+      // 批C 对账分流（微信支付预留 2026-09-08）：BANK_TRANSFER 审核通过 → 同事务写对账台账
+      //   - 幂等：orderId @unique + writer 先查后写；失败只 warn 不阻断审核主流程
+      //   - 纯 USD 资金流：exchangeRate/amountCny/cashResult 均 null（快照仅人民币线上通道有值）
+      //   - P2-1：method 从 order 读取（断言后恒为 BANK_TRANSFER，不硬编码字面量——双保险）
+      if (orderForNotify) {
+        await writeReconciliationLedgerTx(tx, {
+          orderId,
+          orderNo: orderForNotify.orderNo,
+          paymentMethod: orderForNotify.paymentMethod,
+          amountUsd: intentView.amount,
+        });
+      } else {
+        // order 理论不可能缺失（PaymentIntent.orderId FK RESTRICT），真发生则显式留痕不静默
+        logger.warn({
+          msg: 'RECON_LEDGER_ORDER_MISSING_SKIP',
+          orderId,
+          note: 'confirm-receipt order not found — ledger row skipped',
+        });
+      }
       return intentView;
     });
 
