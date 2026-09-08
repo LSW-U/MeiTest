@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { Id, IsoTimestamp, I18nText, Money } from './common';
 import { Role } from './auth';
 import { OrderNo, OrderStatus } from './order';
+import { ProductSummary } from './catalog';
 
 export const UserStatus = z.enum(['ACTIVE', 'SUSPENDED', 'DELETED']);
 
@@ -145,6 +146,18 @@ export const FavoriteToggleRequest = z.object({
 /** 收藏切换响应 */
 export const FavoriteToggleResponse = z.object({
   isFavorite: z.boolean(),
+});
+
+/**
+ * 收藏列表项（GET /client/favorites）
+ * 批D P2-1 修正：此前 openapi 该端点 200 误用 FavoriteToggleResponse 占位，
+ * 真实返回形状（数组 + 商品摘要）从未入契约，isCategoryTop3 无处声明
+ */
+export const FavoriteListItem = z.object({
+  id: Id,
+  productId: Id,
+  product: ProductSummary,
+  createdAt: IsoTimestamp,
 });
 
 /** 通知实体 */

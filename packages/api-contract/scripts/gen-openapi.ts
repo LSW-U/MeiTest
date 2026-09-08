@@ -43,6 +43,7 @@ import {
   UpdateAddressRequest,
   FavoriteToggleRequest,
   FavoriteToggleResponse,
+  FavoriteListItem,
   NotificationItem,
   MarkNotificationReadResponse,
   NotificationPreferences,
@@ -76,9 +77,13 @@ import {
   // catalog
   Product,
   ProductSummary,
+  ProductDetail,
+  WarehouseStock,
   CreateProductRequest,
   UpdateProductRequest,
   UpdateProductStatusRequest,
+  AdminSalesBatchAdjustRequest,
+  AdminSalesBatchAdjustResponse,
   Sku,
   CreateSkuRequest,
   UpdateSkuRequest,
@@ -194,6 +199,14 @@ import {
   TransferRecord,
   ListTransfersQuery,
   ImportResult,
+  // 批E import-log（D5 v2：导入历史跨批通用，批F 复用）
+  ImportLogResourceType,
+  ImportLogItem,
+  ListImportLogsQuery,
+  ImportLogListResponse,
+  // 批F 商品批量导入（D8/D12：全错全不写 + 重复三模式）
+  ImportMode,
+  ProductImportResult,
   // refund（W5 流程 C）
   Refund as RefundSchema,
   CreateRefundRequest as CreateRefundRequestSchema,
@@ -304,6 +317,7 @@ registry.register('CreateAddressRequest', CreateAddressRequest);
 registry.register('UpdateAddressRequest', UpdateAddressRequest);
 registry.register('FavoriteToggleRequest', FavoriteToggleRequest);
 registry.register('FavoriteToggleResponse', FavoriteToggleResponse);
+registry.register('FavoriteListItem', FavoriteListItem);
 registry.register('NotificationItem', NotificationItem);
 registry.register('MarkNotificationReadResponse', MarkNotificationReadResponse);
 registry.register('AdminUserListItem', AdminUserListItem);
@@ -330,9 +344,13 @@ registry.register('WarehouseStaffItem', WarehouseStaffItem);
 
 registry.register('Product', Product);
 registry.register('ProductSummary', ProductSummary);
+registry.register('ProductDetail', ProductDetail);
+registry.register('WarehouseStock', WarehouseStock);
 registry.register('CreateProductRequest', CreateProductRequest);
 registry.register('UpdateProductRequest', UpdateProductRequest);
 registry.register('UpdateProductStatusRequest', UpdateProductStatusRequest);
+registry.register('AdminSalesBatchAdjustRequest', AdminSalesBatchAdjustRequest);
+registry.register('AdminSalesBatchAdjustResponse', AdminSalesBatchAdjustResponse);
 registry.register('Sku', Sku);
 registry.register('CreateSkuRequest', CreateSkuRequest);
 registry.register('UpdateSkuRequest', UpdateSkuRequest);
@@ -458,6 +476,16 @@ registry.register('TransferResult', TransferResult);
 registry.register('TransferRecord', TransferRecord);
 registry.register('ListTransfersQuery', ListTransfersQuery);
 registry.register('ImportResult', ImportResult);
+
+// 批E import-log（D5 v2：导入历史跨批通用，批F 复用）
+registry.register('ImportLogResourceType', ImportLogResourceType);
+registry.register('ImportLogItem', ImportLogItem);
+registry.register('ListImportLogsQuery', ListImportLogsQuery);
+registry.register('ImportLogListResponse', ImportLogListResponse);
+
+// 批F 商品批量导入（D8/D12：全错全不写 + 重复三模式）
+registry.register('ImportMode', ImportMode);
+registry.register('ProductImportResult', ProductImportResult);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
@@ -769,10 +797,11 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/client/favorites',
   tags: ['favorite'],
+  description: '收藏列表（批D P2-1 修正响应形状：此前误用 FavoriteToggleResponse 占位）',
   responses: {
     200: {
       description: '收藏列表',
-      content: { 'application/json': { schema: FavoriteToggleResponse } },
+      content: { 'application/json': { schema: FavoriteListItem.array() } },
     },
   },
 });
@@ -1019,6 +1048,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/client/products/{id}/detail',
+  tags: ['product'],
+  description:
+    '商品聚合详情（批B：stocks 按仓库存 + totalStock + ratingCount + isCategoryTop3；公开可读，admin/client 复用同一契约）',
+  responses: {
+    200: {
+      description: '聚合详情',
+      content: { 'application/json': { schema: ProductDetail } },
+    },
+    404: { description: 'PRODUCT_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/client/products/{id}/skus',
   tags: ['product'],
   description: '商品规格列表（B6，只返 ACTIVE SKU，供 C 端规格选择器）',
@@ -1095,6 +1139,21 @@ registry.registerPath({
   request: { body: { content: { 'application/json': { schema: UpdateProductStatusRequest } } } },
   responses: {
     200: { description: '更新成功', content: { 'application/json': { schema: Product } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/products/sales-batch',
+  tags: ['product'],
+  description:
+    '销量批量调整（批C：列表勾选 → 设值落库，delta 推导写 SalesCountLog changeType=ADMIN_ADJUST）',
+  request: { body: { content: { 'application/json': { schema: AdminSalesBatchAdjustRequest } } } },
+  responses: {
+    200: {
+      description: '调整完成（adjusted=成功，skipped=商品不存在被跳过）',
+      content: { 'application/json': { schema: AdminSalesBatchAdjustResponse } },
+    },
   },
 });
 
@@ -1963,6 +2022,36 @@ registry.registerPath({
   responses: {
     200: { description: '导入结果', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: ImportResult }) } } },
     400: { description: 'E-INVENTORY-009 CSV 格式错', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 批E import-log（D5 v2：跨批通用导入历史查询，Product|Stock 由 resourceType 过滤）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/import-logs',
+  tags: ['inventory'],
+  description: '导入历史列表（批E D5 v2：后端统一写，前端只查不补记；时间/文件名/成功失败数/操作人，分页；resourceType 过滤，批F 商品导入复用）',
+  request: { query: ListImportLogsQuery },
+  responses: {
+    200: {
+      description: '导入历史列表',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: ImportLogListResponse }) } },
+    },
+  },
+});
+
+// 批F 商品批量导入（multipart field=file；?mode=skip|overwrite|error 默认 skip）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/products/import',
+  tags: ['catalog'],
+  description: '商品批量导入 CSV（批F D12：全错全不写——校验/判重错误 400 E-PRODUCT-IMPORT-001 返 details.failedRows[{line,field,reason}]，一个都不写；全通过单事务 Product+默认Sku+Stock+StockLog；D8 重复三模式默认跳过；表头中英文别名；≤1000 行/≤2MB；列 name_en/name_zh/name_tet/price(元)/category/stock/skuCode/warehouseCode/mainImage/unit_*/desc_*）',
+  request: {
+    query: z.object({ mode: ImportMode.optional() }),
+  },
+  responses: {
+    200: { description: '导入结果（全通过）', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: ProductImportResult }) } } },
+    400: { description: 'E-PRODUCT-IMPORT-001 校验/判重失败（details.failedRows）', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

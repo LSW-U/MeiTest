@@ -13,6 +13,7 @@ import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenExce
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { db } from '../../shared/db';
+import { getCategoryTop3ProductIds } from '../../shared/db/category-top3';
 import { Prisma } from '../../prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
@@ -269,10 +270,12 @@ export class UserService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    // 批D P2-1：收藏列表商品带 isCategoryTop3（徽章后端直出；一次查询批量算，非 N+1）
+    const top3Ids = await getCategoryTop3ProductIds(db, favorites.map((f) => f.product));
     return favorites.map((f) => ({
       id: f.id,
       productId: f.productId,
-      product: this.toProductSummary(f.product),
+      product: { ...this.toProductSummary(f.product), isCategoryTop3: top3Ids.has(f.productId) },
       createdAt: f.createdAt.toISOString(),
     }));
   }

@@ -61,6 +61,8 @@ export const ProductSummary = z.object({
   defaultSkuId: Id.nullable(),
   status: ProductStatus,
   salesCount: z.number().int(),
+  /** 同分类 ACTIVE 销量 Top3（批D P2-1：列表 BEST SELLER 徽章后端直出，替代前端 salesCount>500 阈值；与 ProductDetail.isCategoryTop3 同口径） */
+  isCategoryTop3: z.boolean(),
   /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息，0=断货 */
   stock: z.number().int().optional(),
   /** 评分（B7：聚合 APPROVED reviews AVG）。undefined=无评论 */
@@ -86,6 +88,33 @@ export const UpdateProductStatusRequest = z.object({
   status: ProductStatus,
 });
 
+/**
+ * 管理端销量批量调整请求（批C：列表批量勾选 → 弹窗设值 → PATCH /admin/products/sales-batch）
+ *
+ * 语义是「设值」非「增量」：后端按 current 推导 delta 写 SalesCountLog（changeType=ADMIN_ADJUST）。
+ * 与批A 审计口径一致（beforeQty/afterQty 全程留痕），历史假数据保留不清零。
+ */
+export const AdminSalesBatchAdjustRequest = z.object({
+  items: z
+    .array(
+      z.object({
+        id: Id,
+        /** 目标销量（设值，>=0 整数） */
+        salesCount: z.number().int().min(0),
+      }),
+    )
+    .min(1)
+    .max(100),
+});
+export type AdminSalesBatchAdjustRequest = z.infer<typeof AdminSalesBatchAdjustRequest>;
+
+/** 批量调整响应：adjusted=成功应用（含目标值与当前相同的无变化项），skipped=商品不存在被跳过 */
+export const AdminSalesBatchAdjustResponse = z.object({
+  adjusted: z.array(Id),
+  skipped: z.array(Id),
+});
+export type AdminSalesBatchAdjustResponse = z.infer<typeof AdminSalesBatchAdjustResponse>;
+
 /** SKU 实体 */
 export const Sku = z.object({
   id: Id,
@@ -110,6 +139,35 @@ export const CreateSkuRequest = z.object({
 
 /** 修改 SKU 请求 */
 export const UpdateSkuRequest = CreateSkuRequest.partial();
+
+/** 按仓库存条目（批B：仓库维度库存，该仓该商品全部 ACTIVE SKU 求和） */
+export const WarehouseStock = z.object({
+  warehouseId: Id,
+  /** 仓库多语言名称 */
+  name: I18nText,
+  /** 该仓库存量（分仓求和后的整数） */
+  quantity: z.number().int(),
+});
+
+/**
+ * 商品聚合详情（批B 统一详情接口：GET /client/products/:id/detail）
+ *
+ * admin + client 复用同一契约（D5）：基本信息/图片/销量/SKU 透传现有 Product，
+ * 真增量 = stocks[]（按仓库存）+ totalStock + ratingCount + isCategoryTop3。
+ * 端点公开可读（@Public），不筛商品 status（admin 看非在售商品也走此接口）。
+ */
+export const ProductDetail = Product.extend({
+  /** 按仓库存数组（warehouseId 升序）。无库存记录时空数组 */
+  stocks: z.array(WarehouseStock),
+  /** 全仓库存总量（= stocks 各仓求和 = stock）。无库存记录时 0 */
+  totalStock: z.number().int(),
+  /** 评分样本数（APPROVED 评论数，与 rating 同源聚合）。0=无评论（此时 rating 为 undefined） */
+  ratingCount: z.number().int(),
+  /** 是否同分类销量 Top3（ACTIVE 商品按 salesCount 排名）。无分类商品恒 false */
+  isCategoryTop3: z.boolean(),
+  /** ACTIVE SKU 列表（price 升序） */
+  skus: z.array(Sku),
+});
 
 /** 分类基础字段（叶子节点用，无 children） */
 const CategoryBase = z.object({

@@ -35,7 +35,10 @@ const m = vi.hoisted(() => ({
   shopFindFirst: vi.fn(),
   stockFindMany: vi.fn(),
   reviewGroupBy: vi.fn(),
+  reviewAggregate: vi.fn(),
   queryRaw: vi.fn(),
+  salesCountLogCreate: vi.fn(),
+  transaction: vi.fn(),
   // P2-3：count 缓存 redis mock（redis 是 Proxy 单例，mock 整个模块导出）
   redisGet: vi.fn(),
   redisIncr: vi.fn(),
@@ -79,8 +82,10 @@ vi.mock('../src/shared/db', () => ({
     },
     shop: { findFirst: m.shopFindFirst },
     stock: { findMany: m.stockFindMany },
-    review: { groupBy: m.reviewGroupBy },
+    review: { groupBy: m.reviewGroupBy, aggregate: m.reviewAggregate },
+    salesCountLog: { create: m.salesCountLogCreate },
     $queryRaw: m.queryRaw,
+    $transaction: m.transaction,
   },
 }));
 
@@ -93,6 +98,12 @@ vi.mock('../src/shared/cache/redis', () => ({
 }));
 
 import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { db } from '../src/shared/db';
+import {
+  AdminSalesBatchAdjustRequest,
+  AdminSalesBatchAdjustResponse,
+  ProductDetail,
+} from '@meimart/api-contract';
 
 describe('CatalogService', () => {
   let service: CatalogService;
@@ -103,6 +114,8 @@ describe('CatalogService', () => {
     // B1/B7/B11：stock/rating/categoryName 聚合默认返空（字段 undefined/null，不阻塞主流程断言）
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
+    // 批B：detail 评分聚合默认无评论（avg=null count=0）
+    m.reviewAggregate.mockResolvedValue({ _avg: { rating: null }, _count: 0 });
     m.categoryFindMany.mockResolvedValue([]);
     // P2-3：count 缓存 redis 默认 miss（ver=null→0，count key=null→回填），不阻塞现有用例
     m.redisGet.mockResolvedValue(null);
@@ -168,6 +181,43 @@ describe('CatalogService', () => {
       const result = await service.listProducts({ page: 1, pageSize: 20 });
       expect(result.items[0].defaultSkuId).toBeNull();
     });
+
+    it('列表项标记 isCategoryTop3（批D P2-1：Top3 批量直出，非 N+1）', async () => {
+      const p1 = { ...mockProduct, id: 'prod-1', categoryId: 'cat-1' };
+      const p2 = { ...mockProduct, id: 'prod-2', categoryId: 'cat-2' };
+      m.productFindMany
+        .mockResolvedValueOnce([p1, p2]) // 主列表查询
+        .mockResolvedValueOnce([{ id: 'prod-1', categoryId: 'cat-1' }]); // Top3 批量查询（prod-2 落榜）
+      m.productCount.mockResolvedValueOnce(2);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+      expect(result.items[0].isCategoryTop3).toBe(true);
+      expect(result.items[1].isCategoryTop3).toBe(false);
+      // 两次 findMany：主列表 1 + Top3 批量 1（非逐商品 N+1）
+      expect(m.productFindMany).toHaveBeenCalledTimes(2);
+    });
+
+    it('无分类商品 isCategoryTop3 恒 false（Top3 查询短路不发生）', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]); // mockProduct.categoryId = null
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+      expect(result.items[0].isCategoryTop3).toBe(false);
+      // 仅主列表 1 次：全 null 分类短路，Top3 查询不发生
+      expect(m.productFindMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('空列表不产生 Top3 查询', async () => {
+      m.productFindMany.mockResolvedValueOnce([]);
+      m.productCount.mockResolvedValueOnce(0);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ page: 1, pageSize: 20 });
+      expect(result.items).toHaveLength(0);
+      expect(m.productFindMany).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('getProduct', () => {
@@ -205,6 +255,148 @@ describe('CatalogService', () => {
     it('找不到抛 NotFoundException', async () => {
       m.productFindUnique.mockResolvedValueOnce(null);
       await expect(service.getProduct('missing')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ===== 批B 2026-09-08：getProductDetail 聚合详情（stocks/totalStock/ratingCount/isCategoryTop3）=====
+  describe('getProductDetail（批B 聚合详情）', () => {
+    const skuRow = (id: string, price: number, productId = 'prod-1') => ({
+      id,
+      productId,
+      name: { en: '500g' },
+      attributes: { weight: '500g' },
+      price,
+      imageUrl: null,
+      status: 'ACTIVE',
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-01-01'),
+    });
+    const detailProduct = (categoryId: string | null) => ({
+      ...mockProduct,
+      categoryId,
+      skus: [skuRow('sku-1', 1500), skuRow('sku-2', 2800)],
+    });
+
+    it('聚合正确性：多仓多 SKU 分仓求和 + totalStock，stock 与 totalStock 同值', async () => {
+      m.productFindUnique.mockResolvedValueOnce(detailProduct('cat-1'));
+      // 故意乱序 + 同仓多行：wh-a 5+3、wh-b 7 -> 聚合 [wh-a:8, wh-b:7]
+      m.stockFindMany.mockResolvedValueOnce([
+        { warehouseId: 'wh-b', quantity: 7, warehouse: { name: { en: 'WhB' } } },
+        { warehouseId: 'wh-a', quantity: 5, warehouse: { name: { en: 'WhA' } } },
+        { warehouseId: 'wh-a', quantity: 3, warehouse: { name: { en: 'WhA' } } },
+      ]);
+      m.reviewAggregate.mockResolvedValueOnce({ _avg: { rating: 4.46 }, _count: 5 });
+      m.categoryFindMany.mockResolvedValueOnce([{ id: 'cat-1', name: { en: 'Drinks' } }]);
+      m.productFindMany.mockResolvedValueOnce([{ id: 'prod-1' }]); // Top3 含自己
+
+      const detail = await service.getProductDetail('prod-1');
+
+      // 分仓聚合 + warehouseId 升序输出
+      expect(detail.stocks).toEqual([
+        { warehouseId: 'wh-a', name: { en: 'WhA' }, quantity: 8 },
+        { warehouseId: 'wh-b', name: { en: 'WhB' }, quantity: 7 },
+      ]);
+      expect(detail.totalStock).toBe(15);
+      // 兼容透传：stock 与 totalStock 同值（同口径 ACTIVE SKU 求和）
+      expect(detail.stock).toBe(15);
+      expect(detail.defaultSkuId).toBe('sku-1'); // price asc 最低价
+      expect(detail.skus).toHaveLength(2);
+      expect(detail.isCategoryTop3).toBe(true);
+      expect(detail.ratingCount).toBe(5);
+    });
+
+    it('空数据：无库存无评论无分类 -> stocks=[] totalStock=0 ratingCount=0 rating undefined isCategoryTop3=false', async () => {
+      m.productFindUnique.mockResolvedValueOnce(detailProduct(null));
+      // stockFindMany / reviewAggregate 走 beforeEach 默认空；categoryId=null 短路不查 Top3
+
+      const detail = await service.getProductDetail('prod-1');
+
+      expect(detail.stocks).toEqual([]);
+      expect(detail.totalStock).toBe(0);
+      // 兼容透传语义：无库存记录 = undefined（与 batchGetProductStock 一致）
+      expect(detail.stock).toBeUndefined();
+      expect(detail.rating).toBeUndefined();
+      expect(detail.ratingCount).toBe(0);
+      expect(detail.isCategoryTop3).toBe(false);
+      // 无分类：不发起 Top3 查询（productFindMany 未被调用）
+      expect(m.productFindMany).not.toHaveBeenCalled();
+    });
+
+    it('Top3 查询参数锁定：categoryId + ACTIVE 过滤，salesCount desc + id asc 兜并列，take 3', async () => {
+      m.productFindUnique.mockResolvedValueOnce(detailProduct('cat-1'));
+      m.productFindMany.mockResolvedValueOnce([]); // Top3 不含自己
+
+      const detail = await service.getProductDetail('prod-1');
+
+      expect(detail.isCategoryTop3).toBe(false);
+      // 吃 @@index([status, salesCount])：where categoryId+status，orderBy salesCount desc、id asc 稳定并列
+      expect(m.productFindMany).toHaveBeenCalledWith({
+        where: { categoryId: 'cat-1', status: 'ACTIVE' },
+        orderBy: [
+          { salesCount: 'desc' },
+          { id: 'asc' },
+        ],
+        take: 3,
+        select: { id: true },
+      });
+    });
+
+    it('Top3 并列 tie-break 行为：同分两名，DB 按 id asc 只取前者入选（后者 false）', async () => {
+      // 审查 P3-1：prod-1 与 prod-2 同 salesCount 并列第 3，DB orderBy id asc tie-break
+      // 只把 prod-1 带回 top3 结果集 —— service 以结果集为准（不做二次比较）
+      m.productFindUnique.mockResolvedValueOnce(detailProduct('cat-1'));
+      m.productFindMany.mockResolvedValueOnce([{ id: 'prod-1' }, { id: 'peer-a' }, { id: 'peer-b' }]);
+      expect((await service.getProductDetail('prod-1')).isCategoryTop3).toBe(true);
+
+      m.productFindUnique.mockResolvedValueOnce({ ...detailProduct('cat-1'), id: 'prod-2' });
+      m.productFindMany.mockResolvedValueOnce([{ id: 'prod-1' }, { id: 'peer-a' }, { id: 'peer-b' }]);
+      expect((await service.getProductDetail('prod-2')).isCategoryTop3).toBe(false);
+    });
+
+    it('评分精度：rating 与 ratingCount 同源聚合（APPROVED，toFixed(1)）', async () => {
+      m.productFindUnique.mockResolvedValueOnce(detailProduct(null));
+      m.reviewAggregate.mockResolvedValueOnce({ _avg: { rating: 4.46 }, _count: 5 });
+
+      const detail = await service.getProductDetail('prod-1');
+
+      expect(detail.rating).toBe(4.5); // Number((4.46).toFixed(1))，与 batchGetProductRating 同公式
+      expect(detail.ratingCount).toBe(5);
+      // 同源口径锁定：where productId + APPROVED
+      expect(m.reviewAggregate).toHaveBeenCalledWith({
+        _avg: { rating: true },
+        _count: true,
+        where: { productId: 'prod-1', status: 'APPROVED' },
+      });
+    });
+
+    it('404：商品不存在抛 E-CATALOG-001', async () => {
+      m.productFindUnique.mockResolvedValueOnce(null);
+      await expect(service.getProductDetail('missing')).rejects.toMatchObject({
+        response: { code: 'E-CATALOG-001' },
+        status: 404,
+      });
+    });
+
+    it('响应过契约 ProductDetail schema（safeParse，UUID 形态数据）', async () => {
+      const uuid = (n: number) =>
+        `${String(n).repeat(8)}-${String(n).repeat(4)}-4${String(n).repeat(3)}-8${String(n).repeat(3)}-${String(n).repeat(12)}`;
+      m.productFindUnique.mockResolvedValueOnce({
+        ...detailProduct(uuid(3)),
+        id: uuid(1),
+        shopId: uuid(2),
+        skus: [skuRow(uuid(4), 1500, uuid(1)), skuRow(uuid(5), 2800, uuid(1))],
+      });
+      m.stockFindMany.mockResolvedValueOnce([
+        { warehouseId: uuid(6), quantity: 5, warehouse: { name: { en: 'WhA' } } },
+        { warehouseId: uuid(7), quantity: 7, warehouse: { name: { en: 'WhB' } } },
+      ]);
+      m.reviewAggregate.mockResolvedValueOnce({ _avg: { rating: 4.0 }, _count: 2 });
+      m.categoryFindMany.mockResolvedValueOnce([{ id: uuid(3), name: { en: 'Drinks' } }]);
+      m.productFindMany.mockResolvedValueOnce([{ id: uuid(1) }]);
+
+      const detail = await service.getProductDetail(uuid(1));
+      const parsed = ProductDetail.safeParse(detail);
+      expect(parsed.success).toBe(true);
     });
   });
 
@@ -612,6 +804,87 @@ describe('CatalogService', () => {
       await service.createSku('prod-1', { name: { en: '500g' }, attributes: {}, price: 1200 });
 
       expect(m.redisIncr).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('adminAdjustSalesCountBatch（批C 销量批量调整）', () => {
+    it('事务透传 + items 映射 productId + operatorId 传递，写 ADMIN_ADJUST 审计', async () => {
+      // $transaction 直接以 db 自身作为 tx 执行回调（薄透传验证）
+      m.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(db));
+      m.productFindUnique.mockResolvedValue({ salesCount: 10 });
+      m.queryRaw.mockResolvedValue([{ sales_count: 25 }]);
+      m.salesCountLogCreate.mockResolvedValue({});
+
+      const res = await service.adminAdjustSalesCountBatch(
+        [{ id: 'prod-1', salesCount: 25 }],
+        'admin-1',
+      );
+
+      expect(res).toEqual({ adjusted: ['prod-1'], skipped: [] });
+      expect(m.transaction).toHaveBeenCalledTimes(1);
+      // tagged template 参数：[strings, delta, productId]；delta = 25 − 10 = 15
+      expect(m.queryRaw.mock.calls[0]![1]).toBe(15);
+      expect(m.queryRaw.mock.calls[0]![2]).toBe('prod-1');
+      expect(m.salesCountLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            changeType: 'ADMIN_ADJUST',
+            changeQty: 15,
+            beforeQty: 10,
+            afterQty: 25,
+            operatorId: 'admin-1',
+          }),
+        }),
+      );
+    });
+
+    it('商品不存在 → skipped 透传给 controller', async () => {
+      m.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(db));
+      m.productFindUnique.mockResolvedValue(null);
+
+      const res = await service.adminAdjustSalesCountBatch(
+        [{ id: 'prod-x', salesCount: 5 }],
+        'admin-1',
+      );
+
+      expect(res).toEqual({ adjusted: [], skipped: ['prod-x'] });
+    });
+
+    it('契约 AdminSalesBatchAdjustRequest/Response safeParse：min/max/uuid/int/min(0) 声明实际执行（审查 P3-5，照批B 先例）', () => {
+      // controller 单测 mock 不经过 ZodValidationPipe（既有盲区），契约声明在此直接执行
+      const uuid = (n: number) =>
+        `${String(n).repeat(8)}-${String(n).repeat(4)}-4${String(n).repeat(3)}-8${String(n).repeat(3)}-${String(n).repeat(12)}`;
+      // 合法：设值语义（uuid + >=0 整数），1 条即可
+      expect(
+        AdminSalesBatchAdjustRequest.safeParse({ items: [{ id: uuid(1), salesCount: 0 }] })
+          .success,
+      ).toBe(true);
+      // 空数组 → min(1) 拒
+      expect(AdminSalesBatchAdjustRequest.safeParse({ items: [] }).success).toBe(false);
+      // 恰 100 条 → max(100) 边界内通过
+      const full = Array.from({ length: 100 }, () => ({ id: uuid(1), salesCount: 1 }));
+      expect(AdminSalesBatchAdjustRequest.safeParse({ items: full }).success).toBe(true);
+      // 101 条 → max(100) 拒
+      const overflow = Array.from({ length: 101 }, () => ({ id: uuid(1), salesCount: 1 }));
+      expect(AdminSalesBatchAdjustRequest.safeParse({ items: overflow }).success).toBe(false);
+      // 非 uuid id 拒
+      expect(
+        AdminSalesBatchAdjustRequest.safeParse({ items: [{ id: 'prod-1', salesCount: 5 }] })
+          .success,
+      ).toBe(false);
+      // 负数 / 小数 → int().min(0) 拒
+      expect(
+        AdminSalesBatchAdjustRequest.safeParse({ items: [{ id: uuid(2), salesCount: -1 }] })
+          .success,
+      ).toBe(false);
+      expect(
+        AdminSalesBatchAdjustRequest.safeParse({ items: [{ id: uuid(3), salesCount: 1.5 }] })
+          .success,
+      ).toBe(false);
+      // 响应 schema：adjusted/skipped 均为 uuid 数组
+      expect(
+        AdminSalesBatchAdjustResponse.safeParse({ adjusted: [uuid(4)], skipped: [] }).success,
+      ).toBe(true);
     });
   });
 });

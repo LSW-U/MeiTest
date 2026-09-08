@@ -27,6 +27,7 @@ import {
   CreateProductRequest,
   UpdateProductRequest,
   UpdateProductStatusRequest,
+  AdminSalesBatchAdjustRequest,
   CreateSkuRequest,
   UpdateSkuRequest,
   CreateCategoryRequest,
@@ -120,6 +121,16 @@ export class ClientProductController {
     return { success: true, data };
   }
 
+  /**
+   * 商品聚合详情（批B 2026-09-08：stocks 按仓库存 + totalStock + ratingCount + isCategoryTop3）
+   * 公开可读（@Public 类级），admin/client 复用同一契约；与既有 :id / :id/skus 段式无冲突
+   */
+  @Get(':id/detail')
+  async getDetail(@Param('id') id: string) {
+    const data = await this.catalog.getProductDetail(id);
+    return { success: true, data };
+  }
+
   /** 商品规格列表（B6，只返 ACTIVE SKU，供 C 端规格选择器，替代前端 variantTemplates 配置） */
   @Get(':id/skus')
   async listSkus(@Param('id') id: string) {
@@ -179,6 +190,24 @@ export class AdminProductController {
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
   }) {
     const data = await this.catalog.createProduct(body);
+    return { success: true, data };
+  }
+
+  /**
+   * 销量批量调整（批C）。⚠️ 必须声明在 @Patch(':id') 之前：
+   * Express 按声明顺序匹配，'sales-batch' 是静态段，放后面会被 ':id' 参数路由吞掉
+   */
+  @Patch('sales-batch')
+  @Audit({ resource: 'Product' })
+  async adjustSalesBatch(
+    @Body(new ZodValidationPipe(AdminSalesBatchAdjustRequest)) body: AdminSalesBatchAdjustRequest,
+    @Req() req?: any,
+  ) {
+    // 操作人取 JWT sub（payload = { sub, role, deviceType, jti }，无 id 字段）
+    const data = await this.catalog.adminAdjustSalesCountBatch(
+      body.items,
+      req?.user?.sub ?? null,
+    );
     return { success: true, data };
   }
 

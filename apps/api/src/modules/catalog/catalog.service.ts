@@ -14,6 +14,8 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
+import { adjustSalesCountForAdmin } from '../../shared/db/sales-count';
+import { getCategoryTop3ProductIds } from '../../shared/db/category-top3';
 import { SearchService } from '../search/search.service';
 import { redis, setWithTTL } from '../../shared/cache/redis';
 import { ProductSortBy } from '@meimart/api-contract';
@@ -107,11 +109,12 @@ export class CatalogService {
       this.getCachedCount(where, Boolean(kw)),
     ]);
 
-    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
       this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+      getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
     ]);
 
     // 热搜记录：fire-and-forget（不阻塞搜索响应），仅 keyword 搜索记（纯 categoryId 浏览不记）
@@ -132,6 +135,7 @@ export class CatalogService {
         stock: stockMap.get(p.id),
         rating: ratingMap.get(p.id),
         categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+        isCategoryTop3: top3Ids.has(p.id),
       })),
       page,
       pageSize,
@@ -164,6 +168,83 @@ export class CatalogService {
     };
   }
 
+  /**
+   * 商品聚合详情（批B 2026-09-08：统一详情接口，admin/client 复用同一契约）
+   *
+   * 基本字段透传 getProduct（不重复实现）；真增量三件套：
+   * - stocks[] 按仓库存 + totalStock：一次 stock 查询（select 不聚合，JS 分仓求和），
+   *   口径与 batchGetProductStock 一致（全部 ACTIVE SKU 求和），stock = totalStock 自洽
+   * - ratingCount：与 rating 同源聚合（APPROVED reviews，aggregate 一次拿 avg+count，
+   *   精度公式与 batchGetProductRating 相同 toFixed(1)）
+   * - isCategoryTop3：同分类 ACTIVE 商品 salesCount Top3，吃 @@index([status, salesCount])；
+   *   并列销量按 id asc 稳定排序；无分类商品短路 false 不查库
+   */
+  async getProductDetail(id: string) {
+    const product = await db.product.findUnique({
+      where: { id },
+      include: { skus: { where: { status: 'ACTIVE' }, orderBy: { price: 'asc' } } },
+    });
+    if (!product) {
+      throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
+    }
+    const [stockRows, reviewAgg, categoryMap, isTop3] = await Promise.all([
+      db.stock.findMany({
+        where: { sku: { productId: id, status: 'ACTIVE' } },
+        select: {
+          warehouseId: true,
+          quantity: true,
+          warehouse: { select: { name: true } },
+        },
+      }),
+      db.review.aggregate({
+        _avg: { rating: true },
+        _count: true,
+        where: { productId: id, status: 'APPROVED' },
+      }),
+      this.batchGetCategoryNameMap([product.categoryId]),
+      this.isCategoryTop3(product),
+    ]);
+
+    // 分仓聚合：同仓多 SKU 行求和；warehouseId 升序保证输出稳定
+    const byWarehouse = new Map<
+      string,
+      { warehouseId: string; name: Record<string, string>; quantity: number }
+    >();
+    let totalStock = 0;
+    for (const row of stockRows) {
+      const cur = byWarehouse.get(row.warehouseId);
+      if (cur) {
+        cur.quantity += row.quantity;
+      } else {
+        byWarehouse.set(row.warehouseId, {
+          warehouseId: row.warehouseId,
+          name: row.warehouse.name as Record<string, string>,
+          quantity: row.quantity,
+        });
+      }
+      totalStock += row.quantity;
+    }
+    const stocks = [...byWarehouse.values()].sort((a, b) =>
+      a.warehouseId.localeCompare(b.warehouseId),
+    );
+
+    return {
+      ...this.toProductDTO(product),
+      defaultSkuId: product.skus[0]?.id ?? null,
+      // 兼容透传：与 batchGetProductStock 同语义（无库存记录 = undefined）
+      stock: stockRows.length > 0 ? totalStock : undefined,
+      categoryName: product.categoryId ? (categoryMap.get(product.categoryId) ?? null) : null,
+      // 批B 真增量
+      stocks,
+      totalStock,
+      rating:
+        reviewAgg._avg.rating != null ? Number(reviewAgg._avg.rating.toFixed(1)) : undefined,
+      ratingCount: reviewAgg._count,
+      isCategoryTop3: isTop3,
+      skus: product.skus.map((s) => this.toSkuDTO(s)),
+    };
+  }
+
   /** 推荐商品（按销量 top N） */
   async getRecommendations(limit = 6) {
     const items = await db.product.findMany({
@@ -171,11 +252,12 @@ export class CatalogService {
       orderBy: { salesCount: 'desc' },
       take: limit,
     });
-    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
       this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+      getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
@@ -183,6 +265,7 @@ export class CatalogService {
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
       categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+      isCategoryTop3: top3Ids.has(p.id),
     }));
   }
 
@@ -194,11 +277,12 @@ export class CatalogService {
       skip: limit,
       take: limit,
     });
-    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
       this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+      getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
@@ -206,6 +290,7 @@ export class CatalogService {
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
       categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+      isCategoryTop3: top3Ids.has(p.id),
     }));
   }
 
@@ -216,11 +301,12 @@ export class CatalogService {
       where: status ? { status: status as ProductStatus } : undefined,
       orderBy: { createdAt: 'desc' },
     });
-    const [defaultSkuMap, stockMap, ratingMap, categoryMap] = await Promise.all([
+    const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
       this.batchGetProductRating(items.map((p) => p.id)),
       this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
+      getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
     ]);
     return items.map((p) => ({
       ...this.toProductDTO(p),
@@ -228,6 +314,7 @@ export class CatalogService {
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
       categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+      isCategoryTop3: top3Ids.has(p.id),
     }));
   }
 
@@ -299,6 +386,23 @@ export class CatalogService {
 
   async updateProductStatus(id: string, status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK') {
     return this.updateProduct(id, { status });
+  }
+
+  /**
+   * 销量批量调整（批C：列表勾选 → 设值落库 + SalesCountLog ADMIN_ADJUST 审计）
+   * 单事务：同批要么全部生效要么全部回滚，避免勾选 5 条只落 3 条的半途状态
+   */
+  async adminAdjustSalesCountBatch(
+    items: Array<{ id: string; salesCount: number }>,
+    operatorId: string | null,
+  ): Promise<{ adjusted: string[]; skipped: string[] }> {
+    return db.$transaction(async (tx) =>
+      adjustSalesCountForAdmin(
+        tx,
+        items.map((i) => ({ productId: i.id, salesCount: i.salesCount })),
+        { operatorId },
+      ),
+    );
   }
 
   async deleteProduct(id: string) {
@@ -713,6 +817,24 @@ export class CatalogService {
   }
 
   // ===== DTO helpers =====
+
+  /**
+   * 是否同分类销量 Top3（批B）
+   *
+   * 只看 ACTIVE 商品（吃 @@index([status, salesCount])）；orderBy 追加 id asc 兜并列销量
+   * 稳定排序（第 3/4 名同分时 id 小者入选）；无分类商品恒 false（不查库）。
+   * 商品自身非 ACTIVE 时不进 top 查询结果 -> false（热销标签只给在售商品）。
+   */
+  private async isCategoryTop3(product: { id: string; categoryId: string | null }): Promise<boolean> {
+    if (!product.categoryId) return false;
+    const top = await db.product.findMany({
+      where: { categoryId: product.categoryId, status: 'ACTIVE' },
+      orderBy: [{ salesCount: 'desc' }, { id: 'asc' }],
+      take: 3,
+      select: { id: true },
+    });
+    return top.some((p) => p.id === product.id);
+  }
 
   /**
    * 批量查询每个商品的默认 SKU id（最低价 ACTIVE SKU）

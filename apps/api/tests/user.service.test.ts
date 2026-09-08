@@ -26,6 +26,7 @@ const dbMocks = {
   notificationUpdateMany: vi.fn(),
   notificationCount: vi.fn(),
   orderAggregate: vi.fn(),
+  productFindMany: vi.fn(),
   $transaction: vi.fn(),
 };
 const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
@@ -48,6 +49,7 @@ const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
     notificationUpdateMany: vi.fn(),
     notificationCount: vi.fn(),
     orderAggregate: vi.fn(),
+    productFindMany: vi.fn(),
     $transaction: vi.fn(),
   },
 }));
@@ -83,6 +85,10 @@ vi.mock('../src/shared/db', () => ({
     },
     order: {
       aggregate: hoistedMocks.orderAggregate,
+    },
+    product: {
+      // 批D P2-1：listFavorites 经 getCategoryTop3ProductIds 批量查 Top3
+      findMany: hoistedMocks.productFindMany,
     },
     $transaction: hoistedMocks.$transaction,
   },
@@ -324,6 +330,52 @@ describe('UserService', () => {
       const result = await service.toggleFavorite('user-1', 'prod-1');
       expect(result.isFavorite).toBe(false);
       expect(dbMocks.favoriteDelete).toHaveBeenCalledWith({ where: { id: 'fav-1' } });
+    });
+  });
+
+  describe('listFavorites', () => {
+    it('商品摘要带 isCategoryTop3（批D P2-1：Top3 true / 落榜 false，一次批量查询非 N+1）', async () => {
+      dbMocks.favoriteFindMany.mockResolvedValueOnce([
+        {
+          id: 'fav-1',
+          productId: 'prod-1',
+          product: {
+            id: 'prod-1',
+            categoryId: 'cat-1',
+            name: { en: 'A' },
+            mainImage: 'a.png',
+            priceMin: 100,
+            status: 'ACTIVE',
+            salesCount: 9,
+            skus: [],
+          },
+          createdAt: new Date('2026-01-01'),
+        },
+        {
+          id: 'fav-2',
+          productId: 'prod-2',
+          product: {
+            id: 'prod-2',
+            categoryId: 'cat-1',
+            name: { en: 'B' },
+            mainImage: 'b.png',
+            priceMin: 200,
+            status: 'ACTIVE',
+            salesCount: 1,
+            skus: [],
+          },
+          createdAt: new Date('2026-01-02'),
+        },
+      ]);
+      // Top3 批量查询：prod-1 入选、prod-2 落榜
+      dbMocks.productFindMany.mockResolvedValueOnce([{ id: 'prod-1', categoryId: 'cat-1' }]);
+
+      const result = await service.listFavorites('user-1');
+      expect(result).toHaveLength(2);
+      expect(result[0].product.isCategoryTop3).toBe(true);
+      expect(result[1].product.isCategoryTop3).toBe(false);
+      // 一次批量查询覆盖全部收藏分类
+      expect(dbMocks.productFindMany).toHaveBeenCalledTimes(1);
     });
   });
 
