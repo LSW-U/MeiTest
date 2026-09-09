@@ -50,7 +50,8 @@ import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
 import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
-import { apiUploadFile, type ApiSuccess, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { uploadByScene } from '@/lib/upload-scenes';
 import {
   useBanners,
   useCreateBanner,
@@ -93,8 +94,10 @@ function BannerImageUploader({
     if (!file) return;
     setUploading(true);
     try {
-      const res = await apiUploadFile<ApiSuccess<{ url: string; key: string; size: number }>>(
-        '/admin/uploads/product-image',
+      // U7/U8/U9（upload 模块批A）：banner 图切独立端点 banner-image（宽幅区间带校验），
+      // 不再借道 product-image（key 落 products/main-* 前缀的语义污染）
+      const res = await uploadByScene<{ url: string; key: string; size: number }>(
+        'banner',
         file,
       );
       setImageUrl(res.data.url);

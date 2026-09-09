@@ -59,6 +59,11 @@ import {
 /** 售后凭证/评价图最小尺寸（100×100 防空图/图标滥用，宽于商品图 200） */
 const MIN_DIMENSION = 100;
 
+/** 头像最小尺寸（与 rider avatar / admin 商品图同标准，防客户端卡片变形） */
+const AVATAR_MIN_DIMENSION = 200;
+/** 头像 1:1 容差 5%（防 599x600 等微差） */
+const AVATAR_ASPECT_TOLERANCE = 0.05;
+
 /** 上传成功返回结构 */
 interface UploadResult {
   success: true;
@@ -159,22 +164,49 @@ export class ClientUploadController {
     });
   }
 
+  /**
+   * U6（upload 模块批A，2026-09-09）：客户端头像上传
+   * P27 方案占位端点落地：client 资料页改头像此前必 404（uploads.ts avatar 降级注释）。
+   * 与 rider avatar / admin 商品图同标准：1:1（容差 5%）+ 最小 200×200，
+   * MinIO 前缀 avatars/avatar-*。落库路径现成：PATCH /client/user/profile 接受 avatarUrl。
+   */
+  @Post('avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: fileFilterRejectMime,
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<UploadResult> {
+    return this.uploadImage(file, {
+      keyPrefix: 'avatars/avatar-',
+      logLabel: 'client_avatar',
+      mode: 'avatar',
+    });
+  }
+
   // ===================== 内部 =====================
 
   /**
-   * 图片上传核心逻辑（refund-evidence + review-image 共用，P3-2 重构 2026-08-12 抽出）
+   * 图片上传核心逻辑（refund-evidence + review-image + feedback-image + avatar 共用，P3-2 重构 2026-08-12 抽出）
    *
-   * 校验链路：空文件 → magic bytes → magic vs header 一致性 → 最小尺寸 100×100 → 服务端生成 key → MinIO 上传
+   * 校验链路：空文件 → magic bytes → magic vs header 一致性 → 尺寸校验 → 服务端生成 key → MinIO 上传
    *
    * 错误码化（F2 修复，2026-08-25）：所有 BadRequestException 携带 { code, message, details }，
    * code 取 E-UPLOAD-010..018（与 rider-upload 对齐，五语言 locale 已 seed）。
+   * U6（2026-09-09）新增 E-UPLOAD-019/020：avatar 模式尺寸过小 / 非 1:1。
    *
    * @param options.keyPrefix       MinIO key 前缀（如 'refunds/evidence-' / 'reviews/image-'）
    * @param options.logLabel        日志 msg 前缀（自动拼 _uploaded / _upload_failed）
+   * @param options.mode 'avatar' 强制 1:1 最小 200×200（U6）；默认仅最小 100×100 任意比例
    */
   private async uploadImage(
     file: Express.Multer.File | undefined,
-    options: { keyPrefix: string; logLabel: string },
+    options: { keyPrefix: string; logLabel: string; mode?: 'avatar' | 'free' },
   ): Promise<UploadResult> {
     if (!file) {
       throw new BadRequestException({
@@ -202,7 +234,7 @@ export class ClientUploadController {
         details: { detected, declared: file.mimetype },
       });
     }
-    // 最小尺寸校验（仅最小，无上限 + 无 1:1 约束，凭证/评价图任意比例）
+    // 尺寸校验：avatar 模式（U6）最小 200×200 + 强制 1:1；默认仅最小 100×100 任意比例
     try {
       const r = imageSize(file.buffer);
       if (!r.width || !r.height) {
@@ -211,12 +243,31 @@ export class ClientUploadController {
           message: 'Unable to read image dimensions (file may be corrupted)',
         });
       }
-      if (r.width < MIN_DIMENSION || r.height < MIN_DIMENSION) {
-        throw new BadRequestException({
-          code: 'E-UPLOAD-016',
-          message: `Image dimensions ${r.width}x${r.height} too small, minimum ${MIN_DIMENSION}x${MIN_DIMENSION}`,
-          details: { width: r.width, height: r.height, min: MIN_DIMENSION },
-        });
+      if (options.mode === 'avatar') {
+        if (r.width < AVATAR_MIN_DIMENSION || r.height < AVATAR_MIN_DIMENSION) {
+          throw new BadRequestException({
+            code: 'E-UPLOAD-019',
+            message: `Avatar dimensions ${r.width}x${r.height} too small, minimum ${AVATAR_MIN_DIMENSION}x${AVATAR_MIN_DIMENSION}`,
+            details: { width: r.width, height: r.height, min: AVATAR_MIN_DIMENSION },
+          });
+        }
+        // 1:1 容差校验
+        const ratio = r.width / r.height;
+        if (Math.abs(ratio - 1) > AVATAR_ASPECT_TOLERANCE) {
+          throw new BadRequestException({
+            code: 'E-UPLOAD-020',
+            message: `Avatar must be 1:1 square (current ${r.width}x${r.height}), please crop and re-upload`,
+            details: { width: r.width, height: r.height },
+          });
+        }
+      } else {
+        if (r.width < MIN_DIMENSION || r.height < MIN_DIMENSION) {
+          throw new BadRequestException({
+            code: 'E-UPLOAD-016',
+            message: `Image dimensions ${r.width}x${r.height} too small, minimum ${MIN_DIMENSION}x${MIN_DIMENSION}`,
+            details: { width: r.width, height: r.height, min: MIN_DIMENSION },
+          });
+        }
       }
     } catch (err) {
       if (err instanceof BadRequestException) throw err;

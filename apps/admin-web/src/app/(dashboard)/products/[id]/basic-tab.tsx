@@ -17,16 +17,12 @@ import {
   type I18nText,
   type Product,
 } from '@/hooks/api/use-products';
-import { apiUploadFile, type ApiSuccess } from '@/lib/api';
+import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
 import { CategorySelect } from '@/components/common/category-select';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
-interface UploadResponse {
-  url: string;
-  key: string;
-  size: number;
-}
+interface UploadResponse extends UploadResultData {}
 
 export function BasicTab({ productId, product }: { productId: string; product: Product }) {
   const t = useTranslations('common');
@@ -54,10 +50,7 @@ export function BasicTab({ productId, product }: { productId: string; product: P
     setUploadError('');
     setUploading(true);
     try {
-      const res = await apiUploadFile<ApiSuccess<UploadResponse>>(
-        '/admin/uploads/product-image',
-        file,
-      );
+      const res = await uploadByScene<UploadResponse>('product-main-edit', file);
       setMainImage(res.data.url);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : String(err));

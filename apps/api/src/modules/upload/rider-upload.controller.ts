@@ -70,7 +70,10 @@ interface UploadOptions {
 }
 
 @Controller('api/v1/common/rider/uploads')
-@Roles('CUSTOMER')
+// D7（upload 模块批A，2026-09-09）：扩 RIDER —— 已审核骑手 User.role=RIDER
+// （rider.service.ts 审核通过时更新），原仅 CUSTOMER 会导致已审核骑手在
+// rider-app 换头像/证件 403。apply 阶段仍持 CUSTOMER 角色调同端点。
+@Roles('CUSTOMER', 'RIDER')
 export class RiderUploadController {
   private readonly logger = new Logger(RiderUploadController.name);
 

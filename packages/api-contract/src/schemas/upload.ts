@@ -8,6 +8,10 @@
  *   - key 服务端生成：products/main-{ts}-{rand8hex}.{ext}
  *
  * 响应返回完整公开 URL（dev public-read bucket），前端直接 <img src> 用。
+ *
+ * upload 模块批A（2026-09-09）新增端点（复用同一 UploadResponseData）：
+ *   POST /api/v1/admin/uploads/banner-image   U7/U8：banner 宽幅图（600-2000px 宽 + 1.5:1-3:1），前缀 banners/banner-*
+ *   POST /api/v1/client/uploads/avatar        U6：客户端头像（1:1 ≥200×200），前缀 avatars/avatar-*
  */
 import { z } from 'zod';
 

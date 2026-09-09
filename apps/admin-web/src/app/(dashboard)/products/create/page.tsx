@@ -35,16 +35,12 @@ import {
 } from '@/components/ui/select';
 import { useCreateProduct } from '@/hooks/api/use-products';
 import { CategorySelect } from '@/components/common/category-select';
-import { apiUploadFile, type ApiSuccess } from '@/lib/api';
+import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
 import type { I18nText } from '@/hooks/api/use-products';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
 
-interface UploadResponse {
-  url: string;
-  key: string;
-  size: number;
-}
+interface UploadResponse extends UploadResultData {}
 
 export default function CreateProductPage() {
   const t = useTranslations('common');
@@ -67,10 +63,7 @@ export default function CreateProductPage() {
     setUploadError('');
     setUploading(true);
     try {
-      const res = await apiUploadFile<ApiSuccess<UploadResponse>>(
-        '/admin/uploads/product-image',
-        file,
-      );
+      const res = await uploadByScene<UploadResponse>('product-main-create', file);
       setMainImage(res.data.url);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : String(err));

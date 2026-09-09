@@ -49,6 +49,12 @@ const MAX_DIMENSION = 2000; // 最大 2000x2000，超过此值客户端渲染慢
 const RECOMMENDED_DIMENSION = 600; // 推荐 600x600（1:1 正方形）
 const ASPECT_RATIO_TOLERANCE = 0.05; // 1:1 容差 5%（防 599x600 等微差）
 
+/** banner 图尺寸约束（U8，upload 模块批A 2026-09-09）— admin banner-image 端点专用 */
+const BANNER_MIN_WIDTH = 600; // 宽下限（低于此轮播图发虚）
+const BANNER_MAX_WIDTH = 2000; // 宽上限（超过此渲染慢 + 浪费带宽）
+const BANNER_MIN_RATIO = 1.5; // 宽高比下限 1.5:1（区间带下界）
+const BANNER_MAX_RATIO = 3.0; // 宽高比上限 3:1（区间带上界；client BannerCarousel 实际显示 ≈2:1，区间给运营裁切余地）
+
 @Controller('api/v1/admin/uploads')
 @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class UploadController {
@@ -163,6 +169,122 @@ export class UploadController {
     }
     this.logger.log({
       msg: 'product_image_uploaded',
+      key: result.key,
+      size: result.size,
+      mime: file.mimetype,
+    });
+    return {
+      success: true,
+      data: { url: result.url, key: result.key, size: result.size },
+    };
+  }
+
+  @Post('banner-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME[file.mimetype]) {
+          cb(
+            new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadBannerImage(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<{ success: true; data: { url: string; key: string; size: number } }> {
+    if (!file) {
+      throw new BadRequestException('未收到文件（field name 必须为 "file"）');
+    }
+    // #2 空文件校验
+    if (!file.buffer || file.buffer.length < MIN_FILE_SIZE) {
+      throw new BadRequestException('文件为空');
+    }
+    // #1 magic bytes 校验（防 mime 欺骗）+ 与 header 一致性
+    const detected = detectImageFormat(file.buffer);
+    if (!detected) {
+      throw new BadRequestException(
+        `文件内容不是有效的图片（jpg/png/webp），可能 mime 类型被伪造`,
+      );
+    }
+    if (detected !== ALLOWED_MIME[file.mimetype]) {
+      throw new BadRequestException(
+        `文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`,
+      );
+    }
+    // 尺寸校验（U8 区间带模式：宽 600-2000px + 宽高比 1.5:1-3:1，非 1:1 路径）
+    let dims: { width: number; height: number };
+    try {
+      const r = imageSize(file.buffer);
+      if (!r.width || !r.height) {
+        throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
+      }
+      dims = { width: r.width, height: r.height };
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
+    }
+    if (dims.width < BANNER_MIN_WIDTH) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-021',
+        message: `图片宽度 ${dims.width} 过小，banner 最小宽度 ${BANNER_MIN_WIDTH}px`,
+        details: { width: dims.width, min: BANNER_MIN_WIDTH },
+      });
+    }
+    if (dims.width > BANNER_MAX_WIDTH) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-021',
+        message: `图片宽度 ${dims.width} 过大，banner 最大宽度 ${BANNER_MAX_WIDTH}px`,
+        details: { width: dims.width, max: BANNER_MAX_WIDTH },
+      });
+    }
+    // 宽高比区间带校验（U8：1.5:1 - 3:1，覆盖 client BannerCarousel 实际显示 ≈2:1）
+    const ratio = dims.width / dims.height;
+    if (ratio < BANNER_MIN_RATIO || ratio > BANNER_MAX_RATIO) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-022',
+        message: `图片比例 ${dims.width}:${dims.height} 不在 ${BANNER_MIN_RATIO}:1 - ${BANNER_MAX_RATIO}:1 区间内，会导致客户端轮播变形`,
+        details: { width: dims.width, height: dims.height, minRatio: BANNER_MIN_RATIO, maxRatio: BANNER_MAX_RATIO },
+      });
+    }
+    const ext = detected;
+    const rand = randomBytes(4).toString('hex');
+    const key = `banners/banner-${Date.now()}-${rand}.${ext}`;
+    let result;
+    try {
+      result = await this.storage.uploadFile({
+        key,
+        buffer: file.buffer,
+        contentType: file.mimetype,
+      });
+    } catch (err) {
+      this.logger.error({
+        msg: 'banner_image_upload_failed',
+        key,
+        size: file.buffer.length,
+        mime: file.mimetype,
+        error: (err as Error).message,
+      });
+      if (err instanceof StorageError) {
+        throw new InternalServerErrorException({
+          code: 'E-UPLOAD-001',
+          message: `上传失败: ${err.message}`,
+        });
+      }
+      throw new InternalServerErrorException({
+        code: 'E-UPLOAD-002',
+        message: '上传失败，请稍后重试',
+      });
+    }
+    this.logger.log({
+      msg: 'banner_image_uploaded',
       key: result.key,
       size: result.size,
       mime: file.mimetype,

@@ -56,7 +56,8 @@ import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
 import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
-import { apiUploadFile, type ApiSuccess, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { uploadByScene } from '@/lib/upload-scenes';
 import {
   useCategories,
   useCreateCategory,
@@ -99,8 +100,10 @@ function CategoryIconUploader({
     if (!file) return;
     setUploading(true);
     try {
-      const res = await apiUploadFile<ApiSuccess<{ url: string; key: string; size: number }>>(
-        '/admin/uploads/product-image',
+      // U7（upload 模块批A）：分类图标维持挂 product-image（1:1 约束一致，不开新口子），
+      // 仅把端点调用收敛进场景注册表
+      const res = await uploadByScene<{ url: string; key: string; size: number }>(
+        'category-icon',
         file,
       );
       setIconUrl(res.data.url);

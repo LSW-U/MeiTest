@@ -23,13 +23,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUpdateProduct, type Product } from '@/hooks/api/use-products';
-import { apiUploadFile, type ApiSuccess } from '@/lib/api';
+import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
 
-interface UploadResponse {
-  url: string;
-  key: string;
-  size: number;
-}
+interface UploadResponse extends UploadResultData {}
 
 /**
  * product 落库值 → 图片墙初始化形态（主图不在墙内并入首位）。
@@ -73,10 +69,7 @@ export function ImagesTab({ productId, product }: { productId: string; product: 
     try {
       const urls: string[] = [];
       for (const file of files) {
-        const res = await apiUploadFile<ApiSuccess<UploadResponse>>(
-          '/admin/uploads/product-image',
-          file,
-        );
+        const res = await uploadByScene<UploadResponse>('product-image-wall', file);
         urls.push(res.data.url);
       }
       setImages((prev) => [...prev, ...urls]);
