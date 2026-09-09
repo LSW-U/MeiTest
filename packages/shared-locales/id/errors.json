@@ -155,5 +155,7 @@
   "E-DEPOSIT-103": "Lokasi pembayaran tidak ditemukan",
   "E-DEPOSIT-104": "Permintaan ini tidak lagi menunggu",
   "E-DEPOSIT-201": "Wajib setor deposit sebelum menerima tugas",
-  "E-DEPOSIT-202": "Jumlah pesanan melebihi batas tingkatan deposit Anda"
+  "E-DEPOSIT-202": "Jumlah pesanan melebihi batas tingkatan deposit Anda",
+  "E-STATISTICS-001": "Rentang tanggal statistik tidak valid (gunakan YYYY-MM-DD, to tidak boleh sebelum from)",
+  "E-STATISTICS-002": "Rentang tanggal statistik melebihi batas 366 hari"
 }

@@ -155,5 +155,7 @@
   "E-DEPOSIT-103": "Local de pagamento não encontrado",
   "E-DEPOSIT-104": "Este pedido não está mais pendente",
   "E-DEPOSIT-201": "Depósito necessário antes de aceitar tarefas",
-  "E-DEPOSIT-202": "O valor do pedido excede o limite do seu nível de depósito"
+  "E-DEPOSIT-202": "O valor do pedido excede o limite do seu nível de depósito",
+  "E-STATISTICS-001": "Intervalo de datas de estatística inválido (use YYYY-MM-DD, to não pode ser anterior a from)",
+  "E-STATISTICS-002": "O intervalo de datas de estatística excede o limite de 366 dias"
 }

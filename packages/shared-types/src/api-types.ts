@@ -5421,6 +5421,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/statistics/products/top": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品销量排行（R9：OrderItem join Order 状态∈GMV_ORDER_STATUSES 区间聚合，groupBy productId；按 gmvAmount 降序、并列按 quantitySold；limit 默认 10 上限 50）。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                    limit?: number;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 商品排行列表（金额单位分） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                from: string;
+                                to: string;
+                                items: {
+                                    /** Format: uuid */
+                                    productId: string;
+                                    productName: string;
+                                    productImage: string | null;
+                                    orderCount: number;
+                                    quantitySold: number;
+                                    gmvAmount: number;
+                                }[];
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/statistics/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 商品排行导出 CSV（列=页面表格列的 CSV 版，列名/商品名按 lang，缺语 fallback en；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 流（text/csv，attachment） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/support/config": {
         parameters: {
             query?: never;
@@ -21840,6 +21976,76 @@ export interface components {
         };
         /** @enum {string} */
         DashboardTimeRange: "today" | "week" | "month";
+        StatisticsRangeQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+        };
+        StatisticsTopProductsQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+            /** @default 10 */
+            limit: number;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            lang: "en" | "id" | "zh" | "pt" | "tet";
+        };
+        StatisticsTopProductItem: {
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            productImage: string | null;
+            orderCount: number;
+            quantitySold: number;
+            gmvAmount: number;
+        };
+        StatisticsTopProductsData: {
+            from: string;
+            to: string;
+            items: {
+                /** Format: uuid */
+                productId: string;
+                productName: string;
+                productImage: string | null;
+                orderCount: number;
+                quantitySold: number;
+                gmvAmount: number;
+            }[];
+        };
+        StatisticsTopProductsResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                from: string;
+                to: string;
+                items: {
+                    /** Format: uuid */
+                    productId: string;
+                    productName: string;
+                    productImage: string | null;
+                    orderCount: number;
+                    quantitySold: number;
+                    gmvAmount: number;
+                }[];
+            };
+            message?: string;
+        };
+        StatisticsExportQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            lang: "en" | "id" | "zh" | "pt" | "tet";
+        };
         AuditLogListItem: {
             /** Format: uuid */
             id: string;

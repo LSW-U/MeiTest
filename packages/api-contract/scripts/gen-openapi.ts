@@ -306,6 +306,13 @@ import {
   DeviceTokenItem,
   DeviceTokenPlatform,
   AdminRetryNotificationResponseData,
+  // statistics（数据分析报表模块 批B，2026-09-10：商品排行）
+  StatisticsRangeQuery,
+  StatisticsTopProductsQuery,
+  StatisticsTopProductItem,
+  StatisticsTopProductsData,
+  StatisticsTopProductsResponse,
+  StatisticsExportQuery,
   // common
   ErrorResponse,
   Id,
@@ -520,6 +527,13 @@ registry.register('ProductImportResult', ProductImportResult);
 
 registry.register('DashboardSummary', DashboardSummary);
 registry.register('DashboardTimeRange', DashboardTimeRange);
+// statistics（数据分析报表模块 批B，2026-09-10：商品排行）
+registry.register('StatisticsRangeQuery', StatisticsRangeQuery);
+registry.register('StatisticsTopProductsQuery', StatisticsTopProductsQuery);
+registry.register('StatisticsTopProductItem', StatisticsTopProductItem);
+registry.register('StatisticsTopProductsData', StatisticsTopProductsData);
+registry.register('StatisticsTopProductsResponse', StatisticsTopProductsResponse);
+registry.register('StatisticsExportQuery', StatisticsExportQuery);
 registry.register('AuditLogListItem', AuditLogListItem);
 registry.register('AuditLogDetail', AuditLogDetail);
 registry.register('AuditLogQuery', AuditLogQuery);
@@ -1630,6 +1644,42 @@ registry.registerPath({
       content: { 'application/json': { schema: SystemConfigResponse } },
     },
     404: { description: 'CONFIG_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== statistics paths（数据分析报表模块，批B 商品排行 2026-09-10） =====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/statistics/products/top',
+  tags: ['statistics'],
+  description:
+    '商品销量排行（R9：OrderItem join Order 状态∈GMV_ORDER_STATUSES 区间聚合，groupBy productId；按 gmvAmount 降序、并列按 quantitySold；limit 默认 10 上限 50）。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天）',
+  request: { query: StatisticsTopProductsQuery },
+  responses: {
+    200: {
+      description: '商品排行列表（金额单位分）',
+      content: { 'application/json': { schema: StatisticsTopProductsResponse } },
+    },
+    400: {
+      description: 'E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/statistics/products/export',
+  tags: ['statistics'],
+  description:
+    '商品排行导出 CSV（列=页面表格列的 CSV 版，列名/商品名按 lang，缺语 fallback en；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie）',
+  request: { query: StatisticsExportQuery },
+  responses: {
+    200: { description: 'CSV 流（text/csv，attachment）' },
+    400: {
+      description: 'E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
   },
 });
 
@@ -4888,6 +4938,7 @@ const openapi = generator.generateDocument({
     { name: 'order', description: '订单' },
     { name: 'payment', description: '支付' },
     { name: 'platform', description: '平台 dashboard / 审计 / 系统配置' },
+    { name: 'statistics', description: '数据分析报表（商品排行/骑手绩效/退款/客户）' },
     { name: 'settle', description: '结算单 + 提现审核（M W3）' },
     { name: 'im', description: 'IM 自建 WebSocket 用户签名（M W3）' },
     { name: 'upload', description: '图片上传（商品图/banner 图/客户端头像/售后凭证等）' },

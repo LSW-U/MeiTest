@@ -155,5 +155,7 @@
   "E-DEPOSIT-103": "Lokal pagamentu la hetan",
   "E-DEPOSIT-104": "Pedidu nee la sei hela sitasaun hein",
   "E-DEPOSIT-201": "Presaria depósito uluk antes simu tarefa",
-  "E-DEPOSIT-202": "Valor encomenda excede limiti tier depósito ita-nian"
+  "E-DEPOSIT-202": "Valor encomenda excede limiti tier depósito ita-nian",
+  "E-STATISTICS-001": "Periode data statistika la validu (uza YYYY-MM-DD, to la bele antes from)",
+  "E-STATISTICS-002": "Periode data statistika liu limitu 366 dias"
 }

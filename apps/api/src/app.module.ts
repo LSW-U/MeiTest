@@ -39,6 +39,7 @@ import { PromotionModule } from './modules/promotion/promotion.module';
 import { SettleModule } from './modules/settle/settle.module';
 import { SearchModule } from './modules/search/search.module';
 import { ShopModule } from './modules/shop/shop.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { UserModule } from './modules/user/user.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
@@ -81,6 +82,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     SettleModule,
     SearchModule,
     ShopModule,
+    StatisticsModule,
     UploadModule,
     UserModule,
     WarehouseModule,

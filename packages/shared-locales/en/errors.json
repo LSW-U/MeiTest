@@ -155,5 +155,7 @@
   "E-DEPOSIT-103": "Deposit location not found",
   "E-DEPOSIT-104": "This request is no longer pending",
   "E-DEPOSIT-201": "Deposit required before accepting delivery tasks",
-  "E-DEPOSIT-202": "Order amount exceeds your deposit tier limit"
+  "E-DEPOSIT-202": "Order amount exceeds your deposit tier limit",
+  "E-STATISTICS-001": "Invalid statistics date range (use YYYY-MM-DD, to must be on or after from)",
+  "E-STATISTICS-002": "Statistics date range exceeds the 366-day limit"
 }
