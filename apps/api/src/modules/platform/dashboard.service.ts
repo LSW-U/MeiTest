@@ -16,7 +16,16 @@ import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
-import { buildRange, growthPct, type Range } from './platform-time';
+import {
+  buildRange,
+  growthPct,
+  type Range,
+} from '../../shared/statistics/range';
+import {
+  GMV_ORDER_STATUSES,
+  ABNORMAL_ORDER_STATUSES,
+  PENDING_TIMEOUT_MIN,
+} from '../../shared/statistics/metrics';
 import { decimalToNumber } from '@meimart/shared-utils';
 import type {
   DashboardTimeRangeType,
@@ -28,21 +37,8 @@ import type {
  * 订单进入 GMV 统计的状态（已支付/已确认/配送中/已完成；排除待付款/取消/拒付/未确认）
  *
  * 2026-06-24 M2 修复：移除 DELIVERED_UNPAID（拒付不计入成交，否则 GMV 虚高）
+ * 批A（2026-09-09）：口径常量移入 shared/statistics/metrics.ts 单一事实源，此处 import
  */
-const GMV_ORDER_STATUSES = [
-  'CONFIRMED',
-  'PICKED',
-  'OUT_FOR_DELIVERY',
-  'DELIVERED_PAID',
-  'DELIVERED',
-  'COMPLETED',
-] as const;
-
-/** 异常订单状态 */
-const ABNORMAL_ORDER_STATUSES = ['CANCELLED', 'DELIVERED_UNPAID'] as const;
-
-/** 超时未确认订单阈值（分钟） */
-const PENDING_TIMEOUT_MIN = 30;
 
 @Injectable()
 export class DashboardService {

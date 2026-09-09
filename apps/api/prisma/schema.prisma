@@ -630,6 +630,8 @@ model OrderItem {
   sku   Sku   @relation(fields: [skuId], references: [id])
 
   @@index([orderId])
+  // 统计批A（2026-09-09）：raw SQL migration 补 (product_id, order_id) 复合索引（商品排行 R9 聚合），
+  // Prisma 不支持 @@index 声明为 CONCURRENTLY，见 migration 20260909000002_add_order_items_product_idx
   @@map("order_items")
 }
 
