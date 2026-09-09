@@ -42,6 +42,15 @@ export function clearPushProviderCache(): void {
   cachedProvider = null;
 }
 
+/**
+ * 读取当前推送通道（N4 回执 sweep 用：非 expo 通道无真实回执，getReceipts job no-op）
+ *
+ * 复用 resolveProvider 模块级缓存（env 只在进程启动时读取，语义一致）。
+ */
+export function getPushProvider(): 'expo' | 'stub' {
+  return resolveProvider();
+}
+
 function resolveProvider(): 'expo' | 'stub' {
   if (cachedProvider) return cachedProvider;
   if (process.env.PUSH_PROVIDER !== 'expo') {

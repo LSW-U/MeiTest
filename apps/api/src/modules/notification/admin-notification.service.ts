@@ -39,9 +39,10 @@ import {
   NotificationTarget,
   AdminRetryNotificationResponseData,
 } from '@meimart/api-contract';
-import type { NotificationPushJobData } from './notification-push.processor';
+import type { NotificationPushJobData, NotificationReceiptsJobData } from './notification-push.processor';
 import { NOTIFICATION_PUSH_CHUNK_SIZE } from './notification-push.processor';
 import { sendPushToUser } from './send-push-to-user';
+import { enqueueReceiptsSweep } from './receipts-sweep.helper';
 
 /** 后台通知发送响应视图（contract schema 推导，避免双源漂移） */
 type AdminSendNotificationResponseView = z.infer<typeof AdminSendNotificationResponseData>;
@@ -61,7 +62,11 @@ const BROADCAST_HARD_LIMIT = 50_000;
 
 /** Queue 注入结构化类型（避免直接依赖 BullMQ 泛型） */
 interface NotificationQueueLike {
-  add: (name: string, data: NotificationPushJobData, opts?: Record<string, unknown>) => Promise<unknown>;
+  add: (
+    name: string,
+    data: NotificationPushJobData | NotificationReceiptsJobData,
+    opts?: Record<string, unknown>,
+  ) => Promise<unknown>;
 }
 
 /** NotifyFactory 注入类型（与 order.service 同款结构化类型，避免循环导入具体类） */
@@ -218,6 +223,8 @@ export class AdminNotificationService {
     // PUSH 通道（dev stub 或 A2 Expo）。逐用户发（token 级失败不影响其他用户）。
     let pushFailed = 0;
     let pushError: string | null = null;
+    // 批N4：收集真 Expo ticket id（stub/mock 为 null 不收集），推送完成后入延迟回执 job
+    const pushTicketIds: string[] = [];
     for (const userId of userIds) {
       const pushResult = await sendPushToUser({
         notifyFactory: this.notifyFactory,
@@ -231,6 +238,15 @@ export class AdminNotificationService {
       if (pushResult.pushError) {
         pushError = pushResult.pushError;
       }
+      if (pushResult.pushTicketId) {
+        pushTicketIds.push(pushResult.pushTicketId);
+      }
+    }
+
+    // 批N4：推送完成 → 入 5min 延迟回执 job（expo 通道才有真 ticket；processor
+    // 内部再按通道/stub 二次守卫，队列为空时 job no-op，成本可忽略）
+    if (pushTicketIds.length > 0) {
+      await enqueueReceiptsSweep(this.notificationQueue, batchId, pushTicketIds);
     }
 
     // 审查 P3-1：deliveredCount 统一口径 = 站内信落行数（与 retry 校正、历史行一致）

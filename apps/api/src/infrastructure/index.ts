@@ -33,6 +33,7 @@ export {
   EmailNotifyStrategy,
   SmsNotifyStrategy,
   PushNotifyStrategy,
+  getPushProvider,
   WhatsAppNotifyStrategy,
 } from './notify';
 export type {

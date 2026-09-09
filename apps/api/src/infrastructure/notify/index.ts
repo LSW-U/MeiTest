@@ -5,7 +5,7 @@
  */
 export { EmailNotifyStrategy } from './email.strategy';
 export { SmsNotifyStrategy } from './sms.strategy';
-export { PushNotifyStrategy } from './push.strategy';
+export { PushNotifyStrategy, getPushProvider } from './push.strategy';
 export { WhatsAppNotifyStrategy } from './whatsapp.strategy';
 export { NotifyFactory } from './notify.factory';
 export type {
