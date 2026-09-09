@@ -6,8 +6,9 @@
  * 复用 GET /admin/notifications（admin 发送历史，pageSize=5）。
  * 不调 /client/notifications：super_admin via admin_web 被 DeviceTypeGuard 拦截（E-AUTH-001）。
  *
- * 关键约束（批次2 审查 P2-1）：历史项无 isRead/target 字段，deliveredCount 单行近似。
- * 故铃铛语义为「最近发送历史」，不做未读/已读/全部已读。
+ * 批A 批次化适配（2026-09-09）：历史行语义从「按条」改「按批次」（含 target/三数），
+ * 铃铛仍复用发送历史架构（不新增 admin 未读端点），语义为「最近发送历史」，
+ * 不做未读/已读/全部已读。
  *
  * 批次4 微调：去掉 trigger 上的计数红点。原因是 total 是「累计发送历史数」（只增不减），
  * 非未读数，长期会卡 99+ 误导用户。铃铛保持纯图标，有内容在下拉里体现。
@@ -94,6 +95,12 @@ export function NotificationBell() {
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
                   {it.content?.en ?? Object.values(it.content ?? {})[0] ?? ''}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {t('admin.notifications.bellDelivered', {
+                    delivered: it.deliveredCount,
+                    total: it.totalRecipients,
+                  })}
                 </p>
               </li>
             ))}

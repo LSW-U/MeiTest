@@ -1,17 +1,20 @@
 /**
  * 通知管理页 - /notifications
  *
- * admin-web 优化方案 批次3（2026-08-29）
+ * admin-web 优化方案 批次3（2026-08-29）+ 批A 批次化适配（2026-09-09，方案v2 §3.5 D1–D2）
  * 后端：apps/api AdminNotificationController（@Controller('api/v1/admin/notifications')，SUPER_ADMIN）
- *   - POST /admin/notifications   发送（target/type/多语言 title+content）
- *   - GET  /admin/notifications    发送历史（type/page/pageSize，单行近似，无 target）
+ *   - POST /admin/notifications                 发送（target/type/多语言 title+content）→ 批次化
+ *   - GET  /admin/notifications                 发送历史（type/page/pageSize，按批次一行）
+ *   - POST /admin/notifications/:batchId/retry  失败重试（仅重发 failed 用户，幂等）
  *
  * 两个 Tab：
  *   - tabSend：发通知表单（target Select + SPECIFIC_USERS 条件展开 userIds +
- *              type Select + 4 语言 title/content + 发送按钮）
- *   - tabHistory：发送历史 DataTable（type 筛选 Tabs + 分页 + 详情 Dialog）
+ *              type Select + 5 语言 title/content（含 tet）+ 发送按钮）
+ *   - tabHistory：发送历史 DataTable（批次行：type / target / delivered / failed / read /
+ *              title / createdAt + type 筛选 + 分页 + 详情 Dialog + retry 二次确认）
  *
- * 关键约束（批次2 审查 P2-1）：历史项无 target/isRead，deliveredCount 单行近似（恒 1）。
+ * 口径（批A P3-1 裁决）：deliveredCount = 站内信落行数（非 PUSH 回执数）；failedCount 为
+ * 未落行数（retry 目标）；readCount 为已读数实时聚合。历史按「批次」非「按条」。
  * 视角：platform 独占。
  */
 'use client';
@@ -41,6 +44,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { ApiError } from '@/lib/api';
@@ -48,6 +61,7 @@ import { notifTypeSuffix } from '@/lib/notification';
 import {
   useSendNotification,
   useAdminNotificationHistory,
+  useRetryNotification,
   type AdminNotificationHistoryItem,
   type AdminNotificationType,
   type NotificationTarget,
@@ -58,8 +72,8 @@ type Row = AdminNotificationHistoryItem;
 
 const PAGE_SIZE = 10;
 
-/** 4 种翻译语言（与 settings 页 SHOP_NAME_LOCALES 对齐） */
-const NOTIF_LOCALES = ['en', 'zh', 'id', 'pt'] as const;
+/** 5 种翻译语言（en/zh/id/pt + tet，方案v2 §3.5 D2 补齐；与 shared-locales 支持语言一致） */
+const NOTIF_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
 
 /** type 筛选选项（含 ALL） */
 const TYPE_FILTERS: { value: AdminNotificationType | 'ALL'; labelKey: string }[] = [
@@ -68,6 +82,15 @@ const TYPE_FILTERS: { value: AdminNotificationType | 'ALL'; labelKey: string }[]
   { value: 'PROMOTION', labelKey: 'admin.notifications.typePromotion' },
   { value: 'SYSTEM', labelKey: 'admin.notifications.typeSystem' },
 ];
+
+/** target → i18n key 后缀（targetAllCustomers/targetAllRiders/targetSpecific） */
+function targetSuffix(target: NotificationTarget): string {
+  return target === 'ALL_CUSTOMERS'
+    ? 'targetAllCustomers'
+    : target === 'ALL_RIDERS'
+      ? 'targetAllRiders'
+      : 'targetSpecific';
+}
 
 export default function NotificationsPage() {
   const t = useTranslations('common');
@@ -96,7 +119,7 @@ export default function NotificationsPage() {
  * 发通知表单。
  *
  * target=SPECIFIC_USERS 时展开 userIds 输入框（契约 refine 强制 userIds 非空）。
- * title/content 均为 4 语言多语言文本（I18nText）。
+ * title/content 均为 5 语言多语言文本（I18nText，含 tet）。
  */
 function SendForm({ onSent }: { onSent: () => void }) {
   const t = useTranslations('common');
@@ -106,8 +129,8 @@ function SendForm({ onSent }: { onSent: () => void }) {
   const [target, setTarget] = useState<NotificationTarget>('ALL_CUSTOMERS');
   const [type, setType] = useState<AdminNotificationType>('SYSTEM');
   const [userIds, setUserIds] = useState('');
-  const [title, setTitle] = useState<I18nText>({ en: '', zh: '', id: '', pt: '' });
-  const [content, setContent] = useState<I18nText>({ en: '', zh: '', id: '', pt: '' });
+  const [title, setTitle] = useState<I18nText>({ en: '', zh: '', id: '', pt: '', tet: '' });
+  const [content, setContent] = useState<I18nText>({ en: '', zh: '', id: '', pt: '', tet: '' });
 
   function handleSend() {
     // SPECIFIC_USERS 必填 userIds（契约 refine 校验，后端会再拒，前端先挡）
@@ -137,10 +160,16 @@ function SendForm({ onSent }: { onSent: () => void }) {
 
     sendMutation.mutate(body, {
       onSuccess: (res) => {
-        toast({ title: t('admin.notifications.sent', { count: res.deliveredCount }) });
+        // deliveredCount = 首块同步站内信落行数；totalRecipients = 批次规模（异步补齐剩余块）
+        toast({
+          title: t('admin.notifications.sent', { count: res.deliveredCount }),
+          description: t('admin.notifications.sentBatch', {
+            batch: res.totalRecipients,
+          }),
+        });
         // 发送成功后清空表单并切到历史 Tab
-        setTitle({ en: '', zh: '', id: '', pt: '' });
-        setContent({ en: '', zh: '', id: '', pt: '' });
+        setTitle({ en: '', zh: '', id: '', pt: '', tet: '' });
+        setContent({ en: '', zh: '', id: '', pt: '', tet: '' });
         setUserIds('');
         onSent();
       },
@@ -202,7 +231,7 @@ function SendForm({ onSent }: { onSent: () => void }) {
         </div>
       )}
 
-      {/* 多语言 title */}
+      {/* 多语言 title（5 语含 tet） */}
       <div className="space-y-2">
         <Label>{t('admin.notifications.fieldTitle')}</Label>
         <div className="grid gap-2 md:grid-cols-2">
@@ -217,7 +246,7 @@ function SendForm({ onSent }: { onSent: () => void }) {
         </div>
       </div>
 
-      {/* 多语言 content */}
+      {/* 多语言 content（5 语含 tet） */}
       <div className="space-y-2">
         <Label>{t('admin.notifications.fieldContent')}</Label>
         <div className="grid gap-2 md:grid-cols-2">
@@ -240,13 +269,14 @@ function SendForm({ onSent }: { onSent: () => void }) {
   );
 }
 
-/** 发送历史面板：type 筛选 Tabs + 分页 + 详情 Dialog */
+/** 发送历史面板：批次行（type/target/三数）+ type 筛选 + 分页 + 详情 Dialog + retry 二次确认 */
 function HistoryPanel() {
   const t = useTranslations('common');
   const format = useFormatter();
   const [typeFilter, setTypeFilter] = useState<AdminNotificationType | 'ALL'>('ALL');
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [retryRow, setRetryRow] = useState<Row | null>(null);
 
   const { data, isLoading, error, refetch } = useAdminNotificationHistory({
     type: typeFilter === 'ALL' ? undefined : typeFilter,
@@ -255,7 +285,7 @@ function HistoryPanel() {
   });
 
   const items: Row[] = data?.items ?? [];
-  // 详情直接从当前页数据里取（避免额外请求，单行近似无独立详情端点）
+  // 详情直接从当前页数据里取（避免额外请求，批次行无独立详情端点）
   const detail = items.find((it) => it.id === detailId) ?? null;
 
   function formatDateTime(date: string): string {
@@ -279,9 +309,33 @@ function HistoryPanel() {
       ),
     },
     {
+      key: 'target',
+      header: t('admin.notifications.columnTarget'),
+      render: (row) => (
+        <span className="text-xs text-muted-foreground">
+          {t(`admin.notifications.${targetSuffix(row.target)}` as 'admin.notifications.targetSpecific')}
+        </span>
+      ),
+    },
+    {
       key: 'deliveredCount',
       header: t('admin.notifications.columnDelivered'),
       render: (row) => <span className="text-xs font-mono">{row.deliveredCount}</span>,
+    },
+    {
+      key: 'failedCount',
+      header: t('admin.notifications.columnFailed'),
+      render: (row) =>
+        row.failedCount > 0 ? (
+          <span className="text-xs font-mono text-destructive">{row.failedCount}</span>
+        ) : (
+          <span className="text-xs font-mono text-muted-foreground">0</span>
+        ),
+    },
+    {
+      key: 'readCount',
+      header: t('admin.notifications.columnRead'),
+      render: (row) => <span className="text-xs font-mono">{row.readCount}</span>,
     },
     {
       key: 'title',
@@ -303,9 +357,21 @@ function HistoryPanel() {
       key: 'actions',
       header: '',
       render: (row) => (
-        <Button size="sm" variant="outline" onClick={() => setDetailId(row.id)}>
-          {t('admin.notifications.viewButton')}
-        </Button>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={() => setDetailId(row.id)}>
+            {t('admin.notifications.viewButton')}
+          </Button>
+          {row.failedCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setRetryRow(row)}
+            >
+              {t('admin.notifications.retryButton')}
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -389,7 +455,7 @@ function HistoryPanel() {
         </>
       )}
 
-      {/* 详情 Dialog：直接取当前页命中行（历史无独立详情端点） */}
+      {/* 详情 Dialog：批次行详情（直接取当前页命中行，历史无独立详情端点） */}
       <Dialog open={!!detailId} onOpenChange={(open) => !open && setDetailId(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -403,8 +469,20 @@ function HistoryPanel() {
                   {t(`admin.notifications.type${notifTypeSuffix(detail.type)}` as 'admin.notifications.typeSystem')}
                 </Badge>
               </DetailField>
+              <DetailField label={t('admin.notifications.columnTarget')}>
+                {t(`admin.notifications.${targetSuffix(detail.target)}` as 'admin.notifications.targetSpecific')}
+              </DetailField>
+              <DetailField label={t('admin.notifications.fieldRecipients')}>
+                {detail.totalRecipients}
+              </DetailField>
               <DetailField label={t('admin.notifications.fieldDelivered')}>
                 {detail.deliveredCount}
+              </DetailField>
+              <DetailField label={t('admin.notifications.fieldFailed')}>
+                {detail.failedCount}
+              </DetailField>
+              <DetailField label={t('admin.notifications.fieldRead')}>
+                {detail.readCount}
               </DetailField>
               <DetailField label={t('admin.notifications.fieldTitle')}>
                 <MultilineText value={detail.title} />
@@ -419,7 +497,65 @@ function HistoryPanel() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* retry 二次确认 Dialog（仅 failedCount>0 行展示入口） */}
+      <RetryConfirmDialog row={retryRow} onClose={() => setRetryRow(null)} />
     </div>
+  );
+}
+
+/**
+ * retry 二次确认 Dialog。
+ *
+ * 确认后 POST /admin/notifications/:batchId/retry（仅重发 failed 用户，后端幂等）。
+ * 本仓惯例模式（对齐 banners DeleteBannerDialog / memory「删除 Dialog mutateAsync」）：
+ * e.preventDefault() 阻断 AlertDialogAction 默认关闭 + mutateAsync + await + try/catch，
+ * 确保 isPending（retryPending 文案）真实可达，失败时 Dialog 不闪关。
+ * 成功 toast 展示 retriedCount，历史行由 hook invalidateQueries 自动刷新。
+ */
+function RetryConfirmDialog({ row, onClose }: { row: Row | null; onClose: () => void }) {
+  const t = useTranslations('common');
+  const { toast } = useToast();
+  const retryMutation = useRetryNotification();
+
+  async function handleConfirm(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault(); // 阻断 AlertDialogAction 默认关闭，等 mutateAsync 完成后再关
+    if (!row) return;
+    try {
+      const res = await retryMutation.mutateAsync(row.id);
+      toast({
+        title: t('admin.notifications.retryDone', { count: res.retriedCount }),
+        description: t('admin.notifications.retryResult', {
+          delivered: res.deliveredCount,
+          failed: res.failedCount,
+        }),
+      });
+      onClose();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t('admin.notifications.retryFailed');
+      toast({ title: t('admin.notifications.retryFailed'), description: message, variant: 'destructive' });
+    }
+  }
+
+  return (
+    <AlertDialog open={!!row} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('admin.notifications.retryTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('admin.notifications.retryDesc', { failed: row?.failedCount ?? 0 })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('admin.notifications.retryCancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => handleConfirm(e)} disabled={retryMutation.isPending}>
+            {retryMutation.isPending
+              ? t('admin.notifications.retryPending')
+              : t('admin.notifications.retryConfirm')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -433,7 +569,7 @@ function DetailField({ label, children }: { label: string; children: React.React
   );
 }
 
-/** 多语言文本展示：按 locale 逐行（en/zh/id/pt） */
+/** 多语言文本展示：按 locale 逐行（en/zh/id/pt/tet） */
 function MultilineText({ value }: { value: I18nText }) {
   const entries = Object.entries(value ?? {}).filter(([, v]) => v);
   if (entries.length === 0) {
