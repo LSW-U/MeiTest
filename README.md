@@ -243,3 +243,5 @@ docker compose up -d
   - `MeiMart-W1共享前置层-AI执行版-20260617.md` — W1 任务清单
   - `API契约文档-v0.2.md` + `API契约文档-v0.3.md` — 契约（冲突以 v0.3 为准）
   - `claude后端记录/` — 各 D 任务交互记录
+- `docs/backend-common-capabilities.md` — 后端公共能力速查（守卫/管道/装饰器/错误码/限流/公共端点归口）
+- `docs/geo-geocode-notes.md` — geo 双轨现状与 Nominatim 依赖核实记录（含帝力实测基线）
