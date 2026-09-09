@@ -145,6 +145,7 @@ describe('OrderService.createOrder', () => {
       })(), // pricingService（距离计费批次1：mock calcDeliveryFee）
       null, // realtime
       null, // notifyFactory
+      null, // notificationEvents（批A A4，默认 null 不触发挂点）
     );
   });
 
@@ -798,6 +799,7 @@ describe('OrderService.adminUpdateOrder (W7-ext-C)', () => {
       {} as never, // pricingService（markPaid 场景不重算费）
       null, // realtime
       null, // notifyFactory
+      null, // notificationEvents（批A A4，默认 null 不触发挂点）
     );
   });
 
@@ -942,6 +944,7 @@ describe('OrderService.getOrderDetail (P10/P11 rider 嵌套)', () => {
       {} as never, // pricingService
       null, // realtime
       null, // notifyFactory
+      null, // notificationEvents（批A A4，默认 null 不触发挂点）
     );
   });
 
@@ -1112,6 +1115,7 @@ describe('OrderService.markPaidTx - 批A 销量真实统计', () => {
       new (class { calcDeliveryFee = mockPricing.calcDeliveryFee })(), // pricingService
       null, // realtime
       null, // notifyFactory
+      null, // notificationEvents（批A A4，默认 null 不触发挂点）
     );
   });
 

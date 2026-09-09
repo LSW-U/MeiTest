@@ -9,7 +9,7 @@
  * 切真 OrderAggregator：
  *   把 SETTLE_ORDER_AGGREGATOR 的 useClass 从 MockOrderAggregator 改成 RealOrderAggregator（C 流程提供）
  */
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { SettlementController } from './settlement.controller';
 import { WithdrawalController } from './withdraw.controller';
@@ -22,9 +22,13 @@ import { WithdrawalService } from './withdraw.service';
 import { SettleProcessor } from './settle.processor';
 import { SettleScheduler } from './settle.scheduler';
 import { SETTLE_QUEUE } from '../../shared/queue';
+import { NotificationModule } from '../notification/notification.module';
+import { NotificationEventService } from '../notification/notification-event.service';
 
 @Module({
   imports: [
+    // 批A A4：事件通知挂点（结算入账/提现审核结果 → RIDER 站内信 + PUSH）
+    forwardRef(() => NotificationModule),
     BullModule.registerQueue({
       name: SETTLE_QUEUE,
       defaultJobOptions: {
@@ -43,6 +47,8 @@ import { SETTLE_QUEUE } from '../../shared/queue';
     { provide: SETTLE_ORDER_AGGREGATOR, useClass: MockOrderAggregator },
     SettleProcessor,
     SettleScheduler,
+    // 批A A4：显式 token 防 tsx 装饰器元数据缺失；useExisting 指向类，避免自引用
+    { provide: 'NotificationEventServiceToken', useExisting: NotificationEventService },
   ],
   exports: [SettlementService, WithdrawalService],
 })

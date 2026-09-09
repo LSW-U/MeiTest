@@ -99,29 +99,13 @@ export const SetDefaultAddressRequest = z.object({
 
 // ============================================================================
 // P17 B1 通知偏好（2026-08-17）：三分类开关（与 NotificationType 三值对应），null/缺省全 true
+// 批A 2026-09-09：定义收敛到 schemas/notification.ts（扩 riderTasks/wallet），此处重导出保持兼容
 // ============================================================================
 
-/** 通知偏好（GET 响应 / PATCH 返回全量） */
-export const NotificationPreferences = z.object({
-  /** ORDER_UPDATE 类通知开关 */
-  orderUpdates: z.boolean(),
-  /** PROMOTION 类通知开关 */
-  promotions: z.boolean(),
-  /** SYSTEM 类通知开关 */
-  system: z.boolean(),
-});
-
-/** 通知偏好部分更新请求（至少传一个 key，未传的保持不变） */
-export const UpdateNotificationPreferencesRequest = z
-  .object({
-    orderUpdates: z.boolean().optional(),
-    promotions: z.boolean().optional(),
-    system: z.boolean().optional(),
-  })
-  .refine(
-    (v) => v.orderUpdates !== undefined || v.promotions !== undefined || v.system !== undefined,
-    { message: 'at least one preference key is required' },
-  );
+export {
+  NotificationPreferences,
+  UpdateNotificationPreferencesRequest,
+} from './notification';
 
 // ============================================================================
 // P17 B2.3 登录设备管理（2026-08-17）：Redis Token Family 只读聚合（不建表）
@@ -160,34 +144,18 @@ export const FavoriteListItem = z.object({
   createdAt: IsoTimestamp,
 });
 
-/** 通知实体 */
-export const NotificationItem = z.object({
-  id: Id,
-  userId: Id,
-  type: z.enum(['ORDER_UPDATE', 'PROMOTION', 'SYSTEM']),
-  title: I18nText,
-  content: I18nText,
-  isRead: z.boolean(),
-  data: z.record(z.string(), z.unknown()).nullable(),
-  createdAt: IsoTimestamp,
-});
-
-/** 通知标记已读响应 */
-export const MarkNotificationReadResponse = z.object({
-  success: z.boolean(),
-});
+/** 通知实体（批A 2026-09-09：type 扩 RIDER_TASK/WALLET，定义收敛到 schemas/notification.ts） */
+export { NotificationItem, NotificationItemType } from './notification';
 
 // ============================================================================
 // 通知/推送管理（admin-web 优化方案 批次2 2026-08-29）
 // 后台：POST /admin/notifications 发送 + GET /admin/notifications 发送历史
-// MVP 真链路 = 写 Notification 表 + 前端拉取；PUSH 走 dev stub（无 FCM/APNs/deviceToken）
+// 批A 2026-09-09：批次化 schema（历史批次行/AdminNotificationType/retry）收敛到 schemas/notification.ts
 // ============================================================================
 
-/** 通知投递目标（ALL_CUSTOMERS/ALL_RIDERS 全量群发，SPECIFIC_USERS 指定 userIds） */
-export const NotificationTarget = z.enum(['ALL_CUSTOMERS', 'ALL_RIDERS', 'SPECIFIC_USERS']);
-
-/** 通知类型（与 NotificationItem.type 同源：ORDER_UPDATE/PROMOTION/SYSTEM） */
-export const AdminNotificationType = z.enum(['ORDER_UPDATE', 'PROMOTION', 'SYSTEM']);
+/** 通知投递目标 / 类型（批A 扩 RIDER_TASK/WALLET，定义收敛到 schemas/notification.ts 重导出） */
+import { NotificationTarget, AdminNotificationType } from './notification';
+export { NotificationTarget, AdminNotificationType };
 
 /** 后台发送通知请求（POST /admin/notifications body） */
 export const AdminSendNotificationRequest = z
@@ -208,11 +176,15 @@ export const AdminSendNotificationRequest = z
     path: ['userIds'],
   });
 
-/** 后台发送通知响应 data（投递计数 + PUSH stub 结果，前端展示群发规模） */
+/** 后台发送通知响应 data（批A A5 批次化：deliveredCount=首块同步落行数，批次行异步入队） */
 export const AdminSendNotificationResponseData = z.object({
-  /** 成功写入 Notification 表的条数（=实际投递用户数） */
+  /** 批次 id（NotificationBatch 行，历史/retry 定位用） */
+  batchId: Id,
+  /** 批次总收件人数（解析 target 后真实值） */
+  totalRecipients: z.number().int().nonnegative(),
+  /** 首块成功写入 Notification 表的条数（剩余分块异步入队） */
   deliveredCount: z.number().int().nonnegative(),
-  /** PUSH 通道投递结果（MVP dev stub，mockFlag=true 表示未真实推送） */
+  /** PUSH 通道投递结果（mockFlag=true 表示未真实推送/降级 stub） */
   push: z.object({
     success: z.boolean(),
     mockFlag: z.boolean(),
@@ -221,50 +193,19 @@ export const AdminSendNotificationResponseData = z.object({
 });
 
 /**
- * 后台通知发送历史项（GET /admin/notifications 响应元素）
+ * 后台通知发送历史项（批A 2026-09-09 改批次行，定义收敛到 schemas/notification.ts 重导出）
  *
- * MVP 语义说明（2026-08-29 P2-1 修复）：
- *   - **不返 `target`**：MVP 无 NotificationBatch 表，单行 Notification 无法稳定反推群发目标，
- *     保留 target 字段会让前端误以为能按目标筛选/展示，实际后端拿不到真实值。
- *     真正按批次聚合（含 target/deliveredCount=批次规模）需建 NotificationBatch 表，列待办（方案 §四 暂缓增强）。
- *   - `deliveredCount` 是**单行近似值**（恒为 1）：历史按 Notification 行倒序展示，
- *     不代表「本次群发 N 人」的真实批次规模。前端展示需用文案说明「按条展示」非「按批次」。
+ * 历史 MVP 语义说明（已废弃，留档）：
+ *   - P2-1 时代无 NotificationBatch 表，按 Notification 行倒序展示、deliveredCount=1 占位、不返 target。
+ *   - 批A 建批次表后，历史项=批次行（deliveredCount=站内信落行数（审查 P3-1 统一口径）/failedCount/readCount 实时聚合/target）。
  */
-export const AdminNotificationHistoryItem = z.object({
-  id: Id,
-  type: AdminNotificationType,
-  /**
-   * 群发规模（写入条数，便于历史列表展示「本次群发 N 人」）。
-   * MVP 无批次表，单行恒为 1（行数近似，非批次规模）——见上方语义说明。
-   */
-  deliveredCount: z.number().int().nonnegative(),
-  title: I18nText,
-  content: I18nText,
-  createdAt: IsoTimestamp,
-});
+export { AdminNotificationHistoryItem } from './notification';
 
 /** 后台通知发送历史列表响应 data（offset 分页） */
-export const AdminNotificationHistoryListResponseData = z.object({
-  items: z.array(AdminNotificationHistoryItem),
-  page: z.number().int().min(1),
-  pageSize: z.number().int().min(1).max(100),
-  total: z.number().int().nonnegative(),
-  hasMore: z.boolean(),
-});
+export { AdminNotificationHistoryListResponseData } from './notification';
 
-/**
- * 后台通知发送历史 query
- *
- * MVP 仅支持 `type` 筛选（Notification.type 行级过滤）。
- * **不支持 `target` 筛选**：单行 Notification 不存 target，无法按目标过滤
- * （需 NotificationBatch 表，见 AdminNotificationHistoryItem 语义说明）。
- * 若未来加批次表后再补 target query 字段。
- */
-export const AdminListNotificationsQuery = z.object({
-  type: AdminNotificationType.optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
-});
+/** 后台通知发送历史 query（仅 type/page/pageSize） */
+export { AdminListNotificationsQuery } from './notification';
 
 /** 后台用户列表项（W7 P1-2） */
 export const AdminUserListItem = z.object({

@@ -64,6 +64,17 @@ export class MockOrderAggregator implements OrderAggregator {
 export class SettlementService {
   constructor(
     @Inject(SETTLE_ORDER_AGGREGATOR) private readonly aggregator: OrderAggregator,
+    // 批A A4（2026-09-09）：事件通知挂点（结算确认入账 → RIDER 站内信 + PUSH；单测传 null 兼容）
+    @Inject('NotificationEventServiceToken')
+    private readonly notificationEvents: {
+      notify: (input: {
+        event: string;
+        userId: string;
+        type: string;
+        data?: Record<string, unknown>;
+        params?: Record<string, string>;
+      }) => Promise<void>;
+    } | null,
   ) {}
 
   /**
@@ -199,6 +210,28 @@ export class SettlementService {
       id,
       confirmerId,
     });
+
+    // 批A A4 挂点 6：结算确认入账 → 站内信 + PUSH（RIDER, WALLET，data.amount+settlementId）
+    // 任务书锚点：confirm 更新后；subjectId 是 RiderProfile 维度，映射回 User.id 再通知；
+    // MERCHANT 结算暂不通知（批A 范围只覆盖 RIDER）
+    if (this.notificationEvents && updated?.subjectType === 'RIDER') {
+      const profile = await db.riderProfile.findUnique({
+        where: { id: updated.subjectId },
+        select: { userId: true },
+      });
+      if (profile) {
+        await this.notificationEvents.notify({
+          event: 'settlementConfirmed',
+          userId: profile.userId,
+          type: 'WALLET',
+          data: {
+            settlementId: id,
+            amount: (updated.netAmount / 100).toFixed(2),
+          },
+          params: { settlementId: id, amount: (updated.netAmount / 100).toFixed(2) },
+        });
+      }
+    }
 
     return this.toDto(updated!);
   }

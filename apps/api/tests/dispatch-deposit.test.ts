@@ -97,7 +97,7 @@ describe('DispatchService 批 D 派单改造', () => {
   let service: DispatchService;
 
   beforeEach(() => {
-    service = new DispatchService(mockRealtime as never, new DepositEligibilityService());
+    service = new DispatchService(mockRealtime as never, new DepositEligibilityService(), null);
     Object.values(mockDb.deliveryTask).forEach((fn) => fn.mockReset());
     mockDb.order.findUnique.mockReset();
     mockDb.riderProfile.findUnique.mockReset();

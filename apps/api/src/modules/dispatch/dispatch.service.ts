@@ -244,6 +244,17 @@ export class DispatchService {
     @Inject(RealtimeGateway) private readonly realtime: RealtimeGateway,
     // 批 D（2026-09-03）：保证金资格校验（acceptTask/大厅/派单候选三处，方案 Q9）
     @Inject(DepositEligibilityService) private readonly eligibility: DepositEligibilityService,
+    // 批A A4（2026-09-09）：事件通知挂点（站内信 + PUSH，全链失败容忍；单测传 null 兼容）
+    @Inject('NotificationEventServiceToken')
+    private readonly notificationEvents: {
+      notify: (input: {
+        event: string;
+        userId: string;
+        type: string;
+        data?: Record<string, unknown>;
+        params?: Record<string, string>;
+      }) => Promise<void>;
+    } | null,
   ) {}
 
   /**
@@ -428,6 +439,18 @@ export class DispatchService {
         msg: 'DISPATCH_BROADCAST_ACCEPTED_FAILED',
         taskId: input.taskId,
         error: (e as Error).message,
+      });
+    }
+
+    // 批A A4 挂点 4：新任务分配（抢单成功）→ 站内信 + PUSH（RIDER, RIDER_TASK，data.taskId+orderId）
+    // 任务书锚点：acceptTask 乐观锁事务后、dispatch:task-accepted WS 旁；失败容忍不炸抢单
+    if (this.notificationEvents) {
+      await this.notificationEvents.notify({
+        event: 'taskAssigned',
+        userId: input.riderId,
+        type: 'RIDER_TASK',
+        data: { taskId: input.taskId, orderId: task.orderId },
+        params: { orderNo: task.order?.orderNo ?? '' },
       });
     }
 
@@ -695,6 +718,18 @@ export class DispatchService {
       });
     }
 
+    // 批A A4 挂点 3：订单送达 → 站内信 + PUSH（CUSTOMER, ORDER_UPDATE，data.orderId）
+    // 任务书锚点：completeTask WS emit 旁；通知放事务外（此处事务已提交），失败容忍
+    if (this.notificationEvents && order.userId) {
+      await this.notificationEvents.notify({
+        event: 'orderDelivered',
+        userId: order.userId,
+        type: 'ORDER_UPDATE',
+        data: { orderId: task.orderId, orderNo: order.orderNo },
+        params: { orderNo: order.orderNo ?? '' },
+      });
+    }
+
     return this.toView(updated);
   }
 
@@ -899,6 +934,18 @@ export class DispatchService {
       riderId: riderId,
       reason: input.reason,
     });
+
+    // 批A A4 挂点 5a：任务异常失败（reportIssue → FAILED）→ 站内信 + PUSH（RIDER, RIDER_TASK）
+    // 任务书锚点：reportIssue 事务后；上报者即骑手本人（input.riderId 是 User.id），失败容忍
+    if (this.notificationEvents) {
+      await this.notificationEvents.notify({
+        event: 'taskFailed',
+        userId: input.riderId,
+        type: 'RIDER_TASK',
+        data: { taskId: input.taskId, orderId: task.orderId, reason: input.reason },
+        params: { reason: input.reason },
+      });
+    }
 
     return this.toView(updated);
   }
@@ -1457,6 +1504,25 @@ export class DispatchService {
       orderId: taskBefore.orderId,
       adminUserId: input.adminUserId,
     });
+
+    // 批A A4 挂点 5b：任务取消（admin cancelTask → FAILED）→ 站内信 + PUSH（RIDER, RIDER_TASK）
+    // 任务书锚点：cancelTask 事务后；仅当任务原本有骑手（ASSIGNED）才通知，PENDING_ASSIGN 无接收方
+    if (this.notificationEvents && taskBefore.riderId) {
+      // taskBefore.riderId 是 RiderProfile.id，映射回 User.id（Notification.userId 引用 User）
+      const profile = await db.riderProfile.findUnique({
+        where: { id: taskBefore.riderId },
+        select: { userId: true },
+      });
+      if (profile) {
+        await this.notificationEvents.notify({
+          event: 'taskFailed',
+          userId: profile.userId,
+          type: 'RIDER_TASK',
+          data: { taskId: input.taskId, orderId: taskBefore.orderId, reason: input.reason },
+          params: { reason: input.reason ?? '' },
+        });
+      }
+    }
 
     return this.getAdminDetail(input.taskId);
   }

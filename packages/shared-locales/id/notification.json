@@ -1,0 +1,30 @@
+{
+  "orderConfirmed": {
+    "title": "Pesanan Dikonfirmasi",
+    "content": "Pesanan {orderNo} Anda telah dikonfirmasi dan sedang disiapkan."
+  },
+  "orderCancelled": {
+    "title": "Pesanan Dibatalkan",
+    "content": "Pesanan {orderNo} Anda telah dibatalkan. Alasan: {reason}"
+  },
+  "orderDelivered": {
+    "title": "Pesanan Terkirim",
+    "content": "Pesanan {orderNo} Anda telah tiba. Terima kasih!"
+  },
+  "taskAssigned": {
+    "title": "Tugas Pengiriman Baru",
+    "content": "Anda memiliki tugas pengiriman baru. Pesanan: {orderNo}. Silakan terima di halaman tugas."
+  },
+  "taskFailed": {
+    "title": "Tugas Dibatalkan",
+    "content": "Tugas pengiriman untuk pesanan {orderNo} telah dibatalkan."
+  },
+  "settlementConfirmed": {
+    "title": "Penyelesaian Dikonfirmasi",
+    "content": "Penyelesaian {settlementId} Anda sebesar ${amount} telah dikonfirmasi dan ditambahkan ke saldo Anda."
+  },
+  "withdrawReviewed": {
+    "title": "Pembaruan Penarikan",
+    "content": "Permintaan penarikan {withdrawId} Anda telah {status}."
+  }
+}

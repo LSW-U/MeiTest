@@ -28,6 +28,7 @@ import enPlatform from './en/platform.json';
 import enSettle from './en/settle.json';
 import enIm from './en/im.json';
 import enErrors from './en/errors.json';
+import enNotification from './en/notification.json';
 
 import zhCommon from './zh/common.json';
 import zhAuth from './zh/auth.json';
@@ -42,6 +43,7 @@ import zhPlatform from './zh/platform.json';
 import zhSettle from './zh/settle.json';
 import zhIm from './zh/im.json';
 import zhErrors from './zh/errors.json';
+import zhNotification from './zh/notification.json';
 
 import idCommon from './id/common.json';
 import idAuth from './id/auth.json';
@@ -56,6 +58,7 @@ import idPlatform from './id/platform.json';
 import idSettle from './id/settle.json';
 import idIm from './id/im.json';
 import idErrors from './id/errors.json';
+import idNotification from './id/notification.json';
 
 import ptCommon from './pt/common.json';
 import ptAuth from './pt/auth.json';
@@ -70,6 +73,7 @@ import ptPlatform from './pt/platform.json';
 import ptSettle from './pt/settle.json';
 import ptIm from './pt/im.json';
 import ptErrors from './pt/errors.json';
+import ptNotification from './pt/notification.json';
 
 import tetCommon from './tet/common.json';
 import tetAuth from './tet/auth.json';
@@ -84,6 +88,7 @@ import tetPlatform from './tet/platform.json';
 import tetSettle from './tet/settle.json';
 import tetIm from './tet/im.json';
 import tetErrors from './tet/errors.json';
+import tetNotification from './tet/notification.json';
 
 export const SUPPORTED_LOCALES = ['en', 'zh', 'id', 'pt', 'tet'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -103,6 +108,7 @@ export interface MessagesBundle {
   platform: typeof enPlatform;
   settle: typeof enSettle;
   im: typeof enIm;
+  notification: typeof enNotification;
   errors: typeof enErrors;
 }
 
@@ -121,6 +127,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     platform: enPlatform,
     settle: enSettle,
     im: enIm,
+    notification: enNotification,
     errors: enErrors,
   },
   zh: {
@@ -136,6 +143,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     platform: zhPlatform,
     settle: zhSettle,
     im: zhIm,
+    notification: zhNotification,
     errors: zhErrors,
   },
   id: {
@@ -151,6 +159,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     platform: idPlatform,
     settle: idSettle,
     im: idIm,
+    notification: idNotification,
     errors: idErrors,
   },
   pt: {
@@ -166,6 +175,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     platform: ptPlatform,
     settle: ptSettle,
     im: ptIm,
+    notification: ptNotification,
     errors: ptErrors,
   },
   tet: {
@@ -181,6 +191,7 @@ export const messages: Record<Locale, MessagesBundle> = {
     platform: tetPlatform,
     settle: tetSettle,
     im: tetIm,
+    notification: tetNotification,
     errors: tetErrors,
   },
 };

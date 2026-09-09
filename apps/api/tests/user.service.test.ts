@@ -104,6 +104,7 @@ vi.mock('../src/modules/auth/auth.service', () => ({
 }));
 
 import { UserService } from '../src/modules/user/user.service';
+import { NotificationService } from '../src/modules/notification/notification.service';
 
 describe('UserService', () => {
   let service: UserService;
@@ -112,8 +113,11 @@ describe('UserService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    // @ts-expect-error 用 mock AuthService 实例化
-    service = new UserService(mockAuth);
+    // @ts-expect-error 用 mock AuthService 实例化；通知委托给真实 NotificationService（同 mock db）
+    service = new UserService(
+      mockAuth,
+      new NotificationService() as never,
+    );
   });
 
   describe('getProfile', () => {
@@ -427,13 +431,13 @@ describe('UserService', () => {
     it('B1: getNotificationPreferences null 兜底全 true', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({ notificationPreferences: null });
       const prefs = await service.getNotificationPreferences('user-1');
-      expect(prefs).toEqual({ orderUpdates: true, promotions: true, system: true });
+      expect(prefs).toEqual({ orderUpdates: true, promotions: true, system: true, riderTasks: true, wallet: true });
     });
 
     it('B1: getNotificationPreferences 部分缺省 key 兜底 true', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({ notificationPreferences: { promotions: false } });
       const prefs = await service.getNotificationPreferences('user-1');
-      expect(prefs).toEqual({ orderUpdates: true, promotions: false, system: true });
+      expect(prefs).toEqual({ orderUpdates: true, promotions: false, system: true, riderTasks: true, wallet: true });
     });
 
     it('B1: updateNotificationPreferences merge 未传 key 不变 + 返回全量', async () => {
@@ -441,14 +445,14 @@ describe('UserService', () => {
         notificationPreferences: { orderUpdates: true, promotions: true, system: true },
       });
       const next = await service.updateNotificationPreferences('user-1', { promotions: false });
-      expect(next).toEqual({ orderUpdates: true, promotions: false, system: true });
+      expect(next).toEqual({ orderUpdates: true, promotions: false, system: true, riderTasks: true, wallet: true });
       expect(dbMocks.userUpdate).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { notificationPreferences: { orderUpdates: true, promotions: false, system: true } },
+        data: { notificationPreferences: { orderUpdates: true, promotions: false, system: true, riderTasks: true, wallet: true } },
       });
     });
 
-    it('B1: listNotifications 偏好过滤（promotions=false → where type 不含 PROMOTION）', async () => {
+    it('B1: listNotifications 偏好过滤（promotions=false → where type 不含 PROMOTION，含新增 riderTasks/wallet 默认 true）', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({
         notificationPreferences: { orderUpdates: true, promotions: false, system: true },
       });
@@ -456,14 +460,22 @@ describe('UserService', () => {
       await service.listNotifications('user-1');
       expect(dbMocks.notificationFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ type: { in: ['ORDER_UPDATE', 'SYSTEM'] } }),
+          where: expect.objectContaining({
+            type: { in: ['ORDER_UPDATE', 'SYSTEM', 'RIDER_TASK', 'WALLET'] },
+          }),
         }),
       );
     });
 
     it('B1: 偏好全关 → enabledTypes 空数组（列表空）', async () => {
       dbMocks.userFindUnique.mockResolvedValueOnce({
-        notificationPreferences: { orderUpdates: false, promotions: false, system: false },
+        notificationPreferences: {
+          orderUpdates: false,
+          promotions: false,
+          system: false,
+          riderTasks: false,
+          wallet: false,
+        },
       });
       dbMocks.notificationFindMany.mockResolvedValueOnce([]);
       await service.listNotifications('user-1');
@@ -479,7 +491,11 @@ describe('UserService', () => {
       dbMocks.notificationCount.mockResolvedValueOnce(0);
       await service.getUnreadCount('user-1');
       expect(dbMocks.notificationCount).toHaveBeenCalledWith({
-        where: { userId: 'user-1', isRead: false, type: { in: ['ORDER_UPDATE'] } },
+        where: {
+          userId: 'user-1',
+          isRead: false,
+          type: { in: ['ORDER_UPDATE', 'RIDER_TASK', 'WALLET'] },
+        },
       });
     });
   });

@@ -1,0 +1,30 @@
+{
+  "orderConfirmed": {
+    "title": "Pedido Confirmado",
+    "content": "O seu pedido {orderNo} foi confirmado e está a ser preparado."
+  },
+  "orderCancelled": {
+    "title": "Pedido Cancelado",
+    "content": "O seu pedido {orderNo} foi cancelado. Motivo: {reason}"
+  },
+  "orderDelivered": {
+    "title": "Pedido Entregue",
+    "content": "O seu pedido {orderNo} foi entregue. Obrigado!"
+  },
+  "taskAssigned": {
+    "title": "Nova Tarefa de Entrega",
+    "content": "Tem uma nova tarefa de entrega. Pedido: {orderNo}. Aceite na página de tarefas."
+  },
+  "taskFailed": {
+    "title": "Tarefa Cancelada",
+    "content": "A tarefa de entrega do pedido {orderNo} foi cancelada."
+  },
+  "settlementConfirmed": {
+    "title": "Liquidação Confirmada",
+    "content": "A sua liquidação {settlementId} de ${amount} foi confirmada e adicionada ao seu saldo."
+  },
+  "withdrawReviewed": {
+    "title": "Atualização de Levantamento",
+    "content": "O seu pedido de levantamento {withdrawId} foi {status}."
+  }
+}

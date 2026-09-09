@@ -1,0 +1,30 @@
+{
+  "orderConfirmed": {
+    "title": "Order Confirmed",
+    "content": "Your order {orderNo} has been confirmed and is being prepared."
+  },
+  "orderCancelled": {
+    "title": "Order Cancelled",
+    "content": "Your order {orderNo} has been cancelled. Reason: {reason}"
+  },
+  "orderDelivered": {
+    "title": "Order Delivered",
+    "content": "Your order {orderNo} has been delivered. Enjoy!"
+  },
+  "taskAssigned": {
+    "title": "New Delivery Task",
+    "content": "You have a new delivery task. Order: {orderNo}. Please accept it in the tasks page."
+  },
+  "taskFailed": {
+    "title": "Task Cancelled",
+    "content": "Delivery task for order {orderNo} has been cancelled."
+  },
+  "settlementConfirmed": {
+    "title": "Settlement Confirmed",
+    "content": "Your settlement {settlementId} of ${amount} has been confirmed and added to your balance."
+  },
+  "withdrawReviewed": {
+    "title": "Withdrawal Update",
+    "content": "Your withdrawal request {withdrawId} has been {status}."
+  }
+}

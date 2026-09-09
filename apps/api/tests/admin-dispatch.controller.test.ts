@@ -42,7 +42,7 @@ describe('AdminDispatchController - 装配 + 路由（批次 4）', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new AdminDispatchController(new DispatchService() as never);
+    controller = new AdminDispatchController(new DispatchService(null as never, null as never, null) as never);
   });
 
   it('GET /tasks - list 调 listAllTasks 传 query + 返回 { success, data }', async () => {

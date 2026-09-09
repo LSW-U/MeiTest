@@ -47,7 +47,7 @@ describe('AdminRefundController - P3-3 retriggerReturnTask', () => {
     vi.clearAllMocks();
     controller = new AdminRefundController(
       new RefundService() as never,
-      new DispatchService() as never,
+      new DispatchService(null as never, null as never, null) as never,
     );
   });
 

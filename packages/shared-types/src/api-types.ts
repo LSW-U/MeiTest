@@ -785,6 +785,8 @@ export interface paths {
                             orderUpdates: boolean;
                             promotions: boolean;
                             system: boolean;
+                            riderTasks?: boolean;
+                            wallet?: boolean;
                         };
                     };
                 };
@@ -809,6 +811,8 @@ export interface paths {
                         orderUpdates?: boolean;
                         promotions?: boolean;
                         system?: boolean;
+                        riderTasks?: boolean;
+                        wallet?: boolean;
                     };
                 };
             };
@@ -823,6 +827,8 @@ export interface paths {
                             orderUpdates: boolean;
                             promotions: boolean;
                             system: boolean;
+                            riderTasks?: boolean;
+                            wallet?: boolean;
                         };
                     };
                 };
@@ -1302,7 +1308,7 @@ export interface paths {
                             /** Format: uuid */
                             userId: string;
                             /** @enum {string} */
-                            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
                             title: {
                                 [key: string]: string;
                             };
@@ -1428,6 +1434,765 @@ export interface paths {
                     content: {
                         "application/json": {
                             success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/device-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户端注册/刷新推送 token（批A A1，Role: CUSTOMER，deviceType=client_app）。Expo PushToken 全局唯一，upsert by token 幂等：重注册更新归属用户/platform/locale/lastSeenAt 并复位 ACTIVE（换账号登录/重装场景）。locale 为注册时 app 语言快照，推送文案语言来源（en 兜底）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        /** @enum {string} */
+                        platform: "ANDROID" | "IOS" | "WEB";
+                        /**
+                         * @default en
+                         * @enum {string}
+                         */
+                        locale?: "en" | "zh" | "id" | "pt" | "tet";
+                    };
+                };
+            };
+            responses: {
+                /** @description 注册成功（幂等，返回 token 行视图） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                platform: "ANDROID" | "IOS" | "WEB";
+                                locale: string;
+                                status: string;
+                                /** Format: date-time */
+                                lastSeenAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 CUSTOMER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        /** @description 客户端注销推送 token（批A A1，Role: CUSTOMER，登出时调用）。按 token 删且带归属校验（不删他人 token）；幂等：token 不存在也返回 success。 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 注销成功（幂等） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                            data: {
+                                success: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 CUSTOMER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/device-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手端注册/刷新推送 token（批A A1，Role: RIDER，deviceType=rider_app）。与 /client/device-tokens body/实现同构（DeviceTypeGuard 强制分端，单端点双角色不成立故拆双路由）。upsert by token 幂等。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        /** @enum {string} */
+                        platform: "ANDROID" | "IOS" | "WEB";
+                        /**
+                         * @default en
+                         * @enum {string}
+                         */
+                        locale?: "en" | "zh" | "id" | "pt" | "tet";
+                    };
+                };
+            };
+            responses: {
+                /** @description 注册成功（幂等，返回 token 行视图） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                platform: "ANDROID" | "IOS" | "WEB";
+                                locale: string;
+                                status: string;
+                                /** Format: date-time */
+                                lastSeenAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        /** @description 骑手端注销推送 token（批A A1，Role: RIDER，登出时调用）。与 /client/device-tokens 同构；按 token 删 + 归属校验，幂等。 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 注销成功（幂等） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                            data: {
+                                success: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手通知列表（批A A3，Role: RIDER）。与 /client/notifications 同构（复用 NotificationService），最新 100 条、按通知偏好过滤；onlyUnread=true 只看未读。type 扩 RIDER_TASK/WALLET（批A）。 */
+        get: {
+            parameters: {
+                query?: {
+                    onlyUnread?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 通知列表（最新 100 条） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            /** @enum {string} */
+                            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
+                            title: {
+                                [key: string]: string;
+                            };
+                            content: {
+                                [key: string]: string;
+                            };
+                            isRead: boolean;
+                            data: {
+                                [key: string]: unknown;
+                            } | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                        }[];
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手未读通知数量（批A A3，Role: RIDER，与列表同步偏好过滤）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 未读数量 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                            data: {
+                                count: number;
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description 骑手标记单条通知已读（批A A3，Role: RIDER，幂等；归属校验 E-USER-007）。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 标记已读 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-USER-007 通知不存在/无权操作 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/rider/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手全部标记已读（批A A3，Role: RIDER，幂等）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 全部标记已读 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER / deviceType 不符 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -15269,6 +16034,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/uploads/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 客户端头像上传（U6，upload 模块批A 2026-09-09）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 200×200，强制 1:1 正方形（容差 5%，与 rider avatar 同标准）。MinIO 路径前缀 avatars/avatar-。落库：前端拿到 URL 后 PATCH /client/user/profile 传 avatarUrl。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（随后 PATCH /client/user/profile 传 avatarUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（E-UPLOAD-019，< 200×200）/ 非 1:1（E-UPLOAD-020） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-001 跨端调用或 E-AUTH-012 非本人 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/rider/uploads/avatar": {
         parameters: {
             query?: never;
@@ -15557,6 +16458,142 @@ export interface paths {
                 };
                 /** @description E-AUTH-003 未授权 */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/uploads/banner-image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Banner 图片上传（U7/U8/U9，upload 模块批A 2026-09-09）。multipart/form-data，field name="file"。SUPER_ADMIN/WAREHOUSE_STAFF 权限（与 AdminBannerController 一致）。支持 jpg/png/webp，size ≤ 5MB，宽度 600-2000px，宽高比 1.5:1 - 3:1（区间带：覆盖 client BannerCarousel 实际显示 ≈2:1，又给运营裁切余地；方形/竖图拒收避免轮播破相）。MinIO 路径前缀 banners/banner-（此前 banner 图借道 product-image 落 products/main-* 前缀，语义污染已修正）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /admin/banners 的 imageUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 宽度出界（600-2000px）/ 宽高比出界（1.5:1-3:1） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-001 无权限（非 SUPER_ADMIN/WAREHOUSE_STAFF） */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -17378,11 +18415,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 后台通知发送历史（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。offset 分页 + type/target 筛选。MVP 无「批次」表，按 Notification 行倒序展示，每条 deliveredCount=1（真正按批次聚合需建 NotificationBatch 表，列暂缓增强）。 */
+        /** @description 后台通知发送历史（admin-web 优化方案 批次2 2026-08-29；批A A5 改批次行 2026-09-09，Role: SUPER_ADMIN）。offset 分页 + type 筛选。一行 = 一次群发批次（NotificationBatch）：target/totalRecipients 为批次真实值，deliveredCount=站内信落行数（审查 P3-1 统一口径），failedCount=推送失败数（可 POST /:batchId/retry 重发），readCount=已读数实时聚合。 */
         get: {
             parameters: {
                 query?: {
-                    type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                    type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
                     page?: number;
                     pageSize?: number;
                 };
@@ -17392,7 +18429,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 发送历史列表（offset 分页） */
+                /** @description 发送历史列表（批次行，offset 分页） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -17403,8 +18440,13 @@ export interface paths {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
+                                /** @enum {string} */
+                                target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+                                totalRecipients: number;
                                 deliveredCount: number;
+                                failedCount: number;
+                                readCount: number;
                                 title: {
                                     [key: string]: string;
                                 };
@@ -17462,7 +18504,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** @description 后台发送通知（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM。title/content 多语言 JSON（至少 en）。MVP 真链路=写 Notification 表（前端 /client/notifications 拉取），PUSH 走 dev stub（mockFlag=true 提示未真实推送）。响应 deliveredCount + push 结果。 */
+        /** @description 后台发送通知（admin-web 优化方案 批次2 2026-08-29；批A A5 批次化 2026-09-09，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM/RIDER_TASK/WALLET（批A 扩骑手任务/钱包）。title/content 多语言 JSON（至少 en）。批次化：写 NotificationBatch 行 → 首块 100 人同步写 Notification + PUSH → 剩余分块 BullMQ 异步。响应 batchId/totalRecipients/deliveredCount（=首块同步落行数）+ push 结果（mockFlag=true 提示 dev stub/未真实推送）。 */
         post: {
             parameters: {
                 query?: never;
@@ -17477,7 +18519,7 @@ export interface paths {
                         target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
                         userIds?: string[];
                         /** @enum {string} */
-                        type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                        type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
                         title: {
                             [key: string]: string;
                         };
@@ -17491,13 +18533,16 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description 发送成功，返回投递计数 + PUSH stub 结果 */
+                /** @description 发送成功，返回批次信息 + 首块投递计数 + PUSH 结果 */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
+                            /** Format: uuid */
+                            batchId: string;
+                            totalRecipients: number;
                             deliveredCount: number;
                             push: {
                                 success: boolean;
@@ -17547,6 +18592,112 @@ export interface paths {
                 };
                 /** @description 非 SUPER_ADMIN */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notifications/{batchId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批次失败重试（批A A5 新增，Role: SUPER_ADMIN）。仅重发 failed 用户（= 批次收件人中本批次无 Notification 行者；SPECIFIC_USERS 从批次 userIds 快照恢复全集，ALL_* 按当前 DB 解析；快照缺失抛 E-ADMIN-NOTIF-004），重发后校正批次 deliveredCount/failedCount。幂等：无 failed 用户时 retriedCount=0。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    batchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 重试完成（retriedCount/deliveredCount/failedCount + PUSH 结果） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            batchId: string;
+                            retriedCount: number;
+                            deliveredCount: number;
+                            failedCount: number;
+                            push: {
+                                success: boolean;
+                                mockFlag: boolean;
+                                error: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 SUPER_ADMIN */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-ADMIN-NOTIF-003 批次不存在 */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -18959,7 +20110,7 @@ export interface components {
             /** Format: uuid */
             userId: string;
             /** @enum {string} */
-            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
             title: {
                 [key: string]: string;
             };
@@ -21544,7 +22695,7 @@ export interface components {
             target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
             userIds?: string[];
             /** @enum {string} */
-            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
             title: {
                 [key: string]: string;
             };
@@ -21556,6 +22707,9 @@ export interface components {
             } | null;
         };
         AdminSendNotificationResponseData: {
+            /** Format: uuid */
+            batchId: string;
+            totalRecipients: number;
             deliveredCount: number;
             push: {
                 success: boolean;
@@ -21567,8 +22721,13 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
+            /** @enum {string} */
+            target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+            totalRecipients: number;
             deliveredCount: number;
+            failedCount: number;
+            readCount: number;
             title: {
                 [key: string]: string;
             };
@@ -21583,8 +22742,13 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+                type: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
+                /** @enum {string} */
+                target: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
+                totalRecipients: number;
                 deliveredCount: number;
+                failedCount: number;
+                readCount: number;
                 title: {
                     [key: string]: string;
                 };
@@ -21601,14 +22765,51 @@ export interface components {
         };
         AdminListNotificationsQuery: {
             /** @enum {string} */
-            type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+            type?: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
             page?: number;
             pageSize?: number;
         };
         /** @enum {string} */
         NotificationTarget: "ALL_CUSTOMERS" | "ALL_RIDERS" | "SPECIFIC_USERS";
         /** @enum {string} */
-        AdminNotificationType: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM";
+        AdminNotificationType: "ORDER_UPDATE" | "PROMOTION" | "SYSTEM" | "RIDER_TASK" | "WALLET";
+        RegisterDeviceTokenRequest: {
+            token: string;
+            /** @enum {string} */
+            platform: "ANDROID" | "IOS" | "WEB";
+            /**
+             * @default en
+             * @enum {string}
+             */
+            locale: "en" | "zh" | "id" | "pt" | "tet";
+        };
+        DeleteDeviceTokenRequest: {
+            token: string;
+        };
+        DeviceTokenItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            platform: "ANDROID" | "IOS" | "WEB";
+            locale: string;
+            status: string;
+            /** Format: date-time */
+            lastSeenAt: string;
+        };
+        /** @enum {string} */
+        DeviceTokenPlatform: "ANDROID" | "IOS" | "WEB";
+        AdminRetryNotificationResponseData: {
+            /** Format: uuid */
+            batchId: string;
+            retriedCount: number;
+            deliveredCount: number;
+            failedCount: number;
+            push: {
+                success: boolean;
+                mockFlag: boolean;
+                error: string | null;
+            };
+        };
         ExchangeRateView: {
             /** Format: uuid */
             id: string;

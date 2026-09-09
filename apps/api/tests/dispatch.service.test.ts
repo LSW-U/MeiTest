@@ -140,7 +140,7 @@ describe('DispatchService', () => {
   let service: DispatchService;
 
   beforeEach(() => {
-    service = new DispatchService(mockRealtime as never, mockEligibility as never);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never, null);
     Object.values(mockDb).forEach((table) => {
       if (typeof table === 'object') {
         Object.values(table).forEach((fn) => fn.mockReset?.());
@@ -993,5 +993,160 @@ describe('DispatchService', () => {
         service.startDelivering({ riderId: 'r1', taskId: 'task-1' }),
       ).rejects.toThrow(/cannot start delivering|E-DISPATCH-004/i);
     });
+  });
+});
+
+// ===== 批A A4：事件通知挂点（2026-09-09）=====
+describe('DispatchService - A4 事件通知挂点', () => {
+  let service: DispatchService;
+  // notify mock（记录调用 + 可控抛错验证失败容忍）
+  const notify = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    notify.mockReset().mockResolvedValue(undefined);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never, { notify });
+    Object.values(mockDb).forEach((table) => {
+      if (typeof table === 'object') {
+        Object.values(table).forEach((fn) => fn.mockReset?.());
+      }
+    });
+    mockHelpers.withTransaction.mockReset();
+    mockSalesIncrement.mockReset();
+    mockLedgerWrite.mockReset();
+    mockServer.to.mockClear();
+    mockServer.emit.mockClear();
+    mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1', userId: 'user-rider-1' });
+    mockEligibility.assertCanAccept.mockResolvedValue({ riderProfileId: 'r1', depositAmount: 100, maxOrderAmount: 1000, tierId: 'tier-1' });
+  });
+
+  it('挂点 3：deliverTask 送达 → notify(orderDelivered, ORDER_UPDATE, data.orderId)', async () => {
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({
+        riderId: 'r1',
+        status: 'PICKED_UP',
+        orderId: 'order-1',
+        order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', userId: 'user-customer-1' },
+      }),
+    );
+    mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'DELIVERED' }));
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
+
+    await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'orderDelivered',
+        userId: 'user-customer-1',
+        type: 'ORDER_UPDATE',
+        data: expect.objectContaining({ orderId: 'order-1' }),
+      }),
+    );
+  });
+
+  it('挂点 4：acceptTask 抢单成功 → notify(taskAssigned, RIDER_TASK, data.taskId+orderId)', async () => {
+    mockDb.deliveryTask.findUnique
+      .mockResolvedValueOnce(buildTask()) // 第一次查 status
+      .mockResolvedValueOnce(buildTask({ status: 'ASSIGNED' })); // 事务后查详情
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          $executeRaw: vi.fn().mockResolvedValue(1),
+          order: { update: vi.fn().mockResolvedValue({}) },
+        };
+        return fn(tx);
+      },
+    );
+
+    await service.acceptTask({ riderId: 'r1', taskId: 'task-1' });
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'taskAssigned',
+        userId: 'r1',
+        type: 'RIDER_TASK',
+        data: expect.objectContaining({ taskId: 'task-1', orderId: 'order-1' }),
+      }),
+    );
+  });
+
+  it('挂点 5a：reportIssue → notify(taskFailed, RIDER_TASK, data.reason)', async () => {
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({ riderId: 'r1', status: 'PICKED_UP', orderId: 'order-1' }),
+    );
+    mockDb.order.findUnique.mockResolvedValue({ status: 'PICKED' });
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          deliveryTask: {
+            update: vi.fn().mockResolvedValue(
+              buildTask({ riderId: 'r1', status: 'FAILED' }),
+            ),
+          },
+          orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        };
+        return fn(tx);
+      },
+    );
+
+    await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'CUSTOMER_UNREACHABLE' });
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'taskFailed',
+        userId: 'r1',
+        type: 'RIDER_TASK',
+        data: expect.objectContaining({ taskId: 'task-1', reason: 'CUSTOMER_UNREACHABLE' }),
+      }),
+    );
+  });
+
+  it('失败容忍契约：notify 内部吞错（与真 NotificationEventService 行为一致）→ deliverTask 不受影响', async () => {
+    // 真实 NotificationEventService 全链 try/catch 永不 reject（内部测试见
+    // notification-event.service.test.ts）；此处验证挂点调用方在 notify 正常
+    // resolve（即使内部失败）时主流程完整走完
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({
+        riderId: 'r1',
+        status: 'PICKED_UP',
+        orderId: 'order-1',
+        order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', userId: 'user-customer-1' },
+      }),
+    );
+    mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'DELIVERED' }));
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
+
+    const result = await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+    expect(result.status).toBe('DELIVERED');
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('notificationEvents = null（单测默认）→ 不触发挂点不抛错', async () => {
+    const plain = new DispatchService(mockRealtime as never, mockEligibility as never, null);
+    // 覆盖当前 describe 的 service 变量（只为本用例）
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({
+        riderId: 'r1',
+        status: 'PICKED_UP',
+        orderId: 'order-1',
+        order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', userId: 'user-customer-1' },
+      }),
+    );
+    mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'DELIVERED' }));
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
+
+    const result = await plain.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+    expect(result.status).toBe('DELIVERED');
+    expect(notify).not.toHaveBeenCalled();
   });
 });

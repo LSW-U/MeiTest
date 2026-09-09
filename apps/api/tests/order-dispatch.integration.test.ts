@@ -270,7 +270,7 @@ describe('Order → Dispatch 全链路集成测试', () => {
 
     // 批 D（2026-09-03）：第二构造参数 DepositEligibilityService（真 DB 集成测试用真实例，
     // 档位查真表——seed 4 档 + 测试骑手 depositAmount 由测试数据决定）
-    dispatchService = new DispatchService(mockRealtime as never, new DepositEligibilityService());
+    dispatchService = new DispatchService(mockRealtime as never, new DepositEligibilityService(), null);
 
     // 让 orderService 拥有 dispatchService（用于 markPaid 自动建 task）
     (orderService as unknown as { dispatchService: unknown }).dispatchService = dispatchService;

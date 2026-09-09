@@ -94,7 +94,7 @@ describe('SettlementService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     aggregator = makeAggregator();
-    service = new SettlementService(aggregator);
+    service = new SettlementService(aggregator, null);
   });
 
   describe('runSettlement', () => {
@@ -176,7 +176,7 @@ describe('SettlementService', () => {
         refundAmount: 1000,
         commission: 2000,
       });
-      service = new SettlementService(aggregator);
+      service = new SettlementService(aggregator, null);
       dbMock.findFirst.mockResolvedValue(null);
       dbMock.create.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
         Promise.resolve(mockRow({ ...data } as Record<string, unknown>)),

@@ -37,7 +37,7 @@ describe('SettlementController - 4 端点装配（总审查报告 P2-2a）', () 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new SettlementController(new SettlementService() as never);
+    controller = new SettlementController(new SettlementService(null as never, null) as never);
   });
 
   it('GET / - list 调 settle.list 传 query + 返回 { success, data }', async () => {

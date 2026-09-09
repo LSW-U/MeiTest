@@ -40,7 +40,7 @@ describe('WithdrawalController - 5 端点装配（总审查报告 P2-2b）', () 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new WithdrawalController(new WithdrawalService() as never);
+    controller = new WithdrawalController(new WithdrawalService(null) as never);
   });
 
   it('POST / - create 调 withdraw.create 传 body + req.user.sub（super_admin 代录）', async () => {

@@ -104,7 +104,7 @@ describe('DispatchService.reassignTask + cancelTask（批次 4 事务编排）',
     // 批 D：reassign 资格校验默认放行（order 金额查询 + assertCanAccept 全合格）
     mockDb.order.findUnique.mockResolvedValue({ payableAmount: 5800 });
     mockEligibility.assertCanAccept.mockResolvedValue({ riderProfileId: 'r-new', depositAmount: 5000, maxOrderAmount: null, tierId: 't4' });
-    service = new DispatchService(undefined as never, mockEligibility as never);
+    service = new DispatchService(undefined as never, mockEligibility as never, null);
   });
 
   it('reassign 成功：事务内 $executeRaw UPDATE WHERE ASSIGNED + order.update riderId 同事务 + note 追加', async () => {

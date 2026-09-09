@@ -1,0 +1,30 @@
+{
+  "orderConfirmed": {
+    "title": "订单已确认",
+    "content": "您的订单 {orderNo} 已确认，正在备货中。"
+  },
+  "orderCancelled": {
+    "title": "订单已取消",
+    "content": "您的订单 {orderNo} 已取消。原因：{reason}"
+  },
+  "orderDelivered": {
+    "title": "订单已送达",
+    "content": "您的订单 {orderNo} 已送达，感谢您的光临！"
+  },
+  "taskAssigned": {
+    "title": "新配送任务",
+    "content": "您有新的配送任务，订单号 {orderNo}。请到任务页接单。"
+  },
+  "taskFailed": {
+    "title": "任务已取消",
+    "content": "订单 {orderNo} 的配送任务已取消。"
+  },
+  "settlementConfirmed": {
+    "title": "结算已确认",
+    "content": "您的结算单 {settlementId}（${amount}）已确认并入账。"
+  },
+  "withdrawReviewed": {
+    "title": "提现结果通知",
+    "content": "您的提现申请 {withdrawId} 已{status}。"
+  }
+}

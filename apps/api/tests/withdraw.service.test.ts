@@ -90,7 +90,7 @@ describe('WithdrawalService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new WithdrawalService();
+    service = new WithdrawalService(null);
   });
 
   describe('create', () => {

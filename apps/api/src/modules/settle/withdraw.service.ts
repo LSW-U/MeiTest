@@ -8,7 +8,7 @@
  *
  * MVP 简化：不接真实支付平台（无主体），全部走线下打款 + 凭证录入
  */
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Inject } from '@nestjs/common';
 import { db, withTransaction } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import type {
@@ -38,6 +38,32 @@ function advisoryLockKey(requesterType: string, requesterId: string): bigint {
 
 @Injectable()
 export class WithdrawalService {
+  // 批A A4（2026-09-09）：事件通知挂点（提现审核结果 → 站内信 + PUSH；单测传 null 兼容）
+  private readonly notificationEvents: {
+    notify: (input: {
+      event: string;
+      userId: string;
+      type: string;
+      data?: Record<string, unknown>;
+      params?: Record<string, string>;
+    }) => Promise<void>;
+  } | null;
+
+  constructor(
+    @Inject('NotificationEventServiceToken')
+    notificationEvents: {
+      notify: (input: {
+        event: string;
+        userId: string;
+        type: string;
+        data?: Record<string, unknown>;
+        params?: Record<string, string>;
+      }) => Promise<void>;
+    } | null,
+  ) {
+    this.notificationEvents = notificationEvents;
+  }
+
   /**
    * 创建提现申请（审查报告 P0 #4 修复：用 advisory lock + 事务防 TOCTOU）
    *
@@ -157,6 +183,25 @@ export class WithdrawalService {
       action: input.action,
       reviewerId,
     });
+
+    // 批A A4 挂点 7：提现审核结果 → 站内信 + PUSH（WALLET，data.withdrawId+status）
+    // 任务书锚点：review 状态翻转 + race 检查后；requesterId 是 RiderProfile 维度（RIDER 类型时
+    // 映射回 User.id 再通知；MERCHANT 暂不通知，批A 范围只覆盖 RIDER）
+    if (this.notificationEvents && updated.requesterType === 'RIDER') {
+      const profile = await db.riderProfile.findUnique({
+        where: { id: updated.requesterId },
+        select: { userId: true },
+      });
+      if (profile) {
+        await this.notificationEvents.notify({
+          event: 'withdrawReviewed',
+          userId: profile.userId,
+          type: 'WALLET',
+          data: { withdrawId: id, status: updated.status },
+          params: { withdrawId: id, status: updated.status.toLowerCase() },
+        });
+      }
+    }
 
     return this.toDto(updated);
   }

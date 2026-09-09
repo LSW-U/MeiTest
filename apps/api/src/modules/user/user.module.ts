@@ -14,9 +14,11 @@ import {
 } from './user.controller';
 import { AdminUserController } from './admin-user.controller';
 import { AuthModule } from '../auth/auth.module';
+// 批A（2026-09-09）：通知实现收敛到 NotificationModule 的 NotificationService（委托注入）
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationModule],
   controllers: [
     UserController,
     AddressController,

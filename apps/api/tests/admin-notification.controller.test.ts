@@ -15,6 +15,7 @@ const { mockNotifService } = vi.hoisted(() => ({
   mockNotifService: {
     send: vi.fn(),
     listHistory: vi.fn(),
+    retry: vi.fn(),
   },
 }));
 
@@ -22,6 +23,7 @@ vi.mock('../src/modules/notification/admin-notification.service', () => ({
   AdminNotificationService: class {
     send = mockNotifService.send;
     listHistory = mockNotifService.listHistory;
+    retry = mockNotifService.retry;
   },
 }));
 
@@ -29,14 +31,18 @@ import { AdminNotificationService } from '../src/modules/notification/admin-noti
 
 describe('AdminNotificationController - 2 端点装配（批次2）', () => {
   let controller: AdminNotificationController;
+  // 批A A5：send 现在需要 @Req() 取 operator（req.user.sub）
+  const mockReq = { user: { sub: 'admin-1' } } as never;
 
   beforeEach(() => {
     vi.resetAllMocks();
     controller = new AdminNotificationController(new AdminNotificationService() as never);
   });
 
-  it('POST / - send 调 send(body)，返回 { success, data }', async () => {
+  it('POST / - send 调 send(body, operatorId)，返回 { success, data }', async () => {
     const mockData = {
+      batchId: 'batch-1',
+      totalRecipients: 3,
       deliveredCount: 3,
       push: { success: true, mockFlag: true, error: null },
     };
@@ -51,9 +57,9 @@ describe('AdminNotificationController - 2 端点装配（批次2）', () => {
       data: null,
     };
 
-    const result = await controller.send(body);
+    const result = await controller.send(mockReq, body);
 
-    expect(mockNotifService.send).toHaveBeenCalledWith(body);
+    expect(mockNotifService.send).toHaveBeenCalledWith(body, 'admin-1');
     expect(result).toEqual({ success: true, data: mockData });
   });
 
@@ -62,7 +68,7 @@ describe('AdminNotificationController - 2 端点装配（批次2）', () => {
     mockNotifService.send.mockRejectedValue(err);
 
     await expect(
-      controller.send({
+      controller.send(mockReq, {
         target: 'SPECIFIC_USERS',
         userIds: ['missing'],
         type: 'SYSTEM',

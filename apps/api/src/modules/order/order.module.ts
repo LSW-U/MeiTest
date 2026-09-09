@@ -22,6 +22,8 @@ import { DispatchModule, DISPATCH_SERVICE_TOKEN } from '../dispatch/dispatch.mod
 import { CartModule, CART_SERVICE_TOKEN } from '../cart/cart.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
+import { NotificationModule } from '../notification/notification.module';
+import { NotificationEventService } from '../notification/notification-event.service';
 import { RefundModule } from '../refund/refund.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { PricingModule } from '../pricing/pricing.module';
@@ -33,6 +35,8 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
     forwardRef(() => DispatchModule),
     forwardRef(() => CartModule),
     forwardRef(() => RefundModule),
+    // 批A（2026-09-09）：NotificationEventService（七类事件挂点，站内信+PUSH）
+    forwardRef(() => NotificationModule),
     PromotionModule,
     PricingModule,
     RealtimeModule,
@@ -54,6 +58,7 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
     { provide: 'CART_SERVICE_TOKEN', useExisting: CART_SERVICE_TOKEN },
     { provide: 'RealtimeGatewayToken', useExisting: RealtimeGateway },
     { provide: 'NotifyFactoryToken', useExisting: NotifyFactory },
+    { provide: 'NotificationEventServiceToken', useExisting: NotificationEventService },
   ],
   exports: [OrderService, OrderNoService],
 })

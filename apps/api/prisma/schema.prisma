@@ -184,10 +184,56 @@ enum WarehouseStatus {
 }
 
 /// 站内信类型（v0.3-D2-T3 决策：String → enum，更严格）
+/// 批A（2026-09-09）：新增 RIDER_TASK（骑手任务通知）/ WALLET（结算入账/提现结果）
 enum NotificationType {
   ORDER_UPDATE
   PROMOTION
   SYSTEM
+  RIDER_TASK
+  WALLET
+}
+
+/// 设备推送 token（批A 2026-09-09：CUSTOMER/RIDER 通用，Expo Push）
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  /// Expo PushToken（ExpoPushToken[...]），全局唯一，upsert 幂等键
+  token      String   @unique
+  /// ANDROID | IOS | WEB
+  platform   String
+  /// 注册时 app 当前语言快照 → 推送文案语言（User 无 locale 字段，en 兜底）
+  locale     String   @default("en")
+  /// ACTIVE | INVALID（Expo 回执 NotRegistered 置 INVALID，脏 token 清理）
+  status     String   @default("ACTIVE")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, status])
+  @@map("device_tokens")
+}
+
+/// 群发批次（批A 2026-09-09：一次 admin 群发一行；事件通知无批次 batchId=null）
+model NotificationBatch {
+  id              String   @id @default(uuid())
+  type            String
+  /// ALL_CUSTOMERS | ALL_RIDERS | SPECIFIC_USERS
+  target          String
+  /// 多语言标题
+  title           Json
+  /// 多语言内容
+  content         Json
+  /// 收件人快照（审查 P2-1 裁决：SPECIFIC_USERS 存 userIds 数组，ALL_* 存 null；
+  /// retry 按此恢复全集做差集重发，不依赖 target 重新解析）
+  userIds         Json?    @map("user_ids")
+  totalRecipients Int      @map("total_recipients")
+  /// 站内信落行数（审查 P3-1 统一口径：MVP deliveredCount=站内信行数，非 Expo 回执数）
+  deliveredCount  Int      @default(0) @map("delivered_count")
+  /// 推送失败数（可见、可 retry 重发）
+  failedCount     Int      @default(0) @map("failed_count")
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("notification_batches")
 }
 
 // ============================================================================
@@ -991,10 +1037,14 @@ model Notification {
   content   Json
   isRead    Boolean          @default(false) @map("is_read")
   data      Json?
+  /// 群发批次 ID（批A 2026-09-09 新增，nullable：事件通知无批次）
+  batchId   String?          @map("batch_id")
   createdAt DateTime         @default(now()) @map("created_at")
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+  /// readCount 实时聚合：count(batchId AND isRead=true)（批A 2026-09-09 新增）
+  @@index([batchId, isRead])
   @@map("notifications")
 }
 

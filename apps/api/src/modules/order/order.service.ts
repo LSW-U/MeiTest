@@ -181,6 +181,17 @@ export class OrderService {
         channels: string[],
       ) => Promise<unknown>;
     } | null,
+    // 批A（2026-09-09）：事件通知挂点（站内信 + PUSH，全链失败容忍）
+    @Inject('NotificationEventServiceToken')
+    private readonly notificationEvents: {
+      notify: (input: {
+        event: string;
+        userId: string;
+        type: string;
+        data?: Record<string, unknown>;
+        params?: Record<string, string>;
+      }) => Promise<void>;
+    } | null,
   ) {}
 
   /**
@@ -655,7 +666,7 @@ export class OrderService {
     // 事务外查 order（broadcast 用，事务内再查一次校验一致性）
     const orderForBroadcast = await db.order.findUnique({
       where: { id: orderId },
-      select: { status: true },
+      select: { status: true, userId: true, orderNo: true },
     });
 
     await withTransaction(async (tx: Tx) => {
@@ -753,6 +764,18 @@ export class OrderService {
         orderId,
         event: 'order:status-changed',
         error: (e as Error).message,
+      });
+    }
+
+    // 批A A4 挂点 2：订单取消 → 站内信 + PUSH（CUSTOMER, ORDER_UPDATE，data.orderId+reason）
+    // 失败容忍在 NotificationEventService 内部；注入为 null 时跳过（单测兼容）
+    if (this.notificationEvents && orderForBroadcast) {
+      await this.notificationEvents.notify({
+        event: 'orderCancelled',
+        userId: orderForBroadcast.userId,
+        type: 'ORDER_UPDATE',
+        data: { orderId, orderNo: orderForBroadcast.orderNo, reason: ctx.reason },
+        params: { orderNo: orderForBroadcast.orderNo, reason: ctx.reason },
       });
     }
   }
@@ -952,6 +975,18 @@ export class OrderService {
           error: (e as Error).message,
         });
       }
+    }
+
+    // 批A A4 挂点 1：订单已确认（支付成功）→ 站内信 + PUSH（CUSTOMER, ORDER_UPDATE）
+    // 失败容忍在 NotificationEventService 内部（不炸主流程）；本服务注入为 null 时跳过（单测兼容）
+    if (this.notificationEvents && orderForNotify) {
+      await this.notificationEvents.notify({
+        event: 'orderConfirmed',
+        userId: orderForNotify.userId,
+        type: 'ORDER_UPDATE',
+        data: { orderId, orderNo: orderForNotify.orderNo },
+        params: { orderNo: orderForNotify.orderNo },
+      });
     }
   }
 

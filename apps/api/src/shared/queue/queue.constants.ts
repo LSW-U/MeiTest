@@ -13,3 +13,8 @@ export const SETTLE_QUEUE = 'settle';
  * 每 5min 扫 UNUSED + promotion.endAt<now 的 UserCoupon -> EXPIRED
  */
 export const COUPON_EXPIRE_QUEUE = 'coupon-expire';
+/**
+ * 通知推送队列（批A A5，2026-09-09）
+ * admin 批量通知 → 按 100 人分块入队 → processor 逐块写 Notification + PUSH
+ */
+export const NOTIFICATION_QUEUE = 'notification';

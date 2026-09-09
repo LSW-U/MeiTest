@@ -300,6 +300,12 @@ import {
   AdminListNotificationsQuery,
   NotificationTarget,
   AdminNotificationType,
+  // notification 批A（2026-09-09：DeviceToken + 骑手通知 + 批次 retry）
+  RegisterDeviceTokenRequest,
+  DeleteDeviceTokenRequest,
+  DeviceTokenItem,
+  DeviceTokenPlatform,
+  AdminRetryNotificationResponseData,
   // common
   ErrorResponse,
   Id,
@@ -891,6 +897,144 @@ registry.registerPath({
       description: '全部标记已读',
       content: { 'application/json': { schema: MarkNotificationReadResponse } },
     },
+  },
+});
+
+// ===== notification 批A（2026-09-09）：DeviceToken 注册/注销（client/rider 双端点）+ 骑手通知 =====
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/device-tokens',
+  tags: ['notification'],
+  description:
+    '客户端注册/刷新推送 token（批A A1，Role: CUSTOMER，deviceType=client_app）。Expo PushToken 全局唯一，upsert by token 幂等：重注册更新归属用户/platform/locale/lastSeenAt 并复位 ACTIVE（换账号登录/重装场景）。locale 为注册时 app 语言快照，推送文案语言来源（en 兜底）。',
+  request: { body: { content: { 'application/json': { schema: RegisterDeviceTokenRequest } } } },
+  responses: {
+    200: {
+      description: '注册成功（幂等，返回 token 行视图）',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: DeviceTokenItem }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 CUSTOMER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/device-tokens',
+  tags: ['notification'],
+  description:
+    '客户端注销推送 token（批A A1，Role: CUSTOMER，登出时调用）。按 token 删且带归属校验（不删他人 token）；幂等：token 不存在也返回 success。',
+  request: { body: { content: { 'application/json': { schema: DeleteDeviceTokenRequest } } } },
+  responses: {
+    200: {
+      description: '注销成功（幂等）',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: z.object({ success: z.boolean() }) }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 CUSTOMER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/device-tokens',
+  tags: ['rider'],
+  description:
+    '骑手端注册/刷新推送 token（批A A1，Role: RIDER，deviceType=rider_app）。与 /client/device-tokens body/实现同构（DeviceTypeGuard 强制分端，单端点双角色不成立故拆双路由）。upsert by token 幂等。',
+  request: { body: { content: { 'application/json': { schema: RegisterDeviceTokenRequest } } } },
+  responses: {
+    200: {
+      description: '注册成功（幂等，返回 token 行视图）',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: DeviceTokenItem }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/rider/device-tokens',
+  tags: ['rider'],
+  description:
+    '骑手端注销推送 token（批A A1，Role: RIDER，登出时调用）。与 /client/device-tokens 同构；按 token 删 + 归属校验，幂等。',
+  request: { body: { content: { 'application/json': { schema: DeleteDeviceTokenRequest } } } },
+  responses: {
+    200: {
+      description: '注销成功（幂等）',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: z.object({ success: z.boolean() }) }) } },
+    },
+    400: { description: 'E-COMMON-001 校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/notifications',
+  tags: ['rider'],
+  description:
+    '骑手通知列表（批A A3，Role: RIDER）。与 /client/notifications 同构（复用 NotificationService），最新 100 条、按通知偏好过滤；onlyUnread=true 只看未读。type 扩 RIDER_TASK/WALLET（批A）。',
+  request: { query: z.object({ onlyUnread: z.string().optional() }) },
+  responses: {
+    200: {
+      description: '通知列表（最新 100 条）',
+      content: { 'application/json': { schema: NotificationItem.array() } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/notifications/unread-count',
+  tags: ['rider'],
+  description: '骑手未读通知数量（批A A3，Role: RIDER，与列表同步偏好过滤）。',
+  responses: {
+    200: {
+      description: '未读数量',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: z.object({ count: z.number() }) }) } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/rider/notifications/{id}/read',
+  tags: ['rider'],
+  description: '骑手标记单条通知已读（批A A3，Role: RIDER，幂等；归属校验 E-USER-007）。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: {
+      description: '标记已读',
+      content: { 'application/json': { schema: MarkNotificationReadResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-USER-007 通知不存在/无权操作', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/notifications/read-all',
+  tags: ['rider'],
+  description: '骑手全部标记已读（批A A3，Role: RIDER，幂等）。',
+  responses: {
+    200: {
+      description: '全部标记已读',
+      content: { 'application/json': { schema: MarkNotificationReadResponse } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER / deviceType 不符', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -3880,6 +4024,32 @@ registry.registerPath({
     },
   },
 });
+
+// ===== Client Upload - avatar（U6 客户端头像上传，upload 模块批A 2026-09-09）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/uploads/avatar',
+  tags: ['upload'],
+  description:
+    '客户端头像上传（U6，upload 模块批A 2026-09-09）。multipart/form-data，field name="file"。CUSTOMER 权限 + DeviceTypeGuard 自动校验 client_app deviceType。支持 jpg/png/webp，size ≤ 5MB，最小 200×200，强制 1:1 正方形（容差 5%，与 rider avatar 同标准）。MinIO 路径前缀 avatars/avatar-。落库：前端拿到 URL 后 PATCH /client/user/profile 传 avatarUrl。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（随后 PATCH /client/user/profile 传 avatarUrl）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（E-UPLOAD-019，< 200×200）/ 非 1:1（E-UPLOAD-020）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 跨端调用或 E-AUTH-012 非本人', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 // ===== Rider Upload - avatar/id-card-image/license-image（W3 骑手个人区，2026-08-24）=====
 // common 前缀：apply 阶段用户尚持 client_app token（role=CUSTOMER），审核通过后才变 rider_app。
 // apply payload 改带 URL 方案：前端先调这三个端点拿 URL，再提交到 POST /common/rider/apply。
@@ -3955,7 +4125,31 @@ registry.registerPath({
   },
 });
 
-// ===== Home Entries（活动入口 PromoDock，路线 A 配置接口）=====
+// ===== Admin Upload - banner-image（U7/U8/U9 banner 宽幅图上传，upload 模块批A 2026-09-09）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/uploads/banner-image',
+  tags: ['upload'],
+  description:
+    'Banner 图片上传（U7/U8/U9，upload 模块批A 2026-09-09）。multipart/form-data，field name="file"。SUPER_ADMIN/WAREHOUSE_STAFF 权限（与 AdminBannerController 一致）。支持 jpg/png/webp，size ≤ 5MB，宽度 600-2000px，宽高比 1.5:1 - 3:1（区间带：覆盖 client BannerCarousel 实际显示 ≈2:1，又给运营裁切余地；方形/竖图拒收避免轮播破相）。MinIO 路径前缀 banners/banner-（此前 banner 图借道 product-image 落 products/main-* 前缀，语义污染已修正）。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（前端拿到 URL 后提交 POST /admin/banners 的 imageUrl）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 宽度出界（600-2000px）/ 宽高比出界（1.5:1-3:1）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 无权限（非 SUPER_ADMIN/WAREHOUSE_STAFF）', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 registry.registerPath({
   method: 'get',
   path: '/api/v1/client/home-entries',
@@ -4406,18 +4600,25 @@ registry.register('AdminListNotificationsQuery', AdminListNotificationsQuery);
 registry.register('NotificationTarget', NotificationTarget);
 registry.register('AdminNotificationType', AdminNotificationType);
 
+// ===== notification 批A（2026-09-09：DeviceToken 注册/注销 + 批次 retry 响应）=====
+registry.register('RegisterDeviceTokenRequest', RegisterDeviceTokenRequest);
+registry.register('DeleteDeviceTokenRequest', DeleteDeviceTokenRequest);
+registry.register('DeviceTokenItem', DeviceTokenItem);
+registry.register('DeviceTokenPlatform', DeviceTokenPlatform);
+registry.register('AdminRetryNotificationResponseData', AdminRetryNotificationResponseData);
+
 registry.registerPath({
   method: 'post',
   path: '/api/v1/admin/notifications',
   tags: ['notification'],
   description:
-    '后台发送通知（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM。title/content 多语言 JSON（至少 en）。MVP 真链路=写 Notification 表（前端 /client/notifications 拉取），PUSH 走 dev stub（mockFlag=true 提示未真实推送）。响应 deliveredCount + push 结果。',
+    '后台发送通知（admin-web 优化方案 批次2 2026-08-29；批A A5 批次化 2026-09-09，Role: SUPER_ADMIN）。target=ALL_CUSTOMERS/ALL_RIDERS（群发，超 50000 抛 E-ADMIN-NOTIF-002）/SPECIFIC_USERS（指定 userIds，缺失抛 E-ADMIN-NOTIF-001，最多 1000）。type=ORDER_UPDATE/PROMOTION/SYSTEM/RIDER_TASK/WALLET（批A 扩骑手任务/钱包）。title/content 多语言 JSON（至少 en）。批次化：写 NotificationBatch 行 → 首块 100 人同步写 Notification + PUSH → 剩余分块 BullMQ 异步。响应 batchId/totalRecipients/deliveredCount（=首块同步落行数）+ push 结果（mockFlag=true 提示 dev stub/未真实推送）。',
   request: {
     body: { content: { 'application/json': { schema: AdminSendNotificationRequest } } },
   },
   responses: {
     200: {
-      description: '发送成功，返回投递计数 + PUSH stub 结果',
+      description: '发送成功，返回批次信息 + 首块投递计数 + PUSH 结果',
       content: { 'application/json': { schema: AdminSendNotificationResponseData } },
     },
     400: {
@@ -4434,15 +4635,33 @@ registry.registerPath({
   path: '/api/v1/admin/notifications',
   tags: ['notification'],
   description:
-    '后台通知发送历史（admin-web 优化方案 批次2 2026-08-29，Role: SUPER_ADMIN）。offset 分页 + type/target 筛选。MVP 无「批次」表，按 Notification 行倒序展示，每条 deliveredCount=1（真正按批次聚合需建 NotificationBatch 表，列暂缓增强）。',
+    '后台通知发送历史（admin-web 优化方案 批次2 2026-08-29；批A A5 改批次行 2026-09-09，Role: SUPER_ADMIN）。offset 分页 + type 筛选。一行 = 一次群发批次（NotificationBatch）：target/totalRecipients 为批次真实值，deliveredCount=站内信落行数（审查 P3-1 统一口径），failedCount=推送失败数（可 POST /:batchId/retry 重发），readCount=已读数实时聚合。',
   request: { query: AdminListNotificationsQuery },
   responses: {
     200: {
-      description: '发送历史列表（offset 分页）',
+      description: '发送历史列表（批次行，offset 分页）',
       content: { 'application/json': { schema: AdminNotificationHistoryListResponseData } },
     },
     401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
     403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/notifications/{batchId}/retry',
+  tags: ['notification'],
+  description:
+    '批次失败重试（批A A5 新增，Role: SUPER_ADMIN）。仅重发 failed 用户（= 批次收件人中本批次无 Notification 行者；SPECIFIC_USERS 从批次 userIds 快照恢复全集，ALL_* 按当前 DB 解析；快照缺失抛 E-ADMIN-NOTIF-004），重发后校正批次 deliveredCount/failedCount。幂等：无 failed 用户时 retriedCount=0。',
+  request: { params: z.object({ batchId: Id }) },
+  responses: {
+    200: {
+      description: '重试完成（retriedCount/deliveredCount/failedCount + PUSH 结果）',
+      content: { 'application/json': { schema: AdminRetryNotificationResponseData } },
+    },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-ADMIN-NOTIF-003 批次不存在', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -4671,7 +4890,7 @@ const openapi = generator.generateDocument({
     { name: 'platform', description: '平台 dashboard / 审计 / 系统配置' },
     { name: 'settle', description: '结算单 + 提现审核（M W3）' },
     { name: 'im', description: 'IM 自建 WebSocket 用户签名（M W3）' },
-    { name: 'upload', description: '商品图片上传（W7-feature）' },
+    { name: 'upload', description: '图片上传（商品图/banner 图/客户端头像/售后凭证等）' },
     { name: 'geo', description: '地址 geocoding（W7 P0-3）' },
     { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
     { name: 'feedback', description: '用户反馈（P22 反馈页）' },
