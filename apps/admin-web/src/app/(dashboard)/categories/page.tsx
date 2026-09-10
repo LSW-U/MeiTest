@@ -17,7 +17,7 @@
  */
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
@@ -58,6 +58,8 @@ import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { ApiError } from '@/lib/api';
 import { uploadByScene } from '@/lib/upload-scenes';
+import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import {
   useCategories,
   useCreateCategory,
@@ -95,26 +97,43 @@ function CategoryIconUploader({
   const t = useTranslations('common');
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  // 批B（改动4）：网络类耗尽自动重试后的手动兜底（重试同文件）
+  const [canRetry, setCanRetry] = useState(false);
+  const lastFileRef = useRef<File | null>(null);
 
   async function handleUpload(file: File) {
     if (!file) return;
+    setCanRetry(false);
     setUploading(true);
     try {
       // U7（upload 模块批A）：分类图标维持挂 product-image（1:1 约束一致，不开新口子），
       // 仅把端点调用收敛进场景注册表
+      // 批B（改动4）：uploadByScene 内嵌网络类自动重试 2 次 + 阶段回调
       const res = await uploadByScene<{ url: string; key: string; size: number }>(
         'category-icon',
         file,
+        'file',
+        {
+          onPhase: (phase: UploadPhase) => {
+            if (phase === 'done') setUploading(false);
+          },
+        },
       );
       setIconUrl(res.data.url);
       toast({ title: t('w.categories.iconUploadSuccess') });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : t('w.categories.iconUploadFailed');
+      const uploadErr = toUploadError(err);
+      const message = localizeUploadError(uploadErr, t, t.has.bind(t));
       toast({
         title: t('w.categories.iconUploadFailed'),
         description: message,
         variant: 'destructive',
       });
+      // 业务类（4xx 校验失败）重试无意义；网络类耗尽自动重试后开放手动兜底
+      if (uploadErr.kind === 'network') {
+        setCanRetry(true);
+        lastFileRef.current = file;
+      }
     } finally {
       setUploading(false);
     }
@@ -144,7 +163,24 @@ function CategoryIconUploader({
         placeholder={t('w.categories.iconUrlPlaceholder')}
       />
       {uploading && (
-        <p className="text-xs text-muted-foreground">{t('w.categories.uploading')}</p>
+        <>
+          <UploadProgressBar progress={phaseToProgress('uploading')} />
+          <p className="text-xs text-muted-foreground">{t('w.categories.uploading')}</p>
+        </>
+      )}
+      {/* 批B（改动4）：网络类失败手动重试兜底 */}
+      {canRetry && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => {
+            if (lastFileRef.current) void handleUpload(lastFileRef.current);
+          }}
+        >
+          {t('retry')}
+        </Button>
       )}
       <p className="text-xs text-muted-foreground">{t('w.categories.iconUploadHint')}</p>
     </div>

@@ -24,8 +24,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUpdateProduct, type Product } from '@/hooks/api/use-products';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
+import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 
 interface UploadResponse extends UploadResultData {}
+
+/** 批B（改动4）：单张上传明细——失败项保留文件可重试，不再单张失败中断整批 */
+interface ImageUploadItem {
+  id: string;
+  file: File;
+  phase: 'uploading' | 'done' | 'error';
+  /** 失败时本地化后的错误文案 */
+  error?: string;
+  /** 网络类失败可手动重试（业务类 4xx 校验失败重试无意义） */
+  retryable?: boolean;
+  /** 本地预览 object URL（失败项保留缩略图，done 后仍挂 URL 供展示） */
+  previewUrl: string;
+}
 
 /**
  * product 落库值 → 图片墙初始化形态（主图不在墙内并入首位）。
@@ -47,6 +62,8 @@ export function ImagesTab({ productId, product }: { productId: string; product: 
   const [images, setImages] = useState<string[]>([]);
   const [mainImage, setMainImage] = useState('');
   const [uploading, setUploading] = useState(false);
+  // 批B（改动4）：逐张上传明细（失败项可重试，不再单张失败中断整批）
+  const [pendingUploads, setPendingUploads] = useState<ImageUploadItem[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,31 +79,88 @@ export function ImagesTab({ productId, product }: { productId: string; product: 
   /** 有未保存变更（与初始化基准对比），提示用户别忘保存 */
   const dirty = JSON.stringify({ images, mainImage }) !== JSON.stringify(baseline);
 
+  /**
+   * 批B（改动4）：多图上传改为逐张明细——每张独立 phase/error/retryable，
+   * 失败不再中断整批；成功的图追加进墙，失败项留在「失败明细」区可重试。
+   */
+  const runOne = async (item: ImageUploadItem) => {
+    setPendingUploads((prev) =>
+      prev.map((p) => (p.id === item.id ? { ...p, phase: 'uploading', error: undefined } : p)),
+    );
+    try {
+      const res = await uploadByScene<UploadResponse>('product-image-wall', item.file, 'file', {
+        onPhase: (phase: UploadPhase) => {
+          if (phase === 'done') setPendingUploads((prev) => prev.map((p) => (p.id === item.id ? { ...p, phase: 'done' } : p)));
+        },
+      });
+      setImages((prev) => [...prev, res.data.url]);
+      // 墙原本为空 → 首张成功图自动成为主图（baseline 保证墙非空时 mainImage 必非空，
+      // 故 mainImage 为空即「原本无主图」；updater 纯函数，StrictMode 下并发成功仅首个空值生效）
+      setMainImage((current) => current || res.data.url);
+      // 成功 → 明细项移除（回收 object URL；成功图由墙的 <img> 直接展示远程 URL）
+      URL.revokeObjectURL(item.previewUrl);
+      setPendingUploads((prev) => prev.filter((p) => p.id !== item.id));
+    } catch (err) {
+      const uploadErr = toUploadError(err);
+      setPendingUploads((prev) =>
+        prev.map((p) =>
+          p.id === item.id
+            ? {
+                ...p,
+                phase: 'error',
+                error: localizeUploadError(uploadErr, t, t.has.bind(t)),
+                retryable: uploadErr.kind === 'network',
+              }
+            : p,
+        ),
+      );
+    }
+  };
+
   const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    const items: ImageUploadItem[] = files.map((file, i) => ({
+      id: `${Date.now()}-${i}-${file.name}`,
+      file,
+      phase: 'uploading',
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setPendingUploads((prev) => [...prev, ...items]);
     setUploading(true);
-    try {
-      const urls: string[] = [];
-      for (const file of files) {
-        const res = await uploadByScene<UploadResponse>('product-image-wall', file);
-        urls.push(res.data.url);
-      }
-      setImages((prev) => [...prev, ...urls]);
-      // 墙原本为空 → 第一张自动成为主图。判定放在 updater 外（审查 P3-3）：
-      // updater 须为纯函数，StrictMode double-invoke 下内嵌 setMainImage 会执行两次
-      if (images.length === 0 && !mainImage) setMainImage(urls[0] ?? '');
-    } catch (err) {
-      toast({
-        title: t('w.form.uploadFailed'),
-        description: err instanceof Error ? err.message : String(err),
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    // 并发逐张：一张失败不影响其余（改动4 核心——替换原 for-await「单张失败即中断批次」）
+    await Promise.allSettled(items.map((item) => runOne(item)));
+    setUploading(false);
   };
+
+  /** 批B（改动4）：重试失败项（网络类） */
+  const handleRetryItem = async (item: ImageUploadItem) => {
+    setUploading(true);
+    await runOne(item);
+    setUploading(false);
+  };
+
+  /** 批B（改动4）：移除失败明细项（放弃该张），回收 object URL */
+  const handleDismissItem = (id: string) => {
+    setPendingUploads((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  };
+
+  // 批B 修复 P3-5：组件卸载（切 tab）时回收仍挂着的失败项 object URL。
+  // ref 镜像避免 effect 依赖 pendingUploads 导致每次增删都重建 cleanup；
+  // StrictMode 双挂载下 cleanup 会 revoke 后重新 createObjectURL（handleFilesChange 里新建），
+  // 但首次挂载时 pendingUploadsRef 恒为空数组，无副作用。
+  const pendingUploadsRef = useRef<ImageUploadItem[]>([]);
+  pendingUploadsRef.current = pendingUploads;
+  useEffect(() => {
+    return () => {
+      for (const p of pendingUploadsRef.current) URL.revokeObjectURL(p.previewUrl);
+    };
+  }, []);
 
   /** 拖拽排序：把 from 位置的图移动到 to 位置 */
   const handleDrop = (to: number) => {
@@ -159,6 +233,49 @@ export function ImagesTab({ productId, product }: { productId: string; product: 
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">{t('w.products.imageWallHint')}</p>
+        {/* 批B（改动4）：失败/进行中明细区——失败项显示错误文案 + 重试/放弃，不进墙 */}
+        {pendingUploads.length > 0 && (
+          <div className="space-y-1 rounded border border-dashed p-2">
+            {pendingUploads.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 text-xs">
+                <img
+                  src={item.previewUrl}
+                  alt=""
+                  className="h-8 w-8 rounded border object-cover"
+                />
+                {item.phase === 'uploading' ? (
+                  <>
+                    <UploadProgressBar progress={phaseToProgress('uploading')} />
+                    <span className="text-muted-foreground">{t('w.form.uploading')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 truncate text-destructive">{item.error}</span>
+                    {item.retryable && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2"
+                        disabled={uploading}
+                        onClick={() => void handleRetryItem(item)}
+                      >
+                        {t('retry')}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2"
+                      onClick={() => handleDismissItem(item.id)}
+                    >
+                      {t('w.form.cancel')}
+                    </Button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {images.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             {t('w.products.imageWallEmpty')}

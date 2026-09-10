@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
@@ -52,6 +52,8 @@ import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { ApiError } from '@/lib/api';
 import { uploadByScene } from '@/lib/upload-scenes';
+import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import {
   useBanners,
   useCreateBanner,
@@ -89,25 +91,42 @@ function BannerImageUploader({
   const t = useTranslations('common');
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  // 批B（改动4）：网络类耗尽自动重试后的手动兜底（banner 场景重试同文件）
+  const [canRetry, setCanRetry] = useState(false);
+  const lastFileRef = useRef<File | null>(null);
 
   async function handleUpload(file: File) {
     if (!file) return;
+    setCanRetry(false);
     setUploading(true);
     try {
       // U7/U8/U9（upload 模块批A）：banner 图切独立端点 banner-image（宽幅区间带校验），
       // 不再借道 product-image（key 落 products/main-* 前缀的语义污染）
+      // 批B（改动4）：uploadByScene 内嵌网络类自动重试 2 次 + 阶段回调
       const res = await uploadByScene<{ url: string; key: string; size: number }>(
         'banner',
         file,
+        'file',
+        {
+          onPhase: (phase: UploadPhase) => {
+            if (phase === 'done') setUploading(false);
+          },
+        },
       );
       setImageUrl(res.data.url);
       toast({ title: t('w.banners.uploadSuccess') });
     } catch (err) {
+      const uploadErr = toUploadError(err);
       toast({
         title: t('w.banners.uploadFailed'),
-        description: err instanceof ApiError ? err.message : '',
+        description: localizeUploadError(uploadErr, t, t.has.bind(t)),
         variant: 'destructive',
       });
+      // 业务类（4xx 校验失败）重试无意义；网络类耗尽自动重试后开放手动兜底
+      if (uploadErr.kind === 'network') {
+        setCanRetry(true);
+        lastFileRef.current = file;
+      }
     } finally {
       setUploading(false);
     }
@@ -132,7 +151,26 @@ function BannerImageUploader({
         onChange={(e) => setImageUrl(e.target.value)}
         placeholder={t('w.banners.imageUrlPlaceholder')}
       />
-      {uploading && <p className="text-xs text-muted-foreground">{t('w.banners.uploading')}</p>}
+      {uploading && (
+        <>
+          <UploadProgressBar progress={phaseToProgress('uploading')} />
+          <p className="text-xs text-muted-foreground">{t('w.banners.uploading')}</p>
+        </>
+      )}
+      {/* 批B（改动4）：网络类失败手动重试兜底 */}
+      {canRetry && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => {
+            if (lastFileRef.current) void handleUpload(lastFileRef.current);
+          }}
+        >
+          {t('retry')}
+        </Button>
+      )}
       <p className="text-xs text-muted-foreground">{t('w.banners.imageHint')}</p>
     </div>
   );

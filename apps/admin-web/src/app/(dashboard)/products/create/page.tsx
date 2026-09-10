@@ -36,6 +36,8 @@ import {
 import { useCreateProduct } from '@/hooks/api/use-products';
 import { CategorySelect } from '@/components/common/category-select';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
+import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import type { I18nText } from '@/hooks/api/use-products';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
@@ -55,23 +57,44 @@ export default function CreateProductPage() {
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  // 批B（改动4）：canRetry=网络类耗尽自动重试后的手动兜底入口；重试=重新提交同一文件
+  const [canRetry, setCanRetry] = useState(false);
+  const lastFileRef = useRef<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (file: File) => {
+    setUploadError('');
+    setCanRetry(false);
+    setUploading(true);
+    try {
+      const res = await uploadByScene<UploadResponse>('product-main-create', file, 'file', {
+        onPhase: (phase: UploadPhase) => {
+          if (phase === 'done') setUploading(false);
+        },
+      });
+      setMainImage(res.data.url);
+    } catch (err) {
+      const uploadErr = toUploadError(err);
+      setUploadError(localizeUploadError(uploadErr, t, t.has.bind(t)));
+      // 业务类（4xx 校验失败）重试无意义；网络类耗尽自动重试后开放手动兜底
+      setCanRetry(uploadErr.kind === 'network');
+      lastFileRef.current = file;
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadError('');
-    setUploading(true);
-    try {
-      const res = await uploadByScene<UploadResponse>('product-main-create', file);
-      setMainImage(res.data.url);
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setUploading(false);
-      // 清空 input value 让同一文件能再次触发 change
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    // 清空 input value 让同一文件能再次触发 change
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    await handleUpload(file);
+  };
+
+  /** 批B（改动4）：手动重试——网络类耗尽自动重试后的兜底入口，重发同一文件 */
+  const handleRetry = async () => {
+    if (lastFileRef.current) await handleUpload(lastFileRef.current);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,12 +202,26 @@ export default function CreateProductPage() {
             </div>
             <p className="text-xs text-muted-foreground">{t('w.form.mainImageHint')}</p>
             {uploading && (
-              <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+              <>
+                <UploadProgressBar progress={phaseToProgress('uploading')} />
+                <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+              </>
             )}
             {uploadError && (
               <p className="text-xs text-destructive">
                 {t('w.form.uploadFailed')}: {uploadError}
               </p>
+            )}
+            {canRetry && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => void handleRetry()}
+              >
+                {t('retry')}
+              </Button>
             )}
             {mainImage && (
               <Input

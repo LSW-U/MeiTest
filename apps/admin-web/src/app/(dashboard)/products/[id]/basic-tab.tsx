@@ -18,6 +18,8 @@ import {
   type Product,
 } from '@/hooks/api/use-products';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
+import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import { CategorySelect } from '@/components/common/category-select';
 
 type Locale = 'en' | 'zh' | 'id' | 'pt';
@@ -35,6 +37,9 @@ export function BasicTab({ productId, product }: { productId: string; product: P
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  // 批B（改动4）：手动重试兜底状态
+  const [canRetry, setCanRetry] = useState(false);
+  const lastFileRef = useRef<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,17 +52,35 @@ export function BasicTab({ productId, product }: { productId: string; product: P
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    await handleUpload(file);
+  };
+
+  // 批B（改动4）：同构 create 页——错误码本地化 + 网络类耗尽自动重试后手动兜底
+  const handleUpload = async (file: File) => {
     setUploadError('');
+    setCanRetry(false);
     setUploading(true);
     try {
-      const res = await uploadByScene<UploadResponse>('product-main-edit', file);
+      const res = await uploadByScene<UploadResponse>('product-main-edit', file, 'file', {
+        onPhase: (phase: UploadPhase) => {
+          if (phase === 'done') setUploading(false);
+        },
+      });
       setMainImage(res.data.url);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : String(err));
+      const uploadErr = toUploadError(err);
+      setUploadError(localizeUploadError(uploadErr, t, t.has.bind(t)));
+      setCanRetry(uploadErr.kind === 'network');
+      lastFileRef.current = file;
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  /** 手动重试兜底：重发同一文件（网络类耗尽自动重试后开放） */
+  const handleRetry = async () => {
+    if (lastFileRef.current) await handleUpload(lastFileRef.current);
   };
 
   const handleSaveBasic = async () => {
@@ -122,12 +145,26 @@ export function BasicTab({ productId, product }: { productId: string; product: P
           </div>
           <p className="text-xs text-muted-foreground">{t('w.form.mainImageHint')}</p>
           {uploading && (
-            <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+            <>
+              <UploadProgressBar progress={phaseToProgress('uploading')} />
+              <p className="text-xs text-muted-foreground">{t('w.form.uploading')}</p>
+            </>
           )}
           {uploadError && (
             <p className="text-xs text-destructive">
               {t('w.form.uploadFailed')}: {uploadError}
             </p>
+          )}
+          {canRetry && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={uploading}
+              onClick={() => void handleRetry()}
+            >
+              {t('retry')}
+            </Button>
           )}
           {mainImage && (
             <Input

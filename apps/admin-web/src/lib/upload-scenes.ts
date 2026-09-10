@@ -15,8 +15,13 @@
  *
  * 前端不做尺寸/比例预校验（A4 对照表成稿后批B 落地统一 util），约束由后端
  * 逐端点强校验；此处仅锚定端点映射，防止再出现借道端点的语义污染。
+ *
+ * 批B（改动4）：uploadByScene 内嵌 runUploadWithRetry——网络类错误（fetch throw /
+ * HTTP 5xx）自动重试 2 次、指数退避；4xx 校验失败直接抛 AdminUploadError（不重试）。
+ * 调用方可传 onPhase 接收阶段回调渲染内联进度（0 → 60 → 100 阶段拟真）。
  */
 import { apiUploadFile, type ApiSuccess } from '@/lib/api';
+import { runUploadWithRetry, type UploadPhase, type UploadRetryOptions } from '@/lib/upload-errors';
 
 /** 上传响应 data（所有图片上传端点共用同构响应） */
 export interface UploadResultData {
@@ -42,16 +47,26 @@ export const UPLOAD_SCENES = {
 export type UploadScene = keyof typeof UPLOAD_SCENES;
 
 /**
- * 按场景上传文件。
+ * 按场景上传文件（批B 起：内嵌网络类自动重试 + 阶段回调，5 调用点统一生效）。
  *
  * @param scene  场景名（见 UPLOAD_SCENES 注册表）
  * @param file   用户选择的文件
  * @param fieldName multipart field name（默认 'file'，CSV 导入场景由调用方传 'csv' 等）
+ * @param opts 批B 改动4：onPhase 阶段回调（idle→uploading→done/error）+ 重试参数覆盖。
+ *             默认 network 类自动重试 2 次（1s→2s 退避），4xx 校验失败不重试。
+ * @throws AdminUploadError（upload-errors.ts，kind/code 供调用方判定重试与本地化）
  */
 export async function uploadByScene<T = UploadResultData>(
   scene: UploadScene,
   file: File,
   fieldName = 'file',
+  opts: Pick<UploadRetryOptions, 'retries' | 'baseDelayMs' | 'sleepFn' | 'onPhase'> = {},
 ): Promise<ApiSuccess<T>> {
-  return apiUploadFile<ApiSuccess<T>>(UPLOAD_SCENES[scene], file, fieldName);
+  return runUploadWithRetry(
+    () => apiUploadFile<ApiSuccess<T>>(UPLOAD_SCENES[scene], file, fieldName),
+    opts,
+  );
 }
+
+/** 场景上传的进度阶段流（改动4 调用方接 onPhase 渲染内联进度） */
+export type { UploadPhase };
