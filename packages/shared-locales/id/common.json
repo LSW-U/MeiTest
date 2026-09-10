@@ -1210,7 +1210,22 @@
       "exportReason": "Alasan",
       "exportRefundCount": "Jumlah Refund",
       "exportRefundAmountUsdCents": "Nominal Refund (sen USD)",
-      "exportRefundTotal": "Total"
+      "exportRefundTotal": "Total",
+      "customersTab": "Pelanggan",
+      "newCustomers": "Pelanggan Baru",
+      "newCustomersHint": "Pengguna dengan pesanan pertama (sepanjang waktu) dalam rentang",
+      "repeatRate": "Rasio Pembelian Ulang",
+      "repeatRateDenominator": "Pembelian ulang = ≥2 pesanan dalam rentang; penyebut: {count} pengguna memesan",
+      "avgOrderValue": "Nilai Rata-rata Pesanan",
+      "aovDenominator": "AOV = GMV rentang ÷ {count} pesanan (bukan per pengguna)",
+      "exportMetric": "Metrik",
+      "exportValue": "Nilai",
+      "exportNewCustomers": "Pelanggan Baru",
+      "exportRepeatCustomers": "Pelanggan Pembelian Ulang",
+      "exportRepeatRate": "Rasio Pembelian Ulang",
+      "exportAvgOrderValueUsdCents": "Nilai Rata-rata Pesanan (sen USD)",
+      "exportGmvOrderCount": "Jumlah Pesanan GMV",
+      "exportOrderUserCount": "Jumlah Pengguna Memesan"
     },
     "settings": {
       "title": "Pengaturan",

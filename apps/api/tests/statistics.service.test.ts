@@ -405,3 +405,126 @@ describe('StatisticsService.getRefunds', () => {
     ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-002' } });
   });
 });
+
+/**
+ * 客户分析（批E，2026-09-10 / 方案v2 §3.2 customers 行 · R4 MVP 三指标）
+ *
+ * $queryRaw 依次被调：第 1 次 = groupBy user_id 主聚合（订单数/用户数/GMV/新客），
+ * 第 2 次 = 复购用户数（HAVING COUNT(*) >= 2）
+ * 新客判定 = 全局首单（first_order 子查询 min(created_at)）落在区间内——SQL 判定，
+ * 单测验证 SQL 文本含 first_order 全局首单子查询 + 服务层映射/率计算/分母 0 语义
+ */
+describe('StatisticsService.getCustomers', () => {
+  let service: StatisticsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMock.$queryRaw.mockReset();
+    dbMock.$queryRaw.mockResolvedValue([]);
+    service = new StatisticsService();
+  });
+
+  /** 造主聚合单行 mock（orders/orders users/gmv/new） */
+  function mainRow(orderCnt: number, userCnt: number, gmv: number, newUsers: number) {
+    return {
+      order_cnt: BigInt(orderCnt),
+      user_cnt: BigInt(userCnt),
+      gmv: BigInt(gmv),
+      new_users: BigInt(newUsers),
+    };
+  }
+
+  it('新客判定走全局首单子查询（SQL 含 first_order min(created_at)，非"区间内有单"）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(10, 4, 50000, 2)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(1) }]);
+
+    await service.getCustomers({ range: 'week' });
+
+    // 第 1 次调用（主聚合）：递归收集真实 Prisma sqltag strings/values，
+    // 断言全局首单子查询（first_order + MIN(created_at)）存在 + GMV 状态集出现
+    const seen: string[] = [];
+    const walk = (v: unknown): void => {
+      if (typeof v === 'string') { seen.push(v); return; }
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') {
+        const o = v as Record<string, unknown>;
+        if (Array.isArray(o.strings)) o.strings.forEach(walk);
+        if (Array.isArray(o.values)) o.values.forEach(walk);
+        if (typeof o.sql === 'string') seen.push(o.sql);
+        if (Array.isArray(o.vals)) o.vals.forEach(walk);
+        if (Array.isArray(o.parts)) o.parts.forEach(walk);
+      }
+    };
+    walk(dbMock.$queryRaw.mock.calls[0]);
+    const joined = seen.join(' ');
+    expect(joined).toContain('first_order');
+    expect(joined).toContain('MIN(created_at)');
+    // 分母口径与批A/D 同源：GMV 状态集出现在 WHERE
+    expect(joined).toContain('status');
+  });
+
+  it('新客/复购/基数映射：BigInt → number 全链', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(10, 4, 50000, 2)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(1) }]);
+
+    const res = await service.getCustomers({ range: 'week' });
+    expect(res.newCustomers).toBe(2);
+    expect(res.repeatCustomers).toBe(1);
+    expect(res.gmvOrderCount).toBe(10);
+    expect(res.orderUserCount).toBe(4);
+  });
+
+  it('repeatRate = repeatCustomers / orderUserCount（区间下单用户数，非订单数）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(10, 4, 50000, 2)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(1) }]);
+
+    const res = await service.getCustomers({ range: 'week' });
+    expect(res.repeatRate).toBe(1 / 4);
+  });
+
+  it('avgOrderValue = GMV / 订单数（AOV）——不是 GMV/用户数（防写错成 ARPU，v2 🔧）', async () => {
+    // 10 单 4 用户 GMV 50000 → AOV = 5000（若错写成 ARPU = 12500）
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(10, 4, 50000, 2)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(1) }]);
+
+    const res = await service.getCustomers({ range: 'month' });
+    expect(res.avgOrderValue).toBe(5000);
+    expect(res.avgOrderValue).not.toBe(12500);
+  });
+
+  it('复购 = 区间 ≥2 单（SQL HAVING COUNT(*) >= 2 判定，1 单不计入）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(3, 3, 9000, 3)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+
+    const res = await service.getCustomers({ range: 'today' });
+    expect(res.repeatCustomers).toBe(0);
+    expect(res.repeatRate).toBe(0); // 0/3
+  });
+
+  it('零分母 nullable：无下单用户 → repeatRate=null；无订单 → avgOrderValue=null（对齐批D 范式）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(0, 0, 0, 0)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+
+    const res = await service.getCustomers({ range: 'today' });
+    expect(res.orderUserCount).toBe(0);
+    expect(res.repeatRate).toBeNull();
+    expect(res.gmvOrderCount).toBe(0);
+    expect(res.avgOrderValue).toBeNull();
+  });
+
+  it('时间边界：自定义 from/to 含头尾（Dili 切日 → UTC 前日 15:00）+ E-STATISTICS 透传', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([mainRow(0, 0, 0, 0)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+
+    const res = await service.getCustomers({ from: '2026-06-23', to: '2026-06-23' });
+    expect(res.from).toBe('2026-06-22T15:00:00.000Z');
+    expect(res.to).toBe('2026-06-23T15:00:00.000Z');
+
+    await expect(
+      service.getCustomers({ from: '2026-06-23', to: '2026-06-20' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-001' } });
+    await expect(
+      service.getCustomers({ from: '2025-01-01', to: '2026-06-23' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-002' } });
+  });
+});

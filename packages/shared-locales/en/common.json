@@ -1214,7 +1214,22 @@
       "exportReason": "Reason",
       "exportRefundCount": "Refunded Orders",
       "exportRefundAmountUsdCents": "Refund Amount (USD cents)",
-      "exportRefundTotal": "Total"
+      "exportRefundTotal": "Total",
+      "customersTab": "Customers",
+      "newCustomers": "New Customers",
+      "newCustomersHint": "Users whose first-ever order falls in range",
+      "repeatRate": "Repeat Rate",
+      "repeatRateDenominator": "Repeat = ≥2 orders in range; denominator: {count} ordering users",
+      "avgOrderValue": "Avg Order Value",
+      "aovDenominator": "AOV = range GMV / {count} orders (not per-user)",
+      "exportMetric": "Metric",
+      "exportValue": "Value",
+      "exportNewCustomers": "New Customers",
+      "exportRepeatCustomers": "Repeat Customers",
+      "exportRepeatRate": "Repeat Rate",
+      "exportAvgOrderValueUsdCents": "Avg Order Value (USD cents)",
+      "exportGmvOrderCount": "GMV Orders",
+      "exportOrderUserCount": "Ordering Users"
     },
     "settings": {
       "title": "Settings",

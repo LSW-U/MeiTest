@@ -1210,7 +1210,22 @@
       "exportReason": "Futin",
       "exportRefundCount": "Pedidu Reembolsu",
       "exportRefundAmountUsdCents": "Monte Reembolsu (sen USD)",
-      "exportRefundTotal": "Total"
+      "exportRefundTotal": "Total",
+      "customersTab": "Kliente",
+      "newCustomers": "Kliente Foun",
+      "newCustomersHint": "Uzaariu ho pedidu dahuluk (global) iha periódu",
+      "repeatRate": "Taxa Sosa Fali",
+      "repeatRateDenominator": "Sosa fali = ≥2 pedidu iha periódu; denominadór: {count} uzaariu sosa",
+      "avgOrderValue": "Valor Médio Pedidu",
+      "aovDenominator": "AOV = GMV periódu ÷ {count} pedidu (la'e per uzaariu)",
+      "exportMetric": "Métrika",
+      "exportValue": "Valor",
+      "exportNewCustomers": "Kliente Foun",
+      "exportRepeatCustomers": "Kliente Sosa Fali",
+      "exportRepeatRate": "Taxa Sosa Fali",
+      "exportAvgOrderValueUsdCents": "Valor Médio Pedidu (sen USD)",
+      "exportGmvOrderCount": "Pedidu GMV",
+      "exportOrderUserCount": "Uzaariu Sosa"
     },
     "settings": {
       "title": "Konfigurasaun",

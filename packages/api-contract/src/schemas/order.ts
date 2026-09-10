@@ -128,6 +128,8 @@ export const Order = z.object({
       discountAmount: z.number().int(),
     })
     .nullable(),
+  /** 预约单（保证金批A T5-c 2026-09-10）：打烊时段下单 = 该仓下一次开门时间；即时单 null */
+  scheduledFor: IsoTimestamp.nullable(),
 });
 
 /** Admin 编辑订单请求（W7-ext-C）：MVP 仅允许改 remark */

@@ -343,6 +343,8 @@ export const WarehouseLoadItem = z.object({
 /** 资格标签（✅可接 / ⛔需保证金 $Z） */
 export const DispatchEligibilityLabel = z.object({
   eligible: z.boolean(),
+  /** T1-c（2026-09-10）：冗余直读标记（=eligible），前端免二次判断 */
+  canAccept: z.boolean(),
   depositAmount: z.number().int().nonnegative(),
   maxOrderAmount: z.number().int().positive().nullable(),
   /** 不合格时：接到该单所需最低保证金（分） */

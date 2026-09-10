@@ -20,6 +20,7 @@ import {
   StatisticsTopProductsQuery,
   StatisticsExportQuery,
   StatisticsRefundsQuery,
+  StatisticsCustomersQuery,
 } from '@meimart/api-contract';
 
 @Controller('api/v1/admin/statistics')
@@ -133,6 +134,41 @@ export class StatisticsController {
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="refunds-${new Date().toISOString().slice(0, 10)}.csv"`,
+    );
+    return csv;
+  }
+
+  /** 客户分析（批E R4：新客=全局首单在区间；复购=区间≥2单；AOV=GMV/订单数 非 ARPU） */
+  @Get('customers')
+  async getCustomers(
+    @Query(new ZodValidationPipe(StatisticsCustomersQuery))
+    query: {
+      range?: 'today' | 'week' | 'month';
+      from?: string;
+      to?: string;
+    },
+  ) {
+    const data = await this.statistics.getCustomers(query);
+    return { success: true as const, data };
+  }
+
+  /** 客户分析导出 CSV（批E：指标汇总型键值两列式，指标名按 lang；lang 显式传） */
+  @Get('customers/export')
+  async exportCustomers(
+    @Query(new ZodValidationPipe(StatisticsExportQuery))
+    query: {
+      range?: 'today' | 'week' | 'month';
+      from?: string;
+      to?: string;
+      lang: 'en' | 'id' | 'zh' | 'pt' | 'tet';
+    },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const csv = await this.csv.exportCustomersCsv(query);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="customers-${new Date().toISOString().slice(0, 10)}.csv"`,
     );
     return csv;
   }

@@ -1210,7 +1210,22 @@
       "exportReason": "退款原因",
       "exportRefundCount": "退款单量",
       "exportRefundAmountUsdCents": "退款金额（美分）",
-      "exportRefundTotal": "总计"
+      "exportRefundTotal": "总计",
+      "customersTab": "客户分析",
+      "newCustomers": "新客数",
+      "newCustomersHint": "全局首单落在该区间内的用户数",
+      "repeatRate": "复购率",
+      "repeatRateDenominator": "复购 = 区间内 ≥2 单；分母：区间内下单用户 {count} 人",
+      "avgOrderValue": "客单价",
+      "aovDenominator": "客单价 = 区间 GMV ÷ {count} 单（非按用户均摊）",
+      "exportMetric": "指标",
+      "exportValue": "值",
+      "exportNewCustomers": "新客数",
+      "exportRepeatCustomers": "复购用户数",
+      "exportRepeatRate": "复购率",
+      "exportAvgOrderValueUsdCents": "客单价（美分）",
+      "exportGmvOrderCount": "GMV 订单数",
+      "exportOrderUserCount": "下单用户数"
     },
     "settings": {
       "title": "系统设置",

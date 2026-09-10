@@ -35,6 +35,16 @@ vi.mock('../src/modules/statistics/statistics.service', () => ({
       gmvOrderCount: 0,
       reasonBreakdown: [],
     });
+    getCustomersForExport = vi.fn().mockResolvedValue({
+      from: '2026-06-22T15:00:00.000Z',
+      to: '2026-06-23T15:00:00.000Z',
+      newCustomers: 0,
+      repeatCustomers: 0,
+      repeatRate: null,
+      avgOrderValue: null,
+      gmvOrderCount: 0,
+      orderUserCount: 0,
+    });
   },
 }));
 
@@ -272,5 +282,75 @@ describe('StatisticsCsvService.exportRefundsCsv', () => {
     const lines = csv.split('\n');
     expect(lines[1]).toBe('OTHER,5,2300');
     expect(lines[2]).toBe('Total,5,2300');
+  });
+});
+
+describe('StatisticsCsvService.exportCustomersCsv', () => {
+  let service: StatisticsCsvService;
+  let source: { getCustomersForExport: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new StatisticsCsvService(new StatisticsService());
+    source = (service as unknown as { statistics: { getCustomersForExport: ReturnType<typeof vi.fn> } })
+      .statistics;
+  });
+
+  /** 造一份客户分析 mock 数据 */
+  function mockCustomers(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      from: '2026-06-22T15:00:00.000Z',
+      to: '2026-06-23T15:00:00.000Z',
+      newCustomers: 2,
+      repeatCustomers: 1,
+      repeatRate: 0.25,
+      avgOrderValue: 5000,
+      gmvOrderCount: 10,
+      orderUserCount: 4,
+      ...overrides,
+    };
+  }
+
+  it('键值两列式：六指标行 + 指标名走 shared-locales（en）', async () => {
+    source.getCustomersForExport.mockResolvedValue(mockCustomers());
+    const csv = await service.exportCustomersCsv({ range: 'week', lang: 'en' });
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('Metric,Value');
+    expect(lines).toHaveLength(7); // header + 6 指标行
+    expect(csv).toContain('New Customers,2');
+    expect(csv).toContain('Repeat Customers,1');
+    expect(csv).toContain('Repeat Rate,25.0%');
+    expect(csv).toContain('Avg Order Value (USD cents),5000');
+    expect(csv).toContain('GMV Orders,10');
+    expect(csv).toContain('Ordering Users,4');
+  });
+
+  it('repeatRate 百分比一位小数 / avgOrderValue 取整为分 / 列名 zh', async () => {
+    source.getCustomersForExport.mockResolvedValue(
+      mockCustomers({ repeatRate: 1 / 3, avgOrderValue: 5000.4 }),
+    );
+    const csv = await service.exportCustomersCsv({ range: 'week', lang: 'zh' });
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('指标,值');
+    expect(csv).toContain('复购率,33.3%');
+    expect(csv).toContain('客单价（美分）,5000'); // Math.round，不带小数
+  });
+
+  it('零分母 nullable → 空值单元格（repeatRate/avgOrderValue 为 null 时留空）', async () => {
+    source.getCustomersForExport.mockResolvedValue(
+      mockCustomers({ repeatRate: null, avgOrderValue: null }),
+    );
+    const csv = await service.exportCustomersCsv({ range: 'today', lang: 'en' });
+    const lines = csv.split('\n');
+    expect(lines[3]).toBe('Repeat Rate,');
+    expect(lines[4]).toBe('Avg Order Value (USD cents),');
+  });
+
+  it('值列公式注入防护（对齐前三导出同法）+ 未知语兜底 DEFAULT_LOCALE（en）列头与指标名', async () => {
+    // 值来自服务层 number，注入防护主要覆盖指标名路径；lang xx 兜底 en bundle 指标名
+    source.getCustomersForExport.mockResolvedValue(mockCustomers({ newCustomers: 12 }));
+    const csv = await service.exportCustomersCsv({ range: 'week', lang: 'xx' as never });
+    expect(csv.split('\n')[0]).toBe('Metric,Value');
+    expect(csv.split('\n')[1]).toBe('New Customers,12');
   });
 });

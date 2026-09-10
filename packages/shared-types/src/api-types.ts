@@ -4845,6 +4845,8 @@ export interface paths {
                                 code: string;
                                 discountAmount: number;
                             } | null;
+                            /** Format: date-time */
+                            scheduledFor: string | null;
                         }[];
                     };
                 };
@@ -4951,6 +4953,8 @@ export interface paths {
                                 code: string;
                                 discountAmount: number;
                             } | null;
+                            /** Format: date-time */
+                            scheduledFor: string | null;
                         };
                     };
                 };
@@ -5825,6 +5829,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/statistics/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 客户分析（R4 MVP 三指标，口径见 方案v2 §3.2 customers 行）：newCustomers=全局首单（该用户全表 min(createdAt)）落在区间内的用户数；repeatCustomers=区间内下单 ≥2 单的用户数；repeatRate=repeatCustomers/orderUserCount（分母 0 → null）；avgOrderValue（AOV）=区间 GMV/区间订单数（非 ARPU，分母 0 → null）；基数 gmvOrderCount/orderUserCount 回显。数据源 Order（状态 ∈ GMV_ORDER_STATUSES，createdAt ∈ range）。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 客户分析三指标（avgOrderValue 金额单位分） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                from: string;
+                                to: string;
+                                newCustomers: number;
+                                repeatCustomers: number;
+                                repeatRate: number | null;
+                                avgOrderValue: number | null;
+                                gmvOrderCount: number;
+                                orderUserCount: number;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/statistics/customers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 客户分析导出 CSV（指标汇总型，键值两列式：指标名按 lang 列名 + 值；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 流（text/csv，attachment） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/support/config": {
         parameters: {
             query?: never;
@@ -6120,6 +6255,8 @@ export interface paths {
                                 code: string;
                                 discountAmount: number;
                             } | null;
+                            /** Format: date-time */
+                            scheduledFor: string | null;
                         };
                     };
                 };
@@ -6625,6 +6762,9 @@ export interface paths {
                                 id: string;
                                 code: string;
                                 deliveryFee: number;
+                                acceptingReservation: boolean;
+                                /** Format: date-time */
+                                nextOpenAt: string | null;
                             } | null;
                             itemsSubtotal: number;
                             deliveryFee: number;
@@ -9931,6 +10071,8 @@ export interface paths {
                                         code: string;
                                         discountAmount: number;
                                     } | null;
+                                    /** Format: date-time */
+                                    scheduledFor: string | null;
                                 }[];
                                 /** Format: uuid */
                                 nextCursor: string | null;
@@ -10082,6 +10224,8 @@ export interface paths {
                                     code: string;
                                     discountAmount: number;
                                 } | null;
+                                /** Format: date-time */
+                                scheduledFor: string | null;
                             };
                         };
                     };
@@ -10206,6 +10350,8 @@ export interface paths {
                                     code: string;
                                     discountAmount: number;
                                 } | null;
+                                /** Format: date-time */
+                                scheduledFor: string | null;
                             };
                         };
                     };
@@ -12895,7 +13041,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description E-DEPOSIT-005 非本人申请 */
+                /** @description E-DEPOSIT-005 非本人申请 | E-DEPOSIT-008 生产环境禁用 pay-mock（批A T1-a，2026-09-10：NODE_ENV=production 下 403） */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -14195,6 +14341,7 @@ export interface paths {
                                     distanceKm: number | null;
                                     eligibility: {
                                         eligible: boolean;
+                                        canAccept: boolean;
                                         depositAmount: number;
                                         maxOrderAmount: number | null;
                                         requiredDeposit?: number;
@@ -15886,6 +16033,173 @@ export interface paths {
                 };
                 /** @description E-COMMON-001 校验失败（address 长度 2-500），details 含 zod 具体 message */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/geo/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 地址输入多候选（A7）。Nominatim search limit=5，viewbox 限定东帝汶（bounded）。失败/无结果返回空 items（不抛错）。与 geocode 共享 rate limit（1/s + 10/min/IP → E-COMMON-004）。 */
+        get: {
+            parameters: {
+                query: {
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 候选列表（≤5 条） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                lat: number;
+                                lng: number;
+                                label: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败（q 长度 2-500） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-004 超频（1/s + 10/min/IP） */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/geo/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 坐标附近带名称地点（A7）。Overpass 2km 内 node["name"]，Haversine 按距离升序前 5。失败/无结果返回空 items（不抛错）。与 geocode 共享 rate limit。 */
+        get: {
+            parameters: {
+                query: {
+                    lat: number;
+                    lng: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 附近地点列表（≤5 条） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                id: string;
+                                name: string;
+                                distanceM: number;
+                                lat: number;
+                                lng: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败（lat/lng 范围） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-004 超频（1/s + 10/min/IP） */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -21376,6 +21690,8 @@ export interface components {
                 code: string;
                 discountAmount: number;
             } | null;
+            /** Format: date-time */
+            scheduledFor: string | null;
         };
         OrderItem: {
             /** Format: uuid */
@@ -21527,6 +21843,9 @@ export interface components {
                 id: string;
                 code: string;
                 deliveryFee: number;
+                acceptingReservation: boolean;
+                /** Format: date-time */
+                nextOpenAt: string | null;
             } | null;
             itemsSubtotal: number;
             deliveryFee: number;
@@ -22402,6 +22721,37 @@ export interface components {
             };
             message?: string;
         };
+        StatisticsCustomersQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+        };
+        StatisticsCustomersData: {
+            from: string;
+            to: string;
+            newCustomers: number;
+            repeatCustomers: number;
+            repeatRate: number | null;
+            avgOrderValue: number | null;
+            gmvOrderCount: number;
+            orderUserCount: number;
+        };
+        StatisticsCustomersResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                from: string;
+                to: string;
+                newCustomers: number;
+                repeatCustomers: number;
+                repeatRate: number | null;
+                avgOrderValue: number | null;
+                gmvOrderCount: number;
+                orderUserCount: number;
+            };
+            message?: string;
+        };
         AuditLogListItem: {
             /** Format: uuid */
             id: string;
@@ -22685,6 +23035,29 @@ export interface components {
             /** @enum {string} */
             source: "nominatim" | "fallback";
             formattedAddress: string | null;
+        };
+        GeoSuggestRequest: {
+            q: string;
+        };
+        GeoSuggestResponseData: {
+            items: {
+                lat: number;
+                lng: number;
+                label: string;
+            }[];
+        };
+        GeoNearbyRequest: {
+            lat: number;
+            lng: number;
+        };
+        GeoNearbyResponseData: {
+            items: {
+                id: string;
+                name: string;
+                distanceM: number;
+                lat: number;
+                lng: number;
+            }[];
         };
         UploadResponseData: {
             /** Format: uri */
@@ -23020,6 +23393,7 @@ export interface components {
         };
         DispatchEligibilityLabel: {
             eligible: boolean;
+            canAccept: boolean;
             depositAmount: number;
             maxOrderAmount: number | null;
             requiredDeposit?: number;
@@ -23039,6 +23413,7 @@ export interface components {
             distanceKm: number | null;
             eligibility: {
                 eligible: boolean;
+                canAccept: boolean;
                 depositAmount: number;
                 maxOrderAmount: number | null;
                 requiredDeposit?: number;
@@ -23065,6 +23440,7 @@ export interface components {
                 distanceKm: number | null;
                 eligibility: {
                     eligible: boolean;
+                    canAccept: boolean;
                     depositAmount: number;
                     maxOrderAmount: number | null;
                     requiredDeposit?: number;

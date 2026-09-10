@@ -1210,7 +1210,22 @@
       "exportReason": "Motivo",
       "exportRefundCount": "Pedidos Reembolsados",
       "exportRefundAmountUsdCents": "Valor Reembolsado (centavos USD)",
-      "exportRefundTotal": "Total"
+      "exportRefundTotal": "Total",
+      "customersTab": "Clientes",
+      "newCustomers": "Novos Clientes",
+      "newCustomersHint": "Utilizadores cujo primeiro pedido (global) cai no período",
+      "repeatRate": "Taxa de Recompra",
+      "repeatRateDenominator": "Recompra = ≥2 pedidos no período; denominador: {count} utilizadores que encomendaram",
+      "avgOrderValue": "Valor Médio por Pedido",
+      "aovDenominator": "AOV = GMV do período ÷ {count} pedidos (não por utilizador)",
+      "exportMetric": "Métrica",
+      "exportValue": "Valor",
+      "exportNewCustomers": "Novos Clientes",
+      "exportRepeatCustomers": "Clientes Recorrentes",
+      "exportRepeatRate": "Taxa de Recompra",
+      "exportAvgOrderValueUsdCents": "Valor Médio por Pedido (centavos USD)",
+      "exportGmvOrderCount": "Pedidos GMV",
+      "exportOrderUserCount": "Utilizadores que Encomendaram"
     },
     "settings": {
       "title": "Configurações",

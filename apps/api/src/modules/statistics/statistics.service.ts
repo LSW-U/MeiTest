@@ -20,6 +20,7 @@ import { buildRange } from '../../shared/statistics/range';
 import { ABNORMAL_ORDER_STATUSES, GMV_ORDER_STATUSES } from '../../shared/statistics/metrics';
 import { pickI18nField, type SupportedLanguage } from '@meimart/shared-utils';
 import type {
+  StatisticsCustomersDataType,
   StatisticsRefundReasonItemType,
   StatisticsRidersResponseItemType,
   StatisticsTopProductItemType,
@@ -43,6 +44,13 @@ export interface RidersParams {
 
 /** 退款统计聚合入参（controller 已过 Zod 校验） */
 export interface RefundsParams {
+  range?: 'today' | 'week' | 'month';
+  from?: string;
+  to?: string;
+}
+
+/** 客户分析聚合入参（controller 已过 Zod 校验） */
+export interface CustomersParams {
   range?: 'today' | 'week' | 'month';
   from?: string;
   to?: string;
@@ -339,5 +347,89 @@ export class StatisticsService {
    */
   async getRefundsForExport(params: RefundsParams) {
     return this.getRefunds(params);
+  }
+
+  /**
+   * 客户分析（批E，2026-09-10 / 方案v2 §3.2 customers 行 · R4 MVP 三指标）
+   *
+   * 口径（单一事实源 = 数据口径.md + 方案v2 🔧 拍板）：
+   *   - 数据源：Order（状态 ∈ GMV_ORDER_STATUSES，createdAt ∈ range），groupBy user_id
+   *   - newCustomers：新客 = 该用户**全局**首单（全表 min(created_at)）落在区间内——
+   *     不是"区间内有单"；HAVING MIN(o.created_at) = 该用户全局首单 ≥ 区间起点实现
+   *   - repeatCustomers：复购 = 区间内下单 ≥2 单的用户数
+   *   - repeatRate = repeatCustomers / orderUserCount（区间内下单用户数）；分母 0 → null
+   *   - avgOrderValue（AOV，v2 🔧 拍板）= 区间 GMV / 区间订单数——**非 ARPU**
+   *     （弃用"GMV/去重用户数"）；分母 0 → null；金额单位分
+   *   - 基数 gmvOrderCount / orderUserCount 回显（分母口径对齐批D 范式）
+   *
+   * 性能：raw SQL 两次聚合（orders [status, created_at] 过滤 + user_id 分组）
+   */
+  async getCustomers(params: CustomersParams): Promise<StatisticsCustomersDataType> {
+    // 时间范围校验/切日全部由批A 公共层负责（E-STATISTICS-001/002 在此抛出）
+    const r =
+      params.range !== undefined
+        ? buildRange(params.range)
+        : buildRange({ from: params.from as string, to: params.to as string });
+
+    // 一次 groupBy user_id 同时产出：下单用户数 / 复购用户数 / GMV / 订单数；
+    // 新客判定：MIN(o.created_at) = 该用户全局首单（不加 created_at 过滤），
+    // 区间外的首单不会出现在这行——所以 HAVING 全局首单 ≥ 区间起点 = 首单落区间内
+    const rows = await db.$queryRaw<
+      Array<{ order_cnt: bigint; user_cnt: bigint; gmv: bigint; new_users: bigint }>
+    >`
+      SELECT COUNT(o.id)::bigint AS order_cnt,
+             COUNT(DISTINCT o.user_id)::bigint AS user_cnt,
+             SUM(o.payable_amount)::bigint AS gmv,
+             COUNT(DISTINCT o.user_id) FILTER (WHERE first_order.created_at >= ${r.from}::timestamptz)::bigint AS new_users
+      FROM orders o
+      INNER JOIN (
+        SELECT user_id, MIN(created_at) AS created_at
+        FROM orders
+        GROUP BY user_id
+      ) first_order ON first_order.user_id = o.user_id
+      WHERE o.status::text IN (${GMV_STATUSES_SQL})
+        AND o.created_at >= ${r.from}::timestamptz
+        AND o.created_at < ${r.to}::timestamptz
+    `;
+
+    // 复购用户数：区间内下单 ≥2 单的用户（单独一条 groupBy，语义独立更直读）
+    const repeatRows = await db.$queryRaw<Array<{ cnt: bigint }>>`
+      SELECT COUNT(*)::bigint AS cnt
+      FROM (
+        SELECT o.user_id
+        FROM orders o
+        WHERE o.status::text IN (${GMV_STATUSES_SQL})
+          AND o.created_at >= ${r.from}::timestamptz
+          AND o.created_at < ${r.to}::timestamptz
+        GROUP BY o.user_id
+        HAVING COUNT(*) >= 2
+      ) t
+    `;
+
+    const orderCount = Number(rows[0]?.order_cnt ?? 0);
+    const orderUserCount = Number(rows[0]?.user_cnt ?? 0);
+    const gmv = Number(rows[0]?.gmv ?? 0);
+    const newCustomers = Number(rows[0]?.new_users ?? 0);
+    const repeatCustomers = Number(repeatRows[0]?.cnt ?? 0);
+
+    return {
+      from: r.from.toISOString(),
+      to: r.to.toISOString(),
+      newCustomers,
+      repeatCustomers,
+      // 分母 0（区间内无下单用户）→ 率无意义，置 null
+      repeatRate: orderUserCount === 0 ? null : repeatCustomers / orderUserCount,
+      // AOV 分母 = 区间订单数（非用户数——ARPU 口径已在方案v2 🔧 明确弃用）；分母 0 → null
+      avgOrderValue: orderCount === 0 ? null : gmv / orderCount,
+      gmvOrderCount: orderCount,
+      orderUserCount,
+    };
+  }
+
+  /**
+   * 客户分析导出行（CSV 组装交给 statistics-csv.service，本方法只取数）
+   */
+  async getCustomersForExport(params: CustomersParams) {
+    return this.getCustomers(params);
   }
 }

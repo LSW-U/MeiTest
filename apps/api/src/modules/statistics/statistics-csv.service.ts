@@ -40,6 +40,20 @@ const REFUND_EXPORT_COLUMNS = [
   'refundAmountUsdCents',
 ] as const;
 
+/** 客户分析导出行结构（批E；指标汇总型 → 键值两列式：metricLabel / value） */
+interface CustomerMetricRow {
+  key: 'newCustomers' | 'repeatCustomers' | 'repeatRate' | 'avgOrderValueUsdCents' | 'gmvOrderCount' | 'orderUserCount';
+  value: (d: { newCustomers: number; repeatCustomers: number; repeatRate: number | null; avgOrderValue: number | null; gmvOrderCount: number; orderUserCount: number }) => string;
+}
+const CUSTOMER_EXPORT_ROWS: CustomerMetricRow[] = [
+  { key: 'newCustomers', value: (d) => String(d.newCustomers) },
+  { key: 'repeatCustomers', value: (d) => String(d.repeatCustomers) },
+  { key: 'repeatRate', value: (d) => (d.repeatRate === null ? '' : (d.repeatRate * 100).toFixed(1) + '%') },
+  { key: 'avgOrderValueUsdCents', value: (d) => (d.avgOrderValue === null ? '' : String(Math.round(d.avgOrderValue))) },
+  { key: 'gmvOrderCount', value: (d) => String(d.gmvOrderCount) },
+  { key: 'orderUserCount', value: (d) => String(d.orderUserCount) },
+];
+
 @Injectable()
 export class StatisticsCsvService {
   constructor(@Inject(StatisticsService) private readonly statistics: StatisticsService) {}
@@ -188,5 +202,51 @@ export class StatisticsCsvService {
       escape(data.refundAmount),
     ].join(',');
     return [header, ...rows, totalRow].join('\n');
+  }
+
+  /**
+   * 客户分析导出 CSV（批E）
+   *
+   * 指标汇总型（无行维度）→ 键值两列式：每指标一行（指标名按 lang 列名 + 值），
+   * 符合任务书 §2 改动 3"实现取简，审查对齐'列=表格列'精神即可"。
+   * repeatRate 百分比一位小数；avgOrderValue 保留分（Math.round 防 AOV 带小数）；
+   * nullable（分母 0）→ 空串。lang 只影响指标名。
+   */
+  async exportCustomersCsv(params: {
+    range?: 'today' | 'week' | 'month';
+    from?: string;
+    to?: string;
+    lang: SupportedLanguage;
+  }): Promise<string> {
+    const data = await this.statistics.getCustomersForExport(params);
+
+    const locale = (params.lang as Locale) ?? DEFAULT_LOCALE;
+    const bundle = messages[locale] ?? messages[DEFAULT_LOCALE];
+    const stat = (bundle.common as Record<string, unknown>)['admin'] as Record<
+      string,
+      unknown
+    >;
+    const block = (stat['statistics'] ?? {}) as Record<string, string>;
+
+    // CSV escape（对齐 inventory.service.ts:509-517 先例，与前三导出方法逐字节同法）
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return '';
+      let s = String(v);
+      // CSV injection 防护：= + - @ 开头前缀单引号（Excel/WPS 当文本，防公式执行）
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      // 标准字段转义（引号/逗号/换行）
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const header = [
+      escape(block['exportMetric'] ?? 'Metric'),
+      escape(block['exportValue'] ?? 'Value'),
+    ].join(',');
+    const rows = CUSTOMER_EXPORT_ROWS.map((r) => {
+      const i18nKey = `export${r.key.charAt(0).toUpperCase()}${r.key.slice(1)}`;
+      return [escape(block[i18nKey] ?? r.key), escape(r.value(data))].join(',');
+    });
+    return [header, ...rows].join('\n');
   }
 }

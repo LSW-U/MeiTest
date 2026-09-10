@@ -162,3 +162,41 @@ export const StatisticsRefundsData = z.object({
 export type StatisticsRefundsDataType = z.infer<typeof StatisticsRefundsData>;
 
 export const StatisticsRefundsResponse = ApiResponse(StatisticsRefundsData);
+
+// ===== 客户分析（批E，2026-09-10 / 方案v2 §3.2 customers 行 · R4 MVP）=====
+
+/** 客户分析 query：时间范围（复用公共 rangeFields + refine） */
+export const StatisticsCustomersQuery = z
+  .object({ ...rangeFields })
+  .refine((q) => (q.from && q.to) || q.range, rangeRequired);
+export type StatisticsCustomersQueryType = z.infer<typeof StatisticsCustomersQuery>;
+
+/**
+ * 客户分析响应（R4 MVP 三指标）：
+ *   - newCustomers：新客 = 该用户全局首单（min(createdAt) 全表）落在区间内（非"区间内有单"）
+ *   - repeatCustomers：复购 = 区间内下单 ≥2 单的用户数
+ *   - repeatRate = repeatCustomers / orderUserCount（区间内下单用户数），分母 0 → null
+ *   - avgOrderValue（AOV，v2 🔧 拍板）= 区间 GMV / 区间订单数（**非 ARPU**——弃用 GMV/去重用户数），
+ *     分母 0 → null；金额单位分
+ *   - 基数 gmvOrderCount / orderUserCount 回显（分母口径对齐批D 范式）
+ */
+export const StatisticsCustomersData = z.object({
+  /** 实际生效的查询区间起止（UTC ISO，回显给前端） */
+  from: z.string(),
+  to: z.string(),
+  /** 区间内新客数（全局首单落在区间内的用户数） */
+  newCustomers: z.number().int().nonnegative(),
+  /** 区间内复购用户数（区间内下单 ≥2 单） */
+  repeatCustomers: z.number().int().nonnegative(),
+  /** 复购率 = repeatCustomers / orderUserCount（0-1；分母 0 → null） */
+  repeatRate: z.number().min(0).max(1).nullable(),
+  /** 客单价 AOV = 区间 GMV / 区间订单数（分；非 ARPU；分母 0 → null） */
+  avgOrderValue: z.number().min(0).nullable(),
+  /** 区间内 GMV 状态订单数（AOV 分母回显） */
+  gmvOrderCount: z.number().int().nonnegative(),
+  /** 区间内下单用户数（repeatRate 分母回显） */
+  orderUserCount: z.number().int().nonnegative(),
+});
+export type StatisticsCustomersDataType = z.infer<typeof StatisticsCustomersData>;
+
+export const StatisticsCustomersResponse = ApiResponse(StatisticsCustomersData);

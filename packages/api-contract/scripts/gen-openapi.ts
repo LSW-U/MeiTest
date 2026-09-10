@@ -254,9 +254,13 @@ import {
   ImSignature,
   ConversationType,
   ImMessage,
-  // geo（W7 P0-3 地址 geocoding）
+  // geo（W7 P0-3 地址 geocoding；A7 suggest/nearby 2026-09-10）
   GeocodeRequest,
   GeocodeResponseData,
+  GeoSuggestRequest,
+  GeoSuggestResponseData,
+  GeoNearbyRequest,
+  GeoNearbyResponseData,
   // upload（W7-feature 商品图片上传）
   UploadResponseData,
   // home（活动入口 PromoDock）
@@ -323,6 +327,10 @@ import {
   StatisticsRefundReasonItem,
   StatisticsRefundsData,
   StatisticsRefundsResponse,
+  // statistics（数据分析报表模块 批E，2026-09-10：客户分析）
+  StatisticsCustomersQuery,
+  StatisticsCustomersData,
+  StatisticsCustomersResponse,
   // common
   ErrorResponse,
   Id,
@@ -553,6 +561,10 @@ registry.register('StatisticsRefundsQuery', StatisticsRefundsQuery);
 registry.register('StatisticsRefundReasonItem', StatisticsRefundReasonItem);
 registry.register('StatisticsRefundsData', StatisticsRefundsData);
 registry.register('StatisticsRefundsResponse', StatisticsRefundsResponse);
+// statistics（数据分析报表模块 批E，2026-09-10：客户分析）
+registry.register('StatisticsCustomersQuery', StatisticsCustomersQuery);
+registry.register('StatisticsCustomersData', StatisticsCustomersData);
+registry.register('StatisticsCustomersResponse', StatisticsCustomersResponse);
 registry.register('AuditLogListItem', AuditLogListItem);
 registry.register('AuditLogDetail', AuditLogDetail);
 registry.register('AuditLogQuery', AuditLogQuery);
@@ -1774,7 +1786,41 @@ registry.registerPath({
   },
 });
 
-// P5 #1 客服配置公开下发（2026-08-25）：骑手/客户端 help 页读 support.phone
+// ===== statistics paths（数据分析报表模块，批E 客户分析 2026-09-10） =====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/statistics/customers',
+  tags: ['statistics'],
+  description:
+    '客户分析（R4 MVP 三指标，口径见 方案v2 §3.2 customers 行）：newCustomers=全局首单（该用户全表 min(createdAt)）落在区间内的用户数；repeatCustomers=区间内下单 ≥2 单的用户数；repeatRate=repeatCustomers/orderUserCount（分母 0 → null）；avgOrderValue（AOV）=区间 GMV/区间订单数（非 ARPU，分母 0 → null）；基数 gmvOrderCount/orderUserCount 回显。数据源 Order（状态 ∈ GMV_ORDER_STATUSES，createdAt ∈ range）。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天）',
+  request: { query: StatisticsCustomersQuery },
+  responses: {
+    200: {
+      description: '客户分析三指标（avgOrderValue 金额单位分）',
+      content: { 'application/json': { schema: StatisticsCustomersResponse } },
+    },
+    400: {
+      description: 'E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/statistics/customers/export',
+  tags: ['statistics'],
+  description:
+    '客户分析导出 CSV（指标汇总型，键值两列式：指标名按 lang 列名 + 值；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie）',
+  request: { query: StatisticsExportQuery },
+  responses: {
+    200: { description: 'CSV 流（text/csv，attachment）' },
+    400: {
+      description: 'E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 registry.registerPath({
   method: 'get',
   path: '/api/v1/common/support/config',
@@ -3320,7 +3366,11 @@ registry.registerPath({
       description: 'E-DEPOSIT-003 非 ONLINE_MOCK 通道 | E-DEPOSIT-004 非法状态流转',
       content: { 'application/json': { schema: ErrorResponse } },
     },
-    403: { description: 'E-DEPOSIT-005 非本人申请', content: { 'application/json': { schema: ErrorResponse } } },
+    403: {
+      description:
+        'E-DEPOSIT-005 非本人申请 | E-DEPOSIT-008 生产环境禁用 pay-mock（批A T1-a，2026-09-10：NODE_ENV=production 下 403）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
     404: { description: 'E-DEPOSIT-006 申请不存在', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
@@ -4052,6 +4102,52 @@ registry.registerPath({
     },
     400: {
       description: 'E-COMMON-001 校验失败（address 长度 2-500），details 含 zod 具体 message',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+// ===== Geo A7（保证金批A 2026-09-10）：suggest 多候选 + nearby 附近地点 =====
+registry.register('GeoSuggestRequest', GeoSuggestRequest);
+registry.register('GeoSuggestResponseData', GeoSuggestResponseData);
+registry.register('GeoNearbyRequest', GeoNearbyRequest);
+registry.register('GeoNearbyResponseData', GeoNearbyResponseData);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/geo/suggest',
+  tags: ['geo'],
+  description:
+    '地址输入多候选（A7）。Nominatim search limit=5，viewbox 限定东帝汶（bounded）。失败/无结果返回空 items（不抛错）。与 geocode 共享 rate limit（1/s + 10/min/IP → E-COMMON-004）。',
+  request: { query: GeoSuggestRequest },
+  responses: {
+    200: { description: '候选列表（≤5 条）', content: { 'application/json': { schema: GeoSuggestResponseData } } },
+    400: {
+      description: 'E-COMMON-001 校验失败（q 长度 2-500）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    429: {
+      description: 'E-COMMON-004 超频（1/s + 10/min/IP）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/geo/nearby',
+  tags: ['geo'],
+  description:
+    '坐标附近带名称地点（A7）。Overpass 2km 内 node["name"]，Haversine 按距离升序前 5。失败/无结果返回空 items（不抛错）。与 geocode 共享 rate limit。',
+  request: { query: GeoNearbyRequest },
+  responses: {
+    200: { description: '附近地点列表（≤5 条）', content: { 'application/json': { schema: GeoNearbyResponseData } } },
+    400: {
+      description: 'E-COMMON-001 校验失败（lat/lng 范围）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    429: {
+      description: 'E-COMMON-004 超频（1/s + 10/min/IP）',
       content: { 'application/json': { schema: ErrorResponse } },
     },
   },

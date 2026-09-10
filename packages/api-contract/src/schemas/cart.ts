@@ -68,6 +68,10 @@ export const CheckoutPreview = z.object({
       id: Id,
       code: z.string(),
       deliveryFee: Money,
+      /** 预约单标注（保证金批A T5-c 2026-09-10）：true = 匹配仓当前打烊，下单将走预约 */
+      acceptingReservation: z.boolean(),
+      /** 打烊仓下一次开门时间 ISO；营业中 null */
+      nextOpenAt: IsoTimestamp.nullable(),
     })
     .nullable(),
   itemsSubtotal: Money,

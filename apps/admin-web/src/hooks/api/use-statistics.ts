@@ -115,6 +115,39 @@ export function useRefunds(params: RefundsParams) {
   });
 }
 
+// ===== 客户分析（批E，2026-09-10）=====
+
+type StatisticsCustomersData = components['schemas']['StatisticsCustomersData'];
+
+export interface CustomersParams {
+  /** 预设范围（自定义时为 undefined） */
+  range?: StatisticsRange;
+  /** 自定义范围 YYYY-MM-DD 含头尾（预设时为 undefined） */
+  custom?: { from: string; to: string };
+}
+
+function buildCustomersQuery(params: CustomersParams): string {
+  const qs = new URLSearchParams();
+  if (params.range) qs.set('range', params.range);
+  if (params.custom) {
+    qs.set('from', params.custom.from);
+    qs.set('to', params.custom.to);
+  }
+  return qs.toString();
+}
+
+export function useCustomers(params: CustomersParams) {
+  return useQuery({
+    queryKey: ['statistics', 'customers', params.range, params.custom?.from, params.custom?.to],
+    queryFn: async () => {
+      const res = await apiFetch<ApiSuccess<StatisticsCustomersData>>(
+        `/admin/statistics/customers?${buildCustomersQuery(params)}`,
+      );
+      return res.data;
+    },
+  });
+}
+
 export type {
   StatisticsRidersResponseItem,
   StatisticsRidersData,
@@ -122,4 +155,5 @@ export type {
   StatisticsTopProductsData,
   StatisticsRefundReasonItem,
   StatisticsRefundsData,
+  StatisticsCustomersData,
 };
