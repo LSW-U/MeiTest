@@ -162,3 +162,124 @@ describe('StatisticsService.getTopProducts', () => {
     });
   });
 });
+
+/**
+ * 骑手绩效（批C，2026-09-10 / R5 口径）
+ *
+ * $queryRaw 依次被调：第 1 次 = delivery_tasks 聚合，第 2 次 = settlements 收入聚合
+ */
+describe('StatisticsService.getRiders', () => {
+  let service: StatisticsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMock.$queryRaw.mockReset();
+    dbMock.$queryRaw.mockResolvedValue([]);
+    service = new StatisticsService();
+  });
+
+  /** 造一行 delivery_tasks 聚合 mock */
+  function riderRow(riderId: string, name: string, completed: number, abnormal: number, rating = 4.5) {
+    return {
+      rider_id: riderId,
+      rider_name: name,
+      rating,
+      completed_orders: BigInt(completed),
+      abnormal_count: BigInt(abnormal),
+    };
+  }
+
+  it('完成单归属三值命中：task 关联 Order 三值由 SQL 判定，服务层透传计数', async () => {
+    // SQL 内已完成状态过滤（CASE WHEN o.status IN 三值），mock 只验映射
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      riderRow('11111111-1111-1111-1111-111111111111', 'João', 12, 1),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const res = await service.getRiders({ range: 'week' });
+    expect(res.items).toHaveLength(1);
+    expect(res.items[0]).toEqual({
+      riderId: '11111111-1111-1111-1111-111111111111',
+      riderName: 'João',
+      completedOrders: 12,
+      income: 0,
+      rating: 4.5,
+      abnormalCount: 1,
+    });
+  });
+
+  it('完成单不命中/异常归属：completedOrders=0 + abnormalCount 保留（CANCELLED 场景 riderId 保留在 task）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      riderRow('22222222-2222-2222-2222-222222222222', 'Maria', 0, 3),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const res = await service.getRiders({ range: 'month' });
+    expect(res.items[0].completedOrders).toBe(0);
+    expect(res.items[0].abnormalCount).toBe(3);
+  });
+
+  it('收入聚合：Settlement periodDate 过滤由 SQL 判定，各 status 均计入 → income 按 subjectId 映射', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      riderRow('33333333-3333-3333-3333-333333333333', 'Ali', 5, 0),
+      riderRow('44444444-4444-4444-4444-444444444444', 'Budi', 2, 0),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      { subject_id: '33333333-3333-3333-3333-333333333333', income: BigInt(15000) },
+      // 55555555 只在 settlements 有、无 delivery task → 不出现在 items（骑手维度以 task 为锚）
+      { subject_id: '55555555-5555-5555-5555-555555555555', income: BigInt(999) },
+    ]);
+
+    const res = await service.getRiders({ range: 'week' });
+    expect(res.items[0].income).toBe(15000);
+    expect(res.items[1].income).toBe(0);
+    expect(res.items).toHaveLength(2);
+  });
+
+  it('排序：completedOrders 降序，并列按 income 降序（服务层 sort 语义）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      riderRow('aaaa1111-1111-1111-1111-111111111111', 'Low', 1, 0),
+      riderRow('aaaa2222-2222-2222-2222-222222222222', 'TopA', 10, 0),
+      riderRow('aaaa3333-3333-3333-3333-333333333333', 'TopB', 10, 0),
+      riderRow('aaaa4444-4444-4444-4444-444444444444', 'TopC', 10, 0),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      { subject_id: 'aaaa3333-3333-3333-3333-333333333333', income: BigInt(3000) },
+      { subject_id: 'aaaa4444-4444-4444-4444-444444444444', income: BigInt(2000) },
+      { subject_id: 'aaaa2222-2222-2222-2222-222222222222', income: BigInt(2000) },
+    ]);
+
+    const res = await service.getRiders({ range: 'week' });
+    const names = res.items.map((i) => i.riderName);
+    // 10 单组内：3000 > 2000(TopB) = 2000(TopA，无收入并列保序) ；1 单组垫底
+    expect(names).toEqual(['TopB', 'TopA', 'TopC', 'Low']);
+  });
+
+  it('时间边界：自定义 from/to 含头尾（Dili 切日 → UTC 前日 15:00）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const res = await service.getRiders({ from: '2026-06-23', to: '2026-06-23' });
+    expect(res.from).toBe('2026-06-22T15:00:00.000Z');
+    expect(res.to).toBe('2026-06-23T15:00:00.000Z');
+  });
+
+  it('E-STATISTICS-001/002 透传（公共层抛出，服务层不吞）', async () => {
+    await expect(
+      service.getRiders({ from: '2026-06-23', to: '2026-06-20' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-001' } });
+    await expect(
+      service.getRiders({ from: '2025-01-01', to: '2026-06-23' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-002' } });
+  });
+
+  it('rating 快照映射 Number(rating)（Prisma Decimal → number）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      riderRow('66666666-6666-6666-6666-666666666666', 'Rui', 4, 0, '4.85'),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const res = await service.getRiders({ range: 'today' });
+    expect(res.items[0].rating).toBe(4.85);
+  });
+});

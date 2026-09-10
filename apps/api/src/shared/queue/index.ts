@@ -4,4 +4,5 @@ export {
   SETTLE_QUEUE,
   COUPON_EXPIRE_QUEUE,
   NOTIFICATION_QUEUE,
+  ORPHAN_CLEANUP_QUEUE,
 } from './queue.constants';

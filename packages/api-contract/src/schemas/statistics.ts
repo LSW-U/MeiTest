@@ -72,3 +72,45 @@ export const StatisticsExportQuery = z
   })
   .refine((q) => (q.from && q.to) || q.range, rangeRequired);
 export type StatisticsExportQueryType = z.infer<typeof StatisticsExportQuery>;
+
+// ===== 骑手绩效（批C，2026-09-10）=====
+
+/** 骑手绩效 query：时间范围（复用公共 rangeFields + refine） */
+export const StatisticsRidersQuery = z
+  .object({ ...rangeFields })
+  .refine((q) => (q.from && q.to) || q.range, rangeRequired);
+export type StatisticsRidersQueryType = z.infer<typeof StatisticsRidersQuery>;
+
+/**
+ * 骑手绩效单行（R5 修订口径，归属源 = DeliveryTask(taskType=delivery).riderId）：
+ *   - completedOrders：task 关联 Order 状态 ∈ (DELIVERED_PAID, DELIVERED, COMPLETED)
+ *   - abnormalCount：task 关联 Order 状态 ∈ (CANCELLED, DELIVERED_UNPAID)
+ *   - 超时未确认（PENDING_CONFIRM）不归骑手维度，不在本表
+ *   - income：Settlement(subjectType=RIDER) periodDate ∈ range 各 status 均计入（分）
+ *   - rating：RiderProfile.rating 快照
+ */
+export const StatisticsRidersResponseItem = z.object({
+  riderId: z.string().uuid(),
+  /** 骑手名（RiderProfile.riderName 单值字符串，非 Json i18n，无 fallback 问题） */
+  riderName: z.string(),
+  /** 区间内完成单数（关联 Order 三值命中） */
+  completedOrders: z.number().int().nonnegative(),
+  /** 区间内收入合计（Settlement netAmount 口径，分） */
+  income: Money,
+  /** 骑手评分快照（RiderProfile.rating，1.00-5.00） */
+  rating: z.number().min(0).max(5),
+  /** 区间内异常单数（关联 Order CANCELLED / DELIVERED_UNPAID） */
+  abnormalCount: z.number().int().nonnegative(),
+});
+export type StatisticsRidersResponseItemType = z.infer<typeof StatisticsRidersResponseItem>;
+
+/** 骑手绩效响应 */
+export const StatisticsRidersData = z.object({
+  /** 实际生效的查询区间起止（UTC ISO，回显给前端） */
+  from: z.string(),
+  to: z.string(),
+  items: z.array(StatisticsRidersResponseItem),
+});
+export type StatisticsRidersDataType = z.infer<typeof StatisticsRidersData>;
+
+export const StatisticsRidersResponse = ApiResponse(StatisticsRidersData);

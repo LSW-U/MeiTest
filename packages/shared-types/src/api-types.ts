@@ -5557,6 +5557,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/statistics/riders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手绩效（R5 修订：归属源=DeliveryTask(taskType=delivery).riderId，join 关联 Order 判定——完成单=Order ∈ (DELIVERED_PAID, DELIVERED, COMPLETED)；异常=Order ∈ (CANCELLED, DELIVERED_UNPAID)；超时未确认不归骑手。收入=Settlement(subjectType=RIDER) periodDate ∈ range 各 status 均计入（分）；rating 取 RiderProfile 快照。按 completedOrders 降序排序。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 骑手绩效列表（金额单位分） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                from: string;
+                                to: string;
+                                items: {
+                                    /** Format: uuid */
+                                    riderId: string;
+                                    riderName: string;
+                                    completedOrders: number;
+                                    income: number;
+                                    rating: number;
+                                    abnormalCount: number;
+                                }[];
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/statistics/riders/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手绩效导出 CSV（列=页面表格列的 CSV 版，列名按 lang；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 流（text/csv，attachment） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/support/config": {
         parameters: {
             query?: never;
@@ -22045,6 +22179,52 @@ export interface components {
              * @enum {string}
              */
             lang: "en" | "id" | "zh" | "pt" | "tet";
+        };
+        StatisticsRidersQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+        };
+        StatisticsRidersResponseItem: {
+            /** Format: uuid */
+            riderId: string;
+            riderName: string;
+            completedOrders: number;
+            income: number;
+            rating: number;
+            abnormalCount: number;
+        };
+        StatisticsRidersData: {
+            from: string;
+            to: string;
+            items: {
+                /** Format: uuid */
+                riderId: string;
+                riderName: string;
+                completedOrders: number;
+                income: number;
+                rating: number;
+                abnormalCount: number;
+            }[];
+        };
+        StatisticsRidersResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                from: string;
+                to: string;
+                items: {
+                    /** Format: uuid */
+                    riderId: string;
+                    riderName: string;
+                    completedOrders: number;
+                    income: number;
+                    rating: number;
+                    abnormalCount: number;
+                }[];
+            };
+            message?: string;
         };
         AuditLogListItem: {
             /** Format: uuid */

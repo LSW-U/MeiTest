@@ -2,6 +2,7 @@
  * Statistics CSV Service（报表导出组装）
  *
  * 来源：数据分析报表模块 批B（2026-09-10）——商品排行 CSV 导出（B4 验收依赖）
+ *       数据分析报表模块 批C（2026-09-10）——骑手绩效 CSV 导出
  *
  * 转义对齐 exportStocksCsv 先例（inventory.service.ts:509-517）：
  *   - CSV injection 防护：= + - @ 开头前缀单引号（Excel/WPS 当文本，防公式执行）
@@ -13,13 +14,23 @@ import { StatisticsService } from './statistics.service';
 import { messages, DEFAULT_LOCALE, type Locale } from '@meimart/shared-locales';
 import type { SupportedLanguage } from '@meimart/shared-utils';
 
-/** 导出列 key（与 admin-web「商品排行」表格列一一对应，列名 i18n key 在 admin.statistics.export* ） */
+/** 商品排行导出列 key（与 admin-web「商品排行」表格列一一对应，列名 i18n key 在 admin.statistics.export* ） */
 const EXPORT_COLUMNS = [
   'rank',
   'productName',
   'orderCount',
   'quantitySold',
   'gmvAmountUsdCents',
+] as const;
+
+/** 骑手绩效导出列 key（与 admin-web「骑手绩效」表格列一一对应，列名 i18n key 在 admin.statistics.export* ） */
+const RIDER_EXPORT_COLUMNS = [
+  'rank',
+  'riderName',
+  'completedOrders',
+  'incomeUsdCents',
+  'rating',
+  'abnormalOrders',
 ] as const;
 
 @Injectable()
@@ -68,6 +79,56 @@ export class StatisticsCsvService {
         escape(item.orderCount),
         escape(item.quantitySold),
         escape(item.gmvAmount),
+      ].join(','),
+    );
+    return [header, ...rows].join('\n');
+  }
+
+  /**
+   * 骑手绩效导出 CSV（批C）
+   *
+   * @param lang  导出语言（query 显式传；只影响列名——riderName 单值字符串无切片）
+   */
+  async exportRidersCsv(params: {
+    range?: 'today' | 'week' | 'month';
+    from?: string;
+    to?: string;
+    lang: SupportedLanguage;
+  }): Promise<string> {
+    const { items } = await this.statistics.getRidersForExport(params);
+
+    // 列名：shared-locales common.json admin.statistics.export 块（五语 parity）——
+    // 列名解析逻辑与 exportTopProductsCsv 相同（列名走同层 export* key）
+    const locale = (params.lang as Locale) ?? DEFAULT_LOCALE;
+    const bundle = messages[locale] ?? messages[DEFAULT_LOCALE];
+    const stat = (bundle.common as Record<string, unknown>)['admin'] as Record<
+      string,
+      unknown
+    >;
+    const block = (stat['statistics'] ?? {}) as Record<string, string>;
+
+    // CSV escape（对齐 inventory.service.ts:509-517 先例，与 exportTopProductsCsv 逐字节同法）
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return '';
+      let s = String(v);
+      // CSV injection 防护：= + - @ 开头前缀单引号（Excel/WPS 当文本，防公式执行）
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      // 标准字段转义（引号/逗号/换行）
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const header = RIDER_EXPORT_COLUMNS.map(
+      (c) => escape(block[`export${c.charAt(0).toUpperCase()}${c.slice(1)}`] ?? c),
+    ).join(',');
+    const rows = items.map((item, idx) =>
+      [
+        escape(idx + 1),
+        escape(item.riderName),
+        escape(item.completedOrders),
+        escape(item.income),
+        escape(item.rating.toFixed(2)),
+        escape(item.abnormalCount),
       ].join(','),
     );
     return [header, ...rows].join('\n');

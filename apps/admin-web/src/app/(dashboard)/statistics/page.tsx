@@ -6,9 +6,12 @@
  *   - 新增「商品排行」tab（components/statistics/top-products-tab.tsx）
  *   - 页头公共件：tab 容器 + 时间范围选择器（预设三值 + 自定义起止日期）
  *     ——时间选择器对两个 tab 同时生效（总览只消费预设三值，自定义时总览沿用当前预设回退）
+ * 数据分析报表模块 批C 改造（2026-09-10）：
+ *   - 新增「骑手绩效」tab（components/statistics/riders-tab.tsx）
  * 后端：
  *   - 总览：GET /admin/platform/dashboard/summary?range=today|week|month
  *   - 商品排行：GET /admin/statistics/products/top + /products/export
+ *   - 骑手绩效：GET /admin/statistics/riders + /riders/export
  */
 'use client';
 
@@ -38,6 +41,7 @@ import { Input } from '@/components/ui/input';
 import { useDashboardSummary, type DashboardRange } from '@/hooks/api/use-dashboard';
 import { formatCurrency } from '@/lib/utils';
 import { TopProductsTab } from '@/components/statistics/top-products-tab';
+import { RidersTab } from '@/components/statistics/riders-tab';
 
 const RANGES: DashboardRange[] = ['today', 'week', 'month'];
 
@@ -48,8 +52,8 @@ export default function StatisticsPage() {
   const t = useTranslations('common');
   const format = useFormatter();
 
-  // 报表级 tab：总览 / 商品排行（后续批次扩展：骑手绩效/退款统计/客户分析）
-  const [reportTab, setReportTab] = useState<'overview' | 'topProducts'>('overview');
+  // 报表级 tab：总览 / 商品排行 / 骑手绩效（后续批次扩展：退款统计/客户分析）
+  const [reportTab, setReportTab] = useState<'overview' | 'topProducts' | 'riders'>('overview');
 
   // 时间范围：预设三值 + 自定义（提交后生效；isCustom 区分当前模式）
   const [range, setRange] = useState<DashboardRange>('today');
@@ -92,15 +96,24 @@ export default function StatisticsPage() {
 
       {/* 页头公共件：报表 tab + 时间范围选择器（预设三值 + 自定义起止） */}
       <div className="flex flex-wrap items-center gap-4">
-        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts')}>
+        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts' | 'riders')}>
           <TabsList>
             <TabsTrigger value="overview">{t('admin.statistics.overviewTab')}</TabsTrigger>
             <TabsTrigger value="topProducts">{t('admin.statistics.topProductsTab')}</TabsTrigger>
+            <TabsTrigger value="riders">{t('admin.statistics.ridersTab')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={isCustom ? 'custom' : range} onValueChange={(v) => { if (v !== 'custom') selectPreset(v as DashboardRange); }}>
+          {/* P1-1 修复（批B 引入回归，2026-09-10 修复轮）：点「自定义」→ 立即 setIsCustom(true)
+              展开日期选择器（此前 'custom' 被 no-op 吞掉，isCustom 恒 false，选择器不可达） */}
+          <Tabs
+            value={isCustom ? 'custom' : range}
+            onValueChange={(v) => {
+              if (v === 'custom') setIsCustom(true);
+              else selectPreset(v as DashboardRange);
+            }}
+          >
             <TabsList>
               {RANGES.map((r) => (
                 <TabsTrigger key={r} value={r}>
@@ -305,6 +318,15 @@ export default function StatisticsPage() {
             <TopProductsTab custom={custom} />
           ) : (
             <TopProductsTab range={range} />
+          )}
+        </TabsContent>
+
+        {/* ===== 骑手绩效 tab（批C 新增） ===== */}
+        <TabsContent value="riders">
+          {isCustom && custom.from && custom.to ? (
+            <RidersTab custom={custom} />
+          ) : (
+            <RidersTab range={range} />
           )}
         </TabsContent>
       </Tabs>
