@@ -59,10 +59,23 @@ export const GeoSuggestResponseData = z.object({
   items: z.array(GeoSuggestHit),
 });
 
-/** Nearby 请求 query（坐标 2km 内带名称地点） */
+/** Nearby 请求 query（坐标 2km 内带名称地点）
+ *
+ * 批D 审查 P1-1（2026-09-11）：Express @Query 恒为 string（axios params 序列化进 URL），
+ * z.number() 直接 parse 必 400 E-COMMON-001 → real 模式 nearby 全死。
+ * 先 preprocess 拒 null/undefined/空串，再 coerce 转数字校验范围——裸 z.coerce.number()
+ * 会把 null/'' 转成 0 混过校验（坐标 0 点在几内亚湾，非东帝汶），必须挡住。
+ * suggest 的 q / geocode 的 address 本身就是 string，无同类问题。
+ */
+const QueryCoordinate = (min: number, max: number) =>
+  z.preprocess(
+    (v) => (v === null || v === undefined || v === '' ? undefined : v),
+    z.coerce.number().min(min).max(max),
+  );
+
 export const GeoNearbyRequest = z.object({
-  lat: Latitude,
-  lng: Longitude,
+  lat: QueryCoordinate(-90, 90),
+  lng: QueryCoordinate(-180, 180),
 });
 
 /** Nearby 单条结果（与 client-app NearbyPlaceResult 同形态） */

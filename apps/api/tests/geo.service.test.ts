@@ -17,6 +17,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GeoService, clearGeoCacheForTest } from '../src/modules/common/geo/geo.service';
+import { GeoNearbyRequest } from '@meimart/api-contract';
 
 describe('GeoService', () => {
   let service: GeoService;
@@ -248,5 +249,33 @@ describe('GeoService', () => {
     );
     expect(await service.nearby(-8.5567, 125.5595)).toEqual([]);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // ===== 批D 审查 P1-1（2026-09-11）：nearby query schema 接受字符串坐标 =====
+  // Express @Query 恒为 string，z.number() 直接 parse 必 400 → real 模式 nearby 全死。
+  // controller 单测 mock 不经过 ZodValidationPipe（meimart-controller-zod-test-blindspot），
+  // 拒绝/接受路径直接 safeParse contract schema（import-log.service.test.ts 先例）。
+  describe('GeoNearbyRequest zod（批D P1-1：@Query string 坐标 coerce）', () => {
+    it('字符串坐标过（Express @Query 真实形态）+ 数字坐标过', () => {
+      const fromQuery = GeoNearbyRequest.safeParse({ lat: '-8.5567', lng: '125.5595' });
+      expect(fromQuery.success).toBe(true);
+      if (fromQuery.success) {
+        expect(fromQuery.data).toEqual({ lat: -8.5567, lng: 125.5595 });
+      }
+      expect(GeoNearbyRequest.safeParse({ lat: -8.5567, lng: 125.5595 }).success).toBe(true);
+    });
+
+    it('越界拒绝（保留 min/max 范围校验）+ 非数字拒绝 + 缺参拒绝', () => {
+      expect(GeoNearbyRequest.safeParse({ lat: '95', lng: '125' }).success).toBe(false);
+      expect(GeoNearbyRequest.safeParse({ lat: '-8.5', lng: '999' }).success).toBe(false);
+      expect(GeoNearbyRequest.safeParse({ lat: 'abc', lng: '125' }).success).toBe(false);
+      expect(GeoNearbyRequest.safeParse({ lng: '125' }).success).toBe(false);
+    });
+
+    it('null / 空串拒绝（裸 coerce 会把 null/\'\' 转成 0 混过校验，必须挡）', () => {
+      expect(GeoNearbyRequest.safeParse({ lat: null, lng: '125' }).success).toBe(false);
+      expect(GeoNearbyRequest.safeParse({ lat: '', lng: '125' }).success).toBe(false);
+      expect(GeoNearbyRequest.safeParse({ lat: '-8.5', lng: null }).success).toBe(false);
+    });
   });
 });
