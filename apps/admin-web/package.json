@@ -14,6 +14,7 @@
     "@geoman-io/leaflet-geoman-free": "^2.20.0",
     "@meimart/shared-locales": "workspace:*",
     "@meimart/shared-types": "workspace:*",
+    "@meimart/shared-utils": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.17",
     "@radix-ui/react-avatar": "^1.2.0",
     "@radix-ui/react-checkbox": "^1.3.5",

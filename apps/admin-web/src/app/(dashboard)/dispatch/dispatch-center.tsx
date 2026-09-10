@@ -31,12 +31,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2, ChevronRight, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Loader2, ChevronRight, ShieldCheck, ShieldAlert, CircleCheck, CircleX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDispatchTasks, useAssignTask, type AdminDeliveryTask } from '@/hooks/api/use-dispatch';
 import { useDispatchCandidates, type DispatchCandidate } from '@/hooks/api/use-deposit';
 import { formatCurrency } from '@/lib/utils';
 import { ApiError } from '@/lib/api';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 /** 资格标签（✅可接 / ⛔需保证金 $Y） */
 function EligibilityTag({ candidate, t }: { candidate: DispatchCandidate; t: (k: string, v?: Record<string, string>) => string }) {
@@ -55,6 +61,46 @@ function EligibilityTag({ candidate, t }: { candidate: DispatchCandidate; t: (k:
         amount: formatCurrency(candidate.eligibility.requiredDeposit ?? 0),
       })}
     </Badge>
+  );
+}
+
+/**
+ * canAccept 列（保证金拦截链批C C2，2026-09-11）——直读批A 契约冗余标记
+ * DispatchCandidate.eligibility.canAccept（=eligible），⛔ 时 tooltip 展示资格明细。
+ */
+function CanAcceptCell({
+  candidate,
+  t,
+}: {
+  candidate: DispatchCandidate;
+  t: (k: string, v?: Record<string, string>) => string;
+}) {
+  const canAccept = candidate.eligibility.canAccept === true;
+  const icon = canAccept ? (
+    <CircleCheck className="h-4 w-4 text-green-600" aria-label={t('admin.dispatchCenter.canAcceptYes')} />
+  ) : (
+    <CircleX className="h-4 w-4 text-destructive" aria-label={t('admin.dispatchCenter.canAcceptNo')} />
+  );
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{icon}</TooltipTrigger>
+        <TooltipContent>
+          <p>
+            {canAccept
+              ? t('admin.dispatchCenter.canAcceptYes')
+              : t('admin.dispatchCenter.canAcceptTooltip', {
+                  deposit: formatCurrency(candidate.eligibility.depositAmount),
+                  limit:
+                    candidate.eligibility.maxOrderAmount !== null
+                      ? formatCurrency(candidate.eligibility.maxOrderAmount)
+                      : '—',
+                  required: formatCurrency(candidate.eligibility.requiredDeposit ?? 0),
+                })}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -81,6 +127,8 @@ function CandidateRow({
         <div className="w-10 text-center font-mono text-xs text-muted-foreground" title={t('admin.dispatchCenter.score')}>
           {candidate.score}
         </div>
+        {/* 批C C2：canAccept 列（✅/⛔ + 资格 tooltip，直读契约冗余标记） */}
+        <CanAcceptCell candidate={candidate} t={t} />
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{candidate.riderName}</span>

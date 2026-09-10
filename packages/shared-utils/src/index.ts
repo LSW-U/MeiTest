@@ -6,3 +6,4 @@ export * from './pagination';
 export * from './i18n';
 export * from './order-no';
 export * from './geo';
+export * from './dispatch-weights';

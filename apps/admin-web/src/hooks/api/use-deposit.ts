@@ -128,6 +128,8 @@ export interface DispatchCandidate {
   distanceKm: number | null;
   eligibility: {
     eligible: boolean;
+    /** 批A A2（T1-c）冗余直读标记（=eligible），契约 DispatchEligibilityLabel.canAccept */
+    canAccept: boolean;
     depositAmount: number;
     maxOrderAmount: number | null;
     requiredDeposit?: number;

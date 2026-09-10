@@ -22,6 +22,7 @@ import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { WarehouseLoadPanel } from '@/components/warehouse/warehouse-load-panel';
 import { DispatchCenter } from './dispatch-center';
+import { DispatchWeightsCard } from './dispatch-weights-card';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
@@ -223,6 +224,11 @@ function DispatchTasksContent() {
       <section className="space-y-3" id="dispatch-center">
         <h3 className="text-sm font-semibold">{t('admin.dispatchCenter.title')}</h3>
         <DispatchCenter crossSupportTarget={crossSupportTarget} />
+      </section>
+
+      {/* ===== 保证金拦截链批C C1（2026-09-11）：派单排序权重可配（SystemConfig dispatch.score_weights） ===== */}
+      <section className="space-y-3">
+        <DispatchWeightsCard />
       </section>
 
       {/* ===== 既有：任务监控列表 ===== */}
