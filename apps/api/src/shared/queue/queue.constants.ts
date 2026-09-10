@@ -18,3 +18,8 @@ export const COUPON_EXPIRE_QUEUE = 'coupon-expire';
  * admin 批量通知 → 按 100 人分块入队 → processor 逐块写 Notification + PUSH
  */
 export const NOTIFICATION_QUEUE = 'notification';
+/**
+ * 孤儿图片清理队列（upload 模块批C U4/U4P，2026-09-10）
+ * 每日一次扫描 MinIO 全量 key vs DB 引用集合（13 字段），仅删「无引用且超宽限期 7 天」对象
+ */
+export const ORPHAN_CLEANUP_QUEUE = 'orphan-cleanup';
