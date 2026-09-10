@@ -81,4 +81,45 @@ export function useRiders(params: RidersParams) {
   });
 }
 
-export type { StatisticsRidersResponseItem, StatisticsRidersData, StatisticsTopProductItem, StatisticsTopProductsData };
+// ===== 退款统计（批D，2026-09-10）=====
+
+type StatisticsRefundsData = components['schemas']['StatisticsRefundsData'];
+type StatisticsRefundReasonItem = components['schemas']['StatisticsRefundReasonItem'];
+
+export interface RefundsParams {
+  /** 预设范围（自定义时为 undefined） */
+  range?: StatisticsRange;
+  /** 自定义范围 YYYY-MM-DD 含头尾（预设时为 undefined） */
+  custom?: { from: string; to: string };
+}
+
+function buildRefundsQuery(params: RefundsParams): string {
+  const qs = new URLSearchParams();
+  if (params.range) qs.set('range', params.range);
+  if (params.custom) {
+    qs.set('from', params.custom.from);
+    qs.set('to', params.custom.to);
+  }
+  return qs.toString();
+}
+
+export function useRefunds(params: RefundsParams) {
+  return useQuery({
+    queryKey: ['statistics', 'refunds', params.range, params.custom?.from, params.custom?.to],
+    queryFn: async () => {
+      const res = await apiFetch<ApiSuccess<StatisticsRefundsData>>(
+        `/admin/statistics/refunds?${buildRefundsQuery(params)}`,
+      );
+      return res.data;
+    },
+  });
+}
+
+export type {
+  StatisticsRidersResponseItem,
+  StatisticsRidersData,
+  StatisticsTopProductItem,
+  StatisticsTopProductsData,
+  StatisticsRefundReasonItem,
+  StatisticsRefundsData,
+};

@@ -283,3 +283,125 @@ describe('StatisticsService.getRiders', () => {
     expect(res.items[0].rating).toBe(4.85);
   });
 });
+
+/**
+ * 退款统计（批D，2026-09-10 / 数据口径.md §2）
+ *
+ * $queryRaw 依次被调：第 1 次 = refunds 原因分布聚合，第 2 次 = orders GMV 分母
+ * 计入状态过滤（APPROVED/COMPLETED 计入 vs PENDING/REJECTED/FAILED/CANCELLED 不计入）
+ * 由 SQL WHERE 判定——单测验证 SQL 文本含状态集 + 服务层映射逻辑（reason 归并/排序/率计算）
+ */
+describe('StatisticsService.getRefunds', () => {
+  let service: StatisticsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    dbMock.$queryRaw.mockReset();
+    dbMock.$queryRaw.mockResolvedValue([]);
+    service = new StatisticsService();
+  });
+
+  /** 造一行 refunds groupBy mock */
+  function refundRow(reason: string, cnt: number, amount: number) {
+    return { reason, cnt: BigInt(cnt), amount: BigInt(amount) };
+  }
+
+  it('计入口径状态集出现在 SQL（APPROVED/COMPLETED 计入；PENDING 等由 WHERE 排除）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(5) }]);
+
+    await service.getRefunds({ range: 'week' });
+
+    // 第 1 次调用（refunds 聚合）：服务层 Prisma 来自本地生成客户端（real sqltag/join，
+    // 形如 { strings, values }，嵌套 SQL 展平进 values）——递归收集 strings/values 断言
+    const seen: string[] = [];
+    const walk = (v: unknown): void => {
+      if (typeof v === 'string') { seen.push(v); return; }
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') {
+        const o = v as Record<string, unknown>;
+        if (Array.isArray(o.strings)) o.strings.forEach(walk);
+        if (Array.isArray(o.values)) o.values.forEach(walk);
+        if (typeof o.sql === 'string') seen.push(o.sql);
+        if (Array.isArray(o.vals)) o.vals.forEach(walk);
+        if (Array.isArray(o.parts)) o.parts.forEach(walk);
+      }
+    };
+    walk(dbMock.$queryRaw.mock.calls[0]);
+    const joined = seen.join(' ');
+    expect(joined).toContain('APPROVED');
+    expect(joined).toContain('COMPLETED');
+    expect(joined).not.toContain('PENDING');
+    expect(joined).not.toContain('REJECTED');
+  });
+
+  it('金额/单量汇总：多原因映射 + BigInt → number + 总和正确', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      refundRow('QUALITY_ISSUE', 3, 1500),
+      refundRow('OUT_OF_STOCK', 2, 800),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(50) }]);
+
+    const res = await service.getRefunds({ range: 'month' });
+    expect(res.refundCount).toBe(5);
+    expect(res.refundAmount).toBe(2300);
+    expect(res.reasonBreakdown).toHaveLength(2);
+  });
+
+  it('reasonBreakdown 按 amount 降序', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      refundRow('OUT_OF_STOCK', 2, 800),
+      refundRow('QUALITY_ISSUE', 3, 1500),
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(50) }]);
+
+    const res = await service.getRefunds({ range: 'week' });
+    expect(res.reasonBreakdown.map((r) => r.reason)).toEqual(['QUALITY_ISSUE', 'OUT_OF_STOCK']);
+  });
+
+  it('reason 约定外值归 OTHER（TEXT 无 CHECK 容错，同 OTHER 已有值时归并）', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([
+      refundRow('WEIRD_DB_VALUE', 1, 100), // 不在 8 约定值 → OTHER
+      refundRow('OTHER', 2, 300), // 已有 OTHER → 归并到同一行
+    ]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(10) }]);
+
+    const res = await service.getRefunds({ range: 'week' });
+    expect(res.reasonBreakdown).toHaveLength(1);
+    expect(res.reasonBreakdown[0]).toEqual({ reason: 'OTHER', count: 3, amount: 400 });
+  });
+
+  it('rate 分母 = 同期 GMV 状态订单数；退款率 = refundCount / gmvOrderCount', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([refundRow('EXPIRED', 4, 1200)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(200) }]);
+
+    const res = await service.getRefunds({ range: 'week' });
+    expect(res.gmvOrderCount).toBe(200);
+    expect(res.rate).toBe(4 / 200); // 0.02
+  });
+
+  it('rate 分母 0（同期无 GMV 状态订单）→ rate = null', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([refundRow('EXPIRED', 4, 1200)]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+
+    const res = await service.getRefunds({ range: 'week' });
+    expect(res.gmvOrderCount).toBe(0);
+    expect(res.rate).toBeNull();
+  });
+
+  it('时间边界：自定义 from/to 含头尾（Dili 切日 → UTC 前日 15:00）+ E-STATISTICS 透传', async () => {
+    dbMock.$queryRaw.mockResolvedValueOnce([]);
+    dbMock.$queryRaw.mockResolvedValueOnce([{ cnt: BigInt(0) }]);
+
+    const res = await service.getRefunds({ from: '2026-06-23', to: '2026-06-23' });
+    expect(res.from).toBe('2026-06-22T15:00:00.000Z');
+    expect(res.to).toBe('2026-06-23T15:00:00.000Z');
+
+    await expect(
+      service.getRefunds({ from: '2026-06-23', to: '2026-06-20' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-001' } });
+    await expect(
+      service.getRefunds({ from: '2025-01-01', to: '2026-06-23' }),
+    ).rejects.toMatchObject({ status: 400, response: { code: 'E-STATISTICS-002' } });
+  });
+});

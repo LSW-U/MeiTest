@@ -8,10 +8,13 @@
  *     ——时间选择器对两个 tab 同时生效（总览只消费预设三值，自定义时总览沿用当前预设回退）
  * 数据分析报表模块 批C 改造（2026-09-10）：
  *   - 新增「骑手绩效」tab（components/statistics/riders-tab.tsx）
+ * 数据分析报表模块 批D 改造（2026-09-10）：
+ *   - 新增「退款统计」tab（components/statistics/refunds-tab.tsx）
  * 后端：
  *   - 总览：GET /admin/platform/dashboard/summary?range=today|week|month
  *   - 商品排行：GET /admin/statistics/products/top + /products/export
  *   - 骑手绩效：GET /admin/statistics/riders + /riders/export
+ *   - 退款统计：GET /admin/statistics/refunds + /refunds/export
  */
 'use client';
 
@@ -42,6 +45,7 @@ import { useDashboardSummary, type DashboardRange } from '@/hooks/api/use-dashbo
 import { formatCurrency } from '@/lib/utils';
 import { TopProductsTab } from '@/components/statistics/top-products-tab';
 import { RidersTab } from '@/components/statistics/riders-tab';
+import { RefundsTab } from '@/components/statistics/refunds-tab';
 
 const RANGES: DashboardRange[] = ['today', 'week', 'month'];
 
@@ -52,8 +56,10 @@ export default function StatisticsPage() {
   const t = useTranslations('common');
   const format = useFormatter();
 
-  // 报表级 tab：总览 / 商品排行 / 骑手绩效（后续批次扩展：退款统计/客户分析）
-  const [reportTab, setReportTab] = useState<'overview' | 'topProducts' | 'riders'>('overview');
+  // 报表级 tab：总览 / 商品排行 / 骑手绩效 / 退款统计（后续批次扩展：客户分析）
+  const [reportTab, setReportTab] = useState<
+    'overview' | 'topProducts' | 'riders' | 'refunds'
+  >('overview');
 
   // 时间范围：预设三值 + 自定义（提交后生效；isCustom 区分当前模式）
   const [range, setRange] = useState<DashboardRange>('today');
@@ -96,11 +102,12 @@ export default function StatisticsPage() {
 
       {/* 页头公共件：报表 tab + 时间范围选择器（预设三值 + 自定义起止） */}
       <div className="flex flex-wrap items-center gap-4">
-        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts' | 'riders')}>
+        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts' | 'riders' | 'refunds')}>
           <TabsList>
             <TabsTrigger value="overview">{t('admin.statistics.overviewTab')}</TabsTrigger>
             <TabsTrigger value="topProducts">{t('admin.statistics.topProductsTab')}</TabsTrigger>
             <TabsTrigger value="riders">{t('admin.statistics.ridersTab')}</TabsTrigger>
+            <TabsTrigger value="refunds">{t('admin.statistics.refundsTab')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -327,6 +334,15 @@ export default function StatisticsPage() {
             <RidersTab custom={custom} />
           ) : (
             <RidersTab range={range} />
+          )}
+        </TabsContent>
+
+        {/* ===== 退款统计 tab（批D 新增） ===== */}
+        <TabsContent value="refunds">
+          {isCustom && custom.from && custom.to ? (
+            <RefundsTab custom={custom} />
+          ) : (
+            <RefundsTab range={range} />
           )}
         </TabsContent>
       </Tabs>

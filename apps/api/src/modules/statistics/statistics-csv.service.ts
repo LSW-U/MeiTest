@@ -33,6 +33,13 @@ const RIDER_EXPORT_COLUMNS = [
   'abnormalOrders',
 ] as const;
 
+/** 退款统计导出列 key（批D；与 admin-web「退款统计」汇总卡+原因分布对应，列名 i18n key 在 admin.statistics.export* ） */
+const REFUND_EXPORT_COLUMNS = [
+  'reason',
+  'refundCount',
+  'refundAmountUsdCents',
+] as const;
+
 @Injectable()
 export class StatisticsCsvService {
   constructor(@Inject(StatisticsService) private readonly statistics: StatisticsService) {}
@@ -132,5 +139,54 @@ export class StatisticsCsvService {
       ].join(','),
     );
     return [header, ...rows].join('\n');
+  }
+
+  /**
+   * 退款统计导出 CSV（批D）
+   *
+   * 行结构 = 原因分布表（每原因一行），首列 reason 展示**枚举原文**（OUT_OF_STOCK 等，
+   * 约定外值归 OTHER——不做文案映射，任务书 §2 改动 3 拍板）；末行附总计（汇总卡三值）。
+   * lang 只影响列名。
+   */
+  async exportRefundsCsv(params: {
+    range?: 'today' | 'week' | 'month';
+    from?: string;
+    to?: string;
+    lang: SupportedLanguage;
+  }): Promise<string> {
+    const data = await this.statistics.getRefundsForExport(params);
+
+    const locale = (params.lang as Locale) ?? DEFAULT_LOCALE;
+    const bundle = messages[locale] ?? messages[DEFAULT_LOCALE];
+    const stat = (bundle.common as Record<string, unknown>)['admin'] as Record<
+      string,
+      unknown
+    >;
+    const block = (stat['statistics'] ?? {}) as Record<string, string>;
+
+    // CSV escape（对齐 inventory.service.ts:509-517 先例，与前两个导出方法逐字节同法）
+    const escape = (v: unknown): string => {
+      if (v === null || v === undefined) return '';
+      let s = String(v);
+      // CSV injection 防护：= + - @ 开头前缀单引号（Excel/WPS 当文本，防公式执行）
+      if (/^[=+\-@]/.test(s)) s = "'" + s;
+      // 标准字段转义（引号/逗号/换行）
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const header = REFUND_EXPORT_COLUMNS.map(
+      (c) => escape(block[`export${c.charAt(0).toUpperCase()}${c.slice(1)}`] ?? c),
+    ).join(',');
+    const rows = data.reasonBreakdown.map((it) =>
+      [escape(it.reason), escape(it.count), escape(it.amount)].join(','),
+    );
+    // 末行总计：首列放「总计」列名位（exportRefundTotal），后两列 = 汇总卡单量/金额
+    const totalRow = [
+      escape(block['exportRefundTotal'] ?? 'Total'),
+      escape(data.refundCount),
+      escape(data.refundAmount),
+    ].join(',');
+    return [header, ...rows, totalRow].join('\n');
   }
 }

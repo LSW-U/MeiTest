@@ -114,3 +114,51 @@ export const StatisticsRidersData = z.object({
 export type StatisticsRidersDataType = z.infer<typeof StatisticsRidersData>;
 
 export const StatisticsRidersResponse = ApiResponse(StatisticsRidersData);
+
+// ===== 退款统计（批D，2026-09-10）=====
+
+/** 退款统计 query：时间范围（复用公共 rangeFields + refine） */
+export const StatisticsRefundsQuery = z
+  .object({ ...rangeFields })
+  .refine((q) => (q.from && q.to) || q.range, rangeRequired);
+export type StatisticsRefundsQueryType = z.infer<typeof StatisticsRefundsQuery>;
+
+/**
+ * 退款原因分布单行（口径见 数据口径.md §2）：
+ *   - 计入口径 = Refund.status ∈ (APPROVED, COMPLETED)（APPROVED 已审待打款、COMPLETED 已打款，都是"确定要退"的钱）
+ *   - reason 是 TEXT 无 DB CHECK（schema.prisma 8 值是注释约定）——服务层对约定外值归 'OTHER' 展示
+ */
+export const StatisticsRefundReasonItem = z.object({
+  /** 原因枚举原文（OUT_OF_STOCK 等 8 约定值；约定外值归 'OTHER'，不做文案映射） */
+  reason: z.string(),
+  /** 区间内该原因退款单数 */
+  count: z.number().int().nonnegative(),
+  /** 区间内该原因退款金额合计（分） */
+  amount: Money,
+});
+export type StatisticsRefundReasonItemType = z.infer<typeof StatisticsRefundReasonItem>;
+
+/**
+ * 退款统计响应（金额单位分）：
+ *   - refundCount/refundAmount：计入口径内汇总
+ *   - rate：退款率 = refundCount / 同期 GMV 状态订单数（GMV_ORDER_STATUSES + createdAt ∈ range），
+ *     分母为 0 时 rate = null（无同期成交则率无意义）
+ *   - reasonBreakdown：groupBy reason（仅计入口径内），按 amount 降序
+ */
+export const StatisticsRefundsData = z.object({
+  /** 实际生效的查询区间起止（UTC ISO，回显给前端） */
+  from: z.string(),
+  to: z.string(),
+  /** 区间内退款单数（计入口径 status ∈ APPROVED/COMPLETED） */
+  refundCount: z.number().int().nonnegative(),
+  /** 区间内退款金额合计（分） */
+  refundAmount: Money,
+  /** 退款率 = refundCount / 同期 GMV 状态订单数（0-1，两位小数由前端格式化；分母 0 → null） */
+  rate: z.number().min(0).max(1).nullable(),
+  /** 同期 GMV 状态订单数（rate 分母回显，便于前端展示口径） */
+  gmvOrderCount: z.number().int().nonnegative(),
+  reasonBreakdown: z.array(StatisticsRefundReasonItem),
+});
+export type StatisticsRefundsDataType = z.infer<typeof StatisticsRefundsData>;
+
+export const StatisticsRefundsResponse = ApiResponse(StatisticsRefundsData);

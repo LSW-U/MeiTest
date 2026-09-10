@@ -1202,7 +1202,19 @@
       "exportCompletedOrders": "Completed Orders",
       "exportIncomeUsdCents": "Income (USD cents)",
       "exportRating": "Rating",
-      "exportAbnormalOrders": "Abnormal Orders"
+      "exportAbnormalOrders": "Abnormal Orders",
+      "refundsTab": "Refunds",
+      "refundCount": "Refunded Orders",
+      "refundAmount": "Refund Amount",
+      "refundRate": "Refund Rate",
+      "refundRateDenominator": "Denominator: {count} GMV orders in range",
+      "reasonBreakdown": "Refund Reasons",
+      "refundReason": "Reason",
+      "noRefunds": "No refunds in this range",
+      "exportReason": "Reason",
+      "exportRefundCount": "Refunded Orders",
+      "exportRefundAmountUsdCents": "Refund Amount (USD cents)",
+      "exportRefundTotal": "Total"
     },
     "settings": {
       "title": "Settings",

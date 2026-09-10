@@ -5691,6 +5691,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/statistics/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 退款统计（口径见 数据口径.md §2：计入口径=Refund.status ∈ (APPROVED, COMPLETED)；refundCount/refundAmount 汇总；rate 分母=同期 GMV 状态订单数（GMV_ORDER_STATUSES + createdAt ∈ range），分母 0 → rate=null；reasonBreakdown=groupBy reason（reason TEXT 无 CHECK，约定外值归 OTHER 展示），按 amount 降序。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 退款统计汇总（金额单位分） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                from: string;
+                                to: string;
+                                refundCount: number;
+                                refundAmount: number;
+                                rate: number | null;
+                                gmvOrderCount: number;
+                                reasonBreakdown: {
+                                    reason: string;
+                                    count: number;
+                                    amount: number;
+                                }[];
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/statistics/refunds/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 退款统计导出 CSV（列名按 lang；reason 展示枚举原文（OUT_OF_STOCK 等，约定外值归 OTHER），不做文案映射；Content-Disposition attachment；lang 必须显式传——admin-web locale 在 cookie） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 流（text/csv，attachment） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/support/config": {
         parameters: {
             query?: never;
@@ -22222,6 +22356,48 @@ export interface components {
                     income: number;
                     rating: number;
                     abnormalCount: number;
+                }[];
+            };
+            message?: string;
+        };
+        StatisticsRefundsQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+        };
+        StatisticsRefundReasonItem: {
+            reason: string;
+            count: number;
+            amount: number;
+        };
+        StatisticsRefundsData: {
+            from: string;
+            to: string;
+            refundCount: number;
+            refundAmount: number;
+            rate: number | null;
+            gmvOrderCount: number;
+            reasonBreakdown: {
+                reason: string;
+                count: number;
+                amount: number;
+            }[];
+        };
+        StatisticsRefundsResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                from: string;
+                to: string;
+                refundCount: number;
+                refundAmount: number;
+                rate: number | null;
+                gmvOrderCount: number;
+                reasonBreakdown: {
+                    reason: string;
+                    count: number;
+                    amount: number;
                 }[];
             };
             message?: string;

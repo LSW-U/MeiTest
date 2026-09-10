@@ -20,6 +20,7 @@ import { buildRange } from '../../shared/statistics/range';
 import { ABNORMAL_ORDER_STATUSES, GMV_ORDER_STATUSES } from '../../shared/statistics/metrics';
 import { pickI18nField, type SupportedLanguage } from '@meimart/shared-utils';
 import type {
+  StatisticsRefundReasonItemType,
   StatisticsRidersResponseItemType,
   StatisticsTopProductItemType,
 } from '@meimart/api-contract';
@@ -40,10 +41,38 @@ export interface RidersParams {
   to?: string;
 }
 
+/** 退款统计聚合入参（controller 已过 Zod 校验） */
+export interface RefundsParams {
+  range?: 'today' | 'week' | 'month';
+  from?: string;
+  to?: string;
+}
+
 /** GMV 状态集合的 SQL IN 字面量（metrics 常量展开，单一事实源仍 metrics.ts） */
 const GMV_STATUSES_SQL = Prisma.join(
   [...GMV_ORDER_STATUSES].map((s) => Prisma.sql`${s}`),
 );
+
+/**
+ * 退款计入口径状态集 SQL IN 字面量（批D，数据口径.md §2 拍板）：
+ * APPROVED（已审待打款）+ COMPLETED（已打款）= "确定要退"的钱；
+ * PENDING / REJECTED / FAILED / CANCELLED 不计入
+ */
+const REFUND_COUNTED_STATUSES_SQL = Prisma.join(
+  (['APPROVED', 'COMPLETED'] as const).map((s) => Prisma.sql`${s}`),
+);
+
+/** reason 约定 8 值（schema.prisma 注释约定，TEXT 无 DB CHECK）；约定外值归 OTHER 展示 */
+const REFUND_KNOWN_REASONS = new Set([
+  'OUT_OF_STOCK',
+  'EXPIRED',
+  'QUALITY_ISSUE',
+  'WRONG_ITEM',
+  'SHORTAGE',
+  'DELIVERY_TOO_SLOW',
+  'CUSTOMER_CHANGE_MIND',
+  'OTHER',
+]);
 
 /** 骑手完成单状态集 SQL IN 字面量（R5 三值：task 自身状态不作为完成依据，join Order 判定） */
 const COMPLETED_STATUSES_SQL = Prisma.join(
@@ -219,5 +248,96 @@ export class StatisticsService {
    */
   async getRidersForExport(params: RidersParams) {
     return this.getRiders(params);
+  }
+
+  /**
+   * 退款统计（批D，2026-09-10）
+   *
+   * 口径（单一事实源 = 数据口径.md §2）：
+   *   - 计入口径：Refund.status ∈ (APPROVED, COMPLETED)（确定要退的钱）
+   *   - 金额：Refund.amount（分）——整单退款=Order.payableAmount，部分退款=Σ RefundItem.subtotal，
+   *     Refund.amount 在退款创建时已按此口径落值，本层直接 sum 无需再 join RefundItem
+   *   - rate 分母：同期 GMV 状态订单数（GMV_ORDER_STATUSES + Order.createdAt ∈ range），
+   *     不是全部订单；分母 0 → rate = null
+   *   - reasonBreakdown：groupBy reason（仅计入口径内）；reason 是 TEXT 无 CHECK，
+   *     约定外值归 'OTHER' 展示；按 amount 降序
+   *   - 时间过滤：Refund.createdAt ∈ range（报表锚点；结算单挂 periodDate，D2 对账注明差异）
+   *
+   * 性能：两次 raw SQL（退款汇总+原因分布合一条、GMV 分母一条），
+   *       吃既有 refunds_status_created_at_idx（migration 20260630000000）
+   */
+  async getRefunds(params: RefundsParams): Promise<{
+    from: string;
+    to: string;
+    refundCount: number;
+    refundAmount: number;
+    rate: number | null;
+    gmvOrderCount: number;
+    reasonBreakdown: StatisticsRefundReasonItemType[];
+  }> {
+    // 时间范围校验/切日全部由批A 公共层负责（E-STATISTICS-001/002 在此抛出）
+    const r =
+      params.range !== undefined
+        ? buildRange(params.range)
+        : buildRange({ from: params.from as string, to: params.to as string });
+
+    // 退款汇总 + 原因分布：一条 SQL（计入口径过滤），复用 refunds_status_created_at_idx
+    const refundRows = await db.$queryRaw<
+      Array<{ reason: string; cnt: bigint; amount: bigint }>
+    >`
+      SELECT rf.reason::text AS reason,
+             COUNT(*)::bigint AS cnt,
+             SUM(rf.amount)::bigint AS amount
+      FROM refunds rf
+      WHERE rf.status::text IN (${REFUND_COUNTED_STATUSES_SQL})
+        AND rf.created_at >= ${r.from}::timestamptz
+        AND rf.created_at < ${r.to}::timestamptz
+      GROUP BY rf.reason
+    `;
+
+    // rate 分母：同期 GMV 状态订单数（metrics 六态，与 dashboard/批A 同源常量）
+    const denomRows = await db.$queryRaw<Array<{ cnt: bigint }>>`
+      SELECT COUNT(*)::bigint AS cnt
+      FROM orders o
+      WHERE o.status::text IN (${GMV_STATUSES_SQL})
+        AND o.created_at >= ${r.from}::timestamptz
+        AND o.created_at < ${r.to}::timestamptz
+    `;
+
+    const gmvOrderCount = Number(denomRows[0]?.cnt ?? 0);
+
+    // 原因分布：约定外值归 OTHER（reason TEXT 无 CHECK，容忍未知值不报错）
+    const merged = new Map<string, { count: number; amount: number }>();
+    for (const row of refundRows) {
+      const reason = REFUND_KNOWN_REASONS.has(row.reason) ? row.reason : 'OTHER';
+      const acc = merged.get(reason) ?? { count: 0, amount: 0 };
+      acc.count += Number(row.cnt);
+      acc.amount += Number(row.amount);
+      merged.set(reason, acc);
+    }
+    const reasonBreakdown: StatisticsRefundReasonItemType[] = [...merged.entries()]
+      .map(([reason, v]) => ({ reason, count: v.count, amount: v.amount }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const refundCount = reasonBreakdown.reduce((s, it) => s + it.count, 0);
+    const refundAmount = reasonBreakdown.reduce((s, it) => s + it.amount, 0);
+
+    return {
+      from: r.from.toISOString(),
+      to: r.to.toISOString(),
+      refundCount,
+      refundAmount,
+      // 分母 0（同期无 GMV 状态订单）→ 率无意义，置 null
+      rate: gmvOrderCount === 0 ? null : refundCount / gmvOrderCount,
+      gmvOrderCount,
+      reasonBreakdown,
+    };
+  }
+
+  /**
+   * 退款统计导出行（CSV 组装交给 statistics-csv.service，本方法只取数）
+   */
+  async getRefundsForExport(params: RefundsParams) {
+    return this.getRefunds(params);
   }
 }

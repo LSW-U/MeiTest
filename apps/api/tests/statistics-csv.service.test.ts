@@ -26,6 +26,15 @@ vi.mock('../src/modules/statistics/statistics.service', () => ({
       to: '2026-06-23T15:00:00.000Z',
       items: [],
     });
+    getRefundsForExport = vi.fn().mockResolvedValue({
+      from: '2026-06-22T15:00:00.000Z',
+      to: '2026-06-23T15:00:00.000Z',
+      refundCount: 0,
+      refundAmount: 0,
+      rate: null,
+      gmvOrderCount: 0,
+      reasonBreakdown: [],
+    });
   },
 }));
 
@@ -192,5 +201,76 @@ describe('StatisticsCsvService.exportRidersCsv', () => {
     expect(lines[1].split(',')[4]).toBe('4.85');
     expect(lines[1].split(',')[5]).toBe('1');
     expect(lines[2].split(',')[4]).toBe('4.10');
+  });
+});
+
+describe('StatisticsCsvService.exportRefundsCsv', () => {
+  let service: StatisticsCsvService;
+  let source: { getRefundsForExport: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new StatisticsCsvService(new StatisticsService());
+    source = (service as unknown as { statistics: { getRefundsForExport: ReturnType<typeof vi.fn> } })
+      .statistics;
+  });
+
+  /** 造一份退款统计 mock 数据 */
+  function mockRefunds(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      from: '2026-06-22T15:00:00.000Z',
+      to: '2026-06-23T15:00:00.000Z',
+      refundCount: 5,
+      refundAmount: 2300,
+      rate: 0.1,
+      gmvOrderCount: 50,
+      reasonBreakdown: [
+        { reason: 'QUALITY_ISSUE', count: 3, amount: 1500 },
+        { reason: 'OUT_OF_STOCK', count: 2, amount: 800 },
+      ],
+      ...overrides,
+    };
+  }
+
+  it('reason 枚举原文展示（不做文案映射）+ 末行总计（单量/金额）', async () => {
+    source.getRefundsForExport.mockResolvedValue(mockRefunds());
+    const csv = await service.exportRefundsCsv({ range: 'week', lang: 'en' });
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('Reason,Refunded Orders,Refund Amount (USD cents)');
+    expect(lines[1]).toBe('QUALITY_ISSUE,3,1500');
+    expect(lines[2]).toBe('OUT_OF_STOCK,2,800');
+    expect(lines[3]).toBe('Total,5,2300');
+  });
+
+  it('reason 公式注入防护：= + - @ 前缀单引号（对齐前两个导出方法同法）', async () => {
+    source.getRefundsForExport.mockResolvedValue(
+      mockRefunds({
+        reasonBreakdown: [{ reason: '=WEIRD', count: 1, amount: 100 }],
+        refundCount: 1,
+        refundAmount: 100,
+      }),
+    );
+    const csv = await service.exportRefundsCsv({ range: 'week', lang: 'en' });
+    expect(csv.split('\n')[1]).toContain("'=WEIRD");
+  });
+
+  it('列名五语走 shared-locales 对应语（en / zh 各一行头）', async () => {
+    source.getRefundsForExport.mockResolvedValue(mockRefunds({ reasonBreakdown: [] }));
+    const en = await service.exportRefundsCsv({ range: 'week', lang: 'en' });
+    expect(en.split('\n')[0]).toBe('Reason,Refunded Orders,Refund Amount (USD cents)');
+    const zh = await service.exportRefundsCsv({ range: 'week', lang: 'zh' });
+    expect(zh.split('\n')[0]).toBe('退款原因,退款单量,退款金额（美分）');
+  });
+
+  it('约定外 reason 归 OTHER 后进入 CSV（服务层归并，CSV 层透传）', async () => {
+    source.getRefundsForExport.mockResolvedValue(
+      mockRefunds({
+        reasonBreakdown: [{ reason: 'OTHER', count: 5, amount: 2300 }],
+      }),
+    );
+    const csv = await service.exportRefundsCsv({ range: 'week', lang: 'en' });
+    const lines = csv.split('\n');
+    expect(lines[1]).toBe('OTHER,5,2300');
+    expect(lines[2]).toBe('Total,5,2300');
   });
 });
