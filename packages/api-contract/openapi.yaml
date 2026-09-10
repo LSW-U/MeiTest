@@ -2524,6 +2524,8 @@ components:
           type: string
           nullable: true
           format: date-time
+        acceptingReservation:
+          type: boolean
       required:
         - id
         - orderNo
@@ -2551,6 +2553,7 @@ components:
         - cancelReason
         - promotion
         - scheduledFor
+        - acceptingReservation
     OrderItem:
       type: object
       properties:
@@ -14116,6 +14119,8 @@ paths:
                     type: string
                     nullable: true
                     format: date-time
+                  acceptingReservation:
+                    type: boolean
                 required:
                   - id
                   - orderNo
@@ -14143,6 +14148,7 @@ paths:
                   - cancelReason
                   - promotion
                   - scheduledFor
+                  - acceptingReservation
         "400":
           description: STOCK_NOT_ENOUGH
           content:
@@ -14351,6 +14357,8 @@ paths:
                       type: string
                       nullable: true
                       format: date-time
+                    acceptingReservation:
+                      type: boolean
                   required:
                     - id
                     - orderNo
@@ -14378,6 +14386,7 @@ paths:
                     - cancelReason
                     - promotion
                     - scheduledFor
+                    - acceptingReservation
   /api/v1/client/orders/counts:
     get:
       tags:
@@ -16132,6 +16141,8 @@ paths:
                     type: string
                     nullable: true
                     format: date-time
+                  acceptingReservation:
+                    type: boolean
                 required:
                   - id
                   - orderNo
@@ -16159,6 +16170,7 @@ paths:
                   - cancelReason
                   - promotion
                   - scheduledFor
+                  - acceptingReservation
         "404":
           description: ORDER_NOT_FOUND
           content:
@@ -21630,6 +21642,8 @@ paths:
                               type: string
                               nullable: true
                               format: date-time
+                            acceptingReservation:
+                              type: boolean
                           required:
                             - id
                             - orderNo
@@ -21657,6 +21671,7 @@ paths:
                             - cancelReason
                             - promotion
                             - scheduledFor
+                            - acceptingReservation
                       nextCursor:
                         type: string
                         nullable: true
@@ -21920,6 +21935,8 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      acceptingReservation:
+                        type: boolean
                     required:
                       - id
                       - orderNo
@@ -21947,6 +21964,7 @@ paths:
                       - cancelReason
                       - promotion
                       - scheduledFor
+                      - acceptingReservation
                 required:
                   - success
                   - data
@@ -22181,6 +22199,8 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      acceptingReservation:
+                        type: boolean
                     required:
                       - id
                       - orderNo
@@ -22208,6 +22228,7 @@ paths:
                       - cancelReason
                       - promotion
                       - scheduledFor
+                      - acceptingReservation
                 required:
                   - success
                   - data

@@ -328,6 +328,13 @@ async function main() {
   // === FLOW M === 平台系统配置（流程 M 独占段，其他流程不动此段）
   // W2-COLLABORATION.md §3.5 — seed.ts 用 FLOW 注释分段
   const SYSTEM_CONFIGS: Array<{ key: string; value: string; description: string }> = [
+    // 保证金批A T2（2026-09-10）：派单排序权重单键（JSON，和必须=1；zod refine 校验）。
+    // dispatch.service score 读此 key；缺省/非法 JSON/解析失败回退代码常量 DISPATCH_SCORE_WEIGHTS。
+    {
+      key: 'dispatch.score_weights',
+      value: JSON.stringify({ rating: 0.5, distance: 0.3, inTransit: 0.2 }),
+      description: 'Dispatch candidate score weights JSON {rating,distance,inTransit}; sum must equal 1',
+    },
     {
       key: 'platform.commission_rate',
       value: '5',

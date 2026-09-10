@@ -174,7 +174,9 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
   };
 });
 
-vi.mock('../src/shared/db', () => ({
+vi.mock('../src/shared/db', async () => ({
+  // 批A A3：order.service 引 isWarehouseOpen/nextOpenAt（真实实现）
+  ...(await import('../src/shared/db/warehouse-hours')),
   db: mockDb,
   withTransaction: mockHelpers.withTransaction,
   deductStock: mockHelpers.deductStock,

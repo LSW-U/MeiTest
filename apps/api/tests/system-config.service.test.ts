@@ -24,6 +24,7 @@ vi.mock('../src/shared/cache', () => ({
     get: vi.fn(),
     set: vi.fn(),
     del: vi.fn(),
+    incr: vi.fn(),
   },
 }));
 
@@ -44,6 +45,7 @@ const redisMock = redis as unknown as {
   get: ReturnType<typeof vi.fn>;
   set: ReturnType<typeof vi.fn>;
   del: ReturnType<typeof vi.fn>;
+  incr: ReturnType<typeof vi.fn>;
 };
 
 describe('SystemConfigService', () => {
@@ -175,5 +177,46 @@ describe('SystemConfigService', () => {
       where: { key: 'k' },
       data: { value: 'new', updatedBy: 'u' },
     });
+  });
+
+  // ===== 批A P3-3（2026-09-10）：weights 版本 bump 正向断言 =====
+  // 此前 redis mock 缺 incr，update('dispatch.score_weights') 走 bumpKeys 循环时
+  // "redis.incr is not a function" 被 try/catch 吞成 warn——测试绿但属异常路径过关。
+  it('批A P3-3: update dispatch.score_weights → INCR 权重版本号（不 DEL 版本键）', async () => {
+    dbMock.findUnique.mockResolvedValueOnce({ key: 'dispatch.score_weights', value: 'old' });
+    dbMock.update.mockResolvedValueOnce({
+      key: 'dispatch.score_weights',
+      value: 'new',
+      description: null,
+      updatedAt: new Date(),
+      updatedBy: 'admin-1',
+    });
+    redisMock.del.mockResolvedValue(1);
+    redisMock.incr.mockResolvedValue(1);
+
+    await service.update('dispatch.score_weights', 'new', undefined, 'admin-1');
+
+    // 自身缓存 del 照常；weights 的派生 cacheKey 为空串（filter 掉）不 del 空键
+    expect(redisMock.del).toHaveBeenCalledWith('SystemConfig:dispatch.score_weights');
+    expect(redisMock.del).not.toHaveBeenCalledWith('');
+    // 版本号 INCR（读者进程 getScoreWeights 比对版本变化才回源）
+    expect(redisMock.incr).toHaveBeenCalledTimes(1);
+    expect(redisMock.incr).toHaveBeenCalledWith('config:dispatch:weights:ver');
+  });
+
+  it('批A P3-3: update 无 bumpVerKey 的 key → incr 不被调', async () => {
+    dbMock.findUnique.mockResolvedValueOnce({ key: 'support.phone', value: 'old' });
+    dbMock.update.mockResolvedValueOnce({
+      key: 'support.phone',
+      value: 'new',
+      description: null,
+      updatedAt: new Date(),
+      updatedBy: 'u',
+    });
+    redisMock.del.mockResolvedValue(1);
+
+    await service.update('support.phone', 'new', undefined, 'u');
+
+    expect(redisMock.incr).not.toHaveBeenCalled();
   });
 });

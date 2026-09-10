@@ -33,11 +33,14 @@ const { mockDb, mockHelpers, mockRealtime, mockServer, mockRedis } = vi.hoisted(
         update: vi.fn(),
       },
       $executeRaw: vi.fn(),
+      // 保证金批A T2：listDispatchCandidates score 走 getScoreWeights（SystemConfig 权重）
+      systemConfig: { findUnique: vi.fn().mockResolvedValue(null) },
     },
     mockHelpers: { withTransaction: vi.fn() },
     mockRealtime: { server },
     mockServer: server,
-    mockRedis: { pipeline: vi.fn() },
+    // 保证金批A T2/T3：redis.get 读权重版本号（返回 null → 版本 0，weights 回退常量）
+    mockRedis: { pipeline: vi.fn(), get: vi.fn().mockResolvedValue(null) },
   };
 });
 
@@ -120,6 +123,43 @@ describe('DispatchService 批 D 派单改造', () => {
       });
       mockDb.order.findUnique.mockResolvedValue({ payableAmount: orderAmount });
     }
+
+    // ===== 批A P3-1（2026-09-10）：预约单未到时直抢拒绝 =====
+    it('预约单 scheduledFor 未来时刻 → E-DISPATCH-006，事务不进', async () => {
+      setupAccept(100, 800); // 保证金资格正常，仅时间未到
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 800,
+        scheduledFor: new Date(Date.now() + 60 * 60 * 1000), // 1h 后开门
+      });
+      await expect(service.acceptTask({ riderId: 'u1', taskId: 'task-1' })).rejects.toThrow(
+        /E-DISPATCH-006|scheduled order/,
+      );
+      expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+    });
+
+    it('即时单 scheduledFor=null → 正常放行（资格通过后进事务）', async () => {
+      setupAccept(100, 800);
+      mockHelpers.withTransaction.mockResolvedValue({ ok: true });
+      mockDb.deliveryTask.findUnique
+        .mockResolvedValueOnce({ id: 'task-1', orderId: 'order-1', status: 'PENDING_ASSIGN' })
+        .mockResolvedValueOnce(buildTask({ status: 'ASSIGNED', assignedAt: new Date() }) as never);
+      const result = await service.acceptTask({ riderId: 'u1', taskId: 'task-1' });
+      expect(result.status).toBe('ASSIGNED');
+    });
+
+    it('预约单已到时（scheduledFor 过去时刻）→ 放行进事务', async () => {
+      setupAccept(100, 800);
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 800,
+        scheduledFor: new Date(Date.now() - 60 * 1000), // 已过预约点，可接
+      });
+      mockHelpers.withTransaction.mockResolvedValue({ ok: true });
+      mockDb.deliveryTask.findUnique
+        .mockResolvedValueOnce({ id: 'task-1', orderId: 'order-1', status: 'PENDING_ASSIGN' })
+        .mockResolvedValueOnce(buildTask({ status: 'ASSIGNED', assignedAt: new Date() }) as never);
+      const result = await service.acceptTask({ riderId: 'u1', taskId: 'task-1' });
+      expect(result.status).toBe('ASSIGNED');
+    });
 
     it('未缴（0）→ E-DEPOSIT-201，事务不进', async () => {
       setupAccept(0, 800);
@@ -355,6 +395,34 @@ describe('DispatchService 批 D 派单改造', () => {
       const result = await service.listDispatchCandidates({ taskId: 'task-1' });
       expect(result.items[0].riderProfileId).toBe('rich');
       expect(result.items[0].score).toBe(result.items[1].score);
+    });
+
+    it('批A A4/T5-c 预约单可见性：开门前（scheduledFor > now）→ 候选早退为空，不查骑手', async () => {
+      setupCandidates([buildRider({ id: 'ok' })]);
+      // 覆盖 order：未来开门的预约单
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 800,
+        scheduledFor: new Date(Date.now() + 3600_000),
+      });
+      const result = await service.listDispatchCandidates({ taskId: 'task-1' });
+      expect(result.items).toEqual([]);
+      // 早退：不进候选池查询（APPROVED 骑手 findMany 不触达）
+      expect(mockDb.riderProfile.findMany).not.toHaveBeenCalled();
+    });
+
+    it('批A A4/T5-c 预约单可见性：已到时（scheduledFor ≤ now）/ 即时单 → 正常推荐', async () => {
+      // 即时单（scheduledFor=null）
+      setupCandidates([buildRider({ id: 'ok' })]);
+      const nowCase = await service.listDispatchCandidates({ taskId: 'task-1' });
+      expect(nowCase.items.map((c) => c.riderProfileId)).toEqual(['ok']);
+
+      // 预约单已到时
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 800,
+        scheduledFor: new Date(Date.now() - 1000),
+      });
+      const dueCase = await service.listDispatchCandidates({ taskId: 'task-1' });
+      expect(dueCase.items.map((c) => c.riderProfileId)).toEqual(['ok']);
     });
 
     it('任务不存在 → E-DISPATCH-001', async () => {

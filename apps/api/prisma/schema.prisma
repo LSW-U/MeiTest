@@ -564,6 +564,11 @@ model Order {
   // 配送
   riderId String? @map("rider_id")
 
+  // 预约单（保证金批A T5-c，2026-09-10）：打烊时段下单写入该仓下一次开门时间；
+  // 即时单为 null。骑手大厅 scheduledFor > now() 的单不可见，开门后自然进入候选。
+  // 超时豁免：order-timeout 15min 取消跳过 scheduledFor 非空的单（T5-e）。
+  scheduledFor DateTime? @map("scheduled_for")
+
   // 支付(v0.3:5 枚举)
   paymentMethod PaymentMethod @map("payment_method")
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
@@ -606,6 +611,8 @@ model Order {
 
   @@index([userId, createdAt])
   @@index([warehouseId, status])
+  // 保证金批A T5-c（2026-09-10）：预约单大厅可见性查询用（scheduledFor<=now 过滤）
+  @@index([scheduledFor, status])
   // DBA 批次1-4（2026-08-27）：移除 @@index([status])——被 (status, created_at DESC) 复合索引最左前缀覆盖，冗余
   // DBA 批次1-4：移除 @@index([orderNo])——orderNo 已有 @unique 自动建 UQ B-tree，普通索引冗余
   @@index([riderId])

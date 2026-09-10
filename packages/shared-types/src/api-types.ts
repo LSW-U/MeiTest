@@ -4847,6 +4847,7 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            acceptingReservation: boolean;
                         }[];
                     };
                 };
@@ -4955,6 +4956,7 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            acceptingReservation: boolean;
                         };
                     };
                 };
@@ -6257,6 +6259,7 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            acceptingReservation: boolean;
                         };
                     };
                 };
@@ -10073,6 +10076,7 @@ export interface paths {
                                     } | null;
                                     /** Format: date-time */
                                     scheduledFor: string | null;
+                                    acceptingReservation: boolean;
                                 }[];
                                 /** Format: uuid */
                                 nextCursor: string | null;
@@ -10226,6 +10230,7 @@ export interface paths {
                                 } | null;
                                 /** Format: date-time */
                                 scheduledFor: string | null;
+                                acceptingReservation: boolean;
                             };
                         };
                     };
@@ -10352,6 +10357,7 @@ export interface paths {
                                 } | null;
                                 /** Format: date-time */
                                 scheduledFor: string | null;
+                                acceptingReservation: boolean;
                             };
                         };
                     };
@@ -21692,6 +21698,7 @@ export interface components {
             } | null;
             /** Format: date-time */
             scheduledFor: string | null;
+            acceptingReservation: boolean;
         };
         OrderItem: {
             /** Format: uuid */

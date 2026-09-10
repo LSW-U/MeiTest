@@ -10,10 +10,11 @@
  *   - toLabel：合格/不合格（requiredDeposit 字段条件出现）
  *
  * mock：db（riderProfile/riderDepositTier）；档位缓存用 setTierCacheForTest 注入
+ * 批A A6：补 redis mock（版本号 bump / 版本不一致回源）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb } = vi.hoisted(() => ({
+const { mockDb, mockRedis } = vi.hoisted(() => ({
   mockDb: {
     riderProfile: {
       findUnique: vi.fn(),
@@ -22,13 +23,19 @@ const { mockDb } = vi.hoisted(() => ({
       findMany: vi.fn(),
     },
   },
+  mockRedis: {
+    get: vi.fn(),
+    incr: vi.fn(),
+  },
 }));
 
 vi.mock('../src/shared/db', () => ({ db: mockDb }));
+vi.mock('../src/shared/cache', () => ({ redis: mockRedis }));
 
 import {
   DepositEligibilityService,
   setTierCacheForTest,
+  TIER_VER_KEY,
 } from '../src/modules/rider/deposit-eligibility.service';
 
 /** 默认 4 档（seed 同构）：$1→$10 / $5→$50 / $10→$100 / $50→$500 */
@@ -194,6 +201,64 @@ describe('DepositEligibilityService', () => {
       );
       expect(label.eligible).toBe(false);
       expect(label.requiredDeposit).toBe(1000);
+    });
+
+    it('批A T1-c：canAccept 与 eligible 同值冗余直读（合格 true / 不合格 false）', () => {
+      const ok = service.toLabel(
+        { riderProfileId: 'r', depositAmount: 1000, maxOrderAmount: 10000, tierId: 't3' },
+        5000,
+      );
+      expect(ok.canAccept).toBe(true);
+      expect(ok.canAccept).toBe(ok.eligible);
+
+      const ng = service.toLabel(
+        { riderProfileId: 'r', depositAmount: 500, maxOrderAmount: 5000, tierId: 't2' },
+        8000,
+      );
+      expect(ng.canAccept).toBe(false);
+      expect(ng.canAccept).toBe(ng.eligible);
+    });
+  });
+
+  describe('批A A6 Redis 版本号 bump（T3 缓存一致性）', () => {
+    it('bumpTierVersion → redis.incr(TIER_VER_KEY)', async () => {
+      mockRedis.get.mockResolvedValue('3'); // 当前版本 3
+      mockRedis.incr.mockResolvedValue(4);
+      await service.bumpTierVersion();
+      expect(mockRedis.incr).toHaveBeenCalledWith(TIER_VER_KEY);
+    });
+
+    it('版本不一致 → 回源 DB 刷新缓存（ver 从 redis 读取比对）', async () => {
+      // 进程内缓存 ver=0（setTierCacheForTest 注入），redis 版本已到 5 → 强制回源
+      mockRedis.get.mockResolvedValue('5');
+      const fresh = [{ id: 'tier-new', minAmount: 200, maxOrderAmount: 2000 }];
+      mockDb.riderDepositTier.findMany.mockResolvedValue(fresh);
+      const tiers = await service.getEnabledTiers();
+      expect(tiers).toEqual(fresh);
+      expect(mockDb.riderDepositTier.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { enabled: true } }),
+      );
+    });
+
+    it('版本一致且未过期 → 直接用进程内缓存（不触 DB）', async () => {
+      setTierCacheForTest(DEFAULT_TIERS); // ver=0
+      mockRedis.get.mockResolvedValue(null); // redis 版本 0（无 bump 过）
+      const tiers = await service.getEnabledTiers();
+      expect(tiers).toEqual(DEFAULT_TIERS);
+      expect(mockDb.riderDepositTier.findMany).not.toHaveBeenCalled();
+    });
+
+    it('redis 异常 → 降级走本地 TTL（log.warn 不抛错）', async () => {
+      setTierCacheForTest(DEFAULT_TIERS);
+      mockRedis.get.mockRejectedValue(new Error('redis down'));
+      const tiers = await service.getEnabledTiers();
+      expect(tiers).toEqual(DEFAULT_TIERS); // 60s TTL 内直接用本地
+      expect(mockDb.riderDepositTier.findMany).not.toHaveBeenCalled();
+    });
+
+    it('bump 失败被吞（不抛错，旧缓存等 TTL 兜底）', async () => {
+      mockRedis.incr.mockRejectedValue(new Error('redis down'));
+      await expect(service.bumpTierVersion()).resolves.toBeUndefined();
     });
   });
 });

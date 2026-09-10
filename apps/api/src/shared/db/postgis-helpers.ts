@@ -39,6 +39,13 @@ export async function findWarehouseByPoint(
       name: unknown;
       deliveryFee: number;
       distance: number;
+      /**
+       * 营业时间 JSON（保证金批A P1-1 修复，2026-09-10）：raw 列 operating_hours 透出。
+       * 消费点 order.service Step 2.5 / cart.service checkout preview 的
+       * isWarehouseOpen 判定数据源——漏列会被 isWarehouseOpen 的"无配置=24h"防御
+       * 静默放行（预约链路整体 dead，审查报告 P1-1）。
+       */
+      operatingHours: unknown;
     }
   | null
 > {
@@ -49,6 +56,7 @@ export async function findWarehouseByPoint(
       name: unknown;
       delivery_fee: number;
       distance: number;
+      operating_hours: unknown;
     }>
   >`
     SELECT
@@ -56,6 +64,7 @@ export async function findWarehouseByPoint(
       code,
       name,
       delivery_fee,
+      "operatingHours" AS operating_hours,
       ST_Distance(
         "centerPoint",
         ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)
@@ -78,6 +87,7 @@ export async function findWarehouseByPoint(
     name: r.name,
     deliveryFee: r.delivery_fee,
     distance: r.distance,
+    operatingHours: r.operating_hours,
   };
 }
 

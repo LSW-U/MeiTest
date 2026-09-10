@@ -19,6 +19,18 @@
  */
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { db } from '../../shared/db';
+import { redis } from '../../shared/cache';
+import { logger } from '../../shared/logger/logger';
+
+/**
+ * 档位缓存版本号 key（保证金批A T3，2026-09-10）
+ *
+ * 照抄 catalog.service.ts COUNT_VER_KEY 先例（:513-580）：INCR + 版本号比对 + fire-and-forget
+ * bump + try/catch 降级。多进程部署下 admin 档位写路径 bump 版本号后，其它进程的
+ * getEnabledTiers 下次读取时版本不一致即回源 DB（不再等 60s TTL）。
+ * redis.ts Proxy 自动加 meimart: 前缀，此处不含前缀。
+ */
+export const TIER_VER_KEY = 'config:deposit:tiers:ver';
 
 /** 派单排序权重（方案 Q10：评分×0.5 + 距离近度×0.3 − 在途×0.2；提常量便于调参） */
 export const DISPATCH_SCORE_WEIGHTS = {
@@ -43,6 +55,8 @@ export interface EligibilitySnapshot {
 /** 资格标签（admin 候选列表输出，契约 DispatchCandidate.eligibility） */
 export interface EligibilityLabel {
   eligible: boolean;
+  /** T1-c（2026-09-10）：冗余直读标记（=eligible），前端免二次判断 */
+  canAccept: boolean;
   depositAmount: number;
   maxOrderAmount: number | null;
   /** 不合格时：接到该单所需的最低保证金（分，命中该订单金额的最低启用档 minAmount） */
@@ -87,20 +101,42 @@ export class DepositEligibilityService {
 
   /**
    * 批量预取启用档（admin 候选/大厅过滤场景：一次查询复用 N 个骑手/任务）
-   * 缓存策略：进程内 60s + **tier CRUD 后主动失效**（批D审查 P3-1 裁决 2026-09-03：
-   * admin-deposit 的 create/update/deleteTier 成功后调 clearTierCache，
-   * 「停用档立即回落」单进程实时生效；多进程 Redis 版本号 bump 记批 E TODO）
+   * 缓存策略（T3 改造 2026-09-10）：
+   *   - Redis 可用：读缓存前先比对 `config:deposit:tiers:ver`（Redis）vs 进程内 ver，
+   *     版本不一致 → 回源 DB 并更新本地 ver（多进程即时生效，照抄 catalog COUNT_VER_KEY 先例）
+   *   - Redis 异常：跳过版本比对走本地 60s TTL（log.warn 不炸，行为退回改造前——v2 风险 4）
+   *   - 进程内 TTL 60s 兜底（版本一致且未过期直接用缓存，免一次 Redis GET）
    */
   async getEnabledTiers(): Promise<Array<{ id: string; minAmount: number; maxOrderAmount: number | null }>> {
     const now = Date.now();
-    if (tierCache.data && now - tierCache.at < TIER_CACHE_MS) return tierCache.data;
-    const tiers = await db.riderDepositTier.findMany({
-      where: { enabled: true },
-      select: { id: true, minAmount: true, maxOrderAmount: true },
-      orderBy: { minAmount: 'desc' },
-    });
-    tierCache = { data: tiers, at: now };
-    return tiers;
+    try {
+      const verRaw = await redis.get(TIER_VER_KEY);
+      const ver = verRaw ? Number(verRaw) : 0;
+      if (tierCache.data && tierCache.ver === ver && now - tierCache.at < TIER_CACHE_MS) {
+        return tierCache.data;
+      }
+      const tiers = await db.riderDepositTier.findMany({
+        where: { enabled: true },
+        select: { id: true, minAmount: true, maxOrderAmount: true },
+        orderBy: { minAmount: 'desc' },
+      });
+      tierCache = { data: tiers, at: now, ver };
+      return tiers;
+    } catch (err) {
+      // Redis 故障降级：纯本地 60s TTL（多进程失效退化为 TTL 内陈旧，可接受）
+      logger.warn({
+        msg: 'TIER_VER_CHECK_DEGRADED',
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (tierCache.data && now - tierCache.at < TIER_CACHE_MS) return tierCache.data;
+      const tiers = await db.riderDepositTier.findMany({
+        where: { enabled: true },
+        select: { id: true, minAmount: true, maxOrderAmount: true },
+        orderBy: { minAmount: 'desc' },
+      });
+      tierCache = { data: tiers, at: now, ver: -1 };
+      return tiers;
+    }
   }
 
   /**
@@ -108,7 +144,22 @@ export class DepositEligibilityService {
    * 单进程内即时生效：下次 getEnabledTiers 强制回源 DB
    */
   clearTierCache(): void {
-    tierCache = { data: [], at: 0 };
+    tierCache = { data: [], at: 0, ver: -1 };
+  }
+
+  /**
+   * bump 档位缓存版本号（T3）：admin tier 写路径（create/update/disable）成功后调用。
+   * fire-and-forget 语义由调用方决定；本方法自身 try/catch 吞错（失败=旧缓存等 60s TTL 过期）。
+   */
+  async bumpTierVersion(): Promise<void> {
+    try {
+      await redis.incr(TIER_VER_KEY);
+    } catch (err) {
+      logger.warn({
+        msg: 'TIER_VER_BUMP_FAILED',
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   /**
@@ -167,6 +218,7 @@ export class DepositEligibilityService {
     const eligible = this.isEligible(snapshot, orderAmount);
     return {
       eligible,
+      canAccept: eligible, // T1-c：冗余直读字段（与 eligible 同值）
       depositAmount: snapshot.depositAmount,
       maxOrderAmount: snapshot.maxOrderAmount,
       ...(eligible ? {} : { requiredDeposit: requiredDeposit ?? snapshot.depositAmount }),
@@ -174,14 +226,20 @@ export class DepositEligibilityService {
   }
 }
 
-/** 档位进程内缓存（getEnabledTiers 60s） */
+/** 档位进程内缓存（getEnabledTiers 60s + T3 版本号） */
 const TIER_CACHE_MS = 60_000;
-let tierCache: { data: Array<{ id: string; minAmount: number; maxOrderAmount: number | null }>; at: number } = {
+let tierCache: {
+  data: Array<{ id: string; minAmount: number; maxOrderAmount: number | null }>;
+  at: number;
+  /** Redis 版本号快照；-1 = Redis 降级路径写入（下次比对必回源） */
+  ver: number;
+} = {
   data: [],
   at: 0,
+  ver: 0,
 };
 
 /** 单测注入入口：直接替换缓存档位（绕过 DB） */
 export function setTierCacheForTest(tiers: Array<{ id: string; minAmount: number; maxOrderAmount: number | null }>): void {
-  tierCache = { data: tiers, at: Date.now() };
+  tierCache = { data: tiers, at: Date.now(), ver: 0 };
 }

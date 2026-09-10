@@ -23,7 +23,7 @@
 import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { PromotionService } from '../promotion/promotion.service';
-import { db, findWarehouseByPoint } from '../../shared/db';
+import { db, findWarehouseByPoint, isWarehouseOpen, nextOpenAt } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 
@@ -384,7 +384,15 @@ export class CartService {
     couponCode?: string,
   ): Promise<{
     items: CartItemView[];
-    warehouseMatch: { id: string; code: string; deliveryFee: number } | null;
+    warehouseMatch: {
+      id: string;
+      code: string;
+      deliveryFee: number;
+      /** 预约单标注（保证金批A T5-c）：true = 匹配仓当前打烊，下单将走预约 */
+      acceptingReservation: boolean;
+      /** 打烊仓下一次开门时间 ISO；营业中 null */
+      nextOpenAt: string | null;
+    } | null;
     itemsSubtotal: number;
     deliveryFee: number;
     payableAmount: number;
@@ -438,11 +446,27 @@ export class CartService {
     const itemsSubtotal = itemViews.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
     // 仓库匹配（address 有 lat/lng 时）
-    let warehouseMatch: { id: string; code: string; deliveryFee: number } | null = null;
+    let warehouseMatch: {
+      id: string;
+      code: string;
+      deliveryFee: number;
+      acceptingReservation: boolean;
+      nextOpenAt: string | null;
+    } | null = null;
     if (address.lat !== null && address.lng !== null) {
       const wh = await findWarehouseByPoint(db, Number(address.lng), Number(address.lat));
       if (wh) {
-        warehouseMatch = { id: wh.id, code: wh.code, deliveryFee: wh.deliveryFee };
+        // 预约单标注（保证金批A T5-c，2026-09-10）：匹配仓打烊 → 结算页展示"明早开门可配送"，
+        // 与 createOrder 的 scheduledFor 判定同源（isWarehouseOpen）
+        const operatingHours = (wh as { operatingHours?: unknown }).operatingHours ?? null;
+        const open = isWarehouseOpen(operatingHours as Record<string, unknown> | null);
+        warehouseMatch = {
+          id: wh.id,
+          code: wh.code,
+          deliveryFee: wh.deliveryFee,
+          acceptingReservation: !open,
+          nextOpenAt: open ? null : nextOpenAt(operatingHours as Record<string, unknown> | null)?.toISOString() ?? null,
+        };
       } else {
         warnings.push('ADDRESS_OUT_OF_DELIVERY_RANGE');
       }

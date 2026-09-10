@@ -1,15 +1,17 @@
 /**
  * Geo Controller — 地址 geocoding（W7 P0-3 + W7-fix P1-3 rate limit）
  *
- * 1 个 endpoint：
- *   - GET /api/v1/common/geo/geocode?address=xxx  公开（无需登录，地址输入时调）
+ * 3 个 endpoint（保证金批A A7 加 suggest/nearby，2026-09-10）：
+ *   - GET /api/v1/common/geo/geocode?address=xxx   公开（地址保存补 lat/lng）
+ *   - GET /api/v1/common/geo/suggest?q=xxx        公开（地址输入多候选）
+ *   - GET /api/v1/common/geo/nearby?lat=&lng=     公开（附近地点，Overpass 收进后端）
  *
  * 设计：
  *   - Public（用户在保存地址前可能未登录，例如注册流程中的地址输入）
  *   - deviceType 不限制（/common/* 前缀自动放行 DeviceTypeGuard）
- *   - 用 zod 校验 query（address 长度 2-500）
+ *   - 用 zod 校验 query
  *
- * Rate limit（W7-fix P1-3）：
+ * Rate limit（W7-fix P1-3，A7 三个端点共享同一组 limiter）：
  *   - Nominatim Usage Policy 要求 ≤ 1 req/s
  *   - 接口暴露公网可能被脚本滥用，导致 Nominatim 限频触发 fallback
  *   - 内存 rate limit：每 IP 1 req/s + 10 req/min
@@ -17,7 +19,7 @@
  */
 import { Controller, Get, Query, Inject, HttpException, HttpStatus, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { GeocodeRequest } from '@meimart/api-contract';
+import { GeocodeRequest, GeoSuggestRequest, GeoNearbyRequest } from '@meimart/api-contract';
 import { GeoService } from './geo.service';
 import { Public } from '../../../shared/decorators/public.decorator';
 import { ZodValidationPipe } from '../../../shared/pipes/zod-validation.pipe';
@@ -62,15 +64,9 @@ function getClientIp(req: Request): string {
 export class GeoController {
   constructor(@Inject(GeoService) private readonly geo: GeoService) {}
 
-  /** 地址 → 经纬度（公开，无需登录） */
-  @Public()
-  @Get('geocode')
-  async geocode(
-    @Query(new ZodValidationPipe(GeocodeRequest)) query: { address: string },
-    @Req() req: Request,
-  ) {
+  /** A7：三个端点共享限流检查（Nominatim ≤1 req/s；超限 E-COMMON-004） */
+  private enforceRateLimit(req: Request): void {
     const ip = getClientIp(req);
-
     if (!perSecondLimiter.allow(ip) || !perMinuteLimiter.allow(ip)) {
       throw new HttpException(
         {
@@ -83,8 +79,41 @@ export class GeoController {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+  }
 
+  /** 地址 → 经纬度（公开，无需登录；A7 加 5min LRU 缓存） */
+  @Public()
+  @Get('geocode')
+  async geocode(
+    @Query(new ZodValidationPipe(GeocodeRequest)) query: { address: string },
+    @Req() req: Request,
+  ) {
+    this.enforceRateLimit(req);
     const result = await this.geo.geocode(query.address);
     return { success: true, data: result };
+  }
+
+  /** 地址输入多候选（A7 新增；失败返回空列表不抛错） */
+  @Public()
+  @Get('suggest')
+  async suggest(
+    @Query(new ZodValidationPipe(GeoSuggestRequest)) query: { q: string },
+    @Req() req: Request,
+  ) {
+    this.enforceRateLimit(req);
+    const items = await this.geo.suggest(query.q);
+    return { success: true, data: { items } };
+  }
+
+  /** 附近地点（A7 新增；Overpass 收进后端，失败返回空列表不抛错） */
+  @Public()
+  @Get('nearby')
+  async nearby(
+    @Query(new ZodValidationPipe(GeoNearbyRequest)) query: { lat: number; lng: number },
+    @Req() req: Request,
+  ) {
+    this.enforceRateLimit(req);
+    const items = await this.geo.nearby(query.lat, query.lng);
+    return { success: true, data: { items } };
   }
 }

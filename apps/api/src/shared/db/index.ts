@@ -9,6 +9,12 @@ export {
 } from './transaction';
 export * from './postgis-helpers';
 export {
+  isWarehouseOpen,
+  nextOpenAt,
+  WAREHOUSE_TZ,
+  type OperatingHoursLike,
+} from './warehouse-hours';
+export {
   incrementSalesCountForOrder,
   rollbackSalesCountForRefundItems,
   rollbackSalesCountForFullOrder,

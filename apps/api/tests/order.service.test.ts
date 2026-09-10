@@ -46,7 +46,9 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mock
   mockSalesIncrement: vi.fn(),
 }));
 
-vi.mock('../src/shared/db', () => ({
+vi.mock('../src/shared/db', async () => ({
+  // 批A A3：order.service 引 isWarehouseOpen/nextOpenAt（真实实现，warehouse mock 无 operatingHours → 视为 24h 营业）
+  ...(await import('../src/shared/db/warehouse-hours')),
   db: mockDb,
   withTransaction: mockHelpers.withTransaction,
   deductStock: mockHelpers.deductStock,
@@ -773,6 +775,202 @@ describe('OrderService.createOrder', () => {
     ).rejects.not.toMatchObject({ response: { code: 'E-PAYMENT-011' } });
     // 两个用例都通过了 Step 0，进入 Step 1 查地址
     expect(mockDb.address.findUnique).toHaveBeenCalled();
+  });
+
+  // ===== 保证金批A A3/T5：营业时间判断 + 预约单（2026-09-10） =====
+
+  /** 当前 Dili 墙钟分钟数（HH*60+mm）与星期键——测试与 helper 同口径（Intl Asia/Dili） */
+  function diliNow(): { minutes: number; dayKey: string } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Dili',
+      hour: '2-digit',
+      minute: '2-digit',
+      weekday: 'short',
+      hour12: false,
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    const hour = Number(get('hour')) % 24; // 部分运行时 midnight 输出 "24"
+    return { minutes: hour * 60 + Number(get('minute')), dayKey: get('weekday').toLowerCase() };
+  }
+
+  function diliNowMinutes(): number {
+    return diliNow().minutes;
+  }
+
+  /** "HH:mm" → 分钟数 */
+  function diliMinutesOf(hhmm: string): number {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  /**
+   * 构造「当前 Dili 时刻必打烊」的全周营业时段：以当前 Dili 时间 +90min 为 open，
+   * +240min 为 close（窗口 150min，永不与 now 重叠，且当日/次日都成立）
+   */
+  function closedNowHours(): Record<string, { open: string; close: string }> {
+    const openMin = (diliNowMinutes() + 90) % 1440;
+    const closeMin = (openMin + 150) % 1440;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const slot = {
+      open: `${pad(Math.floor(openMin / 60))}:${pad(openMin % 60)}`,
+      close: `${pad(Math.floor(closeMin / 60))}:${pad(closeMin % 60)}`,
+    };
+    return Object.fromEntries(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((k) => [k, slot]));
+  }
+
+  /** Dili 墙钟（今天 + dayOffset 天）的 minutes → UTC instant（Dili = UTC+9 固定，无 DST） */
+  function diliWallToUtcInstant(dayOffset: number, minutes: number): Date {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Dili',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+    const ymd = `${get('year')}-${get('month')}-${get('day')}`;
+    return new Date(Date.parse(`${ymd}T00:00:00Z`) + dayOffset * 86_400_000 + minutes * 60_000 - 9 * 3600_000);
+  }
+
+  /** 复用 happy path 全套 mock（打烊/营业两种 operatingHours 场景共用） */
+  function setupHappyPath(warehouseOverrides: Record<string, unknown> = {}, createdOverrides: Record<string, unknown> = {}) {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({
+      id: 'wh-1',
+      code: 'W01',
+      deliveryFee: 0,
+      ...warehouseOverrides,
+    });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260910010000001');
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        // createdOverrides：预约单场景回填 scheduledFor（order.create data 与返回行一致）
+        order: { create: vi.fn().mockResolvedValue(mockCreatedOrder(createdOverrides)) },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPricing.calcDeliveryFee.mockResolvedValue({
+      warehouseId: 'wh-1',
+      baseFee: 0,
+      perKmFee: 0,
+      freeKm: 2,
+      distanceKm: 1.2,
+      distanceFee: 0,
+      deliveryFee: 0,
+      currency: 'USD',
+    });
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+    mockDb.orderItem.findMany.mockResolvedValue([]);
+  }
+
+  it('批A A3/T5-a：仓库营业中 → 即时单（scheduledFor=null + acceptingReservation=false）', async () => {
+    setupHappyPath({
+      operatingHours: {
+        mon: { open: '00:00', close: '23:59' }, tue: { open: '00:00', close: '23:59' },
+        wed: { open: '00:00', close: '23:59' }, thu: { open: '00:00', close: '23:59' },
+        fri: { open: '00:00', close: '23:59' }, sat: { open: '00:00', close: '23:59' },
+        sun: { open: '00:00', close: '23:59' },
+      },
+    });
+
+    const result = await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 1 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+    expect(result.acceptingReservation).toBe(false);
+    expect(result.scheduledFor).toBeNull();
+  });
+
+  it('批A A3/T5-a：仓库打烊 → 预约单（scheduledFor=下次开门时间 + acceptingReservation=true）', async () => {
+    // P1-2 修复后判定显式 Asia/Dili：营业时段按「当前 Dili 时刻必打烊」动态构造
+    // （固定时段会踩坑：Dili 深夜 01:02 恰好跨进 01:00-02:00 窗口 → 仓在营业中）
+    const hours = closedNowHours();
+    const openMin = diliMinutesOf(hours.mon.open);
+    const dayOffset = diliNowMinutes() < openMin ? 0 : 1;
+    const nextOpen = diliWallToUtcInstant(dayOffset, openMin);
+    // createdOverrides：mock created 行回填 scheduledFor（与 order.create data 一致，模拟 DB 落库回读）
+    setupHappyPath({ operatingHours: hours }, { scheduledFor: nextOpen });
+
+    const result = await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 1 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+    expect(result.acceptingReservation).toBe(true);
+    expect(result.scheduledFor).toBe(nextOpen.toISOString());
+  });
+
+  // ===== 保证金批A T5-e：cancelIfPending 预约单超时豁免（2026-09-10） =====
+
+  it('批A T5-e：cancelIfPending 预约单（scheduledFor 非空）→ 跳过不取消', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_CONFIRM',
+      scheduledFor: new Date('2026-09-11T01:00:00.000Z'), // 预约单：等仓库开门
+    });
+    const result = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+    expect(result).toEqual({ cancelled: false, fromStatus: 'PENDING_CONFIRM' });
+    // 不进取消事务（豁免）
+    expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it('批A T5-e：cancelIfPending 即时单（scheduledFor=null）→ 正常取消（豁免不误伤）', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_PAYMENT',
+      scheduledFor: null,
+    });
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'order-1',
+            status: 'PENDING_PAYMENT',
+            orderNo: 'MM1',
+            warehouseId: 'wh-1',
+            riderId: null,
+            items: [],
+          }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        deliveryTask: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      };
+      return fn(tx);
+    });
+    const result = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+    expect(result.cancelled).toBe(true);
+    expect(result.fromStatus).toBe('PENDING_PAYMENT');
   });
 });
 

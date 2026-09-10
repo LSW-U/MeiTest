@@ -259,6 +259,20 @@ describe('DispatchService', () => {
       const call = mockDb.deliveryTask.findMany.mock.calls[0]?.[0] as { take: number };
       expect(call.take).toBe(100);
     });
+
+    it('批A A4/T5-c 预约单可见性：where 带 order OR（scheduledFor null 或已到时）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValue([]);
+      await service.listPendingTasks({ riderId: 'r1' });
+      const call = mockDb.deliveryTask.findMany.mock.calls[0]?.[0] as {
+        where: { order: { OR: unknown[] } };
+      };
+      // 未消费门面的大厅同样只能看到「即时单 + 已到开门时间的预约单」
+      const or = call.where.order.OR as Array<Record<string, unknown>>;
+      expect(or).toHaveLength(2);
+      expect(or[0]).toEqual({ scheduledFor: null });
+      // 第二支路：scheduledFor <= now（now 为服务端生成时间，只验证 lte 形状）
+      expect(or[1]).toEqual({ scheduledFor: { lte: expect.any(Date) } });
+    });
   });
 
   describe('listMyTasks', () => {

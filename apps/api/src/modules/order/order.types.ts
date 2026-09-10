@@ -64,6 +64,10 @@ export interface CreatedOrder {
   paymentClientSecret?: string;
   /** mock/stub 标识（前端展示"测试模式"badge） */
   paymentMockFlag: boolean;
+  /** 预约单标注（保证金批A T5-c）：true = 打烊时段下单，前端展示"明早 {scheduledFor} 可配送" */
+  acceptingReservation: boolean;
+  /** 预约单开门时间 ISO；即时单 null */
+  scheduledFor: string | null;
   /** 订单商品快照列表（与 GET /client/orders/:id 一致） */
   items: CreatedOrderItem[];
   createdAt: string;

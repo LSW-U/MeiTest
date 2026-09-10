@@ -130,6 +130,11 @@ export const Order = z.object({
     .nullable(),
   /** 预约单（保证金批A T5-c 2026-09-10）：打烊时段下单 = 该仓下一次开门时间；即时单 null */
   scheduledFor: IsoTimestamp.nullable(),
+  /**
+   * 预约单标注（保证金批A P2-1 2026-09-10）：true = 本次下单走了预约（打烊时段）。
+   * createOrder 响应携带（前端结算跳转页展示"明早开门可配送"）；scheduledFor 非空 ⇔ true。
+   */
+  acceptingReservation: z.boolean(),
 });
 
 /** Admin 编辑订单请求（W7-ext-C）：MVP 仅允许改 remark */

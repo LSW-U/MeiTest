@@ -68,6 +68,18 @@ export class RiderDepositController {
     @Param('id', new ZodValidationPipe(DepositIdParam)) id: string,
     @Req() req: RequestWithUser,
   ) {
+    // T1-a 幽灵 token 台账条目 1（2026-09-10）：生产环境禁用模拟支付通道——
+    // 否则任何持 RIDER JWT 的骑手可把自己 depositAmount 刷成"已缴"，绕过押金拦截。
+    // 对齐 mock-login 守卫范式（auth.module.ts NODE_ENV 门控）；W6 真支付接入时根本修。
+    if (process.env.NODE_ENV === 'production') {
+      throw new HttpException(
+        {
+          code: 'E-DEPOSIT-008',
+          message: 'pay-mock disabled in production',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
     const user = req.user;
     if (!user) {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);

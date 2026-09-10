@@ -62,9 +62,10 @@ const { mockDb, mockRedis, mockWithTransaction, mockEligibility } = vi.hoisted((
     pipeline: vi.fn(),
   },
   mockWithTransaction: vi.fn(),
-  // 批D审查 P3-1：tier CRUD 后清档位缓存的 mock
+  // 批D审查 P3-1：tier CRUD 后清档位缓存的 mock；批A T3：bump Redis 版本号
   mockEligibility: {
     clearTierCache: vi.fn(),
+    bumpTierVersion: vi.fn(),
   },
 }));
 
@@ -122,6 +123,7 @@ describe('AdminDepositService', () => {
     mockRedis.pipeline.mockReset();
     mockWithTransaction.mockReset();
     mockEligibility.clearTierCache.mockReset();
+    mockEligibility.bumpTierVersion.mockReset();
   });
 
   describe('tiers CRUD', () => {

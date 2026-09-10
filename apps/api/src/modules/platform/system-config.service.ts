@@ -27,11 +27,15 @@ const cacheKey = (key: string) => `SystemConfig:${key}`;
  *
  * 当前登记：
  *   - `about.socials` → AboutService 的 `AboutProfile` 缓存（TTL 1h，含解析后的 socials）
+ *   - `dispatch.score_weights` → dispatch-scores.config 的进程内权重缓存（T3 保证金批A
+ *     2026-09-10）：版本号机制不走 DEL，走 INCR `config:dispatch:weights:ver`——
+ *     各进程读缓存时比对版本号，变了才回源（bumpDispatchWeightsVersion fire-and-forget）
  *
  * 如未来新增更多派生缓存，在此 push 即可。
  */
-const DERIVED_CACHE_KEYS: Array<{ keyPrefix: string; cacheKey: string }> = [
+const DERIVED_CACHE_KEYS: Array<{ keyPrefix: string; cacheKey: string; bumpVerKey?: string }> = [
   { keyPrefix: 'about.', cacheKey: 'AboutProfile' },
+  { keyPrefix: 'dispatch.score_weights', cacheKey: '', bumpVerKey: 'config:dispatch:weights:ver' },
 ];
 
 @Injectable()
@@ -85,9 +89,30 @@ export class SystemConfigService {
      */
     const derivedKeys = DERIVED_CACHE_KEYS
       .filter((d) => key === d.keyPrefix || key.startsWith(d.keyPrefix))
-      .map((d) => d.cacheKey);
+      .map((d) => d.cacheKey)
+      .filter((k) => k.length > 0);
     if (derivedKeys.length > 0) {
       await redis.del(...derivedKeys);
+    }
+
+    /**
+     * 保证金批A T3（2026-09-10）：版本号型派生缓存——不 DEL 而是 INCR 版本号
+     *（读者进程比对版本，变了才回源，见 dispatch-scores.config.ts getScoreWeights）。
+     */
+    const bumpKeys = DERIVED_CACHE_KEYS
+      .filter((d) => key === d.keyPrefix || key.startsWith(d.keyPrefix))
+      .map((d) => d.bumpVerKey)
+      .filter((k): k is string => Boolean(k));
+    for (const verKey of bumpKeys) {
+      try {
+        await redis.incr(verKey);
+      } catch (err) {
+        logger.warn({
+          msg: 'DERIVED_VER_BUMP_FAILED',
+          verKey,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     /**

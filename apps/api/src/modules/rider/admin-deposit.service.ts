@@ -133,6 +133,8 @@ export class AdminDepositService {
         },
       });
       this.eligibility.clearTierCache(); // P3-1：新档立即参与派生
+      // T3（保证金批A 2026-09-10）：多进程失效——bump Redis 版本号，其它进程下次读取回源
+      await this.eligibility.bumpTierVersion();
       return tier;
     } catch (e) {
       if (isPrismaUniqueConstraintError(e)) {
@@ -163,6 +165,8 @@ export class AdminDepositService {
     try {
       const tier = await db.riderDepositTier.update({ where: { id }, data: input });
       this.eligibility.clearTierCache(); // P3-1：改档/启停立即生效
+      // T3：多进程失效（同 createTier）
+      await this.eligibility.bumpTierVersion();
       return tier;
     } catch (e) {
       if (isPrismaUniqueConstraintError(e)) {
@@ -183,6 +187,8 @@ export class AdminDepositService {
     }
     await db.riderDepositTier.update({ where: { id }, data: { enabled: false } });
     this.eligibility.clearTierCache(); // P3-1：停用档立即回落（不再吃 60s 旧缓存）
+    // T3：多进程失效（同 createTier）
+    await this.eligibility.bumpTierVersion();
     return { id, enabled: false as const };
   }
 

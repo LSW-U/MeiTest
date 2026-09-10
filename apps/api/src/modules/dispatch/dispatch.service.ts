@@ -30,7 +30,8 @@ import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } fro
 import { redis } from '../../shared/cache';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 import { DepositEligibilityService } from '../rider/deposit-eligibility.service';
-import { DISPATCH_SCORE_WEIGHTS, SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
+import { SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
+import { getScoreWeights } from './dispatch-scores.config';
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -291,11 +292,19 @@ export class DispatchService {
         ? { warehouseId: { in: profile.preferredWarehouseIds } }
         : {};
 
+    // 预约单可见性（T5-c）：now 之后开门的预约单不进大厅
+    const now = new Date();
+
     const tasks = await db.deliveryTask.findMany({
       where: {
         status: 'PENDING_ASSIGN',
         ...warehouseFilter,
         ...(options.warehouseId ? { warehouseId: options.warehouseId } : {}),
+        // 预约单可见性（保证金批A T5-c，2026-09-10）：开门前不可见，开门后自然进入候选
+        //（无定时任务推状态，靠查询条件实现"开门自动接单"）
+        order: {
+          OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
+        },
       },
       orderBy: { createdAt: 'asc' },
       take: limit,
@@ -371,10 +380,19 @@ export class DispatchService {
 
     // 批 D 资格拦截（2026-09-03，方案 Q9 第 1 处）：订单金额 ≤ 档位上限才可接。
     //   未缴/档全停 → E-DEPOSIT-201；超上限 → E-DEPOSIT-202（含所需保证金提示）
+    // 批A P3-1（2026-09-10）：预约单未到时拒绝直抢——正常流预约单停 PENDING_CONFIRM
+    //   等开门，但 admin 提前确认会建任务 + WS 广播，大厅/候选已按 scheduledFor 过滤，
+    //   唯 accept 直调入口漏复核（防骑手从广播 payload 抢未到时预约单）。
     const orderForAmount = await db.order.findUnique({
       where: { id: taskBefore.orderId },
-      select: { payableAmount: true },
+      select: { payableAmount: true, scheduledFor: true },
     });
+    if (orderForAmount?.scheduledFor && orderForAmount.scheduledFor.getTime() > now.getTime()) {
+      throw new ConflictException({
+        code: 'E-DISPATCH-006',
+        message: `Task is a scheduled order (opens at ${orderForAmount.scheduledFor.toISOString()}), not acceptable yet`,
+      });
+    }
     await this.eligibility.assertCanAccept(riderId, orderForAmount?.payableAmount ?? 0);
 
     // 事务：乐观锁 UPDATE + order.riderId 同步（任一失败回滚）
@@ -1607,9 +1625,15 @@ export class DispatchService {
 
     const order = await db.order.findUnique({
       where: { id: task.orderId },
-      select: { payableAmount: true },
+      select: { payableAmount: true, scheduledFor: true },
     });
     const orderAmount = order?.payableAmount ?? 0;
+
+    // 预约单可见性（保证金批A T5-c，2026-09-10）：开门前 admin 候选同样不推荐
+    //（开门后自然可见，与骑手大厅同规则）；即时单（scheduledFor=null）不受影响。
+    if (order?.scheduledFor && order.scheduledFor.getTime() > Date.now()) {
+      return { taskId: task.id, orderAmount, items: [] };
+    }
 
     // 候选池：APPROVED + 在途数（并行）
     const [profiles, inTransitCounts, enabledTiers, requiredDeposit] = await Promise.all([
@@ -1676,7 +1700,7 @@ export class DispatchService {
     // 在线过滤（批D审查观察项 2026-09-03 拍板）：离线骑手不进候选——派单推荐
     //   应指向可立即接单的人；跨仓支援（crossWarehouse=true）同样只列在线
     //   （isOnline 来自 Redis rider:online:{userId}，与 heartbeat/availableRiders 同源）
-    const { W, MAX_D } = { W: DISPATCH_SCORE_WEIGHTS, MAX_D: SCORE_MAX_DISTANCE_KM };
+    const { W, MAX_D } = { W: await getScoreWeights(), MAX_D: SCORE_MAX_DISTANCE_KM };
     const eligiblePool = items.filter(
       (c) =>
         c.isOnline &&

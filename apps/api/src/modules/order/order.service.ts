@@ -31,7 +31,7 @@
  */
 import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
-import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, incrementSalesCountForOrder } from '../../shared/db';
+import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, incrementSalesCountForOrder, isWarehouseOpen, nextOpenAt } from '../../shared/db';
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderNoService } from './order-no.service';
@@ -108,6 +108,8 @@ export interface OrderWithRelations {
   /** 批A 人民币估算金额（分）= payableAmount × exchangeRate / 10000；非人民币通道 null */
   estimatedCnyAmount: number | null;
   createdAt: string;
+  /** 预约单开门时间 ISO（保证金批A P2-1，2026-09-10）；即时单 null。契约 Order.scheduledFor 同名 */
+  scheduledFor: string | null;
   confirmedAt: string | null;
   pickedAt: string | null;
   deliveringAt: string | null;
@@ -241,6 +243,21 @@ export class OrderService {
       throw new ConflictException({
         code: 'E-ORDER-001',
         message: 'Delivery address is out of all warehouses coverage',
+      });
+    }
+
+    // ===== Step 2.5: 营业时间判断（保证金批A T5-a/b/c，2026-09-10）=====
+    // 单仓匹配（LIMIT 1）无候选集合：匹配仓打烊 → 该单走预约（scheduledFor=下次开门时间），
+    // 不换仓不拒单（超市模式 T5-b）；未打烊 → 即时单（scheduledFor=null）。
+    // 防御解析在 isWarehouseOpen 内：无配置=24h 营业；close<=open 视为打烊（本期不跨天 T5-d）。
+    const operatingHours = (warehouse as { operatingHours?: unknown }).operatingHours ?? null;
+    const warehouseOpen = isWarehouseOpen(operatingHours as Record<string, unknown> | null);
+    const scheduledFor = warehouseOpen ? null : nextOpenAt(operatingHours as Record<string, unknown> | null);
+    if (!warehouseOpen) {
+      logger.info({
+        msg: 'ORDER_CREATED_AS_RESERVATION',
+        warehouseCode: warehouse.code,
+        scheduledFor: scheduledFor?.toISOString() ?? null,
       });
     }
 
@@ -378,6 +395,8 @@ export class OrderService {
             paymentStatus: 'PENDING',
             exchangeRate: rateFields.exchangeRate,
             estimatedCnyAmount: rateFields.estimatedCnyAmount,
+            // 预约单承载（T5-c）：null=即时单；打烊仓=下次开门时间
+            scheduledFor,
           },
         });
 
@@ -537,6 +556,9 @@ export class OrderService {
         paymentStatus: created.paymentStatus,
         paymentClientSecret,
         paymentMockFlag,
+        // 预约单标注（T5-c）：acceptingReservation=true 时前端展示"明早 {nextOpenAt} 可配送"
+        acceptingReservation: scheduledFor !== null,
+        scheduledFor: created.scheduledFor ? created.scheduledFor.toISOString() : null,
         items: persistedItems.map((i) => ({
           id: i.id,
           productId: i.productId,
@@ -620,6 +642,16 @@ export class OrderService {
         orderId,
       });
       return { cancelled: false, fromStatus: null };
+    }
+    // 预约单超时豁免（保证金批A T5-e，2026-09-10）：预约单（scheduledFor 非空）正是停留
+    // PENDING_CONFIRM 等仓库开门，15min 超时 job 不能杀掉它——开门后进 CONFIRMED 正常流转。
+    if (order.scheduledFor !== null && order.scheduledFor !== undefined) {
+      logger.info({
+        msg: 'ORDER_TIMEOUT_SKIP_RESERVATION',
+        orderId,
+        scheduledFor: order.scheduledFor.toISOString(),
+      });
+      return { cancelled: false, fromStatus: order.status };
     }
     // 已推进到 CONFIRMED 及之后状态 → 跳过（不再取消）
     if (
@@ -1432,6 +1464,8 @@ export class OrderService {
       exchangeRate: number | null;
       estimatedCnyAmount: number | null;
       createdAt: Date;
+      /** 预约单开门时间（保证金批A P2-1 透出）；即时单 null */
+      scheduledFor: Date | null;
       confirmedAt: Date | null;
       pickedAt: Date | null;
       deliveringAt: Date | null;
@@ -1487,6 +1521,8 @@ export class OrderService {
       exchangeRate: o.exchangeRate,
       estimatedCnyAmount: o.estimatedCnyAmount,
       createdAt: o.createdAt.toISOString(),
+      // 预约单开门时间透出（P2-1：契约 Order.scheduledFor 已声明，详情/列表须回传）
+      scheduledFor: toIso(o.scheduledFor),
       confirmedAt: toIso(o.confirmedAt),
       pickedAt: toIso(o.pickedAt),
       deliveringAt: toIso(o.deliveringAt),

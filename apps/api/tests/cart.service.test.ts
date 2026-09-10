@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockDb, mockRedis, mockPromotions } = vi.hoisted(() => ({
+const { mockDb, mockRedis, mockPromotions, mockHelpers } = vi.hoisted(() => ({
   mockDb: {
     cart: {
       findUnique: vi.fn(),
@@ -47,14 +47,19 @@ const { mockDb, mockRedis, mockPromotions } = vi.hoisted(() => ({
   mockPromotions: {
     validatePromotion: vi.fn(),
   },
+  mockHelpers: {
+    findWarehouseByPoint: vi.fn(),
+  },
 }));
 
-vi.mock('../src/shared/db', () => ({
+vi.mock('../src/shared/db', async () => ({
+  // 批A P1-1/P3-2：cart.service 引 isWarehouseOpen/nextOpenAt（真实实现，与 order 测试同款 spread）
+  ...(await import('../src/shared/db/warehouse-hours')),
   db: mockDb,
   withTransaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
   deductStock: vi.fn(),
   releaseStock: vi.fn(),
-  findWarehouseByPoint: vi.fn(),
+  findWarehouseByPoint: mockHelpers.findWarehouseByPoint,
 }));
 
 vi.mock('../src/shared/cache', () => ({ redis: mockRedis }));
@@ -73,6 +78,7 @@ describe('CartService - Redis 缓存层', () => {
     mockRedis.set.mockReset();
     mockRedis.del.mockReset();
     mockPromotions.validatePromotion.mockReset();
+    mockHelpers.findWarehouseByPoint.mockReset();
     // B12：getCart -> withStock -> batchGetSkuStock 默认返空（items stock undefined）
     mockDb.stock.groupBy.mockResolvedValue([]);
   });
@@ -331,6 +337,70 @@ describe('CartService - Redis 缓存层', () => {
       expect(result.discount).toBe(0);
       expect(result.couponValid).toBe(false);
       expect(result.payableAmount).toBe(200); // 不减
+    });
+  });
+
+  // ===== 保证金批A P3-2/P1-1（2026-09-10）：checkout preview 预约标注 =====
+  // P1-1 修复后 findWarehouseByPoint 真实返回 operatingHours（postgis SELECT 透出
+  // operating_hours 列）——mock 形状与真实 SQL 行对齐，不再注入真实链路没有的字段。
+  describe('previewCheckout - warehouseMatch 预约标注（批A T5-c）', () => {
+    const selectedItems = [
+      { id: 'i1', skuId: 's1', productId: 'p1', productName: { en: 'M' }, productImage: 'i', skuName: { en: '1L' }, unitPrice: 100, quantity: 2, isSelected: true, addedAt: new Date('2026-06-25T00:00:00Z') },
+    ];
+    /** 地址含坐标 → 触发 findWarehouseByPoint 仓库匹配 */
+    const setupWithAddress = () => {
+      mockDb.cart.findUnique.mockResolvedValue({ id: 'c1', userId: 'u1', warehouseId: null });
+      mockDb.cartItem.findMany.mockResolvedValue(selectedItems);
+      mockDb.address.findUnique.mockResolvedValue({ id: 'a1', userId: 'u1', lat: -8.5, lng: 125.5 });
+      mockDb.stock.groupBy.mockResolvedValue([]);
+      // 真实 SQL 行形状：operating_hours raw 列（camelCase 透出 operatingHours）
+      mockHelpers.findWarehouseByPoint.mockResolvedValue({
+        id: 'wh-1',
+        code: 'W01',
+        deliveryFee: 250,
+        distance: 1200,
+        operatingHours: null,
+      });
+    };
+
+    it('无 operatingHours（null）→ 24h 营业防御：acceptingReservation=false + nextOpenAt=null', async () => {
+      setupWithAddress();
+      const result = await service.previewCheckout('u1', 'a1');
+      expect(result.warehouseMatch).not.toBeNull();
+      expect(result.warehouseMatch!.acceptingReservation).toBe(false);
+      expect(result.warehouseMatch!.nextOpenAt).toBeNull();
+      expect(result.deliveryFee).toBe(250);
+    });
+
+    it('打烊仓 → acceptingReservation=true + nextOpenAt ISO 非空', async () => {
+      setupWithAddress();
+      // P1-2 修复后判定显式 Asia/Dili：营业时段按「当前 Dili 时刻必打烊」动态构造
+      // （固定 01:00-02:00 会踩坑：Dili 深夜恰好跨进窗口 → 仓在营业中）
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const diliParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Dili', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date());
+      const get = (t: string) => Number(diliParts.find((p) => p.type === t)?.value ?? 0) % 24;
+      const openMin = (get('hour') * 60 + get('minute') + 90) % 1440;
+      const closeMin = (openMin + 150) % 1440;
+      const slot = {
+        open: `${pad(Math.floor(openMin / 60))}:${pad(openMin % 60)}`,
+        close: `${pad(Math.floor(closeMin / 60))}:${pad(closeMin % 60)}`,
+      };
+      const operatingHours = Object.fromEntries(
+        ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((k) => [k, slot]),
+      );
+      mockHelpers.findWarehouseByPoint.mockResolvedValue({
+        id: 'wh-1',
+        code: 'W01',
+        deliveryFee: 250,
+        distance: 1200,
+        operatingHours,
+      });
+      const result = await service.previewCheckout('u1', 'a1');
+      expect(result.warehouseMatch!.acceptingReservation).toBe(true);
+      expect(result.warehouseMatch!.nextOpenAt).not.toBeNull();
+      expect(new Date(result.warehouseMatch!.nextOpenAt as string).getTime()).toBeGreaterThan(Date.now());
     });
   });
 });
