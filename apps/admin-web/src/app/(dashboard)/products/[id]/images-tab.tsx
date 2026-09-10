@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUpdateProduct, type Product } from '@/hooks/api/use-products';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
-import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { localizeUploadError, phaseToProgress, precheckUploadFile, PrecheckError, toUploadError, type UploadPhase } from '@/lib/upload-errors';
 import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 
 interface UploadResponse extends UploadResultData {}
@@ -87,6 +87,26 @@ export function ImagesTab({ productId, product }: { productId: string; product: 
     setPendingUploads((prev) =>
       prev.map((p) => (p.id === item.id ? { ...p, phase: 'uploading', error: undefined } : p)),
     );
+    // 批C（批B P3-1）：上传前本地预校验——失败项标记 error 且 retryable=false
+    //（尺寸/类型校验失败重试无意义），可「放弃」移除
+    try {
+      await precheckUploadFile('product-image-wall', item.file);
+    } catch (err) {
+      if (!(err instanceof PrecheckError)) throw err;
+      setPendingUploads((prev) =>
+        prev.map((p) =>
+          p.id === item.id
+            ? {
+                ...p,
+                phase: 'error',
+                error: t.has(`errors.${err.code}`) ? t(`errors.${err.code}`) : err.message,
+                retryable: false,
+              }
+            : p,
+        ),
+      );
+      return;
+    }
     try {
       const res = await uploadByScene<UploadResponse>('product-image-wall', item.file, 'file', {
         onPhase: (phase: UploadPhase) => {

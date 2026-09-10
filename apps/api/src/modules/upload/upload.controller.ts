@@ -70,9 +70,15 @@ export class UploadController {
       fileFilter: (_req, file, cb) => {
         // 第一道：mime header 基础校验（防误传）
         // 真正的 mime 校验在 controller 里通过 magic bytes 做（防伪造）
+        // 错误码化（批A P3-1旧 批C 清账 2026-09-10）：E-UPLOAD-010 对齐
+        // upload-client.controller fileFilterRejectMime 样板，移除硬编码中文
         if (!ALLOWED_MIME[file.mimetype]) {
           cb(
-            new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`),
+            new BadRequestException({
+              code: 'E-UPLOAD-010',
+              message: `Unsupported image type: ${file.mimetype}, only jpg/png/webp allowed`,
+              details: { mime: file.mimetype },
+            }),
             false,
           );
           return;
@@ -185,9 +191,14 @@ export class UploadController {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
+        // 错误码化（批A P3-1旧 批C 清账 2026-09-10）：E-UPLOAD-010 对齐样板，移除硬编码中文
         if (!ALLOWED_MIME[file.mimetype]) {
           cb(
-            new BadRequestException(`不支持的图片类型: ${file.mimetype}，仅支持 jpg/png/webp`),
+            new BadRequestException({
+              code: 'E-UPLOAD-010',
+              message: `Unsupported image type: ${file.mimetype}, only jpg/png/webp allowed`,
+              details: { mime: file.mimetype },
+            }),
             false,
           );
           return;

@@ -58,7 +58,7 @@ import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { ApiError } from '@/lib/api';
 import { uploadByScene } from '@/lib/upload-scenes';
-import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { localizeUploadError, phaseToProgress, precheckUploadFile, PrecheckError, toUploadError, type UploadPhase } from '@/lib/upload-errors';
 import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import {
   useCategories,
@@ -104,6 +104,20 @@ function CategoryIconUploader({
   async function handleUpload(file: File) {
     if (!file) return;
     setCanRetry(false);
+    // 批C（批B P3-1）：上传前本地预校验，PrecheckError 直接 toast 不进重试链
+    try {
+      await precheckUploadFile('category-icon', file);
+    } catch (err) {
+      if (err instanceof PrecheckError) {
+        toast({
+          title: t('w.categories.iconUploadFailed'),
+          description: t.has(`errors.${err.code}`) ? t(`errors.${err.code}`) : err.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      throw err;
+    }
     setUploading(true);
     try {
       // U7（upload 模块批A）：分类图标维持挂 product-image（1:1 约束一致，不开新口子），

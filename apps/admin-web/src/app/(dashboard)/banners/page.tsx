@@ -52,7 +52,7 @@ import { LoadingSkeleton } from '@/components/common/loading-skeleton';
 import { ErrorState } from '@/components/common/error-state';
 import { ApiError } from '@/lib/api';
 import { uploadByScene } from '@/lib/upload-scenes';
-import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { localizeUploadError, phaseToProgress, precheckUploadFile, PrecheckError, toUploadError, type UploadPhase } from '@/lib/upload-errors';
 import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import {
   useBanners,
@@ -98,6 +98,21 @@ function BannerImageUploader({
   async function handleUpload(file: File) {
     if (!file) return;
     setCanRetry(false);
+    // 批C（批B P3-1）：上传前本地预校验（banner-image 规则：宽 600-2000 + 比例 1.5-3.0），
+    // PrecheckError 直接 toast 不进重试链
+    try {
+      await precheckUploadFile('banner', file);
+    } catch (err) {
+      if (err instanceof PrecheckError) {
+        toast({
+          title: t('w.banners.uploadFailed'),
+          description: t.has(`errors.${err.code}`) ? t(`errors.${err.code}`) : err.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      throw err;
+    }
     setUploading(true);
     try {
       // U7/U8/U9（upload 模块批A）：banner 图切独立端点 banner-image（宽幅区间带校验），

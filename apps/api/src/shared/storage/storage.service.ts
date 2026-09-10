@@ -184,4 +184,55 @@ export class StorageService implements OnModuleInit {
     const base = this.endpoint.replace(/\/$/, '');
     return url.startsWith(`${base}/${this.bucket}/`);
   }
+
+  /**
+   * 列出 bucket 内全部对象（孤儿清理批C 2026-09-10）
+   *
+   * @param prefix 可选前缀过滤（缺省全量）
+   * @returns 对象列表 { key, size, lastModified }（lastModified 用于宽限期判定）
+   */
+  async listAllObjects(
+    prefix?: string,
+  ): Promise<Array<{ key: string; size: number; lastModified: Date }>> {
+    if (!this.client || !this.bucket) {
+      throw new StorageError('StorageService 未初始化（OSS_* env 不全）');
+    }
+    const objects: Array<{ key: string; size: number; lastModified: Date }> = [];
+    const stream = this.client.listObjectsV2(this.bucket, prefix, true);
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (obj) => {
+        // BucketItem 联合类型：common-prefix 分支无 name（本仓不用 delimiter，防御性跳过）
+        if (obj.name) {
+          objects.push({ key: obj.name, size: obj.size ?? 0, lastModified: obj.lastModified });
+        }
+      });
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
+    return objects;
+  }
+
+  /**
+   * 批量删除对象（孤儿清理批C 2026-09-10）
+   *
+   * removeObjects 返回错误数组（部分失败语义）——有失败时抛 StorageError 携带明细，
+   * 调用方感知部分失败（不静默吞错，与 prisma/cleanup-review-image-orphans.ts F5 修复同款）
+   *
+   * @returns 实际请求删除的 key 数
+   */
+  async deleteObjects(keys: string[]): Promise<number> {
+    if (!this.client || !this.bucket) {
+      throw new StorageError('StorageService 未初始化（OSS_* env 不全）');
+    }
+    if (keys.length === 0) return 0;
+    const errors = await this.client.removeObjects(this.bucket, keys);
+    if (errors && errors.length > 0) {
+      // RemoveObjectsResponse 形状：{ Error?: { Key, Code, Message } }（minio SDK type.d.ts:338）
+      const detail = errors
+        .map((e) => `${e?.Error?.Key}: ${e?.Error?.Code} ${e?.Error?.Message}`)
+        .join('; ');
+      throw new StorageError(`MinIO removeObjects 部分失败 ${errors.length}/${keys.length}: ${detail}`);
+    }
+    return keys.length;
+  }
 }

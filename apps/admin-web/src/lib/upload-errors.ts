@@ -125,3 +125,200 @@ export function localizeUploadError(
   if (err.code && has(`errors.${err.code}`)) return t(`errors.${err.code}`);
   return err.message || 'Upload failed';
 }
+
+/**
+ * 选图后本地预校验（upload 模块批C · 批B P3-1 移交账，2026-09-10）
+ *
+ * admin 等价层此前只有错误分类/重试/本地化，无预校验（批B 审查 P3-1）——
+ * 错比例图靠后端 400 往返报错，弱网下体验差一档。本函数补齐 admin 等价：
+ * 规则逐条对齐 upload-core precheck.ts SCENE_RULES（客户端 App 同款语义），
+ * 错误码与后端 E-UPLOAD 对齐（010 类型 / 002 过大 / 016 过小 / 020 非方图 /
+ * 021 宽度或最大边越界 / 022 比例越界），命中即抛 PrecheckError。
+ *
+ * ⚠️ 预校验是体验优化不是安全边界——后端逐端点强校验仍是权威
+ * （magic bytes 防伪造只有后端能做）；尺寸取自图片元数据可被构造，不作信任依据。
+ *
+ * admin 场景（对齐 upload-core SCENE_RULES）：
+ *   - product-image：1:1 容差5% + 200–2000px + ≤5MB（主图/图片墙/分类图标）
+ *   - banner-image：宽 600–2000 + 比例 1.5–3.0 + ≤5MB（宽度违规报 021）
+ */
+
+/** admin 预校验失败（code 与后端 E-UPLOAD 对齐，走 localizeUploadError 直接本地化） */
+export class PrecheckError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'PrecheckError';
+    this.code = code;
+  }
+}
+
+/** 全场景共用常量（与后端 upload.helpers.ts / upload-core UPLOAD_LIMITS 一致） */
+export const UPLOAD_LIMITS = {
+  /** 5MB（后端 MAX_FILE_SIZE 一致） */
+  maxBytes: 5 * 1024 * 1024,
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'] as readonly string[],
+} as const;
+
+/** 场景预校验规则（逐条对齐 upload-core SCENE_RULES，key 同名） */
+export interface UploadSceneRule {
+  minEdge?: number;
+  minWidth?: number;
+  minHeight?: number;
+  maxEdge?: number;
+  square?: boolean;
+  squareTolerance?: number;
+  ratioRange?: [number, number];
+  /** minWidth 违规的错误码覆盖（默认 E-UPLOAD-016；banner 后端用 021 宽度越界） */
+  minWidthCode?: string;
+}
+
+/** admin 两场景规则表（与 upload-core SCENE_RULES 对齐；client/rider 场景在 MeiMart1.0 侧消费） */
+export const UPLOAD_SCENE_RULES: Record<string, UploadSceneRule> = {
+  // admin 商品图（主图/图片墙/分类图标）：1:1 容差5% + 200–2000px
+  'product-image': { minEdge: 200, maxEdge: 2000, square: true, squareTolerance: 0.05 },
+  // admin banner：宽 600–2000 + 比例 1.5–3.0（宽度违规后端报 021）
+  'banner-image': { minWidth: 600, maxEdge: 2000, ratioRange: [1.5, 3.0], minWidthCode: 'E-UPLOAD-021' },
+};
+
+/** 预校验输入（尺寸由调用方提供：web Image 解码 / 上传前 readImageDimensions） */
+export interface PrecheckInput {
+  mimeType?: string;
+  /** 文件字节大小（File.size，null 跳过大小校验） */
+  sizeBytes?: number | null;
+  width: number;
+  height: number;
+}
+
+/**
+ * 按场景预校验（对齐 upload-core precheckImage；先抛码后抛尺寸类，规则顺序一致）。
+ * @param scene UPLOAD_SCENE_RULES 的 key 或自定义 UploadSceneRule
+ * @throws PrecheckError（code 与后端 E-UPLOAD 对齐）
+ */
+export function precheckUploadImage(
+  scene: string | UploadSceneRule,
+  input: PrecheckInput,
+): void {
+  const rule = typeof scene === 'string' ? UPLOAD_SCENE_RULES[scene] : scene;
+  if (!rule) throw new PrecheckError('E-UPLOAD-010', `Unknown upload scene: ${String(scene)}`);
+
+  if (input.mimeType && !UPLOAD_LIMITS.allowedMimeTypes.includes(input.mimeType)) {
+    throw new PrecheckError('E-UPLOAD-010', `Unsupported image type: ${input.mimeType}`);
+  }
+  if (typeof input.sizeBytes === 'number' && input.sizeBytes > UPLOAD_LIMITS.maxBytes) {
+    throw new PrecheckError('E-UPLOAD-002', `File too large: ${input.sizeBytes} bytes (max 5MB)`);
+  }
+
+  const { width, height } = input;
+  if (width <= 0 || height <= 0) {
+    throw new PrecheckError('E-UPLOAD-016', `Invalid image dimensions: ${width}x${height}`);
+  }
+
+  if (rule.square) {
+    const tolerance = rule.squareTolerance ?? 0.05;
+    if (Math.abs(width / height - 1) > tolerance) {
+      throw new PrecheckError('E-UPLOAD-020', `Image must be 1:1 square (current ${width}x${height})`);
+    }
+  }
+  if (rule.ratioRange) {
+    const ratio = width / height;
+    const [min, max] = rule.ratioRange;
+    if (ratio < min || ratio > max) {
+      throw new PrecheckError('E-UPLOAD-022', `Aspect ratio ${width}:${height} out of range ${min}:1 - ${max}:1`);
+    }
+  }
+  if (rule.minEdge !== undefined && Math.min(width, height) < rule.minEdge) {
+    throw new PrecheckError('E-UPLOAD-016', `Image too small (current ${width}x${height}, min ${rule.minEdge}px)`);
+  }
+  if (rule.minWidth !== undefined && width < rule.minWidth) {
+    throw new PrecheckError(
+      rule.minWidthCode ?? 'E-UPLOAD-016',
+      `Image width too small (current ${width}, min ${rule.minWidth}px)`,
+    );
+  }
+  if (rule.minHeight !== undefined && height < rule.minHeight) {
+    throw new PrecheckError('E-UPLOAD-016', `Image height too small (current ${height}, min ${rule.minHeight}px)`);
+  }
+  if (rule.maxEdge !== undefined && Math.max(width, height) > rule.maxEdge) {
+    throw new PrecheckError('E-UPLOAD-021', `Image too large (current ${Math.max(width, height)}, max ${rule.maxEdge}px)`);
+  }
+}
+
+/**
+ * admin 上传场景 → 预校验规则 key（upload-scenes.ts UPLOAD_SCENES 的场景名，
+ * 此处反向映射避免 upload-scenes → upload-errors 循环依赖）。
+ * product-image 端点的 4 个场景共用 product-image 规则；banner 走 banner-image。
+ */
+const SCENE_TO_PRECHECK_RULE: Record<string, string> = {
+  'product-main-create': 'product-image',
+  'product-main-edit': 'product-image',
+  'product-image-wall': 'product-image',
+  'category-icon': 'product-image',
+  banner: 'banner-image',
+};
+
+/**
+ * web 侧读取图片真实宽高（File 对象无 RN asset.width/height 元数据，需解码）。
+ * createImageBitmap 优先（web 标准，返回位图自带宽高）；不可用或解码失败时
+ * 兜底 Image + objectURL；再失败返回 null——调用方跳过尺寸预校验直传
+ * （对齐 client-app「元数据取不到跳过、后端兜底」范式，预校验不是安全边界）。
+ */
+export async function readImageDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const dims = { width: bitmap.width, height: bitmap.height };
+      bitmap.close();
+      return dims;
+    } catch {
+      // fallthrough 到 Image 兜底（部分浏览器对特定编码 createImageBitmap 会拒）
+    }
+  }
+  if (typeof document !== 'undefined' && typeof URL?.createObjectURL === 'function') {
+    try {
+      return await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('image decode failed'));
+        };
+        img.src = url;
+      });
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * admin 5 上传位统一预校验入口（批C · 批B P3-1 移交账，2026-09-10）。
+ *
+ * 顺序与 upload-core precheckImage 一致：mime（010）→ size（002）→ 解码尺寸 →
+ * 场景尺寸规则（016/020/021/022）。mime/size 来自 File 元数据始终可校验；
+ * 尺寸解码失败时跳过尺寸规则直接放行（后端逐端点强校验兜底，不阻断上传）。
+ *
+ * @param scene upload-scenes.ts UPLOAD_SCENES 的场景名；未注册场景直接放行
+ *             （CSV 导入等非图片场景不预校验）
+ * @throws PrecheckError（code 与后端 E-UPLOAD 对齐，调用方 t(`errors.${code}`) 本地化）
+ */
+export async function precheckUploadFile(scene: string, file: File): Promise<void> {
+  const ruleKey = SCENE_TO_PRECHECK_RULE[scene];
+  if (!ruleKey) return;
+  if (file.type && !UPLOAD_LIMITS.allowedMimeTypes.includes(file.type)) {
+    throw new PrecheckError('E-UPLOAD-010', `Unsupported image type: ${file.type}`);
+  }
+  if (file.size > UPLOAD_LIMITS.maxBytes) {
+    throw new PrecheckError('E-UPLOAD-002', `File too large: ${file.size} bytes (max 5MB)`);
+  }
+  const dims = await readImageDimensions(file);
+  if (!dims || dims.width <= 0 || dims.height <= 0) return;
+  precheckUploadImage(ruleKey, { width: dims.width, height: dims.height });
+}

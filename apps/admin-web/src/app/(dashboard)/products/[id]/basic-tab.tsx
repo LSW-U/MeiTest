@@ -18,7 +18,7 @@ import {
   type Product,
 } from '@/hooks/api/use-products';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
-import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { localizeUploadError, phaseToProgress, precheckUploadFile, PrecheckError, toUploadError, type UploadPhase } from '@/lib/upload-errors';
 import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import { CategorySelect } from '@/components/common/category-select';
 
@@ -57,9 +57,20 @@ export function BasicTab({ productId, product }: { productId: string; product: P
   };
 
   // 批B（改动4）：同构 create 页——错误码本地化 + 网络类耗尽自动重试后手动兜底
+  // 批C（批B P3-1）：上传前本地预校验（mime/size/尺寸对齐后端规则），PrecheckError
+  // 直接本地化展示、不进重试链（4xx 类校验失败重试无意义）
   const handleUpload = async (file: File) => {
     setUploadError('');
     setCanRetry(false);
+    try {
+      await precheckUploadFile('product-main-edit', file);
+    } catch (err) {
+      if (err instanceof PrecheckError) {
+        setUploadError(t.has(`errors.${err.code}`) ? t(`errors.${err.code}`) : err.message);
+        return;
+      }
+      throw err;
+    }
     setUploading(true);
     try {
       const res = await uploadByScene<UploadResponse>('product-main-edit', file, 'file', {

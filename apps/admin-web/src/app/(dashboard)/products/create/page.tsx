@@ -36,7 +36,7 @@ import {
 import { useCreateProduct } from '@/hooks/api/use-products';
 import { CategorySelect } from '@/components/common/category-select';
 import { uploadByScene, type UploadResultData } from '@/lib/upload-scenes';
-import { localizeUploadError, phaseToProgress, toUploadError, type UploadPhase } from '@/lib/upload-errors';
+import { localizeUploadError, phaseToProgress, precheckUploadFile, PrecheckError, toUploadError, type UploadPhase } from '@/lib/upload-errors';
 import { UploadProgressBar } from '@/components/upload/upload-progress-bar';
 import type { I18nText } from '@/hooks/api/use-products';
 
@@ -62,9 +62,19 @@ export default function CreateProductPage() {
   const lastFileRef = useRef<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 批C（批B P3-1）：上传前本地预校验，PrecheckError 直接展示不进重试链
   const handleUpload = async (file: File) => {
     setUploadError('');
     setCanRetry(false);
+    try {
+      await precheckUploadFile('product-main-create', file);
+    } catch (err) {
+      if (err instanceof PrecheckError) {
+        setUploadError(t.has(`errors.${err.code}`) ? t(`errors.${err.code}`) : err.message);
+        return;
+      }
+      throw err;
+    }
     setUploading(true);
     try {
       const res = await uploadByScene<UploadResponse>('product-main-create', file, 'file', {
