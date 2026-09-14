@@ -7,32 +7,31 @@
  *   POST /api/v1/common/auth/register/complete 200 + token（ticket 原子消费 + DB 事务）
  *
  * 仅 BUYER（消费者 App）。SELLER/RIDER/ADMIN 不通过此入口。
+ *
+ * 批A 审查 P2-1 修复（20260915）：本地宽松 schema（min8/max20）收敛为契约
+ * UnifiedSendSmsRequest/UnifiedVerifySmsRequest/UnifiedCompleteRegisterRequest
+ * （PhoneE164 归一化+E.164 拒收在主登录链路真生效，openapi 单一来源）。
  */
 import { Controller, Post, Body, Inject, HttpCode, HttpStatus } from '@nestjs/common';
-import { z } from 'zod';
+import {
+  UnifiedSendSmsRequest,
+  UnifiedVerifySmsRequest,
+  UnifiedCompleteRegisterRequest,
+} from '@meimart/api-contract';
 import { UnifiedAuthService } from './unified-auth.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Public } from '../../shared/decorators/public.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import { RateLimit } from '../../shared/decorators/rate-limit.decorator';
 
-const SendSmsRequest = z.object({
-  phone: z.string().min(8).max(20),
-  deviceId: z.string().optional(),
-});
-
-const VerifySmsRequest = z.object({
-  phone: z.string().min(8).max(20),
-  code: z.string().length(6),
-  challengeId: z.string().uuid(),
-});
-
-const CompleteRegisterRequest = z.object({
-  registrationTicket: z.string().min(10),
-  agreedToTerms: z.literal(true),
-  challengeId: z.string().uuid(),
-  deviceId: z.string().optional(),
-});
+type SendSmsBody = { phone: string; deviceId?: string };
+type VerifySmsBody = { phone: string; code: string; challengeId: string };
+type CompleteRegisterBody = {
+  registrationTicket: string;
+  agreedToTerms: true;
+  challengeId: string;
+  deviceId?: string;
+};
 
 @Controller('api/v1/common/auth')
 export class UnifiedAuthController {
@@ -53,7 +52,7 @@ export class UnifiedAuthController {
   @Post('sms/send')
   @HttpCode(HttpStatus.ACCEPTED)
   async sendSms(
-    @Body(new ZodValidationPipe(SendSmsRequest)) body: { phone: string; deviceId?: string },
+    @Body(new ZodValidationPipe(UnifiedSendSmsRequest)) body: SendSmsBody,
   ) {
     const data = await this.unified.sendSmsCodeWithChallenge(body.phone, body.deviceId);
     return { success: true as const, data };
@@ -72,8 +71,7 @@ export class UnifiedAuthController {
   @Post('sms/verify')
   @HttpCode(HttpStatus.OK)
   async verifySms(
-    @Body(new ZodValidationPipe(VerifySmsRequest))
-    body: { phone: string; code: string; challengeId: string },
+    @Body(new ZodValidationPipe(UnifiedVerifySmsRequest)) body: VerifySmsBody,
   ) {
     const data = await this.unified.verifyAndDispatch(body.phone, body.code, body.challengeId);
     return { success: true as const, data };
@@ -89,13 +87,7 @@ export class UnifiedAuthController {
   @Post('register/complete')
   @HttpCode(HttpStatus.OK)
   async completeRegister(
-    @Body(new ZodValidationPipe(CompleteRegisterRequest))
-    body: {
-      registrationTicket: string;
-      agreedToTerms: true;
-      challengeId: string;
-      deviceId?: string;
-    },
+    @Body(new ZodValidationPipe(UnifiedCompleteRegisterRequest)) body: CompleteRegisterBody,
   ) {
     const data = await this.unified.completeRegistration(body);
     return { success: true as const, data };

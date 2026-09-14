@@ -16,6 +16,7 @@ import { AppModule } from './app.module';
 import { logger as pinoLogger } from './shared/logger/logger';
 import { initSentry } from './shared/monitoring/sentry';
 import { assertAllJwtSecrets } from './shared/auth/assert-jwt-secret';
+import { assertSmsStartupConfig } from './shared/monitoring/sms-startup-check';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
 import helmet from 'helmet';
@@ -28,6 +29,10 @@ initSentry();
 
 // P0-1：JWT secret 校验紧随 Sentry 之后（漏配时 fail-fast，bootstrap 直接挂）
 assertAllJwtSecrets();
+
+// 批A R8：SMS 网关配置启动软告警（prod + gateway 缺凭据 / 逃生门开着）
+// —— 只 error 日志，不 throw 不退进程（SMS 拒发由策略构造期 fail-fast 兜底，R8）
+assertSmsStartupConfig();
 
 // P1-8 修复：prod 强制 WS_URL 配置（漏配时 IM 客户端会拿到错误的兜底 wsUrl）
 // dev/staging 不强制（兜底 ws://localhost:3001 可用）

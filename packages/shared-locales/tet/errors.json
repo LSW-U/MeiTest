@@ -159,5 +159,13 @@
   "E-DEPOSIT-201": "Presaria depósito uluk antes simu tarefa",
   "E-DEPOSIT-202": "Valor encomenda excede limiti tier depósito ita-nian",
   "E-STATISTICS-001": "Periode data statistika la validu (uza YYYY-MM-DD, to la bele antes from)",
-  "E-STATISTICS-002": "Periode data statistika liu limitu 366 dias"
+  "E-STATISTICS-002": "Periode data statistika liu limitu 366 dias",
+  "E-SMS-001": "Servisu verifikasaun SMS la disponível temporáriu, tenta fali hela",
+  "E-SMS-002": "Notifikasaun SMS pasadu: gateway la konfigura",
+  "E-SMS-003": "Notifikasaun SMS pasadu: buka utilizador falha",
+  "E-SMS-004": "Notifikasaun SMS pasadu: utilizador la iha numeru telefone",
+  "E-SMS-005": "Kota diáriu notifikasaun SMS liu",
+  "E-SMS-006": "Notifikasaun SMS falla atu manda",
+  "E-SMS-007": "Webhook resibu SMS desativadu",
+  "E-SMS-008": "Verifikasaun asin webhook resibu SMS falla"
 }

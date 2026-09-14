@@ -5,11 +5,11 @@
  * 仅 BUYER（消费者 App）
  */
 import { z } from 'zod';
-import { Id } from './common';
+import { Id, PhoneE164 } from './common';
 
 /** 发送验证码请求 */
 export const UnifiedSendSmsRequest = z.object({
-  phone: z.string().min(8).max(20),
+  phone: PhoneE164, // 批A R9：归一化（空格/横线/00前缀）→ E.164
   deviceId: z.string().optional(),
 });
 
@@ -21,7 +21,7 @@ export const UnifiedSendSmsResponse = z.object({
 
 /** 验证码校验请求 */
 export const UnifiedVerifySmsRequest = z.object({
-  phone: z.string().min(8).max(20),
+  phone: PhoneE164, // 批A R9：归一化 → E.164
   code: z.string().length(6),
   challengeId: z.string().uuid(),
 });

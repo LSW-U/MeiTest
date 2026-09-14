@@ -159,5 +159,13 @@
   "E-DEPOSIT-201": "Depósito necessário antes de aceitar tarefas",
   "E-DEPOSIT-202": "O valor do pedido excede o limite do seu nível de depósito",
   "E-STATISTICS-001": "Intervalo de datas de estatística inválido (use YYYY-MM-DD, to não pode ser anterior a from)",
-  "E-STATISTICS-002": "O intervalo de datas de estatística excede o limite de 366 dias"
+  "E-STATISTICS-002": "O intervalo de datas de estatística excede o limite de 366 dias",
+  "E-SMS-001": "Serviço de verificação por SMS temporariamente indisponível, tente novamente mais tarde",
+  "E-SMS-002": "Notificação SMS ignorada: gateway não configurado",
+  "E-SMS-003": "Notificação SMS ignorada: falha ao consultar utilizador",
+  "E-SMS-004": "Notificação SMS ignorada: utilizador sem número de telefone",
+  "E-SMS-005": "Quota diária de notificações SMS excedida",
+  "E-SMS-006": "Falha ao enviar notificação SMS",
+  "E-SMS-007": "Webhook de recibo de SMS desativado",
+  "E-SMS-008": "Falha na verificação de assinatura do webhook de recibo de SMS"
 }

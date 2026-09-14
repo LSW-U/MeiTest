@@ -159,5 +159,13 @@
   "E-DEPOSIT-201": "Deposit required before accepting delivery tasks",
   "E-DEPOSIT-202": "Order amount exceeds your deposit tier limit",
   "E-STATISTICS-001": "Invalid statistics date range (use YYYY-MM-DD, to must be on or after from)",
-  "E-STATISTICS-002": "Statistics date range exceeds the 366-day limit"
+  "E-STATISTICS-002": "Statistics date range exceeds the 366-day limit",
+  "E-SMS-001": "SMS verification service is temporarily unavailable, please try again later",
+  "E-SMS-002": "SMS notification skipped: gateway not configured",
+  "E-SMS-003": "SMS notification skipped: user lookup failed",
+  "E-SMS-004": "SMS notification skipped: user has no phone number",
+  "E-SMS-005": "SMS notification daily quota exceeded",
+  "E-SMS-006": "SMS notification failed to send",
+  "E-SMS-007": "SMS receipt webhook is disabled",
+  "E-SMS-008": "SMS receipt webhook signature verification failed"
 }

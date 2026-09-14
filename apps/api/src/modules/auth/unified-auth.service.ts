@@ -7,6 +7,8 @@
  *   - completeRegistration：原子消费 ticket + DB 事务创建 CUSTOMER
  *
  * 决策依据：统一手机号入口契约（11 条 registrationTicket 决策）
+ * 批A（2026-09-15）R11+R19 收敛：内联 stub 删除，OTP 收发全部走 otp factory
+ * （getOtpStrategy('SMS')），unified 只持有 challengeId→(scene,target) 映射键。
  */
 import {
   Injectable,
@@ -22,10 +24,22 @@ import { db, withTransaction } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { createTicket, consumeTicket } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
+import { getOtpStrategy } from '../../infrastructure/otp/otp.factory';
+import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
 import { AuthService } from './auth.service';
 import { Prisma } from '../../prisma/client';
 
-const OTP_TTL_SECONDS = 300; // 5 分钟
+const OTP_TTL_SECONDS = 300; // 5 分钟（code 键由 factory 落，映射键同 TTL）
+
+/**
+ * 映射键前缀（批A R19）：`otp:chal:{challengeId}` → { scene, target }
+ *
+ * 旧实现写 `otp:sms:{challengeId}` 与工厂 code 键 `otp:sms:{scene}:{target}`
+ * 同前缀双语义混用——换 `otp:chal:` 前缀消除（预研笔记③3.1）。
+ */
+const CHALLENGE_KEY_PREFIX = 'otp:chal:';
+/** 统一入口固定 scene：发码时登录/注册尚未分流，OTP 语义=「本机号持有证明」 */
+const UNIFIED_SMS_SCENE: OtpScene = 'LOGIN';
 
 @Injectable()
 export class UnifiedAuthService {
@@ -35,30 +49,32 @@ export class UnifiedAuthService {
    * 发送验证码（统一入口，生成 challengeId）
    *
    * 无论手机号是否已注册，统一返回 challengeId（防枚举）。
-   * Redis 存 OTP：otp:sms:{challengeId} = { phone, code, expiresAt }
+   * 批A R11 收敛：删内联 stub，只调 otp factory——code 键 `otp:sms:{scene}:{target}`
+   * 由 factory 落（stub/真实网关按 SMS_PROVIDER 分流），unified 只落映射键
+   * `otp:chal:{challengeId}` → { scene, target }（R19，verify 据此走 factory）。
    */
   async sendSmsCodeWithChallenge(
     phone: string,
     deviceId?: string,
   ): Promise<{ challengeId: string; expireIn: number }> {
     const challengeId = genId();
-    // dev stub 固定 123456，prod 生成随机码（W6 切真实 provider）
-    const code = process.env.SMS_STUB_CODE ?? '123456';
-    const now = Date.now();
+    const scene = UNIFIED_SMS_SCENE;
 
+    // 发码走 factory（A-1 已改造：stub 固定码 / gateway 真发，缺凭据 fail-fast E-SMS-001）
+    await getOtpStrategy('SMS').sendCode({ target: phone, scene });
+
+    // 映射键：challengeId → (scene, target)，同 TTL 5min
     await redis.set(
-      `otp:sms:${challengeId}`,
-      JSON.stringify({ phone, code, expiresAt: now + OTP_TTL_SECONDS * 1000 }),
+      `${CHALLENGE_KEY_PREFIX}${challengeId}`,
+      JSON.stringify({ scene, target: phone }),
       'EX',
       OTP_TTL_SECONDS,
     );
 
-    // 发送（dev stub 只记日志，prod 调真实 SMS provider）
     logger.info({
-      msg: '[SMS_STUB] sendCode unified',
+      msg: '[SMS] sendCode unified',
       phone: maskPhone(phone),
       challengeId,
-      note: 'stub code in Redis (W6 切真实 provider)',
     });
 
     void deviceId; // 预留设备指纹（限流 + 风控用）
@@ -88,23 +104,45 @@ export class UnifiedAuthService {
     registrationTicket?: string;
     expireIn?: number;
   }> {
-    // 校验 OTP
-    const otpData = await redis.get(`otp:sms:${challengeId}`);
-    if (!otpData) {
+    // 校验 OTP（批A R11 收敛：查映射键 → 走 factory 按 scene:target 校验）
+    const chalData = await redis.get(`${CHALLENGE_KEY_PREFIX}${challengeId}`);
+    if (!chalData) {
       throw new UnauthorizedException({
         code: 'E-USER-003',
         message: 'SMS code invalid or expired',
       });
     }
-    const otp = JSON.parse(otpData) as { phone: string; code: string };
-    if (otp.phone !== phone || otp.code !== code) {
+    let chal: { scene: OtpScene; target: string };
+    try {
+      chal = JSON.parse(chalData) as { scene: OtpScene; target: string };
+    } catch {
+      // 键值损坏（部署瞬间旧结构残留/脏数据）→ 按验证失败处理，不外泄细节
       throw new UnauthorizedException({
         code: 'E-USER-003',
         message: 'SMS code invalid or expired',
       });
     }
-    // 单次消费
-    await redis.del(`otp:sms:${challengeId}`);
+    // N-2 #1 phone 绑定校验：challenge 只对发码时的 target 有效（保留原语义，防换号撞 verify）
+    if (chal.target !== phone) {
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'SMS code invalid or expired',
+      });
+    }
+    // 走 factory 校验（reason 枚举 → N-2 #4 全部映射 E-USER-003，不外泄 WRONG_CODE/EXPIRED 细节）
+    const verifyResult = await getOtpStrategy('SMS').verifyCode({
+      target: chal.target,
+      code,
+      scene: chal.scene,
+    });
+    if (!verifyResult.valid) {
+      throw new UnauthorizedException({
+        code: 'E-USER-003',
+        message: 'SMS code invalid or expired',
+      });
+    }
+    // 单次消费：code 键 factory 已删；这里删映射键（两键齐删）
+    await redis.del(`${CHALLENGE_KEY_PREFIX}${challengeId}`);
 
     // 查 user 分流
     const user = await db.user.findUnique({ where: { phone } });

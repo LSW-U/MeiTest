@@ -74,3 +74,33 @@ export const ErrorResponse = z.object({
     details: z.record(z.string(), z.unknown()).optional(),
   }),
 });
+
+// ===== 手机号归一化（批A R9，2026-09-15）=====
+
+/**
+ * 手机号归一化：去空格/横线/括号、`00` 国际前缀 → `+`，输出 E.164 标准形态
+ *
+ * 批A R9（真实 SMS）：存储与限流键统一归一化形态，防「同号异形绕过限流」。
+ * 与 apps/api 共用实现：
+ *   - guard（RateLimitGuard.resolveKey）在 ZodValidationPipe 之前跑，读 raw body，
+ *     直接 import 本函数（api 经 @meimart/api-contract workspace 依赖可达）
+ *   - schema 侧用 {@link PhoneE164}（z.preprocess 包本函数，POC 已验证
+ *     zod-to-openapi 7.3.4 只渲染内层 string+pattern，preprocess 本体不进 OpenAPI）
+ *
+ * 规则（先清洗再校验，不硬编码 +670，通用 E.164）：
+ *   1. trim + 去掉所有空格/横线/括号（+670 7xx xxxx / +670-7xx-xxxx / (01) 2345 ）
+ *   2. `00` 国际前缀 → `+`（00670... → +670...）
+ *   3. 结果必须 `^\+[1-9]\d{1,14}$`，否则返回 undefined（schema 层拒收）
+ */
+export function normalizePhoneE164(input: unknown): string | undefined {
+  if (typeof input !== 'string') return undefined;
+  let v = input.trim().replace(/[\s\-().]/g, '');
+  if (v.startsWith('00')) v = `+${v.slice(2)}`;
+  return /^\+[1-9]\d{1,14}$/.test(v) ? v : undefined;
+}
+
+/** E.164 手机号（先归一化再校验；非法格式在 preprocess 阶段拒收 → 400 E-COMMON-001） */
+export const PhoneE164 = z.preprocess(
+  normalizePhoneE164,
+  z.string().regex(/^\+[1-9]\d{1,14}$/, 'PHONE_NOT_E164'),
+);

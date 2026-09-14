@@ -10,7 +10,7 @@
  * - CLAUDE.md §视角切换：deviceType 3 个值（client_app/rider_app/admin_web），前端 App 配置写死
  */
 import { z } from 'zod';
-import { Id } from './common';
+import { Id, PhoneE164 } from './common';
 
 /** 用户角色（5 个真实角色） */
 export const Role = z.enum([
@@ -74,7 +74,7 @@ export const LoginResponseData = z.object({
 /** 注册请求（smsCode 可选，W6 接真实 SMS 后强制；email optional 走 W 流程密码+SMS 主路径） */
 export const RegisterRequest = z
   .object({
-    phone: z.string().min(1),
+    phone: PhoneE164, // 批A R9：归一化 → E.164
     email: z.string().email().optional(),
     password: z
       .string()
@@ -100,13 +100,13 @@ export const LoginPasswordRequest = z.object({
 
 /** SMS 验证码登录请求（对应 POST /api/v1/common/auth/login-sms） */
 export const LoginSmsRequest = z.object({
-  phone: z.string().min(1),
+  phone: PhoneE164, // 批A R9：归一化（空格/横线/00前缀）→ E.164
   smsCode: z.string().min(1),
 });
 
 /** 简化版发 SMS 验证码请求（不带 scene，默认 LOGIN；对应 POST /api/v1/common/auth/sms-code） */
 export const SendSmsCodeRequest = z.object({
-  phone: z.string().min(1),
+  phone: PhoneE164, // 批A R9：归一化 → E.164
   scene: z.enum(['REGISTER', 'LOGIN', 'RESET_PASSWORD', 'BIND_PHONE']).default('LOGIN'),
 });
 
@@ -124,7 +124,7 @@ export const ChangePhoneRequest = z.object({
 
 /** SMS 找回密码请求（对应 POST /api/v1/common/auth/password-reset） */
 export const PasswordResetRequest = z.object({
-  phone: z.string().min(1),
+  phone: PhoneE164, // 批A R9：归一化 → E.164
   smsCode: z.string().min(1),
   newPassword: z
     .string()

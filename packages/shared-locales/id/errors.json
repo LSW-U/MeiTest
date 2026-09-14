@@ -159,5 +159,13 @@
   "E-DEPOSIT-201": "Wajib setor deposit sebelum menerima tugas",
   "E-DEPOSIT-202": "Jumlah pesanan melebihi batas tingkatan deposit Anda",
   "E-STATISTICS-001": "Rentang tanggal statistik tidak valid (gunakan YYYY-MM-DD, to tidak boleh sebelum from)",
-  "E-STATISTICS-002": "Rentang tanggal statistik melebihi batas 366 hari"
+  "E-STATISTICS-002": "Rentang tanggal statistik melebihi batas 366 hari",
+  "E-SMS-001": "Layanan verifikasi SMS sementara tidak tersedia, silakan coba lagi nanti",
+  "E-SMS-002": "Notifikasi SMS dilewati: gateway belum dikonfigurasi",
+  "E-SMS-003": "Notifikasi SMS dilewati: pencarian pengguna gagal",
+  "E-SMS-004": "Notifikasi SMS dilewati: pengguna tidak memiliki nomor telepon",
+  "E-SMS-005": "Kuota harian notifikasi SMS terlampaui",
+  "E-SMS-006": "Notifikasi SMS gagal dikirim",
+  "E-SMS-007": "Webhook terima SMS dinonaktifkan",
+  "E-SMS-008": "Verifikasi tanda tangan webhook terima SMS gagal"
 }

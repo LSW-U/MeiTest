@@ -30,6 +30,7 @@ import {
   RiderDeviceTokenController,
 } from './device-token.controller';
 import { RiderNotificationController } from './rider-notification.controller';
+import { SmsReceiptWebhookController } from './sms-receipt.controller';
 import {
   NotifyFactory,
   EmailNotifyStrategy,
@@ -57,6 +58,8 @@ import { NOTIFICATION_QUEUE } from '../../shared/queue';
     ClientDeviceTokenController,
     RiderDeviceTokenController,
     RiderNotificationController,
+    // 批A R16：SMS 回执 webhook 骨架（开关默认关，选型后补落库）
+    SmsReceiptWebhookController,
   ],
   providers: [
     AdminNotificationService,

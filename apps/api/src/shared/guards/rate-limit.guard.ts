@@ -19,6 +19,7 @@ import { createHash } from 'crypto';
 import { RATE_LIMIT_KEY, type RateLimitOptions } from '../decorators/rate-limit.decorator';
 import { rateLimit } from '../cache/rate-limit';
 import { logger } from '../logger/logger';
+import { normalizePhoneE164 } from '@meimart/api-contract';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -48,6 +49,7 @@ export class RateLimitGuard implements CanActivate {
         }
         logger.warn({
           msg: 'RATE_LIMIT_EXCEEDED',
+          reason: 'rate_limited', // R17 拒发计数分桶（与 otp/sms.strategy 的 not_configured/provider_error 同族）
           key: resolvedKey, // 已 hash，不含明文手机号
           current: result.current,
           limit: result.limit,
@@ -79,13 +81,24 @@ export class RateLimitGuard implements CanActivate {
    * ${ip} 保留明文（IP 非手机号，限流调试需要）。
    * ${user.xxx}（P17 审查 P1 修复，2026-08-17）：JWT 解析后的 request.user 字段（如 ${user.sub}）。
    *   @Public 端点 request.user 为 undefined -> 'anonymous' 兜底（用户维度限流只该用在登录态端点）。
+   *
+   * 批A R9（2026-09-15）：phone 字段先归一化再 hash——guard 全局第 4 道在
+   * ZodValidationPipe 之前跑，读 raw body，必须在这里归一化（方案 a，预研笔记④），
+   * 否则 +670 7xx xxxx / +6707xxxxxxx / 00670... 同号异形各自成桶绕过限流。
+   * 归一化实现与契约 PhoneE164 schema 共用 normalizePhoneE164（api-contract/common.ts）。
    */
   private resolveKey(template: string, request: any, ip: string): string {
     return template
       .replace(/\$\{ip\}/g, ip)
       .replace(/\$\{body\.(\w+)\}/g, (_, field: string) => {
-        const val = request.body?.[field];
+        let val: unknown = request.body?.[field];
         if (!val) return 'unknown';
+        // R9：手机号字段统一归一化形态进 hash（与 schema 存储形态一致）
+        if (field === 'phone' || field === 'newPhone') {
+          const normalized = normalizePhoneE164(val);
+          if (!normalized) return 'unknown'; // 非法格式（schema 会 400），限流仍记账不放过
+          val = normalized;
+        }
         return createHash('sha256').update(String(val)).digest('hex').slice(0, 16);
       })
       .replace(/\$\{query\.(\w+)\}/g, (_, field: string) => {
