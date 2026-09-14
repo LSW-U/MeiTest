@@ -31,6 +31,15 @@ vi.mock('../src/shared/db', () => ({
   },
 }));
 
+// 批B P3-4：隔离 rider-location.store（REDIS_URL 缺失时走真实 store 的 catch 路径，
+// 产生 RIDER_LOC_PERSIST_FAILED 告警噪音）；mock 后可断言 persist 调用参数
+const { persistRiderLocationMock } = vi.hoisted(() => ({
+  persistRiderLocationMock: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../src/modules/rider/rider-location.store', () => ({
+  persistRiderLocation: persistRiderLocationMock,
+}));
+
 function createGateway(): RealtimeGateway {
   const { JwtService } = require('@nestjs/jwt');
   return new RealtimeGateway(new JwtService({}));
@@ -185,6 +194,8 @@ describe('RealtimeGateway', () => {
           riderId: 'rider-1',
         }),
       );
+      // 批B：配送中分支也落 rider:loc（带 orderId → 短 TTL）
+      expect(persistRiderLocationMock).toHaveBeenCalledWith('rider-1', -8.5568, 125.56, 'order-abc');
     });
 
     it('customer 推位置 → 拒绝（only rider）', async () => {
@@ -199,20 +210,23 @@ describe('RealtimeGateway', () => {
       expect(serverToMock).not.toHaveBeenCalled();
     });
 
-    it('缺 lat/lng → 拒绝', async () => {
+    it('缺 lat/lng → 拒绝；空 orderId + 合法坐标 → 等单期仅落 Redis（R12）', async () => {
       const client = createMockClient({
         user: { sub: 'r-1', role: 'RIDER', deviceType: 'rider_app' },
       });
 
-      const result = await gateway.handleLocationUpdate(
-        { orderId: 'o', lat: 0, lng: 0, timestamp: 0 },
-        client,
-      );
-      // lat/lng 为 0 是合法值，应该通过；测试用缺字段
-      const invalid = { orderId: '', lat: 1, lng: 2, timestamp: 0 };
-      const result2 = await gateway.handleLocationUpdate(invalid as any, client);
+      // 真缺字段（lat/lng 非数字）→ 拒绝
+      const invalid = { orderId: 'o', timestamp: 0 };
+      const result = await gateway.handleLocationUpdate(invalid as any, client);
+      expect(result.ok).toBe(false);
 
-      expect(result2.ok).toBe(false);
+      // 空 orderId 是合法等单期上报（R12：orderId 可选）→ 仅落 rider:loc，不广播
+      const idle = { orderId: '', lat: 1, lng: 2, timestamp: 0 };
+      const result2 = await gateway.handleLocationUpdate(idle as any, client);
+      expect(result2).toEqual({ ok: true, persisted: true });
+      expect(serverToMock).not.toHaveBeenCalled();
+      // P3-4：断言 persist 参数——riderId=JWT sub、坐标原样透传、空 orderId 不入参
+      expect(persistRiderLocationMock).toHaveBeenCalledWith('r-1', 1, 2);
     });
 
     it('未鉴权 → 拒绝', async () => {

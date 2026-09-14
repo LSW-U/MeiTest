@@ -12,7 +12,7 @@
  *   - 后端复用 RealtimeGateway 广播，与 WS 通道合一（订阅 order:{orderId} room 的客户端无感知）
  *
  * 校验链（与 realtime.gateway handleLocationUpdate 一致，复用 assertRiderOwnsOrder）：
- *   role=RIDER → payload（orderId 强校验，契约里 optional 是 WS 兜底用）→ assertRiderOwnsOrder → 广播
+ *   role=RIDER → payload（orderId 强校验，等单期前台上报走 WS 无 orderId 分支）→ assertRiderOwnsOrder → 广播
  */
 import {
   Controller,
@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { ReportLocationRequest } from '@meimart/api-contract';
 import { RealtimeGateway, ORDER_ROOM_PREFIX } from '../realtime/realtime.gateway';
 import { assertRiderOwnsOrder } from '../realtime/rider-order-guard';
+import { persistRiderLocation } from './rider-location.store';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import type { RequestUser } from '../auth/strategies/jwt.strategy';
@@ -47,8 +48,9 @@ export class RiderLocationController {
    *
    * 设计要点：
    * - HTTP 短请求，iOS 后台能完成（长连接 socket.io 在 iOS 后台会被挂起）
-   * - orderId 强校验必填：后台定位仅在「配送中」启用，必带 orderId
+   * - orderId 强校验必填：后台定位仅在「配送中」启用，必带 orderId（R22：后台等单不上报）
    * - 复用 WS 广播：订阅 order:{orderId} room 的客户端（客户 App P11 物流追踪）无感知
+   * - R10 落点：与 WS handler 收敛同一 persistRiderLocation（真实环境接入批B）
    */
   @Post('report')
   async report(
@@ -63,7 +65,7 @@ export class RiderLocationController {
         HttpStatus.UNAUTHORIZED,
       );
     }
-    // HTTP report 强校验 orderId（契约里 optional 是 WS 兜底单点上报用的）
+    // HTTP report 强校验 orderId（等单期前台走 WS 通道，后台等单不上报——R22）
     if (!body.orderId) {
       throw new HttpException(
         { code: 'E-RIDER-007', message: 'orderId required for background location report' },
@@ -85,6 +87,9 @@ export class RiderLocationController {
         HttpStatus.FORBIDDEN,
       );
     }
+
+    // R10 落点（真实环境接入批B）：与 WS handler 收敛同一 persistRiderLocation
+    await persistRiderLocation(user.sub, body.lat, body.lng, body.orderId);
 
     // 复用 WS 广播（与 realtime.gateway handleLocationUpdate 合一）
     const room = `${ORDER_ROOM_PREFIX}${body.orderId}`;

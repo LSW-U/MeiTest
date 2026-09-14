@@ -34,6 +34,7 @@ import { logger } from '../../shared/logger/logger';
 import { redis } from '../../shared/cache';
 import { db } from '../../shared/db';
 import { assertRiderOwnsOrder } from './rider-order-guard';
+import { persistRiderLocation } from '../rider/rider-location.store';
 
 /** WS 命名空间：/realtime（与 HTTP 路由 /api/v1 分开，避免冲突） */
 const WS_NAMESPACE = '/realtime';
@@ -63,7 +64,8 @@ export interface ImMessage {
 
 /** 骑手推送的位置数据 */
 export interface RiderLocationUpdate {
-  orderId: string;
+  /** 可选（R12 等单期上报）：配送中必带；等单期前台 WS 上报缺省（无 orderId 走仅落 Redis 分支） */
+  orderId?: string;
   lat: number;
   lng: number;
   /** 可选：速度 km/h */
@@ -307,13 +309,19 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   /**
    * 骑手推送位置更新（仅 rider 角色可调）
    *
-   * 服务端自动广播到对应 order room（客户端订阅后能收到）
+   * 双分支（真实环境接入批B，R12 准入——等单骑手是派单 candidates 主体）：
+   *   - 带 orderId（配送中）：骑手-订单归属校验 → 广播 order:location（P11 物流追踪，行为不变）
+   *   - 无 orderId（等单前台）：不广播（无订阅方），仅落 rider:loc Redis（R10）——
+   *     原实现 :324 orderId 强校验导致等单期三条上报路全断，距离分恒回退中点
+   *
+   * rider-app 前台 useLocation.ts 15s 分档等单期持续 emit（切后台/锁屏 RN 前台定位暂停，
+   * 后台等单不上报——R22），坐标过期由读侧新鲜度阈值回退中点兜底。
    */
   @SubscribeMessage('location:update')
   async handleLocationUpdate(
     @MessageBody() data: RiderLocationUpdate,
     @ConnectedSocket() client: Socket,
-  ): Promise<{ ok: true; broadcast: true } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; broadcast: true } | { ok: true; persisted: true } | { ok: false; error: string }> {
     const user = (client.data as { user?: WsUser }).user;
     if (!user) {
       return { ok: false, error: 'not authenticated' };
@@ -321,10 +329,19 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (user.role !== 'RIDER') {
       return { ok: false, error: 'only rider can push location' };
     }
-    if (!data?.orderId || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
-      return { ok: false, error: 'invalid payload (need orderId, lat, lng)' };
+    // 等单期上报（R12）：orderId 可选，lat/lng 必填（payload 合法性仍强校验）
+    if (typeof data?.lat !== 'number' || typeof data?.lng !== 'number') {
+      return { ok: false, error: 'invalid payload (need lat, lng)' };
     }
 
+    // 分支 1：等单期前台（无 orderId）→ 仅落 rider:loc Redis，不广播（无 order room 订阅方）
+    if (!data.orderId) {
+      // persistRiderLocation 内部 try/catch 吞错（旁路增强，不阻塞上报）
+      await persistRiderLocation(user.sub, data.lat, data.lng);
+      return { ok: true, persisted: true };
+    }
+
+    // 分支 2：配送中（带 orderId）→ 归属校验 + 落 Redis + 广播 order room
     // P1-9 修复：骑手-订单绑定校验（防骑手 A 给骑手 B 的订单推伪造位置）
     // 抽 assertRiderOwnsOrder shared helper（HTTP /rider/location/report 复用，P0 后台定位）
     const ownership = await assertRiderOwnsOrder(data.orderId, user.sub);
@@ -340,6 +357,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
       return { ok: false, error: 'order not found' };
     }
+
+    // R10 落点：两通道收敛同一落点（与 HTTP report 同一 persistRiderLocation）
+    await persistRiderLocation(user.sub, data.lat, data.lng, data.orderId);
 
     const room = `${ORDER_ROOM_PREFIX}${data.orderId}`;
     // 广播到 order room（订阅该订单的客户端收到）

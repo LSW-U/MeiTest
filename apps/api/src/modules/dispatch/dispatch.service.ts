@@ -28,6 +28,11 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
+import {
+  fetchRiderLocations,
+  bucketRiderLocReadMetrics,
+  RIDER_LOC_FRESH_SEC,
+} from '../rider/rider-location.store';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 import { DepositEligibilityService } from '../rider/deposit-eligibility.service';
 import { SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
@@ -1675,6 +1680,14 @@ export class DispatchService {
     const inTransitMap = new Map(inTransitCounts.map((c) => [c.riderId as string, c._count._all]));
     const pickup = { lat: decimalToNumber(task.pickupLat), lng: decimalToNumber(task.pickupLng) };
 
+    // R10 批B：批量读骑手实时位置（rider:loc:{userId}，MGET 一次 round-trip），
+    // 读侧统一新鲜度阈值（RIDER_LOC_FRESH_SEC 固定 2min）判定 + R17 分桶计数；
+    // Redis 异常 fetchRiderLocations 返回 { locs 空, redisError } → 全员回退 null（中点兜底不变）。
+    // 注意 key 用 userId（JWT sub）：写入侧（WS/HTTP report）落的就是 user.sub。
+    const userIds = profiles.map((p) => p.userId);
+    const { locs, redisError } = await fetchRiderLocations(userIds);
+    bucketRiderLocReadMetrics(userIds, locs, Date.now(), redisError);
+
     const items: DispatchCandidateItem[] = profiles.map((p, i) => {
       const snapshot = this.eligibility.deriveEligibility(p.id, p.depositAmount, enabledTiers);
       const label = this.eligibility.toLabel(snapshot, orderAmount, requiredDeposit);
@@ -1689,7 +1702,7 @@ export class DispatchService {
         depositAmount: p.depositAmount,
         maxOrderAmount: snapshot.maxOrderAmount,
         inTransitTasks: inTransit,
-        distanceKm: this.riderPickupDistanceKm(pickup),
+        distanceKm: this.riderPickupDistanceKm(pickup, locs.get(p.userId)),
         eligibility: label,
         warehouseMatched: p.preferredWarehouseIds.includes(task.warehouseId),
         score: 0,
@@ -1710,8 +1723,8 @@ export class DispatchService {
 
     const scored = eligiblePool.map((c) => ({
       ...c,
-      // 距离近度：完全无实时骑手位置（MVP 候选不带 GPS）→ 距离分按中点 0.5 计，
-      // 避免全员 0 分导致排序退化为纯 rating；批 E 接骑手实时位置后替换
+      // 距离近度：有新鲜实时位置（rider:loc，R10 批B）→ 用真实距离；
+      // null（键缺失/过期/Redis 异常）→ 中点 0.5 兜底，避免全员 0 分退化纯 rating
       score:
         Math.round(
           (c.rating / 5) * W.rating +
@@ -1737,11 +1750,27 @@ export class DispatchService {
   }
 
   /**
-   * 候选距离（km）：MVP 无骑手实时 GPS（位置历史表 W4.5 已删），返回 null——
-   * 距离分按中点计（见 listDispatchCandidates）。批 E 接 Redis 实时位置后实现。
+   * 候选距离（km，两位小数）：骑手实时位置（rider:loc Redis，R10 批B）到任务取货点的
+   * Haversine 直线距（R4：复用 shared-utils haversineDistanceKm，不新写不引地图服务）。
+   *
+   * 回退 null（距离分按中点计，见 listDispatchCandidates）：
+   *   - 键缺失（从未上报 / TTL 已到——关 App 后旧坐标不进距离分）
+   *   - 过期（读侧新鲜度阈值 2min 内才算，调用方已按 Map 缺失传入 null 语义：
+   *     过期桶在 metrics 分桶，这里 loc 传入时已可能过期——统一在下方过期判定）
+   *   - Redis 异常（fetchRiderLocations 返回空 Map）
+   *
+   * 销掉原「批 E 接 Redis 实时位置后实现」挂账注释（防文档代码双头挂账，R10）。
    */
-  private riderPickupDistanceKm(_pickup: { lat: number; lng: number }): number | null {
-    return null;
+  private riderPickupDistanceKm(
+    pickup: { lat: number; lng: number },
+    loc?: { lat: number; lng: number; ts: number; orderId?: string },
+  ): number | null {
+    if (!loc) return null;
+    // 读时二次新鲜度校验（R10：防 Redis 智能淘汰/惰性删除延迟导致旧坐标进距离分）
+    if (Date.now() - loc.ts > RIDER_LOC_FRESH_SEC * 1000) return null;
+    const km = haversineDistanceKm(pickup.lat, pickup.lng, loc.lat, loc.lng);
+    if (km == null) return null;
+    return Math.round(km * 100) / 100;
   }
 
   /** admin 视图转换（含 order + rider 关联） */
