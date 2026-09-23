@@ -10,6 +10,7 @@
  * 每次测试创建独立订单，不依赖其他测试的状态。
  */
 import { describe, it, expect } from 'vitest';
+import { describeWhenApiUp } from './helpers/e2e-guard';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -45,7 +46,7 @@ function uuid(): string {
 
 // ============ tests ============
 
-describe('e2e: 客户下单全链路', () => {
+describeWhenApiUp('e2e: 客户下单全链路', () => {
   let customerToken: string;
   let adminToken: string;
   let skuId: string;
@@ -182,7 +183,7 @@ describe('e2e: 客户下单全链路', () => {
   });
 });
 
-describe('e2e: 退款全链路', () => {
+describeWhenApiUp('e2e: 退款全链路', () => {
   let customerToken: string;
   let adminToken: string;
   let skuId: string;
@@ -352,7 +353,7 @@ describe('e2e: 退款全链路', () => {
   });
 });
 
-describe('e2e: 异常路径', () => {
+describeWhenApiUp('e2e: 异常路径', () => {
   let customerToken: string;
   let adminToken: string;
   let skuId: string;
@@ -497,7 +498,7 @@ describe('e2e: 异常路径', () => {
 });
 
 // F4：路由顺序锁定 + 新端点 happy path（防 @Get('counts') 被 @Get(':id') 吞）
-describe('e2e: 路由顺序 + 新端点 happy path', () => {
+describeWhenApiUp('e2e: 路由顺序 + 新端点 happy path', () => {
   let customerToken: string;
 
   it('准备', async () => {

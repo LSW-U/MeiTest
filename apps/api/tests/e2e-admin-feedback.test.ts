@@ -25,6 +25,7 @@
  * 注意：真 HTTP（localhost:3000），不走 NestJS DI。
  */
 import { describe, it, expect, beforeAll } from 'vitest';
+import { describeWhenApiUp } from './helpers/e2e-guard';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -148,7 +149,7 @@ async function registerFreshCustomer(): Promise<{ token: string; userId: string 
 
 // ============ tests ============
 
-describe('e2e: 后台反馈管理（admin 只读）', () => {
+describeWhenApiUp('e2e: 后台反馈管理（admin 只读）', () => {
   let customerToken: string;
   let adminToken: string;
   let feedbackId: string;

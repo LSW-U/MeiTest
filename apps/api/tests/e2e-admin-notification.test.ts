@@ -17,6 +17,7 @@
  * 注意：真 HTTP（localhost:3000），不走 NestJS DI。
  */
 import { describe, it, expect } from 'vitest';
+import { describeWhenApiUp } from './helpers/e2e-guard';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -59,7 +60,7 @@ const CONTENT = { en: 'e2e body', zh: '', id: '', pt: '' };
 
 // ============ tests ============
 
-describe('e2e: 后台通知推送', () => {
+describeWhenApiUp('e2e: 后台通知推送', () => {
   let customerToken: string;
   let customerUserId: string;
   let adminToken: string;

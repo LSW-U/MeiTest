@@ -58,3 +58,7 @@ test_rider_scenarios.js
 docs/architecture-diagram.json
 docs/meimart-architecture.html
 docs/meimart-architecture.visual-check.json
+
+# SIM 实测脚本产物（批A2-3 P3-3：临时发送明细/报告，不进版本库）
+apps/api/scripts/tmp/
+apps/api/scripts/sim-numbers.txt

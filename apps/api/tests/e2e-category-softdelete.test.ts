@@ -14,6 +14,7 @@
  * （客户端树过滤掉），不影响后续测试。
  */
 import { describe, it, expect } from 'vitest';
+import { describeWhenApiUp } from './helpers/e2e-guard';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -59,7 +60,7 @@ function flattenTree(tree: any[]): string[] {
 
 // ============ tests ============
 
-describe('e2e: 分类软删后客户端树不可见', () => {
+describeWhenApiUp('e2e: 分类软删后客户端树不可见', () => {
   let adminToken: string;
   let categoryId: string;
   const marker = `e2e-del-${uuid().slice(0, 8)}`;

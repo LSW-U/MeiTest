@@ -18,6 +18,7 @@
  *   pnpm --filter @meimart/api test:e2e -- rate-limit-isolation.e2e.test.ts
  */
 import { describe, it, expect } from 'vitest';
+import { describeWhenApiUp } from './helpers/e2e-guard';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -50,7 +51,7 @@ async function postFeedback(token: string): Promise<{ status: number; body: any 
   return { status: res.status, body: await res.json() };
 }
 
-describe('e2e: F1 多用户限流隔离（${user.sub} 桶独立）', () => {
+describeWhenApiUp('e2e: F1 多用户限流隔离（${user.sub} 桶独立）', () => {
   it('用户 A 耗尽 5 次/小时配额后，用户 B 首次提交仍成功（不再共用 anonymous 桶）', async () => {
     const adminToken = await mockLogin();
 
