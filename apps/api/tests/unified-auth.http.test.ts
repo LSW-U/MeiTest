@@ -39,6 +39,8 @@ vi.mock('../src/shared/db', () => ({
   db: {},
   withTransaction: vi.fn(),
 }));
+// 批A2-2：图形码闸门 mock（真实现会查 Redis——本文件 mock redis 缺 eval 方法）
+vi.mock('../src/infrastructure/otp/captcha', () => ({ assertCaptchaPassed: vi.fn() }));
 
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
@@ -99,7 +101,11 @@ describe('e2e: unified send 真 HTTP 链（controller→pipe→filter）', () =>
     expect(body.success).toBe(true);
     expect(body.data.challengeId).toBe('ch-http-1');
     // 归一化在真 HTTP pipe 层发生（不是 service 里），service 收到清洗后的 E.164
-    expect(mockSendSms).toHaveBeenCalledWith('+67071234567', undefined);
+    // 批A2-2：controller 现统一传 captcha 对象（开关关时 assertCaptchaPassed 内部放行）
+    expect(mockSendSms).toHaveBeenCalledWith('+67071234567', undefined, {
+      captchaId: undefined,
+      captchaText: undefined,
+    });
   });
 
   it('P2-1 端到端：非 E.164 号（"12345678"）→ 真 400 拒收（旧 min8/max20 会放行）', async () => {

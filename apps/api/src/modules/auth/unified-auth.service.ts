@@ -20,9 +20,12 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { genId } from '@meimart/shared-utils';
+import { createHash } from 'crypto';
 import { db, withTransaction } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { createTicket, consumeTicket } from '../../shared/cache';
+import { rateLimit } from '../../shared/cache/rate-limit';
+import { assertCaptchaPassed } from '../../infrastructure/otp/captcha';
 import { logger } from '../../shared/logger/logger';
 import { getOtpStrategy } from '../../infrastructure/otp/otp.factory';
 import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
@@ -56,9 +59,30 @@ export class UnifiedAuthService {
   async sendSmsCodeWithChallenge(
     phone: string,
     deviceId?: string,
+    captcha?: { captchaId?: string; captchaText?: string },
   ): Promise<{ challengeId: string; expireIn: number }> {
     const challengeId = genId();
     const scene = UNIFIED_SMS_SCENE;
+
+    // 批A2-2：图形验证码闸门（决策7/8）——先图形码后频控（防刷优先：
+    // 图形码不过的请求不占频控桶）；开关 SMS_CAPTCHA_REQUIRED 关时直接放行
+    await assertCaptchaPassed(captcha);
+
+    // 批A2-2：图形验证码闸门（决策7/8）——先图形码后频控（防刷优先：
+    // 图形码不过的请求不占频控桶）；开关 SMS_CAPTCHA_REQUIRED 关时直接放行
+    await assertCaptchaPassed(captcha);
+
+    // P2-3（方案 a）：phone 维度频控下沉到 captcha 之后（原在 controller @RateLimit，
+    // 批A2-1 T3 迁入）——错 captcha 的请求不烧 phone 桶。三段滑动窗口语义/错误码
+    // 与原 guard 版完全一致（60s×1 / 1h×5 / 24h×10，超限 429 E-RATELIMIT-001）。
+    await assertPhoneRateLimit(phone);
+
+    // 批A2-1 T3：deviceId 维度频控（5 次/24h）——设备指纹刷码防线（换号不换设备照样拦）。
+    // 先于发码（超限不打真实通道的钱）；缺 deviceId 跳过（旧客户端兼容）；超限 429
+    // 语义与 RateLimitGuard 家族统一（E-RATELIMIT-001，key 已 hash 不外泄明文指纹）
+    if (deviceId) {
+      await assertDeviceIdRateLimit(deviceId);
+    }
 
     // 发码走 factory（A-1 已改造：stub 固定码 / gateway 真发，缺凭据 fail-fast E-SMS-001）
     await getOtpStrategy('SMS').sendCode({ target: phone, scene });
@@ -77,7 +101,7 @@ export class UnifiedAuthService {
       challengeId,
     });
 
-    void deviceId; // 预留设备指纹（限流 + 风控用）
+    void deviceId; // 预留设备指纹（风控用，频控已在发码前接上）
     return { challengeId, expireIn: OTP_TTL_SECONDS };
   }
 
@@ -284,4 +308,71 @@ export class UnifiedAuthService {
 function maskPhone(phone: string): string {
   if (phone.length < 6) return '***';
   return phone.slice(0, 4) + '****' + phone.slice(-2);
+}
+
+/**
+ * phone 维度频控（P2-3 方案 a：从 controller @RateLimit 下沉，批A2-1 T3 语义原样保留）：
+ * 同号 60s×1 / 1h×5 / 24h×10，Redis 滑动窗口（复用 rate-limit.ts），
+ * 超限 429 E-RATELIMIT-001（与 guard 版同款响应结构，前端无感）。
+ *
+ * 位置：captcha 之后（错 captcha 不烧 phone 桶）、deviceId 频控之前（同族防线一起拦在发码前）。
+ */
+async function assertPhoneRateLimit(phone: string): Promise<void> {
+  const tiers: Array<{ suffix: string; limit: number; window: number }> = [
+    { suffix: '60s', limit: 1, window: 60 },
+    { suffix: '1h', limit: 5, window: 3600 },
+    { suffix: '24h', limit: 10, window: 86400 },
+  ];
+  for (const t of tiers) {
+    const key = `sms:phone:${phone}:${t.suffix}`;
+    const result = await rateLimit(key, t.limit, t.window);
+    if (!result.allowed) {
+      logger.warn({
+        msg: 'RATE_LIMIT_EXCEEDED',
+        reason: 'rate_limited', // R17 拒发计数分桶（guard 同族）
+        key,
+        current: result.current,
+        limit: t.limit,
+        retryAfter: result.retryAfter,
+      });
+      throw new HttpException(
+        {
+          code: 'E-RATELIMIT-001',
+          message: 'Too many requests, please retry later',
+          details: { retryAfter: result.retryAfter },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+}
+
+/**
+ * deviceId 维度频控（批A2-1 T3）：5 次/24h，Redis 滑动窗口（复用 rate-limit.ts，
+ * 与 controller @RateLimit 同族实现，超限 429 E-RATELIMIT-001 同款语义）。
+ *
+ * key：deviceId SHA256 截断 16（与 RateLimitGuard.resolveKey 同款 hash——
+ * Redis key 不含明文设备指纹）。客户端伪造 deviceId 只影响自身桶，不碰手机号/IP 桶。
+ */
+async function assertDeviceIdRateLimit(deviceId: string): Promise<void> {
+  const hashed = createHash('sha256').update(deviceId).digest('hex').slice(0, 16);
+  const result = await rateLimit(`sms:device:${hashed}:24h`, 5, 86400);
+  if (!result.allowed) {
+    logger.warn({
+      msg: 'RATE_LIMIT_EXCEEDED',
+      reason: 'rate_limited', // R17 拒发计数分桶（guard 同族）
+      key: `sms:device:${hashed}:24h`, // 已 hash，不含明文设备指纹
+      current: result.current,
+      limit: result.limit,
+      retryAfter: result.retryAfter,
+    });
+    throw new HttpException(
+      {
+        code: 'E-RATELIMIT-001',
+        message: 'Too many requests, please retry later',
+        details: { retryAfter: result.retryAfter },
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
 }

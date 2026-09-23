@@ -21,6 +21,25 @@ import { rateLimit } from '../cache/rate-limit';
 import { logger } from '../logger/logger';
 import { normalizePhoneE164 } from '@meimart/api-contract';
 
+/**
+ * e2e 频控豁免（批A2-3 审查 P2-1 方案 a，2026-09-24）
+ *
+ * E2E_RATELIMIT_BYPASS=true 时跳过 sms:ip / sms:phone 维度限流——e2e 套件打真 HTTP
+ * 会把本机 IP 桶（sms:ip:*:1h/24h，limit 20）打满，一小时内复跑全量 vitest 必 429
+ * （自毒化）。仅 sms 维度豁免（e2e 唯一会打满的频控面），其余维度（login/register/
+ * verify/feedback 等）照常生效，守卫不整体失效。
+ *
+ * ⚠️ 仅测试语义：E2E_RATELIMIT_BYPASS 不得在生产 env / GitHub Secret 配置——
+ * 它会让真实 SMS 发码端点失去 IP 维防刷防线（phone/deviceId 维在 service 层不受影响，
+ * 但 IP 维是边缘第一道）。生产部署清单不应出现该变量（.env.example 不提供此键）。
+ */
+const E2E_RATELIMIT_BYPASS_KEYS = ['sms:ip:', 'sms:phone:'];
+
+/** e2e 豁免开关（env 每次现读，测试切换无需重置缓存） */
+function isE2eRateLimitBypass(): boolean {
+  return process.env.E2E_RATELIMIT_BYPASS === 'true';
+}
+
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
@@ -40,7 +59,12 @@ export class RateLimitGuard implements CanActivate {
 
     // 多维度限流：任一超限即拒，取最严格（retryAfter 最大）的返回
     let blocked: { retryAfter: number; key: string } | null = null;
+    const bypass = isE2eRateLimitBypass();
     for (const options of optionsList) {
+      // e2e 豁免（P2-1）：bypass 开 + sms 维度 → 跳过该段（不查 Redis 不烧桶）
+      if (bypass && E2E_RATELIMIT_BYPASS_KEYS.some((p) => options.key.startsWith(p))) {
+        continue;
+      }
       const resolvedKey = this.resolveKey(options.key, request, ip);
       const result = await rateLimit(resolvedKey, options.limit, options.window);
       if (!result.allowed) {

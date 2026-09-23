@@ -1,9 +1,12 @@
 /**
- * SMS 策略（手机验证）— stub / 真实网关双通道（批A R1 切真）
+ * SMS 策略（手机验证）— stub / 真实网关 / 腾讯云三通道（批A R1 切真 + 批A2 tencent）
  *
  * 决策依据：CLAUDE.md §测试阶段 OTP 完整方案 + 批A-预研笔记-20260914.md ③3.3/⑤步骤2
+ *   + 任务书-批A2-腾讯云SMS真实接入.md（执行权威）
  *   - dev（默认）：stub 固定验证码，日志标 [SMS_STUB]，SMS_STUB_CODE 仅 stub 生效
- *   - prod：SMS_PROVIDER=gateway 走真实网关（sms-gateway.client.ts，HTTP fetch 直调）；
+ *   - prod：SMS_PROVIDER 默认 tencent（批A2：与 gateway 同语义）——
+ *     · tencent：腾讯云国际短信（tencent-sms.strategy.ts，官方 SDK TC3 签名）
+ *     · gateway：通用 HTTP 网关（sms-gateway.client.ts，fetch 直调）
  *     缺凭据 → sendCode 运行时拒发 503 E-SMS-001（P1-1 审查修复：构造期不校验不
  *     throw，否则 otp.factory 模块作用域 new 会让整个 API 启动即死，违背 R8
  *     「不退进程，爆炸半径=登录」）
@@ -14,8 +17,10 @@
  */
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { redis } from '../../shared/cache';
-import { logger } from "../../shared/logger/logger";
+import { logger } from '../../shared/logger/logger';
 import { readSmsGatewayConfig, sendSmsViaGateway } from './sms-gateway.client';
+import { assertSmsDailyBudget } from './sms-budget';
+import { TencentSmsStrategy } from './tencent-sms.strategy';
 import type {
   OtpStrategy,
   OtpSendInput,
@@ -30,7 +35,10 @@ const KEY_PREFIX = 'otp:sms:';
 /** 生产缺凭据拒发错误码（E-SMS 段 001-099 预留，预研笔记④已核全仓空闲；五语 errors.json 已注册） */
 export const E_SMS_001 = 'E-SMS-001';
 
-type SmsProvider = 'stub' | 'gateway';
+/** 批A2：tencent 策略复用同款 TTL / 键结构（验证链路不感知 provider） */
+export { CODE_TTL_SECONDS, KEY_PREFIX };
+
+type SmsProvider = 'stub' | 'gateway' | 'tencent';
 
 let cachedProvider: SmsProvider | null = null;
 
@@ -40,19 +48,20 @@ export function clearSmsProviderCache(): void {
 }
 
 /**
- * 解析 SMS 通道：显式 SMS_PROVIDER（stub|gateway）；未配置时 dev 默认 stub、
- * production 默认 gateway（缺凭据由 sendCode 运行时拒发兜底，不走降级）
+ * 解析 SMS 通道：显式 SMS_PROVIDER（stub|gateway|tencent）；未配置时 dev 默认 stub、
+ * production 默认 tencent（批A2：与 gateway 同语义——生产默认走真实通道，缺凭据
+ * 由 sendCode 运行时拒发兜底，不走降级）
  *
  * export：sms-startup-check.ts（R8 启动软告警）复用同一解析，不重复实现
  */
 export function resolveProvider(): SmsProvider {
   if (cachedProvider) return cachedProvider;
   const explicit = process.env.SMS_PROVIDER;
-  if (explicit === 'stub' || explicit === 'gateway') {
+  if (explicit === 'stub' || explicit === 'gateway' || explicit === 'tencent') {
     cachedProvider = explicit;
     return cachedProvider;
   }
-  cachedProvider = process.env.NODE_ENV === 'production' ? 'gateway' : 'stub';
+  cachedProvider = process.env.NODE_ENV === 'production' ? 'tencent' : 'stub';
   return cachedProvider;
 }
 
@@ -120,16 +129,30 @@ export class SmsStrategy implements OtpStrategy {
 
   constructor() {
     // 逃生门开 = stub 意图（isMock 同步为 true，语义与 A-1 一致）
+    // 批A2：tencent 也是真实通道意图（isMock=false），凭据缺失运行时拒发
     this.isMock =
-      resolveProvider() !== 'gateway' || process.env.SMS_STUB_ALLOWED === 'true';
+      (resolveProvider() !== 'gateway' && resolveProvider() !== 'tencent') ||
+      process.env.SMS_STUB_ALLOWED === 'true';
   }
 
+  /** 批A2：provider=tencent 时的委托策略（构造只 new 不校验凭据，P1-1 不 throw） */
+  private readonly tencentDelegate = new TencentSmsStrategy();
+
   async sendCode(input: OtpSendInput): Promise<OtpSendOutput> {
+    // 批A2：provider=tencent 委托 TencentSmsStrategy（同 OtpStrategy 接口，键/TTL 同款）
+    if (resolveProvider() === 'tencent') {
+      if (process.env.SMS_STUB_ALLOWED === 'true') {
+        return this.sendStub(input);
+      }
+      await assertSmsDailyBudget(); // 批A2-1：真实通道统一日预算熔断（stub 不计数）
+      return this.tencentDelegate.sendCode(input);
+    }
     if (!this.isMock) {
       // 运行时凭据校验（P1-1：构造期不校验，此处拒发；逃生门回退 stub 语义不变）
       if (resolveGatewayOrEscape() === 'stub') {
         return this.sendStub(input);
       }
+      await assertSmsDailyBudget(); // 批A2-1：真实通道统一日预算熔断（stub 不计数）
       await this.sendViaGateway(input);
       return { expireIn: CODE_TTL_SECONDS };
     }
@@ -179,7 +202,9 @@ export class SmsStrategy implements OtpStrategy {
       // 异常会经 all-exceptions.filter 落泛化 500 E-COMMON-002，客户端无从分辨；
       // 包装为 503 E-SMS-001，语义=「验证码服务暂不可用，请稍后重试」
       if (e instanceof HttpException) throw e;
-      throw smsUnavailableException(`gateway send failed: ${(e as Error).name}`);
+      throw smsUnavailableException(
+        `gateway send failed: ${(e as Error).name}`,
+      );
     }
   }
 
@@ -201,6 +226,8 @@ export class SmsStrategy implements OtpStrategy {
   }
 
   async verifyCode(input: OtpVerifyInput): Promise<OtpVerifyOutput> {
+    // 批A2：tencent 通道的验证码也落同一 Redis 键结构，本类 verifyCode 直接通用，
+    // 无需委托（键 = otp:sms:{scene}:{target}，TencentSmsStrategy 写入时同构）
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     const stored = await redis.get(key);
 
@@ -214,7 +241,12 @@ export class SmsStrategy implements OtpStrategy {
 
     // 验证成功后删除（一次性）
     await redis.del(key);
-    logger.info({ msg: '[SMS] verifyCode', phone: maskSmsPhone(input.target), scene: input.scene, result: 'PASS' });
+    logger.info({
+      msg: '[SMS] verifyCode',
+      phone: maskSmsPhone(input.target),
+      scene: input.scene,
+      result: 'PASS',
+    });
     return { valid: true };
   }
 }

@@ -26,6 +26,7 @@ import { db } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { readSmsGatewayConfig, sendSmsViaGateway } from '../otp/sms-gateway.client';
 import { maskSmsPhone } from '../otp/sms.strategy';
+import { resolveProvider } from '../otp/sms.strategy';
 import type { NotifyStrategy, NotifyRequest, NotifyResult } from './notify-strategy';
 
 /** 日配额默认值（SMS_NOTIFY_DAILY_LIMIT 未配置或非法时兜底，费控不失效） */
@@ -96,14 +97,29 @@ export class SmsNotifyStrategy implements NotifyStrategy {
   private async sendReal(request: NotifyRequest, text: string): Promise<NotifyResult> {
     const base = { userId: request.userId, type: request.type };
 
-    // 1. 网关配置（复用 otp 同一 provider env；缺 → 降级不抛）
+    // 1. provider 解析（批A2-1 任务书 #3：兼容 tencent——开关开后 provider=tencent
+    //    时不再误走 gateway 发送（会拿 gateway env 缺失/错发），降级不抛（R18）。
+    //    开关仍默认关，stub 默认行为不变。tencent 真发通道留后续批（notify 走
+    //    文本模板，与 OTP 数字模板不同），当前兼容分支=识别并降级不误发。
+    const provider = resolveProvider();
+    if (provider === 'tencent') {
+      logger.warn({
+        msg: 'NOTIFY_SMS_DEGRADED',
+        reason: 'TENCENT_NOTIFY_NOT_SUPPORTED',
+        ...base,
+        note: 'SMS_PROVIDER=tencent detected; notify real-send via tencent not wired yet (A2 后续批), degrading without send',
+      });
+      return { success: false, mockFlag: false, error: 'E-SMS-002: notify tencent channel not wired yet' };
+    }
+
+    // 2. 网关配置（复用 otp 同一 provider env；缺 → 降级不抛）
     const config = readSmsGatewayConfig();
     if (!config) {
       logger.warn({ msg: 'NOTIFY_SMS_DEGRADED', reason: 'GATEWAY_CONFIG_MISSING', ...base });
       return { success: false, mockFlag: false, error: 'E-SMS-002: SMS gateway not configured' };
     }
 
-    // 2. userId → phone 查库（User.phone @unique，schema.prisma:245；缺号/查库失败 → 降级）
+    // 3. userId → phone 查库（User.phone @unique，schema.prisma:245；缺号/查库失败 → 降级）
     let phone: string | undefined;
     try {
       const user = await db.user.findUnique({
@@ -125,7 +141,7 @@ export class SmsNotifyStrategy implements NotifyStrategy {
       return { success: false, mockFlag: false, error: 'E-SMS-004: user has no phone' };
     }
 
-    // 3. 日配额（INCR 当日过期；触顶拒发不发送，拒发也计数偏保守防突发放大）
+    // 4. 日配额（INCR 当日过期；触顶拒发不发送，拒发也计数偏保守防突发放大）
     const limit = Number(process.env.SMS_NOTIFY_DAILY_LIMIT) || DEFAULT_DAILY_LIMIT;
     const quotaKey = smsNotifyQuotaKey(todayUtc());
     const count = await redis.incr(quotaKey);
@@ -143,7 +159,7 @@ export class SmsNotifyStrategy implements NotifyStrategy {
       return { success: false, mockFlag: false, error: 'E-SMS-005: daily SMS notify quota exceeded' };
     }
 
-    // 4. 网关发送（SmsGatewayError → 降级不抛）
+    // 5. 网关发送（SmsGatewayError → 降级不抛）
     try {
       const { messageId } = await sendSmsViaGateway(config, phone, text);
       logger.info({

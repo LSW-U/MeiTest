@@ -82,6 +82,8 @@
   "E-PROMO-020": "Promotion per-user usage limit reached",
   "E-RATE-001": "Taxa kambiu tenki numeru boot liu 0 no kiak liu 10000",
   "E-RATE-002": "Data vigência tenki data kalendáriu válidu (YYYY-MM-DD)",
+  "E-RATELIMIT-001": "Solan barak liu, favor ida tan rean",
+  "E-REGISTER-001": "Tiket rejistu la validu ka tanis ona, favor verifika nian telepon fali",
   "E-REFUND-001": "Order status does not allow refund",
   "E-REFUND-002": "A refund is already in progress for this order",
   "E-REFUND-003": "Refund not found",
@@ -167,5 +169,6 @@
   "E-SMS-005": "Kota diáriu notifikasaun SMS liu",
   "E-SMS-006": "Notifikasaun SMS falla atu manda",
   "E-SMS-007": "Webhook resibu SMS desativadu",
-  "E-SMS-008": "Verifikasaun asin webhook resibu SMS falla"
+  "E-SMS-008": "Verifikasaun asin webhook resibu SMS falla",
+  "E-CAPTCHA-001": "Verifikasaun captcha falha, favor tenta fali"
 }

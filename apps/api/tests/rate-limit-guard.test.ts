@@ -7,7 +7,7 @@
  * 批A R9：phone/newPhone 先 normalizePhoneE164 再 hash——同号异形
  * （+670 7xx xxxx / +6707xxxxxxx / 00670...）归一化后同桶，堵限流绕过。
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createHash } from 'crypto';
 import type { Reflector } from '@nestjs/core';
 import { RateLimitGuard } from '../src/shared/guards/rate-limit.guard';
@@ -92,3 +92,87 @@ describe('RateLimitGuard.resolveKey phone 归一化（批A R9）', () => {
   });
 });
 
+describe('RateLimitGuard e2e 频控豁免（批A2-3 审查 P2-1 方案 a）', () => {
+  const reflector = { getAllAndOverride: vi.fn() } as unknown as Reflector;
+
+  beforeEach(() => {
+    vi.resetModules(); // doMock 须在每次动态 import 前重挂
+  });
+
+  afterEach(() => {
+    delete process.env.E2E_RATELIMIT_BYPASS;
+    vi.doUnmock('../src/shared/cache/redis');
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * 构造 canActivate 调用环境。
+   *
+   * mock 策略：rate-limit.ts 只消费 redis.eval 的 Lua 元组
+   * [allowed, current, limit, retryAfter]（rate-limit.ts:93-99），guard 消费
+   * rateLimit 的对象结果——所以直接 doMock redis.eval 按脚本序返回元组，
+   * bypass 语义（sms 段跳过=eval 不被调）用 eval 调用 key 序列断言。
+   */
+  function makeCtx(opts?: { evalReturns: number[][] }) {
+    const evalMock = vi.fn();
+    (opts?.evalReturns ?? [[1, 1, 20, 0]]).forEach((r) => evalMock.mockResolvedValueOnce(r));
+    vi.doMock('../src/shared/cache/redis', () => ({
+      redis: { eval: evalMock, set: vi.fn(), get: vi.fn(), del: vi.fn() },
+    }));
+    const request = { ip: '1.2.3.4', body: { phone: '+67077777777' }, headers: {} };
+    const response = { setHeader: vi.fn() };
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request, getResponse: () => response }),
+      getHandler: () => undefined,
+      getClass: () => undefined,
+    };
+    return { evalMock, response, context };
+  }
+
+  it('bypass 开 → sms:ip/sms:phone 段跳过（eval 零调用），其余维度照常记账', async () => {
+    process.env.E2E_RATELIMIT_BYPASS = 'true';
+    const { evalMock, context } = makeCtx(); // 先挂 doMock 再 import guard
+    const { RateLimitGuard: FreshGuard } = await import('../src/shared/guards/rate-limit.guard');
+    reflector.getAllAndOverride = vi.fn().mockReturnValue([
+      { key: 'sms:ip:${ip}:1h', limit: 20, window: 3600 },
+      { key: 'sms:ip:${ip}:24h', limit: 20, window: 86400 },
+      { key: 'sms:phone:${body.phone}:60s', limit: 1, window: 60 },
+      { key: 'register:ip:${ip}:1h', limit: 5, window: 3600 }, // 非 sms 维度不豁免
+    ]);
+    const g = new FreshGuard(reflector);
+    await expect(g.canActivate(context as never)).resolves.toBe(true);
+    const calledKeys = evalMock.mock.calls.map((c) => c[2] as string); // ioredis eval 签名 arg0=script arg1=numKeys arg2=key（带 ratelimit: 前缀）
+    expect(calledKeys.some((k) => k.includes('sms:ip:'))).toBe(false);
+    expect(calledKeys.some((k) => k.includes('sms:phone:'))).toBe(false);
+    expect(calledKeys.some((k) => k.includes('register:ip:'))).toBe(true); // 恰 evalReturns 一段
+  });
+
+  it('bypass 开 + sms 段本应超限 → 仍放行（跳过即不判 blocked）', async () => {
+    process.env.E2E_RATELIMIT_BYPASS = 'true';
+    // eval 若被调会返回超限元组——bypass 正确时根本不被调，guard 放行
+    const { context } = makeCtx({ evalReturns: [[0, 20, 20, 3600]] });
+    const { RateLimitGuard: FreshGuard } = await import('../src/shared/guards/rate-limit.guard');
+    reflector.getAllAndOverride = vi.fn().mockReturnValue([
+      { key: 'sms:ip:${ip}:1h', limit: 20, window: 3600 },
+    ]);
+    const g = new FreshGuard(reflector);
+    await expect(g.canActivate(context as never)).resolves.toBe(true);
+  });
+
+  it('bypass 关（默认）→ sms:ip 照常记账；超限 429 E-RATELIMIT-001 + Retry-After', async () => {
+    delete process.env.E2E_RATELIMIT_BYPASS;
+    const { evalMock, response, context } = makeCtx({ evalReturns: [[0, 20, 20, 42]] });
+    const { RateLimitGuard: FreshGuard } = await import('../src/shared/guards/rate-limit.guard');
+    reflector.getAllAndOverride = vi.fn().mockReturnValue([
+      { key: 'sms:ip:${ip}:1h', limit: 20, window: 3600 },
+    ]);
+    const g = new FreshGuard(reflector);
+    await expect(g.canActivate(context as never)).rejects.toMatchObject({
+      status: 429,
+      response: { code: 'E-RATELIMIT-001', details: { retryAfter: 42 } },
+    });
+    expect(evalMock).toHaveBeenCalledTimes(1);
+    expect(evalMock.mock.calls[0][2]).toContain('sms:ip:');
+    expect(response.setHeader).toHaveBeenCalledWith('Retry-After', '42');
+  });
+});

@@ -250,6 +250,8 @@ import {
   UnifiedVerifySmsResponse as VerifySmsResponseSchema,
   UnifiedCompleteRegisterRequest as CompleteRegisterRequestSchema,
   UnifiedCompleteRegisterResponse as CompleteRegisterResponseSchema,
+  // captcha（批A2-2 图形验证码闸门）
+  UnifiedCaptchaResponse as CaptchaResponseSchema,
   // im（流程 M W3 自建 WS 用户签名接口）
   ImSignature,
   ConversationType,
@@ -3173,15 +3175,28 @@ registry.register('VerifySmsRequest', VerifySmsRequestSchema);
 registry.register('VerifySmsResponse', VerifySmsResponseSchema);
 registry.register('CompleteRegisterRequest', CompleteRegisterRequestSchema);
 registry.register('CompleteRegisterResponse', CompleteRegisterResponseSchema);
+registry.register('CaptchaResponse', CaptchaResponseSchema); // 批A2-2
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/auth/captcha',
+  tags: ['auth'],
+  description: '批A2-2 图形验证码签发：SVG + captchaId（60s 一次性票据）。SMS_CAPTCHA_REQUIRED=true 时 POST /sms/send 前必调，答案随 captchaText 携带（不区分大小写，消费即焚）。',
+  responses: {
+    200: { description: '图形验证码', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: CaptchaResponseSchema }) } } },
+    429: { description: 'RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
 
 registry.registerPath({
   method: 'post',
   path: '/api/v1/common/auth/sms/send',
   tags: ['auth'],
-  description: '统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。',
+  description: '统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。批A2-2：SMS_CAPTCHA_REQUIRED=true（prod 默认）须先 GET /captcha 并携带 captchaId/captchaText，校验失败 400 E-CAPTCHA-001。',
   request: { body: { content: { 'application/json': { schema: SendSmsRequestSchema } } } },
   responses: {
     202: { description: '验证码已发送', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: SendSmsResponseSchema }) } } },
+    400: { description: 'CAPTCHA_INVALID（图形码错答/过期/缺参，一次性票据已焚）', content: { 'application/json': { schema: ErrorResponse } } },
     429: { description: 'RATE_LIMIT', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });

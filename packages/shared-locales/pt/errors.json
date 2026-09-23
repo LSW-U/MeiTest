@@ -82,6 +82,8 @@
   "E-PROMO-020": "Limite de uso do cupom por usuário atingido",
   "E-RATE-001": "A taxa de câmbio deve ser um número maior que 0 e menor que 10000",
   "E-RATE-002": "A data de vigência deve ser uma data de calendário válida (YYYY-MM-DD)",
+  "E-RATELIMIT-001": "Muitas solicitações, tente novamente mais tarde",
+  "E-REGISTER-001": "Ticket de registro inválido ou expirado, verifique seu telefone novamente",
   "E-REFUND-001": "O estado da encomenda não permite reembolso",
   "E-REFUND-002": "Já existe um reembolso em andamento para esta encomenda",
   "E-REFUND-003": "Reembolso não encontrado",
@@ -167,5 +169,6 @@
   "E-SMS-005": "Quota diária de notificações SMS excedida",
   "E-SMS-006": "Falha ao enviar notificação SMS",
   "E-SMS-007": "Webhook de recibo de SMS desativado",
-  "E-SMS-008": "Falha na verificação de assinatura do webhook de recibo de SMS"
+  "E-SMS-008": "Falha na verificação de assinatura do webhook de recibo de SMS",
+  "E-CAPTCHA-001": "Verificação captcha falhou, tente novamente"
 }

@@ -11,10 +11,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 
 // Mock cache（registration-ticket + redis；OTP code 键归 factory，测试里 mock factory）
-const { mockRedis, mockCreateTicket, mockConsumeTicket } = vi.hoisted(() => ({
+const { mockRedis, mockCreateTicket, mockConsumeTicket, mockRateLimit } = vi.hoisted(() => ({
   mockRedis: { get: vi.fn(), set: vi.fn(), del: vi.fn() },
   mockCreateTicket: vi.fn(),
   mockConsumeTicket: vi.fn(),
+  mockRateLimit: vi.fn(),
 }));
 
 vi.mock('../src/shared/cache', () => ({
@@ -22,6 +23,13 @@ vi.mock('../src/shared/cache', () => ({
   createTicket: mockCreateTicket,
   consumeTicket: mockConsumeTicket,
 }));
+
+// 批A2-1：deviceId 频控走 rate-limit.ts（ZSET+Lua），单测 mock 计数器
+vi.mock('../src/shared/cache/rate-limit', () => ({ rateLimit: mockRateLimit }));
+
+// 批A2-2：图形验证码闸门 mock（开关行为归 captcha.test.ts，这里只断言调用次序）
+const { mockAssertCaptcha } = vi.hoisted(() => ({ mockAssertCaptcha: vi.fn() }));
+vi.mock('../src/infrastructure/otp/captcha', () => ({ assertCaptchaPassed: mockAssertCaptcha }));
 
 // Mock otp factory（收敛后 unified 只经 factory 收发 OTP，不碰其 Redis 细节）
 const { mockSendCode, mockVerifyCode } = vi.hoisted(() => ({
@@ -70,6 +78,8 @@ describe('UnifiedAuthService', () => {
       accessExpiresAt: 1, refreshExpiresAt: 2,
     });
     service = new UnifiedAuthService(mockAuthService as never);
+    // P2-3：phone 三段频控下沉 service 后默认放行（各专例再按需覆盖）
+    mockRateLimit.mockResolvedValue({ allowed: true, current: 1, limit: 5, retryAfter: 0 });
   });
 
   describe('sendSmsCodeWithChallenge（收敛后：factory 发码 + 映射键）', () => {
@@ -107,6 +117,157 @@ describe('UnifiedAuthService', () => {
       mockSendCode.mockRejectedValue(new Error('E-SMS-001: gateway not configured'));
       await expect(service.sendSmsCodeWithChallenge(PHONE)).rejects.toThrow('E-SMS-001');
       expect(mockRedis.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sendSmsCodeWithChallenge 图形验证码闸门（批A2-2：先图形码后频控）', () => {
+    it('assertCaptchaPassed 先于频控与发码（防刷优先：图形码不过不占任何频控桶）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      // vi.resetAllMocks 后重设 resolvedValue 会保留调用历史（resetAllMocks 只清实现），
+      // mockClear 清计数但 invocationCallOrder 在 vitest v4 可能残留——用最后一次调用的
+      // order 做次序断言，次数断言改为「本例新增 1 次」由 calls 尾部锁定
+      const capCallsBefore = mockAssertCaptcha.mock.calls.length;
+      const rlCallsBefore = mockRateLimit.mock.calls.length;
+
+      await service.sendSmsCodeWithChallenge(PHONE, 'dev-1', { captchaId: 'c1', captchaText: 'ab' });
+
+      // 次序：captcha → 频控（phone/deviceId）→ sendCode
+      const capOrder = mockAssertCaptcha.mock.invocationCallOrder[capCallsBefore];
+      expect(mockAssertCaptcha).toHaveBeenLastCalledWith({ captchaId: 'c1', captchaText: 'ab' });
+      for (const order of mockRateLimit.mock.invocationCallOrder.slice(rlCallsBefore)) {
+        expect(capOrder).toBeLessThan(order);
+      }
+      expect(mockRateLimit.mock.invocationCallOrder[rlCallsBefore]).toBeLessThan(
+        mockSendCode.mock.invocationCallOrder[mockSendCode.mock.calls.length - 1],
+      );
+    });
+
+    it('captcha 参数缺省 → assertCaptchaPassed 收到 undefined（开关关时放行语义不变）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      await service.sendSmsCodeWithChallenge(PHONE);
+      expect(mockAssertCaptcha).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  describe('sendSmsCodeWithChallenge phone 频控（P2-3 方案 a：下沉 service，captcha 之后）', () => {
+    it('phone 三段频控（60s×1/1h×5/24h×10）在 captcha 之后执行；key 原样 sms:phone:{phone}:{suffix}', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      mockRateLimit.mockResolvedValue({ allowed: true, current: 1, limit: 5, retryAfter: 0 });
+
+      await service.sendSmsCodeWithChallenge(PHONE, undefined, { captchaId: 'c1', captchaText: 'ab' });
+
+      // 三段 key 语义不变（与原 guard 版同 key 同 limit 同 window）
+      const keys = mockRateLimit.mock.calls.map((c) => c[0] as string);
+      expect(keys).toEqual([
+        `sms:phone:${PHONE}:60s`,
+        `sms:phone:${PHONE}:1h`,
+        `sms:phone:${PHONE}:24h`,
+      ]);
+      // 次序：captcha → phone 频控 → 发码（错 captcha 不烧 phone 桶）
+      expect(mockAssertCaptcha.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRateLimit.mock.invocationCallOrder[0],
+      );
+      expect(mockRateLimit.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSendCode.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('phone 频控超限（60s 段第 2 次）→ 429 E-RATELIMIT-001 + retryAfter；发码未执行', async () => {
+      mockRateLimit.mockResolvedValueOnce({ allowed: false, current: 1, limit: 1, retryAfter: 42 });
+      await expect(service.sendSmsCodeWithChallenge(PHONE))
+        .rejects.toMatchObject({
+          status: 429,
+          response: { code: 'E-RATELIMIT-001', details: { retryAfter: 42 } },
+        });
+      expect(mockSendCode).not.toHaveBeenCalled();
+      expect(mockRedis.set).not.toHaveBeenCalled();
+    });
+
+    it('错 captcha（throw）→ phone 桶零消耗（rateLimit 未被调）', async () => {
+      mockAssertCaptcha.mockRejectedValue(
+        new BadRequestException({ code: 'E-CAPTCHA-001', message: 'captcha invalid' }),
+      );
+      await expect(
+        service.sendSmsCodeWithChallenge(PHONE, undefined, { captchaId: 'c1', captchaText: 'xx' }),
+      ).rejects.toMatchObject({ response: { code: 'E-CAPTCHA-001' } });
+      expect(mockRateLimit).not.toHaveBeenCalled();
+      expect(mockSendCode).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sendSmsCodeWithChallenge deviceId 频控（批A2-1 T3：5 次/24h）', () => {
+    it('未传 deviceId → 跳过 deviceId 频控（旧客户端兼容）；phone 三段频控仍执行', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      await service.sendSmsCodeWithChallenge(PHONE);
+      // phone 维度（P2-3 下沉）不受 deviceId 缺省影响
+      expect(mockRateLimit.mock.calls.every((c) => (c[0] as string).startsWith('sms:device:'))).toBe(false);
+      expect(mockRateLimit.mock.calls.every((c) => !(c[0] as string).startsWith('sms:device:'))).toBe(true);
+    });
+
+    it('传 deviceId 且未超限 → 放行；deviceId rateLimit key 用 SHA256 截 16 hash（不含明文指纹）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+
+      await service.sendSmsCodeWithChallenge(PHONE, 'device-fingerprint-abc');
+
+      // deviceId 维度恰好 1 次调用，key hash 且不含明文（phone 三段维不计入本断言）
+      const deviceCalls = mockRateLimit.mock.calls.filter((c) => (c[0] as string).startsWith('sms:device:'));
+      expect(deviceCalls).toHaveLength(1);
+      const [key, limit, window] = deviceCalls[0] as [string, number, number];
+      expect(key).toMatch(/^sms:device:[0-9a-f]{16}:24h$/);
+      expect(key).not.toContain('device-fingerprint-abc'); // 不含明文
+      expect(limit).toBe(5);
+      expect(window).toBe(86400);
+    });
+
+    it('同一 deviceId 第 6 次（超限）→ 429 E-RATELIMIT-001 + retryAfter；factory 未调用', async () => {
+      mockRateLimit.mockResolvedValue({ allowed: false, current: 5, limit: 5, retryAfter: 3600 });
+
+      await expect(service.sendSmsCodeWithChallenge(PHONE, 'device-1'))
+        .rejects.toMatchObject({
+          status: 429,
+          response: { code: 'E-RATELIMIT-001', details: { retryAfter: 3600 } },
+        });
+      expect(mockSendCode).not.toHaveBeenCalled(); // 频控先于发码
+      expect(mockRedis.set).not.toHaveBeenCalled();
+    });
+
+    it('换 deviceId 各自成桶（bucket 隔离）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      mockRateLimit.mockResolvedValue({ allowed: true, current: 1, limit: 5, retryAfter: 0 });
+
+      await service.sendSmsCodeWithChallenge(PHONE, 'device-A');
+      await service.sendSmsCodeWithChallenge(PHONE, 'device-B');
+
+      const keyA = mockRateLimit.mock.calls[0][0] as string;
+      const keyB = mockRateLimit.mock.calls[1][0] as string;
+      expect(keyA).not.toBe(keyB);
+    });
+
+    it('controller 装饰器仅 IP 维度（P2-3：phone 三段已下沉 service）；IP 1h/24h 保留在 captcha 前', async () => {
+      // 白盒：读 sendSms handler 上的 RATE_LIMIT 元数据（guard 同款读取路径）
+      const { RATE_LIMIT_KEY } = await import('../src/shared/decorators/rate-limit.decorator');
+      const { UnifiedAuthController } = await import('../src/modules/auth/unified-auth.controller');
+      const optionsList = Reflect.getMetadata(RATE_LIMIT_KEY, UnifiedAuthController.prototype.sendSms) as Array<{
+        key: string; limit: number; window: number;
+      }>;
+      // phone 三段已不在 guard（下沉 service，P2-3）
+      expect(optionsList.map((o) => o.key)).toEqual(
+        expect.not.arrayContaining([
+          'sms:phone:${body.phone}:60s',
+          'sms:phone:${body.phone}:1h',
+          'sms:phone:${body.phone}:24h',
+        ]),
+      );
+      // IP 两维保留（1h + 批A2-1 T3 的 24h）
+      expect(optionsList.map((o) => o.key)).toEqual(
+        expect.arrayContaining(['sms:ip:${ip}:1h', 'sms:ip:${ip}:24h']),
+      );
     });
   });
 

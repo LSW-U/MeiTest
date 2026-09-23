@@ -58,7 +58,9 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.3",
+    "svg-captcha": "^1.4.0",
     "swagger-ui-express": "^5.0.1",
+    "tencentcloud-sdk-nodejs-sms": "^4.1.306",
     "uuid": "^14.0.0",
     "yaml": "^2.9.0",
     "zod": "^3.25.76"

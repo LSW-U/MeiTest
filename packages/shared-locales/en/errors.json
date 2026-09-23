@@ -82,6 +82,8 @@
   "E-PROMO-020": "Promotion per-user usage limit reached",
   "E-RATE-001": "rate must be a positive number below 10000",
   "E-RATE-002": "rateDate must be a valid calendar date (YYYY-MM-DD)",
+  "E-RATELIMIT-001": "Too many requests, please retry later",
+  "E-REGISTER-001": "Registration ticket invalid or expired, please verify your phone again",
   "E-REFUND-001": "Order status does not allow refund",
   "E-REFUND-002": "A refund is already in progress for this order",
   "E-REFUND-003": "Refund not found",
@@ -167,5 +169,6 @@
   "E-SMS-005": "SMS notification daily quota exceeded",
   "E-SMS-006": "SMS notification failed to send",
   "E-SMS-007": "SMS receipt webhook is disabled",
-  "E-SMS-008": "SMS receipt webhook signature verification failed"
+  "E-SMS-008": "SMS receipt webhook signature verification failed",
+  "E-CAPTCHA-001": "Captcha verification failed, please retry"
 }

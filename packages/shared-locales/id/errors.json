@@ -82,6 +82,8 @@
   "E-PROMO-020": "Batas penggunaan kupon per pengguna tercapai",
   "E-RATE-001": "Nilai kurs harus berupa angka lebih dari 0 dan kurang dari 10000",
   "E-RATE-002": "Tanggal efektif harus berupa tanggal kalender yang valid (YYYY-MM-DD)",
+  "E-RATELIMIT-001": "Terlalu banyak permintaan, silakan coba lagi nanti",
+  "E-REGISTER-001": "Tiket pendaftaran tidak valid atau kedaluwarsa, silakan verifikasi nomor telepon lagi",
   "E-REFUND-001": "Status pesanan tidak mengizinkan pengembalian dana",
   "E-REFUND-002": "Pengembalian dana untuk pesanan ini sedang diproses",
   "E-REFUND-003": "Pengembalian dana tidak ditemukan",
@@ -167,5 +169,6 @@
   "E-SMS-005": "Kuota harian notifikasi SMS terlampaui",
   "E-SMS-006": "Notifikasi SMS gagal dikirim",
   "E-SMS-007": "Webhook terima SMS dinonaktifkan",
-  "E-SMS-008": "Verifikasi tanda tangan webhook terima SMS gagal"
+  "E-SMS-008": "Verifikasi tanda tangan webhook terima SMS gagal",
+  "E-CAPTCHA-001": "Verifikasi captcha gagal, silakan coba lagi"
 }

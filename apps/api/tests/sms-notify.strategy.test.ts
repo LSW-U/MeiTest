@@ -33,6 +33,7 @@ vi.mock('../src/infrastructure/otp/sms-gateway.client', () => ({
 }));
 
 import { SmsNotifyStrategy, smsNotifyQuotaKey } from '../src/infrastructure/notify/sms.strategy';
+import { clearSmsProviderCache } from '../src/infrastructure/otp/sms.strategy';
 
 const strategy = new SmsNotifyStrategy();
 
@@ -79,6 +80,8 @@ describe('SmsNotifyStrategy 开关开 → 真实网关（R18+R21）', () => {
   afterEach(() => {
     delete process.env.SMS_NOTIFY_ENABLED;
     delete process.env.SMS_NOTIFY_DAILY_LIMIT;
+    delete process.env.SMS_PROVIDER;
+    clearSmsProviderCache(); // 批A2-1：notify provider 解析读 otp 侧缓存，测试后重置
   });
 
   it('正常路径：查号 → 配额 INCR → 网关发送，success:true mockFlag:false', async () => {
@@ -153,5 +156,49 @@ describe('SmsNotifyStrategy 开关开 → 真实网关（R18+R21）', () => {
     const r = await strategy.send(baseRequest);
     expect(r.success).toBe(false);
     expect(r.error).toContain('E-SMS-006');
+  });
+});
+
+describe('SmsNotifyStrategy provider 兼容 tencent（批A2-1 任务书 #3）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.SMS_NOTIFY_ENABLED = 'true';
+    mockRedis.incr.mockResolvedValue(1);
+    mockUserFindUnique.mockResolvedValue({ phone: '+67077777777' });
+    mockSendViaGateway.mockResolvedValue({ messageId: 'gw-123' });
+  });
+  afterEach(() => {
+    delete process.env.SMS_NOTIFY_ENABLED;
+    delete process.env.SMS_PROVIDER;
+    clearSmsProviderCache();
+  });
+
+  it('SMS_PROVIDER=tencent + 开关开 → 识别为 tencent 未接线，降级 success:false 不发网关不查配额', async () => {
+    process.env.SMS_PROVIDER = 'tencent';
+    clearSmsProviderCache();
+    const r = await strategy.send(baseRequest);
+    expect(r.success).toBe(false);
+    expect(r.mockFlag).toBe(false);
+    expect(r.error).toContain('E-SMS-002');
+    expect(mockSendViaGateway).not.toHaveBeenCalled();
+    expect(mockRedis.incr).not.toHaveBeenCalled(); // 未达配额步骤
+    expect(mockUserFindUnique).not.toHaveBeenCalled(); // provider 检查在最前
+  });
+
+  it('SMS_PROVIDER=tencent + 开关关 → 仍走 stub（默认行为不变）', async () => {
+    process.env.SMS_PROVIDER = 'tencent';
+    delete process.env.SMS_NOTIFY_ENABLED;
+    clearSmsProviderCache();
+    const r = await strategy.send(baseRequest);
+    expect(r.success).toBe(true);
+    expect(r.mockFlag).toBe(true);
+    expect(mockSendViaGateway).not.toHaveBeenCalled();
+  });
+
+  it('SMS_PROVIDER=gateway + 开关开 → 不触发 tencent 分支，正常网关发送（回归）', async () => {
+    process.env.SMS_PROVIDER = 'gateway';
+    clearSmsProviderCache();
+    const r = await strategy.send(baseRequest);
+    expect(r).toEqual({ success: true, messageId: 'gw-123', mockFlag: false });
   });
 });

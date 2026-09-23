@@ -11,6 +11,16 @@ import { Id, PhoneE164 } from './common';
 export const UnifiedSendSmsRequest = z.object({
   phone: PhoneE164, // 批A R9：归一化（空格/横线/00前缀）→ E.164
   deviceId: z.string().optional(),
+  // 批A2-2 决策7/8：图形验证码票据（SMS_CAPTCHA_REQUIRED=true 时必传；dev 开关关可省）
+  captchaId: z.string().min(8).max(64).optional(),
+  captchaText: z.string().min(1).max(8).optional(),
+});
+
+/** 批A2-2：图形验证码签发响应（GET /common/auth/captcha，60s 一次性票据） */
+export const UnifiedCaptchaResponse = z.object({
+  captchaId: z.string().min(8).max(64),
+  svg: z.string(), // SVG 文本，前端 innerHTML 直接渲染
+  expireIn: z.number().int(),
 });
 
 /** 发送验证码响应（202，统一，不暴露 registered） */

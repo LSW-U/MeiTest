@@ -12090,6 +12090,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/auth/captcha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 批A2-2 图形验证码签发：SVG + captchaId（60s 一次性票据）。SMS_CAPTCHA_REQUIRED=true 时 POST /sms/send 前必调，答案随 captchaText 携带（不区分大小写，消费即焚）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 图形验证码 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                captchaId: string;
+                                svg: string;
+                                expireIn: number;
+                            };
+                        };
+                    };
+                };
+                /** @description RATE_LIMIT */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/auth/sms/send": {
         parameters: {
             query?: never;
@@ -12099,7 +12162,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。 */
+        /** @description 统一手机号入口：发送验证码。202 + challengeId（无论是否注册统一响应，防枚举）。仅 BUYER。批A2-2：SMS_CAPTCHA_REQUIRED=true（prod 默认）须先 GET /captcha 并携带 captchaId/captchaText，校验失败 400 E-CAPTCHA-001。 */
         post: {
             parameters: {
                 query?: never;
@@ -12112,6 +12175,8 @@ export interface paths {
                     "application/json": {
                         phone: string;
                         deviceId?: string;
+                        captchaId?: string;
+                        captchaText?: string;
                     };
                 };
             };
@@ -12129,6 +12194,25 @@ export interface paths {
                                 /** Format: uuid */
                                 challengeId: string;
                                 expireIn: number;
+                            };
+                        };
+                    };
+                };
+                /** @description CAPTCHA_INVALID（图形码错答/过期/缺参，一次性票据已焚） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
                             };
                         };
                     };
@@ -23032,6 +23116,11 @@ export interface components {
                 role: string;
                 phone: string;
             };
+        };
+        CaptchaResponse: {
+            captchaId: string;
+            svg: string;
+            expireIn: number;
         };
         GeocodeRequest: {
             address: string;

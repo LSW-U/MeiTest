@@ -40,6 +40,10 @@ describe('assertSmsStartupConfig（R8 启动软告警，不退进程）', () => 
     delete process.env.SMS_GATEWAY_AUTH_VALUE;
     delete process.env.SMS_GATEWAY_PAYLOAD_TEMPLATE;
     delete process.env.SMS_STUB_ALLOWED;
+    delete process.env.TENCENT_SMS_SECRET_ID;
+    delete process.env.TENCENT_SMS_SECRET_KEY;
+    delete process.env.TENCENT_SMS_SDK_APP_ID;
+    delete process.env.TENCENT_SMS_TEMPLATE_ID;
     clearSmsProviderCache();
   });
 
@@ -51,10 +55,21 @@ describe('assertSmsStartupConfig（R8 启动软告警，不退进程）', () => 
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'GATEWAY_CREDENTIALS_MISSING' }));
   });
 
-  it('prod + 未配置 SMS_PROVIDER（默认解析 gateway）+ 缺凭据 → 同样告警', () => {
+  it('prod + 未配置 SMS_PROVIDER（批A2 默认解析 tencent）+ 缺凭据 → tencent 告警', () => {
     process.env.NODE_ENV = 'production';
     assertSmsStartupConfig();
-    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'GATEWAY_CREDENTIALS_MISSING' }));
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'TENCENT_CREDENTIALS_MISSING' }));
+  });
+
+  it('prod + tencent 凭据齐备 → 不告警', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.SMS_PROVIDER = 'tencent';
+    process.env.TENCENT_SMS_SECRET_ID = 'id';
+    process.env.TENCENT_SMS_SECRET_KEY = 'key';
+    process.env.TENCENT_SMS_SDK_APP_ID = '1400123456';
+    process.env.TENCENT_SMS_TEMPLATE_ID = '1234567';
+    assertSmsStartupConfig();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it('prod + gateway 凭据齐备 → 不告警', () => {
