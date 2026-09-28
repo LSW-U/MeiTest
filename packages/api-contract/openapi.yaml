@@ -6050,6 +6050,10 @@ components:
           format: uuid
         deviceId:
           type: string
+        password:
+          type: string
+          minLength: 8
+          pattern: "[a-zA-Z]"
       required:
         - registrationTicket
         - agreedToTerms
@@ -25230,6 +25234,10 @@ paths:
                   format: uuid
                 deviceId:
                   type: string
+                password:
+                  type: string
+                  minLength: 8
+                  pattern: "[a-zA-Z]"
               required:
                 - registrationTicket
                 - agreedToTerms

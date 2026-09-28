@@ -563,5 +563,42 @@ describe('UnifiedAuthService', () => {
         }),
       }));
     });
+
+    // R7（方案v3）增量：complete 带 password → hash 入库；缺省 → 维持 null
+    it('R7 带 password：建号 data.password 为 bcrypt hash（$2 开头，cost=12）且与明文不同', async () => {
+      mockConsumeTicket.mockResolvedValue({
+        status: 'OK',
+        data: { phone: PHONE, challengeId: 'ch-1', purpose: 'COMPLETE_BUYER_REGISTRATION', verifiedAt: 1, expiresAt: 2 },
+      });
+      txCreate.mockResolvedValue({ id: 'new-u', phone: PHONE, role: 'CUSTOMER' });
+
+      await service.completeRegistration({
+        registrationTicket: 't', agreedToTerms: true, challengeId: 'ch-1',
+        password: 'Passw0rd123',
+      });
+
+      // hash 走真实 passwordStrategy（bcryptjs）：$2 前缀 + cost 12 + 非明文
+      const data = (txCreate.mock.calls[0][0] as { data: { password: string } }).data;
+      expect(data.password).toMatch(/^\$2[aby]\$12\$/);
+      expect(data.password).not.toBe('Passw0rd123');
+      // hash 可被 verifyPassword 验回明文（同旧链语义）
+      const { passwordStrategy } = await import('../src/infrastructure/otp/password.strategy');
+      expect(await passwordStrategy.verifyPassword(data.password, 'Passw0rd123')).toBe(true);
+    });
+
+    it('R7 缺省 password：建号 data.password 恒 null（SMS-only 上游设计不破坏）', async () => {
+      mockConsumeTicket.mockResolvedValue({
+        status: 'OK',
+        data: { phone: PHONE, challengeId: 'ch-1', purpose: 'COMPLETE_BUYER_REGISTRATION', verifiedAt: 1, expiresAt: 2 },
+      });
+      txCreate.mockResolvedValue({ id: 'new-u', phone: PHONE, role: 'CUSTOMER' });
+
+      await service.completeRegistration({
+        registrationTicket: 't', agreedToTerms: true, challengeId: 'ch-1',
+      });
+
+      const data = (txCreate.mock.calls[0][0] as { data: { password: unknown } }).data;
+      expect(data.password).toBeNull();
+    });
   });
 });

@@ -63,6 +63,15 @@ export const UnifiedCompleteRegisterRequest = z.object({
   agreedToTerms: z.literal(true),
   challengeId: z.string().uuid(),
   deviceId: z.string().optional(),
+  // R7（方案v3 增量）：可选密码——complete 步骤提交，有则 hash 入库，缺省维持 null。
+  // 密度口径复用旧 /register RegisterRequest：≥8 位 + 字母 + 数字（zod 层校验；
+  // UTF-8 ≤72 字节 bcrypt 限制由 service 层 passwordStrategy.hashPassword 兜底）
+  password: z
+    .string()
+    .min(8, 'PASSWORD_TOO_SHORT')
+    .regex(/[a-zA-Z]/, 'PASSWORD_NEED_LETTER')
+    .regex(/\d/, 'PASSWORD_NEED_DIGIT')
+    .optional(),
 });
 
 /** 完成注册响应 */

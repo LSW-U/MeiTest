@@ -28,6 +28,7 @@ import { rateLimit } from '../../shared/cache/rate-limit';
 import { assertCaptchaPassed } from '../../infrastructure/otp/captcha';
 import { logger } from '../../shared/logger/logger';
 import { getOtpStrategy } from '../../infrastructure/otp/otp.factory';
+import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import type { OtpScene } from '../../infrastructure/otp/otp-strategy';
 import { AuthService } from './auth.service';
 import { Prisma } from '../../prisma/client';
@@ -204,6 +205,7 @@ export class UnifiedAuthService {
     agreedToTerms: boolean;
     challengeId: string;
     deviceId?: string;
+    password?: string; // R7（方案v3）：可选密码，有则 hash 入库，缺省 null（SMS-only 设计不破坏）
   }): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -245,6 +247,11 @@ export class UnifiedAuthService {
 
     // DB 事务创建 User（决策 7/8/9）
     try {
+      // R7（方案v3）：可选密码 hash（同旧链 passwordStrategy，bcrypt cost=12 +
+      // UTF-8 ≤72 字节守卫）；zod 密度校验在契约层，这里 hash 前由 strategy 再守一道
+      const passwordHash = input.password
+        ? await passwordStrategy.hashPassword(input.password)
+        : null;
       const user = await withTransaction(async (tx) => {
         const created = await tx.user.create({
           data: {
@@ -253,7 +260,7 @@ export class UnifiedAuthService {
             status: 'ACTIVE',
             phoneVerified: true, // SMS 验证通过
             agreedTermsVersion: 'v1.0', // 决策 7：协议版本
-            // password null（SMS 注册无密码，用户后续可设）
+            password: passwordHash, // R7：有则 bcrypt hash，缺省 null（SMS-only）
           },
         });
         return created;

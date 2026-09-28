@@ -12377,6 +12377,7 @@ export interface paths {
                         /** Format: uuid */
                         challengeId: string;
                         deviceId?: string;
+                        password?: string;
                     };
                 };
             };
@@ -23109,6 +23110,7 @@ export interface components {
             /** Format: uuid */
             challengeId: string;
             deviceId?: string;
+            password?: string;
         };
         CompleteRegisterResponse: {
             accessToken: string;

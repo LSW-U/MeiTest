@@ -38,6 +38,7 @@ type CompleteRegisterBody = {
   agreedToTerms: true;
   challengeId: string;
   deviceId?: string;
+  password?: string; // R7（方案v3）：可选密码（契约 zod 密度校验，service hash 入库）
 };
 
 @Controller('api/v1/common/auth')
