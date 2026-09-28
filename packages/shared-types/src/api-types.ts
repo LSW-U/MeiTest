@@ -12175,6 +12175,11 @@ export interface paths {
                     "application/json": {
                         phone: string;
                         deviceId?: string;
+                        /**
+                         * @default LOGIN
+                         * @enum {string}
+                         */
+                        scene?: "LOGIN" | "REGISTER" | "RESET_PASSWORD";
                         captchaId?: string;
                         captchaText?: string;
                     };

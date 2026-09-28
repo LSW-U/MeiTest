@@ -24974,6 +24974,13 @@ paths:
                   pattern: ^\+[1-9]\d{1,14}$
                 deviceId:
                   type: string
+                scene:
+                  type: string
+                  enum:
+                    - LOGIN
+                    - REGISTER
+                    - RESET_PASSWORD
+                  default: LOGIN
                 captchaId:
                   type: string
                   minLength: 8

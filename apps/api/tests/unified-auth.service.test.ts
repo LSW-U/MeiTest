@@ -8,6 +8,7 @@
  *   - 失败一律 E-USER-003（不外泄 WRONG_CODE/EXPIRED 细节）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHash } from 'crypto';
 import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 
 // Mock cache（registration-ticket + redis；OTP code 键归 factory，测试里 mock factory）
@@ -117,6 +118,122 @@ describe('UnifiedAuthService', () => {
       mockSendCode.mockRejectedValue(new Error('E-SMS-001: gateway not configured'));
       await expect(service.sendSmsCodeWithChallenge(PHONE)).rejects.toThrow('E-SMS-001');
       expect(mockRedis.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('批1 scene 透传（R1/R2）：发码 scene 从请求透传，缺省 LOGIN，verify 分流不动', () => {
+    const SCENES = ['LOGIN', 'REGISTER', 'RESET_PASSWORD'] as const;
+
+    // U4-1：三 scene 透传——factory sendCode 与映射键均收到请求里的 scene
+    for (const scene of SCENES) {
+      it(`scene=${scene} 透传：factory.sendCode 与映射键值均含 scene=${scene}`, async () => {
+        mockSendCode.mockResolvedValue({ expireIn: 300 });
+        mockRedis.set.mockResolvedValue('OK');
+
+        const result = await service.sendSmsCodeWithChallenge(PHONE, undefined, undefined, scene);
+
+        const sendInput = mockSendCode.mock.calls[0][0] as OtpSendInput;
+        expect(sendInput.scene).toBe(scene);
+        expect(mockRedis.set).toHaveBeenCalledWith(
+          `otp:chal:${result.challengeId}`,
+          JSON.stringify({ scene, target: PHONE }),
+          'EX', 300,
+        );
+      });
+    }
+
+    // U4-2：缺省兼容——不传 scene 等价 LOGIN（旧客户端零破坏）
+    it('缺省 scene → 行为与 LOGIN 完全一致（factory + 映射键均 LOGIN）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+
+      const result = await service.sendSmsCodeWithChallenge(PHONE);
+
+      expect((mockSendCode.mock.calls[0][0] as OtpSendInput).scene).toBe('LOGIN');
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        `otp:chal:${result.challengeId}`,
+        JSON.stringify({ scene: 'LOGIN', target: PHONE }),
+        'EX', 300,
+      );
+    });
+
+    // U4-3（R2 防枚举）：RESET_PASSWORD 与 LOGIN 走同一条「统一 202 不查 user」链路，
+    // 不存在账号也返回 challengeId——对外行为与 LOGIN 无差异，无枚举泄露面。
+    // （旧链 auth.service.resetPassword !user→E-USER-003 先例语义在 verify 阶段延续：verify
+    // 端不接收 scene，按映射键解 scene + user 状态分流，本批不动，见 verify 分流既有用例。）
+    it('RESET_PASSWORD 对未注册号发码：统一 202 返回 challengeId，与 LOGIN 对外行为一致（防枚举）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+      userFindUnique.mockResolvedValue(null); // 账号不存在
+
+      const [rLogin, rReset] = await Promise.all([
+        service.sendSmsCodeWithChallenge(PHONE, undefined, undefined, 'LOGIN'),
+        service.sendSmsCodeWithChallenge(PHONE, undefined, undefined, 'RESET_PASSWORD'),
+      ]);
+
+      // 两者响应结构完全同形（challengeId + expireIn），无 registered/存在性差异
+      expect(Object.keys(rReset).sort()).toEqual(Object.keys(rLogin).sort());
+      expect(rReset.challengeId).toBeTruthy();
+      expect(rReset.expireIn).toBe(rLogin.expireIn);
+      // 频控/图形码调用次数与 LOGIN 完全一致（scene 不进任何键位）
+      const keys = mockRateLimit.mock.calls.map((c) => c[0] as string);
+      expect(keys.every((k) => !k.includes('RESET_PASSWORD') && !k.includes('LOGIN'))).toBe(true);
+    });
+
+    // U4-4：REGISTER 场景不绕过既有防线——频控四维/图形码闸门照走（scene 不进键位）
+    it('REGISTER 场景防线照走：captcha → phone 三段频控 → deviceId 频控 → 发码，键位无 scene 维度', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+
+      await service.sendSmsCodeWithChallenge(PHONE, 'dev-1', { captchaId: 'c1', captchaText: 'ab' }, 'REGISTER');
+
+      expect(mockAssertCaptcha).toHaveBeenCalledWith({ captchaId: 'c1', captchaText: 'ab' });
+      const keys = mockRateLimit.mock.calls.map((c) => c[0] as string);
+      expect(keys).toEqual([
+        `sms:phone:${PHONE}:60s`,
+        `sms:phone:${PHONE}:1h`,
+        `sms:phone:${PHONE}:24h`,
+        'sms:device:' + createHash('sha256').update('dev-1').digest('hex').slice(0, 16) + ':24h',
+      ]);
+      // REGISTER 不绕过注册校验：本链路本就不查 user（统一 202），注册校验在
+      // completeRegistration（既有 E-REGISTER-* 用例覆盖），scene 透传未新增旁路
+      expect(userFindUnique).not.toHaveBeenCalled();
+    });
+
+    // U4-5：非法 scene 拒绝——契约 schema 层 400（ZodValidationPipe），service 层不兜底。
+    // 直接 safeParse 契约 schema 验证（controller 单测 mock 不经过 pipe，参照批A2-3 P2-1 定责口径）
+    it('非法 scene（含 BIND_PHONE）→ 契约 schema 拒收（400 语义由 ZodValidationPipe 兑现）', async () => {
+      const { UnifiedSendSmsRequest } = await import('@meimart/api-contract');
+      const base = { phone: PHONE };
+      expect(UnifiedSendSmsRequest.safeParse({ ...base, scene: 'BIND_PHONE' }).success).toBe(false);
+      expect(UnifiedSendSmsRequest.safeParse({ ...base, scene: 'HACK' }).success).toBe(false);
+      // 合法三值 + 缺省通过
+      expect(UnifiedSendSmsRequest.safeParse(base).success).toBe(true);
+      for (const scene of SCENES) {
+        expect(UnifiedSendSmsRequest.safeParse({ ...base, scene }).success).toBe(true);
+      }
+      // 缺省值语义：parse 后 scene=LOGIN
+      expect(UnifiedSendSmsRequest.parse(base).scene).toBe('LOGIN');
+    });
+
+    // U4-7：scene=RESET_PASSWORD 发码后 verify 全链：映射键携带的 scene 被 factory verify 消费
+    it('RESET_PASSWORD 全链：send 落 scene=RESET_PASSWORD 映射键 → verify 按 Key 解出同 scene 校验', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+
+      const { challengeId } = await service.sendSmsCodeWithChallenge(
+        PHONE, undefined, undefined, 'RESET_PASSWORD',
+      );
+
+      mockRedis.get.mockResolvedValue(mockRedis.set.mock.calls[0][1] as string);
+      mockVerifyCode.mockResolvedValue({ valid: true });
+      userFindUnique.mockResolvedValue({ id: 'u1', phone: PHONE, role: 'CUSTOMER', status: 'ACTIVE' });
+
+      const result = await service.verifyAndDispatch(PHONE, '123456', challengeId);
+      expect(result.action).toBe('LOGIN'); // verify 分流按 user 状态，不受发码 scene 影响（R1 设计自洽）
+      expect(mockVerifyCode).toHaveBeenCalledWith(
+        expect.objectContaining({ target: PHONE, code: '123456', scene: 'RESET_PASSWORD' }) satisfies OtpVerifyInput,
+      );
     });
   });
 

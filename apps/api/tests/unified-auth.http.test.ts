@@ -102,10 +102,11 @@ describe('e2e: unified send 真 HTTP 链（controller→pipe→filter）', () =>
     expect(body.data.challengeId).toBe('ch-http-1');
     // 归一化在真 HTTP pipe 层发生（不是 service 里），service 收到清洗后的 E.164
     // 批A2-2：controller 现统一传 captcha 对象（开关关时 assertCaptchaPassed 内部放行）
+    // 批1 R1：scene 透传（契约 schema default 生效，pipe 归一化后缺省已是 LOGIN）
     expect(mockSendSms).toHaveBeenCalledWith('+67071234567', undefined, {
       captchaId: undefined,
       captchaText: undefined,
-    });
+    }, 'LOGIN');
   });
 
   it('P2-1 端到端：非 E.164 号（"12345678"）→ 真 400 拒收（旧 min8/max20 会放行）', async () => {

@@ -65,10 +65,11 @@ describe('PhoneE164 schema（preprocess + regex）', () => {
 });
 
 describe('OTP 入口 schema 逐项（A5 入口清单：unified 两 + 旧 auth 四）', () => {
-  it('UnifiedSendSmsRequest：空格 phone 归一化 + deviceId 保留', () => {
+  it('UnifiedSendSmsRequest：空格 phone 归一化 + deviceId 保留 + scene 缺省 LOGIN（批1 R1）', () => {
     const r = UnifiedSendSmsRequest.safeParse({ phone: '+670 7777 7777', deviceId: 'dev-1' });
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data).toEqual({ phone: '+67077777777', deviceId: 'dev-1' });
+    // 批1：schema 加 optional scene（default LOGIN），parse 输出含 scene 字段
+    if (r.success) expect(r.data).toEqual({ phone: '+67077777777', deviceId: 'dev-1', scene: 'LOGIN' });
     expect(UnifiedSendSmsRequest.safeParse({ phone: '7777' }).success).toBe(false);
   });
 

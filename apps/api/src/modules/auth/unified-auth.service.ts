@@ -41,8 +41,6 @@ const OTP_TTL_SECONDS = 300; // 5 分钟（code 键由 factory 落，映射键�
  * 同前缀双语义混用——换 `otp:chal:` 前缀消除（预研笔记③3.1）。
  */
 const CHALLENGE_KEY_PREFIX = 'otp:chal:';
-/** 统一入口固定 scene：发码时登录/注册尚未分流，OTP 语义=「本机号持有证明」 */
-const UNIFIED_SMS_SCENE: OtpScene = 'LOGIN';
 
 @Injectable()
 export class UnifiedAuthService {
@@ -55,14 +53,16 @@ export class UnifiedAuthService {
    * 批A R11 收敛：删内联 stub，只调 otp factory——code 键 `otp:sms:{scene}:{target}`
    * 由 factory 落（stub/真实网关按 SMS_PROVIDER 分流），unified 只落映射键
    * `otp:chal:{challengeId}` → { scene, target }（R19，verify 据此走 factory）。
+   * 批1 scene 透传（R1/R2）：scene 由请求透传（缺省 LOGIN），verify 分流不动
+   * （verify 端不接收 scene，从映射键解出）；scene 不进任何频控/预算键位。
    */
   async sendSmsCodeWithChallenge(
     phone: string,
     deviceId?: string,
     captcha?: { captchaId?: string; captchaText?: string },
+    scene: OtpScene = 'LOGIN',
   ): Promise<{ challengeId: string; expireIn: number }> {
     const challengeId = genId();
-    const scene = UNIFIED_SMS_SCENE;
 
     // 批A2-2：图形验证码闸门（决策7/8）——先图形码后频控（防刷优先：
     // 图形码不过的请求不占频控桶）；开关 SMS_CAPTCHA_REQUIRED 关时直接放行
@@ -81,6 +81,8 @@ export class UnifiedAuthService {
     }
 
     // 发码走 factory（A-1 已改造：stub 固定码 / gateway 真发，缺凭据 fail-fast E-SMS-001）
+    // R2 防枚举：本链路不查 user 存在性（统一 202），RESET_PASSWORD 对不存在账号
+    // 与 LOGIN 对外行为完全一致；scene 不进任何频控/预算键位（键位与 scene 无关）
     await getOtpStrategy('SMS').sendCode({ target: phone, scene });
 
     // 映射键：challengeId → (scene, target)，同 TTL 5min

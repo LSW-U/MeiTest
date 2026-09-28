@@ -25,7 +25,13 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 import { RateLimit } from '../../shared/decorators/rate-limit.decorator';
 
-type SendSmsBody = { phone: string; deviceId?: string; captchaId?: string; captchaText?: string };
+type SendSmsBody = {
+  phone: string;
+  deviceId?: string;
+  captchaId?: string;
+  captchaText?: string;
+  scene?: 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD';
+};
 type VerifySmsBody = { phone: string; code: string; challengeId: string };
 type CompleteRegisterBody = {
   registrationTicket: string;
@@ -61,6 +67,8 @@ export class UnifiedAuthController {
    * captchaId+captchaText 随请求携带（先图形码后频控）。
    * P2-3（用户拍板方案 a）：phone 维度频控下沉 service（captcha 之后），guard 只留
    * IP 维度——错 captcha 的请求不烧 phone 桶；IP 桶锁攻击者自己，留在 captcha 前可接受。
+   * 批1 R1：scene 透传（LOGIN/REGISTER/RESET_PASSWORD，缺省 LOGIN）；BIND_PHONE
+   * 不开放（换绑走旧 /sms-code），契约 schema 非法值直接 400。
    */
   @Public()
   @Audit({ resource: 'Auth', skip: true })
@@ -73,10 +81,15 @@ export class UnifiedAuthController {
   async sendSms(
     @Body(new ZodValidationPipe(UnifiedSendSmsRequest)) body: SendSmsBody,
   ) {
-    const data = await this.unified.sendSmsCodeWithChallenge(body.phone, body.deviceId, {
-      captchaId: body.captchaId,
-      captchaText: body.captchaText,
-    });
+    const data = await this.unified.sendSmsCodeWithChallenge(
+      body.phone,
+      body.deviceId,
+      {
+        captchaId: body.captchaId,
+        captchaText: body.captchaText,
+      },
+      body.scene, // 批1 R1：scene 透传（契约 schema 缺省 LOGIN；BIND_PHONE 契约层即拒 400）
+    );
     return { success: true as const, data };
   }
 

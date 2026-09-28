@@ -11,6 +11,9 @@ import { Id, PhoneE164 } from './common';
 export const UnifiedSendSmsRequest = z.object({
   phone: PhoneE164, // 批A R9：归一化（空格/横线/00前缀）→ E.164
   deviceId: z.string().optional(),
+  // scene 透传（批1 R1）：发码场景，缺省 LOGIN 向后兼容；
+  // BIND_PHONE 不开放给 unified 发码（换绑仍走旧 /sms-code，非法值 400）
+  scene: z.enum(['LOGIN', 'REGISTER', 'RESET_PASSWORD']).default('LOGIN'),
   // 批A2-2 决策7/8：图形验证码票据（SMS_CAPTCHA_REQUIRED=true 时必传；dev 开关关可省）
   captchaId: z.string().min(8).max(64).optional(),
   captchaText: z.string().min(1).max(8).optional(),
