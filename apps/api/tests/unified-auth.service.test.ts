@@ -143,6 +143,16 @@ describe('UnifiedAuthService', () => {
       );
     });
 
+    // U4-6（R5 回归）：assertCaptchaPassed 单次调用（删除连续重复调用后）
+    it('R5 回归：assertCaptchaPassed 每次 sendCode 恰好调用 1 次（删除连续重复调用）', async () => {
+      mockSendCode.mockResolvedValue({ expireIn: 300 });
+      mockRedis.set.mockResolvedValue('OK');
+
+      await service.sendSmsCodeWithChallenge(PHONE, undefined, { captchaId: 'c1', captchaText: 'ab' });
+
+      expect(mockAssertCaptcha).toHaveBeenCalledTimes(1);
+    });
+
     it('captcha 参数缺省 → assertCaptchaPassed 收到 undefined（开关关时放行语义不变）', async () => {
       mockSendCode.mockResolvedValue({ expireIn: 300 });
       mockRedis.set.mockResolvedValue('OK');

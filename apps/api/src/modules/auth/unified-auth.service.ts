@@ -68,10 +68,6 @@ export class UnifiedAuthService {
     // 图形码不过的请求不占频控桶）；开关 SMS_CAPTCHA_REQUIRED 关时直接放行
     await assertCaptchaPassed(captcha);
 
-    // 批A2-2：图形验证码闸门（决策7/8）——先图形码后频控（防刷优先：
-    // 图形码不过的请求不占频控桶）；开关 SMS_CAPTCHA_REQUIRED 关时直接放行
-    await assertCaptchaPassed(captcha);
-
     // P2-3（方案 a）：phone 维度频控下沉到 captcha 之后（原在 controller @RateLimit，
     // 批A2-1 T3 迁入）——错 captcha 的请求不烧 phone 桶。三段滑动窗口语义/错误码
     // 与原 guard 版完全一致（60s×1 / 1h×5 / 24h×10，超限 429 E-RATELIMIT-001）。
