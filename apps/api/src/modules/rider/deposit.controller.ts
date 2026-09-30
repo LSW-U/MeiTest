@@ -70,12 +70,19 @@ export class RiderDepositController {
   ) {
     // T1-a 幽灵 token 台账条目 1（2026-09-10）：生产环境禁用模拟支付通道——
     // 否则任何持 RIDER JWT 的骑手可把自己 depositAmount 刷成"已缴"，绕过押金拦截。
-    // 对齐 mock-login 守卫范式（auth.module.ts NODE_ENV 门控）；W6 真支付接入时根本修。
-    if (process.env.NODE_ENV === 'production') {
+    // 批1（2026-10-01，后端依赖专项）：从 NODE_ENV 单点黑名单收紧为显式白名单——
+    // 默认（PAY_MOCK_ENABLED 未设置或非 'true'）一律 403，仅 dev/staging 显式
+    // PAY_MOCK_ENABLED=true 才放行；NODE_ENV=production 恒 403 双层兜底。
+    // R9 登记：rider-app dev 联调（pay.tsx 及相关测试）需显式设 PAY_MOCK_ENABLED=true。
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.PAY_MOCK_ENABLED !== 'true'
+    ) {
       throw new HttpException(
         {
           code: 'E-DEPOSIT-008',
-          message: 'pay-mock disabled in production',
+          message:
+            'pay-mock disabled (set PAY_MOCK_ENABLED=true to enable in non-production)',
         },
         HttpStatus.FORBIDDEN,
       );

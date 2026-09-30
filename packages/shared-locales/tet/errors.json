@@ -153,7 +153,7 @@
   "E-DEPOSIT-005": "Pedidu depósito nee pertense ba rider seluk",
   "E-DEPOSIT-006": "Pedidu depósito la hetan",
   "E-DEPOSIT-007": "Ita iha pedidu depósito ida ne'ebé sei espera (paga ka hein konfirmasaun uluk)",
-  "E-DEPOSIT-008": "Pagaun mock desativadu iha produasaun",
+  "E-DEPOSIT-008": "Pagaun mock laiha aktivu (presiza PAY_MOCK_ENABLED=true)",
   "E-DEPOSIT-101": "Tier ho valor minimu nee iha ona",
   "E-DEPOSIT-102": "Tier depósito la hetan",
   "E-DEPOSIT-103": "Lokal pagamentu la hetan",

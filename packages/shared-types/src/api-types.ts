@@ -13137,7 +13137,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description E-DEPOSIT-005 非本人申请 | E-DEPOSIT-008 生产环境禁用 pay-mock（批A T1-a，2026-09-10：NODE_ENV=production 下 403） */
+                /** @description E-DEPOSIT-005 非本人申请 | E-DEPOSIT-008 pay-mock 未启用（批A T1-a 2026-09-10 生产 403；批1 2026-10-01 收紧为显式白名单：NODE_ENV=production 恒 403，非 production 默认 403，仅 PAY_MOCK_ENABLED=true 放行） */
                 403: {
                     headers: {
                         [name: string]: unknown;

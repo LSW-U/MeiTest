@@ -153,7 +153,7 @@
   "E-DEPOSIT-005": "Permintaan deposit ini milik rider lain",
   "E-DEPOSIT-006": "Permintaan deposit tidak ditemukan",
   "E-DEPOSIT-007": "Anda sudah memiliki permintaan deposit yang menunggu (bayar atau tunggu konfirmasi dulu)",
-  "E-DEPOSIT-008": "Pembayaran mock dinonaktifkan di produksi",
+  "E-DEPOSIT-008": "Pembayaran mock tidak diaktifkan (perlu PAY_MOCK_ENABLED=true)",
   "E-DEPOSIT-101": "Tingkatan dengan jumlah minimal ini sudah ada",
   "E-DEPOSIT-102": "Tingkatan deposit tidak ditemukan",
   "E-DEPOSIT-103": "Lokasi pembayaran tidak ditemukan",

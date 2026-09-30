@@ -153,7 +153,7 @@
   "E-DEPOSIT-005": "This deposit request belongs to another rider",
   "E-DEPOSIT-006": "Deposit request not found",
   "E-DEPOSIT-007": "You already have a pending deposit request (pay or wait for confirmation first)",
-  "E-DEPOSIT-008": "Mock payment is disabled in production",
+  "E-DEPOSIT-008": "Mock payment is not enabled (requires PAY_MOCK_ENABLED=true)",
   "E-DEPOSIT-101": "A tier with this minimum amount already exists",
   "E-DEPOSIT-102": "Deposit tier not found",
   "E-DEPOSIT-103": "Deposit location not found",
