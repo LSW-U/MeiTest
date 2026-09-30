@@ -16328,6 +16328,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/common/geo/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 坐标 → 地址反查（后端依赖专项批3 2026-10-01）。Nominatim /reverse（format=jsonv2），失败/无结果返回 Dili fallback（source=fallback，formattedAddress=null）不抛错。LRU 缓存 key=坐标取整 6 位（TTL 5min 上限 500，fallback 结果也写缓存防打爆）。客户端应改调本端点、停止直连 Nominatim。与 geocode 共享 rate limit（1/s + 10/min/IP → E-COMMON-004）。 */
+        get: {
+            parameters: {
+                query: {
+                    lat: number;
+                    lng: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 反查结果（fallback 也在 200 内返回，不抛错） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            lat: number;
+                            lng: number;
+                            /** @enum {string} */
+                            source: "nominatim" | "fallback";
+                            formattedAddress: string | null;
+                        };
+                    };
+                };
+                /** @description E-COMMON-001 校验失败（lat ±90 / lng ±180，@Query 字符串 coerce） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-COMMON-004 超频（1/s + 10/min/IP） */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/uploads/product-image": {
         parameters: {
             query?: never;
@@ -23287,6 +23370,17 @@ export interface components {
                 lat: number;
                 lng: number;
             }[];
+        };
+        GeoReverseRequest: {
+            lat: number;
+            lng: number;
+        };
+        GeoReverseResponseData: {
+            lat: number;
+            lng: number;
+            /** @enum {string} */
+            source: "nominatim" | "fallback";
+            formattedAddress: string | null;
         };
         UploadResponseData: {
             /** Format: uri */

@@ -59,6 +59,7 @@ const DILI_FALLBACK = {
 };
 
 const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
+const NOMINATIM_REVERSE_ENDPOINT = 'https://nominatim.openstreetmap.org/reverse';
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 const NOMINATIM_TIMEOUT_MS = 5000;
 // P3-4（批A 审查 2026-09-10）：Overpass 公共实例高峰常超 5s，fetch abort 与
@@ -114,6 +115,22 @@ function geoCacheSet(key: string, value: GeocodeResult, now: number): void {
 /** 单测注入入口：清空 geocode 缓存 */
 export function clearGeoCacheForTest(): void {
   geoCache.clear();
+}
+
+/**
+ * reverse 缓存 key：lat/lng 各取整 6 位（约 0.1m 精度，同 key 命中不回源）。
+ * 任务书批3：与 geocode 共用同一组 LRU（TTL 5min 上限 500，fallback 也写缓存防打爆 R7）。
+ */
+function reverseCacheKey(lat: number, lng: number): string {
+  return `rev:${lat.toFixed(6)}:${lng.toFixed(6)}`;
+}
+
+/** Nominatim /reverse 返回（仅取我们关心的字段；error = 无结果时的错误对象） */
+interface NominatimReverseResult {
+  lat?: string;
+  lon?: string;
+  display_name?: string;
+  error?: string;
 }
 
 @Injectable()
@@ -205,6 +222,74 @@ export class GeoService {
       this.logger.warn({
         msg: 'GEOCODE_ERROR',
         addressLen: trimmed.length,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
+    }
+  }
+
+  /**
+   * 坐标 → 地址反查（后端依赖专项批3，2026-10-01）
+   *
+   * Nominatim /reverse（format=jsonv2），失败/无结果 → Dili fallback 不抛错。
+   * 缓存与 geocode 共用同一组 LRU（key=坐标取整 6 位，TTL 5min 上限 500）；
+   * fallback 结果也写缓存（R7 拍板，对齐 geocode :127 防打爆先例）。
+   * 日志纪律：不记完整坐标 PII（只记 toFixed 6 位 key 片段 + 来源），对齐 geocode 日志策略。
+   */
+  async reverse(lat: number, lng: number): Promise<GeocodeResult> {
+    const now = Date.now();
+    const cacheKey = reverseCacheKey(lat, lng);
+    const cached = geoCacheGet(cacheKey, now);
+    if (cached) return cached;
+
+    const result = await this.reverseUncached(lat, lng);
+    geoCacheSet(cacheKey, result, now);
+    return result;
+  }
+
+  /** 真实回源路径（reverse 缓存 miss 时调用） */
+  private async reverseUncached(lat: number, lng: number): Promise<GeocodeResult> {
+    try {
+      const url = `${NOMINATIM_REVERSE_ENDPOINT}?format=jsonv2&lat=${lat}&lon=${lng}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), NOMINATIM_TIMEOUT_MS);
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'User-Agent': USER_AGENT, 'Accept-Language': 'en' },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.warn({
+          msg: 'NOMINATIM_REVERSE_HTTP_ERROR',
+          status: res.status,
+          bodyLen: body.length,
+        });
+        return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
+      }
+      const data = (await res.json()) as NominatimReverseResult;
+      // Nominatim /reverse 无结果时返 200 + {error: "..."}（非数组形态），须显式挡
+      if (data.error || !data.lat || !data.lon || !data.display_name) {
+        this.logger.warn({ msg: 'NOMINATIM_REVERSE_NO_RESULT', key: reverseCacheKey(lat, lng) });
+        return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
+      }
+      const rLat = parseFloat(data.lat);
+      const rLng = parseFloat(data.lon);
+      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) {
+        this.logger.warn({ msg: 'NOMINATIM_REVERSE_INVALID_COORDS' });
+        return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };
+      }
+      return {
+        lat: rLat,
+        lng: rLng,
+        source: 'nominatim',
+        formattedAddress: data.display_name,
+      };
+    } catch (e) {
+      this.logger.warn({
+        msg: 'GEO_REVERSE_ERROR',
+        key: reverseCacheKey(lat, lng),
         error: e instanceof Error ? e.message : String(e),
       });
       return { ...DILI_FALLBACK, source: 'fallback', formattedAddress: null };

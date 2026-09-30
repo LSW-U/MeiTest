@@ -93,3 +93,14 @@ export const GeoNearbyPlace = z.object({
 export const GeoNearbyResponseData = z.object({
   items: z.array(GeoNearbyPlace),
 });
+
+// ===== 后端依赖专项批3（2026-10-01）：reverse 坐标反查 =====
+
+/** Reverse 请求 query（坐标 → 地址反查；@Query 恒 string，同 nearby 批D P1-1 的 coerce 范式） */
+export const GeoReverseRequest = z.object({
+  lat: QueryCoordinate(-90, 90),
+  lng: QueryCoordinate(-180, 180),
+});
+
+/** Reverse 响应 data：形态对齐 GeocodeResponseData（lat/lng/source/formattedAddress） */
+export const GeoReverseResponseData = GeocodeResponseData;

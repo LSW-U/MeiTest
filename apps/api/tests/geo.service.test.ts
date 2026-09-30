@@ -17,7 +17,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GeoService, clearGeoCacheForTest } from '../src/modules/common/geo/geo.service';
-import { GeoNearbyRequest } from '@meimart/api-contract';
+import { GeoNearbyRequest, GeoReverseRequest } from '@meimart/api-contract';
 
 describe('GeoService', () => {
   let service: GeoService;
@@ -249,6 +249,86 @@ describe('GeoService', () => {
     );
     expect(await service.nearby(-8.5567, 125.5595)).toEqual([]);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // ===== 后端依赖专项批3（2026-10-01）：reverse 坐标反查 =====
+
+  it('批3 reverse：Nominatim 返回有效结果 → source=nominatim + formattedAddress', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ lat: '-8.5567', lon: '125.5595', display_name: 'Dili, Timor-Leste' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const result = await service.reverse(-8.5567, 125.5595);
+    expect(result).toEqual({ lat: -8.5567, lng: 125.5595, source: 'nominatim', formattedAddress: 'Dili, Timor-Leste' });
+    const [url, options] = fetchSpy.mock.calls[0];
+    expect(url).toContain('https://nominatim.openstreetmap.org/reverse');
+    expect(url).toContain('format=jsonv2');
+    expect(url).toContain('lat=-8.5567');
+    expect(url).toContain('lon=125.5595');
+    const headers = (options as RequestInit).headers as Record<string, string>;
+    expect(headers['User-Agent']).toMatch(/MeiMart/); // 合规 UA 对齐 :67 先例
+  });
+
+  it('批3 reverse：超时 abort / HTTP 500 / 无结果(error 对象) → fallback 不抛错', async () => {
+    // 三子用例各用不同坐标，避免前一子用例的 fallback 缓存命中吞掉后续回源（R7 fallback 也缓存）
+    fetchSpy.mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+    expect(await service.reverse(-8.5567, 125.5595)).toEqual({
+      lat: -8.5567, lng: 125.5595, source: 'fallback', formattedAddress: null,
+    });
+
+    fetchSpy.mockResolvedValueOnce(new Response('oops', { status: 500 }));
+    expect((await service.reverse(-8.5568, 125.5595)).source).toBe('fallback');
+
+    // Nominatim /reverse 无结果时返 200 + {error: "..."}
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'Unable to geocode' }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const noResult = await service.reverse(0, 0);
+    expect(noResult.source).toBe('fallback');
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('批3 reverse 缓存：同 key（取整 6 位）二次调用不回源；fallback 条目同样命中缓存（R7）', async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(
+        JSON.stringify({ lat: '-8.5567', lon: '125.5595', display_name: 'Dili, Timor-Leste' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await service.reverse(-8.5567123, 125.5595123); // toFixed(6) → -8.556712 / 125.559512
+    // ±1e-6 内取整后同串 → 命中缓存不回源
+    await service.reverse(-8.5567124, 125.5595124);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    // R7：fallback 结果也写缓存
+    fetchSpy.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Unable to geocode' }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const fb1 = await service.reverse(1.234567, 2.345678);
+    expect(fb1.source).toBe('fallback');
+    const fb2 = await service.reverse(1.2345671, 2.3456781);
+    expect(fb2.source).toBe('fallback');
+    expect(fetchSpy).toHaveBeenCalledTimes(2); // fallback 二次调用命中缓存，仅回源 1 次
+  });
+
+  it('批3 GeoReverseRequest zod：字符串坐标 coerce + 越界/非数字/空串拒绝（对齐 nearby 批D P1-1 范式）', () => {
+    const fromQuery = GeoReverseRequest.safeParse({ lat: '-8.5567', lng: '125.5595' });
+    expect(fromQuery.success).toBe(true);
+    if (fromQuery.success) expect(fromQuery.data).toEqual({ lat: -8.5567, lng: 125.5595 });
+
+    expect(GeoReverseRequest.safeParse({ lat: '95', lng: '125' }).success).toBe(false);   // lat > 90
+    expect(GeoReverseRequest.safeParse({ lat: '-8.5', lng: '999' }).success).toBe(false); // lng > 180
+    expect(GeoReverseRequest.safeParse({ lat: 'abc', lng: '125' }).success).toBe(false);
+    expect(GeoReverseRequest.safeParse({ lat: '', lng: '125' }).success).toBe(false);
+    expect(GeoReverseRequest.safeParse({ lng: '125' }).success).toBe(false);
   });
 
   // ===== 批D 审查 P1-1（2026-09-11）：nearby query schema 接受字符串坐标 =====

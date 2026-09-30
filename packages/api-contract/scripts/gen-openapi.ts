@@ -263,6 +263,8 @@ import {
   GeoSuggestResponseData,
   GeoNearbyRequest,
   GeoNearbyResponseData,
+  GeoReverseRequest,
+  GeoReverseResponseData,
   // upload（W7-feature 商品图片上传）
   UploadResponseData,
   // home（活动入口 PromoDock）
@@ -4127,6 +4129,9 @@ registry.register('GeoSuggestRequest', GeoSuggestRequest);
 registry.register('GeoSuggestResponseData', GeoSuggestResponseData);
 registry.register('GeoNearbyRequest', GeoNearbyRequest);
 registry.register('GeoNearbyResponseData', GeoNearbyResponseData);
+// ===== Geo reverse（后端依赖专项批3 2026-10-01）=====
+registry.register('GeoReverseRequest', GeoReverseRequest);
+registry.register('GeoReverseResponseData', GeoReverseResponseData);
 
 registry.registerPath({
   method: 'get',
@@ -4159,6 +4164,26 @@ registry.registerPath({
     200: { description: '附近地点列表（≤5 条）', content: { 'application/json': { schema: GeoNearbyResponseData } } },
     400: {
       description: 'E-COMMON-001 校验失败（lat/lng 范围）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    429: {
+      description: 'E-COMMON-004 超频（1/s + 10/min/IP）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/common/geo/reverse',
+  tags: ['geo'],
+  description:
+    '坐标 → 地址反查（后端依赖专项批3 2026-10-01）。Nominatim /reverse（format=jsonv2），失败/无结果返回 Dili fallback（source=fallback，formattedAddress=null）不抛错。LRU 缓存 key=坐标取整 6 位（TTL 5min 上限 500，fallback 结果也写缓存防打爆）。客户端应改调本端点、停止直连 Nominatim。与 geocode 共享 rate limit（1/s + 10/min/IP → E-COMMON-004）。',
+  request: { query: GeoReverseRequest },
+  responses: {
+    200: { description: '反查结果（fallback 也在 200 内返回，不抛错）', content: { 'application/json': { schema: GeoReverseResponseData } } },
+    400: {
+      description: 'E-COMMON-001 校验失败（lat ±90 / lng ±180，@Query 字符串 coerce）',
       content: { 'application/json': { schema: ErrorResponse } },
     },
     429: {

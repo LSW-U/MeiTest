@@ -5,6 +5,7 @@
  *   - GET /api/v1/common/geo/geocode?address=xxx   公开（地址保存补 lat/lng）
  *   - GET /api/v1/common/geo/suggest?q=xxx        公开（地址输入多候选）
  *   - GET /api/v1/common/geo/nearby?lat=&lng=     公开（附近地点，Overpass 收进后端）
+ *   - GET /api/v1/common/geo/reverse?lat=&lng=    公开（坐标反查地址，后端依赖专项批3 2026-10-01）
  *
  * 设计：
  *   - Public（用户在保存地址前可能未登录，例如注册流程中的地址输入）
@@ -19,7 +20,7 @@
  */
 import { Controller, Get, Query, Inject, HttpException, HttpStatus, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { GeocodeRequest, GeoSuggestRequest, GeoNearbyRequest } from '@meimart/api-contract';
+import { GeocodeRequest, GeoSuggestRequest, GeoNearbyRequest, GeoReverseRequest } from '@meimart/api-contract';
 import { GeoService } from './geo.service';
 import { Public } from '../../../shared/decorators/public.decorator';
 import { ZodValidationPipe } from '../../../shared/pipes/zod-validation.pipe';
@@ -115,5 +116,20 @@ export class GeoController {
     this.enforceRateLimit(req);
     const items = await this.geo.nearby(query.lat, query.lng);
     return { success: true, data: { items } };
+  }
+
+  /**
+   * 坐标 → 地址反查（后端依赖专项批3 2026-10-01；客户端停止直连 Nominatim）
+   * 复用 enforceRateLimit（与 geocode/suggest/nearby 同一组 limiter）；失败返 Dili fallback 不抛错。
+   */
+  @Public()
+  @Get('reverse')
+  async reverse(
+    @Query(new ZodValidationPipe(GeoReverseRequest)) query: { lat: number; lng: number },
+    @Req() req: Request,
+  ) {
+    this.enforceRateLimit(req);
+    const result = await this.geo.reverse(query.lat, query.lng);
+    return { success: true, data: result };
   }
 }
