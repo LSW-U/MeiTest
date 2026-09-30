@@ -19,7 +19,9 @@ import { ORPHAN_CLEANUP_GRACE_PERIOD_DAYS } from './orphan-cleanup.config';
 
 /**
  * 引用集合来源表清单（恰 13 张——新增图片字段必须同步此清单 + 单测，
- * 漏扫即误删在线图；字段映射见 collectReferencedKeys）
+ * 漏扫即误删在线图；字段映射见 collectReferencedKeys；
+ * 批2 2026-10-01：DeliveryTask.evidenceUrls 加为第 14 表——tasks/evidence-* 前缀
+ * 若不入引用集合，骑手报状态落库的取证图 7 天后会被误删）
  */
 export const ORPHAN_REFERENCE_SOURCES = [
   'product',
@@ -35,6 +37,7 @@ export const ORPHAN_REFERENCE_SOURCES = [
   'orderItem',
   'cartItem',
   'paymentIntent',
+  'deliveryTask',
 ] as const;
 
 /** 清理汇总（清理日志可审计——任务书批C 要求） */
@@ -86,12 +89,13 @@ export class OrphanCleanupService {
   ) {}
 
   /**
-   * 收集 DB 引用集合：单次 Promise.all 扫 13 表的全部图片字段。
+   * 收集 DB 引用集合：单次 Promise.all 扫 14 表的全部图片字段。
    * 字段映射（⚠️ Refund 是 photos 非 images——schema.prisma:1212）：
    *   product.mainImage+images / sku.imageUrl / banner.imageUrl / category.iconUrl /
    *   shop.logoUrl / user.avatarUrl / riderProfile.avatarUrl+idCardImageUrl+licenseImageUrl /
    *   review.images+avatarUrl(快照U10) / feedback.images / refund.photos /
-   *   orderItem.productImage(快照) / cartItem.productImage(快照) / paymentIntent.receiptUrl
+   *   orderItem.productImage(快照) / cartItem.productImage(快照) / paymentIntent.receiptUrl /
+   *   deliveryTask.evidenceUrls（批2 2026-10-01）
    * banner/category 历史借道 products/main-* key——借道引用同样计入保护。
    */
   async collectReferencedKeys(endpoint: string, bucket: string): Promise<Set<string>> {
@@ -118,6 +122,7 @@ export class OrphanCleanupService {
       orderItems,
       cartItems,
       paymentIntents,
+      deliveryTasks,
     ] = await Promise.all([
       db.product.findMany({ select: { mainImage: true, images: true } }),
       db.sku.findMany({ select: { imageUrl: true } }),
@@ -134,6 +139,8 @@ export class OrphanCleanupService {
       db.orderItem.findMany({ select: { productImage: true } }),
       db.cartItem.findMany({ select: { productImage: true } }),
       db.paymentIntent.findMany({ select: { receiptUrl: true } }),
+      // 批2 2026-10-01：取证照片引用保护（evidenceUrls String[]）
+      db.deliveryTask.findMany({ select: { evidenceUrls: true } }),
     ]);
 
     for (const p of products) {
@@ -159,6 +166,7 @@ export class OrphanCleanupService {
     for (const oi of orderItems) push(oi.productImage);
     for (const ci of cartItems) push(ci.productImage);
     for (const pi of paymentIntents) push(pi.receiptUrl);
+    for (const dt of deliveryTasks) pushArr(dt.evidenceUrls);
 
     return referenced;
   }

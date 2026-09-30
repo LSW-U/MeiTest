@@ -4377,6 +4377,30 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/common/rider/uploads/task-evidence',
+  tags: ['upload', 'rider'],
+  description:
+    '骑手任务取证照片上传（后端依赖专项批2 2026-10-01）。multipart/form-data，field name="file"。CUSTOMER/RIDER 权限（与 RiderUploadController 类级 @Roles 一致）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，与 id-card/license 同 doc 模式口径）。MinIO 路径前缀 tasks/evidence-（orphan-cleanup 引用集合已计入 deliveryTask.evidenceUrls，防 7 天误删）。前端拿到 URL 后提交 pickup/deliver/report-issue 的 evidenceUrls[]（≤3 张，后端 isOwnUrl 前缀校验，外部 URL 拒收 E-DISPATCH-023）。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size（随后提交 dispatch 报状态接口的 evidenceUrls[]）',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
 // ===== Admin Upload - banner-image（U7/U8/U9 banner 宽幅图上传，upload 模块批A 2026-09-09）=====
 registry.registerPath({
   method: 'post',

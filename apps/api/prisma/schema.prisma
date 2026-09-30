@@ -836,6 +836,8 @@ model DeliveryTask {
   /// return 任务关联的 refund（仅 taskType=return 时填；delivery 任务为 null）
   /// P14 ④ refundId @unique 兜底防重（一个 refund 只能建一个 return task）
   refundId         String?            @unique @map("refund_id")
+  /// 取证照片 URL 数组（MinIO，rider task-evidence 上传；pickup/deliver/report-issue 报状态时携带，≤3 张）
+  evidenceUrls     String[]           @default([]) @map("evidence_urls")
   note             String?
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")

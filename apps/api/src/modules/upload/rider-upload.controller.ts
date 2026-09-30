@@ -5,10 +5,11 @@
  *   POST /api/v1/common/rider/uploads/avatar        头像（1:1 推荐，最小 200×200）
  *   POST /api/v1/common/rider/uploads/id-card-image  身份证图（最小 300×200，任意比例）
  *   POST /api/v1/common/rider/uploads/license-image  驾照/车辆证件图（最小 300×200，任意比例）
+ *   POST /api/v1/common/rider/uploads/task-evidence  任务取证图（批2 2026-10-01，最小 300×200 任意比例）
  *     - multipart/form-data, field name="file"
  *     - CUSTOMER 权限（apply 阶段用户 role=CUSTOMER + deviceType=client_app）
  *     - magic bytes + mime ∈ {jpg/png/webp} + size ≤ 5MB + 最小尺寸
- *     - 写 MinIO：riders/avatar-{ts}-{rand8}.{ext} / riders/idcard-* / riders/license-*
+ *     - 写 MinIO：riders/avatar-{ts}-{rand8}.{ext} / riders/idcard-* / riders/license-* / tasks/evidence-*
  *     - 返回 { success: true, data: { url, key, size } }
  *
  * 决策（2026-08-24）：
@@ -150,6 +151,38 @@ export class RiderUploadController {
       keyPrefix: 'riders/license-',
       logLabel: 'rider_license',
       sizeErrorLabel: 'License image',
+      mode: 'doc',
+    });
+  }
+
+  /**
+   * 任务取证照片上传（批2 后端依赖专项，2026-10-01）
+   *
+   * 用途：骑手 pickup/deliver/report-issue 报状态前先传证据拿 URL，随 evidenceUrls 提交。
+   * 复刻 refund-evidence 模式（upload-client.controller.ts）：任意比例最小 300×200（doc 模式，与 id-card/license 同口径），
+   * MinIO 前缀 tasks/evidence-（对齐 refunds/evidence- 语义分化，便于审计/孤儿清理——
+   * orphan-cleanup 按引用集合 13 表扫描非前缀枚举，DeliveryTask.evidenceUrls 已计入引用集合）。
+   */
+  @Post('task-evidence')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME[file.mimetype]) {
+          cb(new BadRequestException({ code: 'E-UPLOAD-010', message: `unsupported mime: ${file.mimetype}` }), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadTaskEvidence(@UploadedFile() file: Express.Multer.File | undefined): Promise<UploadResult> {
+    return this.uploadImage(file, {
+      keyPrefix: 'tasks/evidence-',
+      logLabel: 'task_evidence',
+      sizeErrorLabel: 'Task evidence image',
       mode: 'doc',
     });
   }

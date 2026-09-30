@@ -50,6 +50,7 @@
   "E-DISPATCH-020": "Tipe tugas tidak valid untuk aksi ini (tugas pengiriman tidak dapat memanggil aksi khusus return)",
   "E-DISPATCH-021": "Refund sudah memiliki tugas return",
   "E-DISPATCH-022": "Refund bukan tipe RETURN_REFUND",
+  "E-DISPATCH-023": "Foto bukti tidak valid (maksimal 3, harus URL yang diunggah lewat platform ini)",
   "E-INVENTORY-001": "Stok tidak cukup",
   "E-INVENTORY-002": "Tidak ada gudang yang mencakup alamat ini",
   "E-INVENTORY-003": "Jumlah stok tidak valid (harus > 0)",

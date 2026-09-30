@@ -30,6 +30,8 @@ vi.mock('../src/shared/db', () => ({
     orderItem: { findMany: vi.fn().mockResolvedValue([]) },
     cartItem: { findMany: vi.fn().mockResolvedValue([]) },
     paymentIntent: { findMany: vi.fn().mockResolvedValue([]) },
+    // 批2 2026-10-01：取证照片引用保护（第 14 来源表）
+    deliveryTask: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -87,7 +89,7 @@ describe('urlToOrphanKey', () => {
   });
 });
 
-describe('OrphanCleanupService.collectReferencedKeys — 13 字段完整性', () => {
+describe('OrphanCleanupService.collectReferencedKeys — 字段完整性（批2 起 14 表）', () => {
   let service: OrphanCleanupService;
 
   beforeEach(() => {
@@ -99,15 +101,16 @@ describe('OrphanCleanupService.collectReferencedKeys — 13 字段完整性', ()
     service = new OrphanCleanupService(makeStorage() as never);
   });
 
-  it('来源表清单恰好 13 项（12 张表 + paymentIntent），防清单漂移', () => {
-    // 任务书批C：13 字段全集——product/sku/banner/category/shop/user/riderProfile/
-    // review/feedback/refund/orderItem/cartItem/paymentIntent
-    expect(ORPHAN_REFERENCE_SOURCES).toHaveLength(13);
+  it('来源表清单恰好 14 项（批2 加 deliveryTask），防清单漂移', () => {
+    // 任务书批C：13 字段全集 + 批2 2026-10-01 加 deliveryTask.evidenceUrls
+    expect(ORPHAN_REFERENCE_SOURCES).toHaveLength(14);
     // Refund 字段名防回归：photos 非 images（schema.prisma:1212）
     expect(ORPHAN_REFERENCE_SOURCES).toContain('refund');
     expect(ORPHAN_REFERENCE_SOURCES).toContain('orderItem');
     expect(ORPHAN_REFERENCE_SOURCES).toContain('cartItem');
     expect(ORPHAN_REFERENCE_SOURCES).toContain('review');
+    // 批2：取证照片来源表防漏扫（tasks/evidence-* 否则 7 天后误删）
+    expect(ORPHAN_REFERENCE_SOURCES).toContain('deliveryTask');
   });
 
   it('每张来源表都被查询（漏一张即 fail）——借道 products/main-* 的 banner/category 必在内', async () => {
@@ -170,6 +173,17 @@ describe('OrphanCleanupService.collectReferencedKeys — 13 字段完整性', ()
     expect(referenced.has('receipts/rcpt-1.jpg')).toBe(true);
     // 去重：mainImage 与 images[0] 同 URL → Set 收敛
     expect(referenced.size).toBe(10);
+  });
+
+  it('批2：DeliveryTask.evidenceUrls 数组计入引用集合（tasks/evidence-* 防误删）', async () => {
+    mockTable('deliveryTask', [
+      { evidenceUrls: [`${BASE}tasks/evidence-1.jpg`, `${BASE}tasks/evidence-2.png`] },
+    ]);
+
+    const referenced = await service.collectReferencedKeys(ENDPOINT, BUCKET);
+
+    expect(referenced.has('tasks/evidence-1.jpg')).toBe(true);
+    expect(referenced.has('tasks/evidence-2.png')).toBe(true);
   });
 
   it('null/空串/外域 URL 不进引用集合也不抛错', async () => {

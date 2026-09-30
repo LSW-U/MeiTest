@@ -8092,6 +8092,8 @@ export interface paths {
                                     /** Format: date-time */
                                     deliveredAt: string | null;
                                     note: string | null;
+                                    /** @default [] */
+                                    evidenceUrls: string[];
                                     /** Format: date-time */
                                     createdAt: string;
                                     /** Format: date-time */
@@ -14780,6 +14782,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         note?: string;
+                        evidenceUrls?: string[];
                     };
                 };
             };
@@ -14848,6 +14851,7 @@ export interface paths {
                     "application/json": {
                         collectedAmount?: number;
                         note?: string;
+                        evidenceUrls?: string[];
                     };
                 };
             };
@@ -14917,6 +14921,7 @@ export interface paths {
                         /** @enum {string} */
                         reason: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER";
                         note?: string;
+                        evidenceUrls?: string[];
                     };
                 };
             };
@@ -17238,6 +17243,123 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description 上传成功，返回公开 URL + key + size（apply 阶段填入 licenseImageUrl） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uri */
+                            url: string;
+                            key: string;
+                            size: number;
+                        };
+                    };
+                };
+                /** @description 不支持的 mime / 空文件 / magic bytes 不匹配 / 尺寸过小（< 300×200） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-003 未授权 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 文件超过 5MB 上限 */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误 */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/common/rider/uploads/task-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手任务取证照片上传（后端依赖专项批2 2026-10-01）。multipart/form-data，field name="file"。CUSTOMER/RIDER 权限（与 RiderUploadController 类级 @Roles 一致）。支持 jpg/png/webp，size ≤ 5MB，最小 300×200（任意比例，与 id-card/license 同 doc 模式口径）。MinIO 路径前缀 tasks/evidence-（orphan-cleanup 引用集合已计入 deliveryTask.evidenceUrls，防 7 天误删）。前端拿到 URL 后提交 pickup/deliver/report-issue 的 evidenceUrls[]（≤3 张，后端 isOwnUrl 前缀校验，外部 URL 拒收 E-DISPATCH-023）。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 上传成功，返回公开 URL + key + size（随后提交 dispatch 报状态接口的 evidenceUrls[]） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -22338,6 +22460,8 @@ export interface components {
             /** Format: date-time */
             deliveredAt: string | null;
             note: string | null;
+            /** @default [] */
+            evidenceUrls: string[];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -22402,6 +22526,8 @@ export interface components {
                     /** Format: date-time */
                     deliveredAt: string | null;
                     note: string | null;
+                    /** @default [] */
+                    evidenceUrls: string[];
                     /** Format: date-time */
                     createdAt: string;
                     /** Format: date-time */

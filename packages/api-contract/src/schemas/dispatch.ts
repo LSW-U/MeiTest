@@ -41,6 +41,8 @@ export const DeliveryTask = z.object({
   pickedUpAt: IsoTimestamp.nullable(),
   deliveredAt: IsoTimestamp.nullable(),
   note: z.string().nullable(),
+  /** 取证照片 URL 数组（≤3 张，pickup/deliver/report-issue 时落库；批2 后端依赖专项 2026-10-01） */
+  evidenceUrls: z.array(z.string().url()).default([]),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
@@ -93,6 +95,8 @@ export const AcceptTaskRequest = z.object({});
 /** 骑手上报取货 */
 export const PickupTaskRequest = z.object({
   note: z.string().max(200).optional(),
+  /** 取证照片 URL（先传 POST /api/v1/common/rider/uploads/task-evidence 获取；≤3 张） */
+  evidenceUrls: z.array(z.string().url()).max(3).optional(),
 });
 
 /** 骑手上报送达 */
@@ -100,6 +104,8 @@ export const DeliverTaskRequest = z.object({
   /** COD 场景下：实收金额（小于应付金额时标 SHORT，等于/大于标 PAID） */
   collectedAmount: Money.optional(),
   note: z.string().max(200).optional(),
+  /** 取证照片 URL（先传 POST /api/v1/common/rider/uploads/task-evidence 获取；≤3 张） */
+  evidenceUrls: z.array(z.string().url()).max(3).optional(),
 });
 
 /** 异常上报 */
@@ -112,6 +118,8 @@ export const ReportIssueRequest = z.object({
     'OTHER',
   ]),
   note: z.string().max(500).optional(),
+  /** 取证照片 URL（先传 POST /api/v1/common/rider/uploads/task-evidence 获取；≤3 张） */
+  evidenceUrls: z.array(z.string().url()).max(3).optional(),
 });
 
 /**

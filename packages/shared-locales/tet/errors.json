@@ -50,6 +50,7 @@
   "E-DISPATCH-020": "Tipu tarefa la diak ba aksaun ne'e (tarefa entrega la bele hakerek aksaun return deit)",
   "E-DISPATCH-021": "Refund iha ona tarefa return",
   "E-DISPATCH-022": "Refund la'os tipu RETURN_REFUND",
+  "E-DISPATCH-023": "Foto evidénsia la loos (máximu 3, tenke URL husi plataforma ne'e)",
   "E-INVENTORY-001": "Stock is not enough",
   "E-INVENTORY-002": "No warehouse covers this address",
   "E-INVENTORY-003": "Quantidade stock la diak (tenki > 0)",

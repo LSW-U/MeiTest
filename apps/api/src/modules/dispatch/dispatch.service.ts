@@ -18,7 +18,7 @@
  *   - server.to('riders').emit('dispatch:new-task', { taskId, warehouseId, ... })
  *   - 骑手 App 收到后刷新抢单大厅
  */
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, incrementSalesCountForOrder } from '../../shared/db';
 import { writeReconciliationLedgerTx } from '../../shared/db/reconciliation-ledger';
@@ -37,6 +37,10 @@ import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 import { DepositEligibilityService } from '../rider/deposit-eligibility.service';
 import { SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
 import { getScoreWeights } from './dispatch-scores.config';
+import { StorageService } from '../../shared/storage/storage.service';
+
+/** evidenceUrls 数量上限（与契约 dispatch.ts 三 DTO max(3) 同源；服务端再校验一次防御直调） */
+export const MAX_EVIDENCE_URLS = 3;
 
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
@@ -118,6 +122,8 @@ export interface PickupTaskInput {
   riderId: string;
   taskId: string;
   note?: string;
+  /** 批2：取证照片 URL（≤3 张，服务端校验前缀+数量） */
+  evidenceUrls?: string[];
 }
 
 /** 上报送达 */
@@ -127,6 +133,8 @@ export interface DeliverTaskInput {
   /** COD 场景：实收金额（分），与应付对比决定 PAID/SHORT/UNPAID */
   collectedAmount?: number;
   note?: string;
+  /** 批2：取证照片 URL（≤3 张，服务端校验前缀+数量） */
+  evidenceUrls?: string[];
 }
 
 /** 异常上报 */
@@ -135,6 +143,8 @@ export interface ReportIssueInput {
   taskId: string;
   reason: 'CUSTOMER_UNREACHABLE' | 'CUSTOMER_REJECTED' | 'ADDRESS_NOT_FOUND' | 'TRAFFIC_ACCIDENT' | 'OTHER';
   note?: string;
+  /** 批2：取证照片 URL（≤3 张，服务端校验前缀+数量） */
+  evidenceUrls?: string[];
 }
 
 /**
@@ -191,6 +201,8 @@ export interface AdminDeliveryTaskView {
   deliveredAt: string | null;
   estimatedArrival: string | null;
   note: string | null;
+  /** 批2：取证照片 URL 数组（≤3 张） */
+  evidenceUrls: string[];
   createdAt: string;
   updatedAt: string;
   warehouseCode: string;
@@ -261,6 +273,10 @@ export class DispatchService {
         params?: Record<string, string>;
       }) => Promise<void>;
     } | null,
+    // 批2（后端依赖专项 2026-10-01）：isOwnUrl 语义校验 evidenceUrls 前缀（防外链/SSRF，同 Refund.photos P13 模式）；
+    // StorageModule 由 UploadModule 导出链提供（dispatch.module 需 imports UploadModule 或 StorageModule）；
+    // 单测传 null 兼容（与 notificationEvents 同款 null-容错惯例）
+    @Inject(StorageService) private readonly storage: StorageService | null,
   ) {}
 
   /**
@@ -480,8 +496,42 @@ export class DispatchService {
     return this.toView(task);
   }
 
+  /**
+   * 批2（后端依赖专项 2026-10-01）：evidenceUrls 服务端校验
+   *
+   * - 数量 ≤ MAX_EVIDENCE_URLS（DTO 已 max 3，服务端再校验防御直调）
+   * - 每条 URL 前缀必须为本服务 MinIO/上传域（复用 isOwnUrl 语义 storage.service.ts:182，
+   *   防外链/SSRF/钓鱼，同 Refund.photos P13 审查 P1 模式）
+   * - 非法 → 400 E-DISPATCH-023（新错误码，023 段未占用）
+   * - storage 未注入（单测 null 兼容）时跳过前缀校验仅查数量（null 只出现在测试容器）
+   */
+  private validateEvidenceUrls(evidenceUrls?: string[]): string[] {
+    if (!evidenceUrls || evidenceUrls.length === 0) return [];
+    if (evidenceUrls.length > MAX_EVIDENCE_URLS) {
+      throw new BadRequestException({
+        code: 'E-DISPATCH-023',
+        message: `Too many evidence URLs (max ${MAX_EVIDENCE_URLS})`,
+      });
+    }
+    if (this.storage) {
+      for (const url of evidenceUrls) {
+        if (!this.storage.isOwnUrl(url)) {
+          throw new BadRequestException({
+            code: 'E-DISPATCH-023',
+            message: 'Evidence URL must be uploaded via task-evidence endpoint (external URL rejected)',
+          });
+        }
+      }
+    } else {
+      // P2-1（批2 审查 2026-10-01）：DI 漏配时前缀防线静默失守 → 一次性告警留痕（生产不应出现）
+      logger.warn('evidence prefix check skipped: storage not injected');
+    }
+    return evidenceUrls;
+  }
+
   /** 上报取货（ASSIGNED → PICKED_UP） */
   async pickupTask(input: PickupTaskInput): Promise<DeliveryTaskView> {
+    const evidenceUrls = this.validateEvidenceUrls(input.evidenceUrls);
     const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
     if (!task) {
@@ -508,6 +558,8 @@ export class DispatchService {
           status: 'PICKED_UP',
           pickedUpAt: new Date(),
           note: input.note ?? task.note,
+          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
+          ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {
           // P0-1 修复：补 deliveryFee
@@ -560,6 +612,7 @@ export class DispatchService {
    * 预付场景：collectedAmount 留空 → DELIVERED
    */
   async deliverTask(input: DeliverTaskInput): Promise<DeliveryTaskView> {
+    const evidenceUrls = this.validateEvidenceUrls(input.evidenceUrls);
     const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({
       where: { id: input.taskId },
@@ -593,6 +646,8 @@ export class DispatchService {
           status: 'DELIVERED',
           deliveredAt: new Date(),
           note: input.note ?? task.note,
+          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
+          ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {
           // P0-1 修复：补 deliveryFee
@@ -640,6 +695,8 @@ export class DispatchService {
           status: 'DELIVERED',
           deliveredAt: new Date(),
           note: input.note ?? task.note,
+          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
+          ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {
           // P0-1 修复：补 deliveryFee
@@ -847,6 +904,7 @@ export class DispatchService {
    *   - Order.status 保持（需客服介入决定后续状态推进）
    */
   async reportIssue(input: ReportIssueInput): Promise<DeliveryTaskView> {
+    const evidenceUrls = this.validateEvidenceUrls(input.evidenceUrls);
     const riderId = await this.resolveRiderProfileId(input.riderId);
     const task = await db.deliveryTask.findUnique({ where: { id: input.taskId } });
     if (!task) {
@@ -881,6 +939,8 @@ export class DispatchService {
         data: {
           status: 'FAILED',
           note: `[ISSUE:${input.reason}]${input.note ? ' ' + input.note : ''}`,
+          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
+          ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {
           // P0-2 修复（2026-08-27 审查报告）：补 deliveryAddress/deliveryFee/deliveryFeeBreakdown，
@@ -1794,6 +1854,8 @@ export class DispatchService {
       deliveredAt: t.deliveredAt?.toISOString() ?? null,
       estimatedArrival: t.estimatedArrival?.toISOString() ?? null,
       note: t.note,
+      // 批2：取证照片透出（视图层；schema default [] 运行时恒为数组）
+      evidenceUrls: t.evidenceUrls ?? [],
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
       warehouseCode: t.warehouse?.code ?? '',

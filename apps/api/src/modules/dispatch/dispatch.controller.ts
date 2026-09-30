@@ -119,6 +119,8 @@ export class DispatchController {
       riderId: user.sub,
       taskId: id,
       note: body.note,
+      // 批2：取证照片透传（DTO max 3 + 服务端前缀/数量校验在 service）
+      evidenceUrls: body.evidenceUrls,
     });
     return { success: true as const, data: task };
   }
@@ -140,6 +142,8 @@ export class DispatchController {
       taskId: id,
       collectedAmount: body.collectedAmount,
       note: body.note,
+      // 批2：取证照片透传（DTO max 3 + 服务端前缀/数量校验在 service）
+      evidenceUrls: body.evidenceUrls,
     });
     return { success: true as const, data: task };
   }
@@ -161,6 +165,8 @@ export class DispatchController {
       taskId: id,
       reason: body.reason,
       note: body.note,
+      // 批2：取证照片透传（DTO max 3 + 服务端前缀/数量校验在 service）
+      evidenceUrls: body.evidenceUrls,
     });
     return { success: true as const, data: task };
   }

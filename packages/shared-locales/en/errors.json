@@ -50,6 +50,7 @@
   "E-DISPATCH-020": "Invalid task type for this action (delivery task cannot call return-only operation)",
   "E-DISPATCH-021": "Refund already has a return task",
   "E-DISPATCH-022": "Refund is not RETURN_REFUND type",
+  "E-DISPATCH-023": "Invalid evidence photos (max 3, must be URLs uploaded via this platform)",
   "E-INVENTORY-001": "Stock is not enough",
   "E-INVENTORY-002": "No warehouse covers this address",
   "E-INVENTORY-003": "Invalid stock quantity (must be > 0)",

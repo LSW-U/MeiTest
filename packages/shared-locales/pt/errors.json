@@ -50,6 +50,7 @@
   "E-DISPATCH-020": "Tipo de tarefa inválido para esta ação (tarefa de entrega não pode chamar operação exclusiva de retorno)",
   "E-DISPATCH-021": "Reembolso já possui tarefa de retorno",
   "E-DISPATCH-022": "Reembolso não é do tipo RETURN_REFUND",
+  "E-DISPATCH-023": "Fotos de evidência inválidas (máx. 3, devem ser URLs enviadas por esta plataforma)",
   "E-INVENTORY-001": "Stock insuficiente",
   "E-INVENTORY-002": "Nenhum armazém cobre este endereço",
   "E-INVENTORY-003": "Quantidade de estoque inválida (deve ser > 0)",

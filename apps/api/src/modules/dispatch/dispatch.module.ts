@@ -17,12 +17,14 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { RiderModule } from '../rider/rider.module';
 import { NotificationModule } from '../notification/notification.module';
 import { NotificationEventService } from '../notification/notification-event.service';
+// 批2（后端依赖专项 2026-10-01）：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义）
+import { StorageModule } from '../../shared/storage/storage.module';
 
 /** DispatchService DI token（OrderService 用此 token 注入避免循环依赖） */
 export const DISPATCH_SERVICE_TOKEN = Symbol('DISPATCH_SERVICE_TOKEN');
 
 @Module({
-  imports: [RealtimeModule, RiderModule, forwardRef(() => NotificationModule)],
+  imports: [RealtimeModule, RiderModule, forwardRef(() => NotificationModule), StorageModule],
   controllers: [DispatchController, AdminDispatchController],
   providers: [
     DispatchService,

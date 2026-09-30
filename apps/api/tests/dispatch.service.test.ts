@@ -434,6 +434,120 @@ describe('DispatchService', () => {
     });
   });
 
+  // ===== 批2（后端依赖专项 2026-10-01）：evidenceUrls 服务端校验 =====
+  describe('evidenceUrls 校验（批2 validateEvidenceUrls）', () => {
+    // storage=null（单测惯例）：前缀校验跳过仅数量校验生效；前缀分支用注入 mock storage 的实例测
+    function setupPickup(status = 'ASSIGNED') {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status, taskType: 'delivery', orderId: 'order-1' }),
+      );
+      const txDeliveryTaskUpdate = vi.fn().mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery' }),
+      );
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: { update: txDeliveryTaskUpdate },
+          order: { update: vi.fn().mockResolvedValue({}) },
+          refund: { update: vi.fn() },
+        }),
+      );
+      return { txDeliveryTaskUpdate };
+    }
+
+    it('>3 张 → 400 E-DISPATCH-023（防御直调，DTO max 3 之外的兜底）', async () => {
+      setupPickup();
+      await expect(
+        service.pickupTask({
+          riderId: 'r1',
+          taskId: 'task-1',
+          evidenceUrls: ['http://x/1.jpg', 'http://x/2.jpg', 'http://x/3.jpg', 'http://x/4.jpg'],
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-023' } });
+    });
+
+    it('外部前缀 URL → 400 E-DISPATCH-023（isOwnUrl 语义，注入 mock storage 验证前缀分支）', async () => {
+      const { txDeliveryTaskUpdate } = setupPickup();
+      const withStorage = new DispatchService(
+        mockRealtime as never,
+        mockEligibility as never,
+        null,
+        { isOwnUrl: (url: string) => url.startsWith('http://own/meimart/') } as never,
+      );
+      await expect(
+        withStorage.pickupTask({
+          riderId: 'r1',
+          taskId: 'task-1',
+          evidenceUrls: ['https://evil.com/proof.jpg'],
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-023' } });
+      expect(txDeliveryTaskUpdate).not.toHaveBeenCalled();
+    });
+
+    it('合法前缀 evidenceUrls → 落库（pickup update data 含 evidenceUrls）', async () => {
+      const { txDeliveryTaskUpdate } = setupPickup();
+      const withStorage = new DispatchService(
+        mockRealtime as never,
+        mockEligibility as never,
+        null,
+        { isOwnUrl: (url: string) => url.startsWith('http://own/meimart/') } as never,
+      );
+      const urls = ['http://own/meimart/tasks/evidence-1.jpg', 'http://own/meimart/tasks/evidence-2.png'];
+      await withStorage.pickupTask({ riderId: 'r1', taskId: 'task-1', evidenceUrls: urls });
+      expect(txDeliveryTaskUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ evidenceUrls: urls }),
+        }),
+      );
+    });
+
+    it('不传 evidenceUrls → update data 不含 evidenceUrls 键（向后兼容）', async () => {
+      const { txDeliveryTaskUpdate } = setupPickup();
+      await service.pickupTask({ riderId: 'r1', taskId: 'task-1' });
+      expect(txDeliveryTaskUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.not.objectContaining({ evidenceUrls: expect.anything() }),
+        }),
+      );
+    });
+
+    it('deliverTask >3 张 → 400 E-DISPATCH-023', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'PICKED_UP' }),
+      );
+      await expect(
+        service.deliverTask({
+          riderId: 'r1',
+          taskId: 'task-1',
+          evidenceUrls: Array.from({ length: 4 }, (_, i) => `http://x/${i}.jpg`),
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-023' } });
+    });
+
+    it('reportIssue >3 张 → 400 E-DISPATCH-023', async () => {
+      await expect(
+        service.reportIssue({
+          riderId: 'r1',
+          taskId: 'task-1',
+          reason: 'OTHER',
+          evidenceUrls: Array.from({ length: 5 }, (_, i) => `http://x/${i}.jpg`),
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-023' } });
+    });
+
+    it('回归：E-DISPATCH-003 归属校验不破坏（他人任务携合法 URL 仍 403 语义 Conflict）', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'other-rider', status: 'ASSIGNED' }),
+      );
+      await expect(
+        service.pickupTask({
+          riderId: 'r1',
+          taskId: 'task-1',
+          evidenceUrls: ['http://x/1.jpg'],
+        }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-003' } });
+    });
+  });
+
   describe('deliverTask - COD 场景', () => {
     function setupForDeliver(opts: { collectedAmount?: number; payableAmount?: number }) {
       mockDb.deliveryTask.findUnique.mockResolvedValue(
