@@ -2378,11 +2378,15 @@ components:
                 type: string
                 format: uuid
               productName:
-                type: string
+                type: object
+                additionalProperties:
+                  type: string
               productImage:
                 type: string
               skuName:
-                type: string
+                type: object
+                additionalProperties:
+                  type: string
               unitPrice:
                 type: integer
                 minimum: 0
@@ -2567,11 +2571,15 @@ components:
           type: string
           format: uuid
         productName:
-          type: string
+          type: object
+          additionalProperties:
+            type: string
         productImage:
           type: string
         skuName:
-          type: string
+          type: object
+          additionalProperties:
+            type: string
         unitPrice:
           type: integer
           minimum: 0
@@ -14050,11 +14058,15 @@ paths:
                           type: string
                           format: uuid
                         productName:
-                          type: string
+                          type: object
+                          additionalProperties:
+                            type: string
                         productImage:
                           type: string
                         skuName:
-                          type: string
+                          type: object
+                          additionalProperties:
+                            type: string
                         unitPrice:
                           type: integer
                           minimum: 0
@@ -14288,11 +14300,15 @@ paths:
                             type: string
                             format: uuid
                           productName:
-                            type: string
+                            type: object
+                            additionalProperties:
+                              type: string
                           productImage:
                             type: string
                           skuName:
-                            type: string
+                            type: object
+                            additionalProperties:
+                              type: string
                           unitPrice:
                             type: integer
                             minimum: 0
@@ -16072,11 +16088,15 @@ paths:
                           type: string
                           format: uuid
                         productName:
-                          type: string
+                          type: object
+                          additionalProperties:
+                            type: string
                         productImage:
                           type: string
                         skuName:
-                          type: string
+                          type: object
+                          additionalProperties:
+                            type: string
                         unitPrice:
                           type: integer
                           minimum: 0
@@ -21579,11 +21599,15 @@ paths:
                                     type: string
                                     format: uuid
                                   productName:
-                                    type: string
+                                    type: object
+                                    additionalProperties:
+                                      type: string
                                   productImage:
                                     type: string
                                   skuName:
-                                    type: string
+                                    type: object
+                                    additionalProperties:
+                                      type: string
                                   unitPrice:
                                     type: integer
                                     minimum: 0
@@ -21872,11 +21896,15 @@ paths:
                               type: string
                               format: uuid
                             productName:
-                              type: string
+                              type: object
+                              additionalProperties:
+                                type: string
                             productImage:
                               type: string
                             skuName:
-                              type: string
+                              type: object
+                              additionalProperties:
+                                type: string
                             unitPrice:
                               type: integer
                               minimum: 0
@@ -22136,11 +22164,15 @@ paths:
                               type: string
                               format: uuid
                             productName:
-                              type: string
+                              type: object
+                              additionalProperties:
+                                type: string
                             productImage:
                               type: string
                             skuName:
-                              type: string
+                              type: object
+                              additionalProperties:
+                                type: string
                             unitPrice:
                               type: integer
                               minimum: 0

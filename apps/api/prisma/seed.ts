@@ -7,7 +7,7 @@
  *   - 1 个 super_admin（密码登录测试账号）
  *   - 1 条 shop（单一商家预置）
  *   - 3 个 warehouses（Dili / Baucau / Maliana，含 PostGIS Point + Polygon）
- *   - 10 个 products（4 语言 i18n）+ 20 个 SKUs
+ *   - 10 个 products（5 语言 i18n）+ 20 个 SKUs
  *   - 60 条 stock（每个 SKU × 3 warehouse）
  *
  * 决策依据：W1-D2-T5 + CLAUDE.md §测试阶段 OTP（密码主登录，bcrypt 哈希）
@@ -23,9 +23,9 @@ const prisma = new PrismaClient();
 const SEED_PASSWORD_HASH = bcrypt.hashSync('admin12345', 12);
 const SEED_ADMIN_PHONE = '+67099999999';
 
-/** i18n 助手：构造 4 语言字段 */
-function i18n(en: string, zh: string, id: string, pt: string): Record<string, string> {
-  return { en, zh, id, pt };
+/** i18n 助手：构造 5 语言字段（en/id/zh/pt/tet，批1 B-P0-4 五语化；权威键集见 api-contract common.ts LanguageCode） */
+function i18n(en: string, zh: string, id: string, pt: string, tet: string): Record<string, string> {
+  return { en, zh, id, pt, tet };
 }
 
 /**
@@ -49,7 +49,7 @@ const OPERATING_HOURS = {
 const WAREHOUSES = [
   {
     code: 'W01',
-    name: i18n('Dili Warehouse', '帝力仓库', 'Gudang Dili', 'Armazém Dili'),
+    name: i18n('Dili Warehouse', '帝力仓库', 'Gudang Dili', 'Armazém Dili', 'Almoxarifadu Dili'),
     address: 'Rua dos Martires da Patria, Dili',
     center: { lon: 125.56, lat: -8.5568 },
     coverage: buildBoxPolygon(125.56, -8.5568, 0.2),
@@ -59,7 +59,7 @@ const WAREHOUSES = [
   },
   {
     code: 'W02',
-    name: i18n('Baucau Warehouse', '包考仓库', 'Gudang Baucau', 'Armazém Baucau'),
+    name: i18n('Baucau Warehouse', '包考仓库', 'Gudang Baucau', 'Armazém Baucau', 'Almoxarifadu Baukau'),
     address: 'Avenida Baucau, Baucau',
     center: { lon: 126.45, lat: -8.4667 },
     coverage: buildBoxPolygon(126.45, -8.4667, 0.2),
@@ -69,7 +69,7 @@ const WAREHOUSES = [
   },
   {
     code: 'W03',
-    name: i18n('Maliana Warehouse', '马利亚纳仓库', 'Gudang Maliana', 'Armazém Maliana'),
+    name: i18n('Maliana Warehouse', '马利亚纳仓库', 'Gudang Maliana', 'Armazém Maliana', 'Almoxarifadu Maliana'),
     address: 'Rua Principal, Maliana',
     center: { lon: 125.3833, lat: -8.9167 },
     coverage: buildBoxPolygon(125.3833, -8.9167, 0.2),
@@ -159,8 +159,8 @@ async function main() {
     update: {},
     create: {
       id: '00000000-0000-0000-0000-000000000001',
-      name: i18n('MeiMart', '美超市', 'MeiMart', 'MeiMart'),
-      announcement: i18n('Welcome to MeiMart', '欢迎光临美超市', 'Selamat datang di MeiMart', 'Bem-vindo ao MeiMart'),
+      name: i18n('MeiMart', '美超市', 'MeiMart', 'MeiMart', 'MeiMart'),
+      announcement: i18n('Welcome to MeiMart', '欢迎光临美超市', 'Selamat datang di MeiMart', 'Bem-vindo ao MeiMart', 'Bem-vindu ba MeiMart'),
       phone: '+6703333333',
       address: 'Avenida bispo medeiros, Dili, Timor-Leste',
       lat: -8.5568,
@@ -215,10 +215,10 @@ async function main() {
   // 4a. 创建分类：4 顶级大类 + 每大类下子分类（§6.1，演示两层；商品挂叶子子分类）
   await prisma.category.deleteMany();
   const TOP_CATEGORIES = [
-    { slug: 'groceries', name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia' }, sortOrder: 1 },
-    { slug: 'beauty', name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza' }, sortOrder: 2 },
-    { slug: 'skin-care', name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele' }, sortOrder: 3 },
-    { slug: 'fragrances', name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes' }, sortOrder: 4 },
+    { slug: 'groceries', name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia', tet: 'Aihan no Merkaria' }, sortOrder: 1 },
+    { slug: 'beauty', name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza', tet: 'Beleza' }, sortOrder: 2 },
+    { slug: 'skin-care', name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele', tet: 'Kuidadu Kulit' }, sortOrder: 3 },
+    { slug: 'fragrances', name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes', tet: 'Parfum' }, sortOrder: 4 },
   ];
   const topIdBySlug = new Map<string, string>();
   for (const t of TOP_CATEGORIES) {
@@ -227,18 +227,18 @@ async function main() {
   }
   // 子分类（§6.1：每大类下 3-4 个，name 用多语言而非顶级名重复）
   const SUB_CATEGORIES_DEF = [
-    { parentSlug: 'groceries', slug: 'fresh-produce', name: { en: 'Fresh Produce', zh: '生鲜果蔬', id: 'Produk Segar', pt: 'Produtos Frescos' }, sortOrder: 1 },
-    { parentSlug: 'groceries', slug: 'pantry', name: { en: 'Pantry Staples', zh: '粮油干货', id: 'Bahan Pokok', pt: 'Despensa' }, sortOrder: 2 },
-    { parentSlug: 'groceries', slug: 'snacks', name: { en: 'Snacks', zh: '零食', id: 'Camilan', pt: 'Lanches' }, sortOrder: 3 },
-    { parentSlug: 'groceries', slug: 'beverages', name: { en: 'Beverages', zh: '饮料', id: 'Minuman', pt: 'Bebidas' }, sortOrder: 4 },
-    { parentSlug: 'beauty', slug: 'skincare', name: { en: 'Skincare', zh: '护肤', id: 'Perawatan Wajah', pt: 'Cuidados Rosto' }, sortOrder: 1 },
-    { parentSlug: 'beauty', slug: 'makeup', name: { en: 'Makeup', zh: '彩妆', id: 'Makeup', pt: 'Maquiagem' }, sortOrder: 2 },
-    { parentSlug: 'beauty', slug: 'body-care', name: { en: 'Body Care', zh: '身体护理', id: 'Perawatan Tubuh', pt: 'Cuidados Corpo' }, sortOrder: 3 },
-    { parentSlug: 'skin-care', slug: 'face-care', name: { en: 'Face Care', zh: '面部护理', id: 'Perawatan Wajah', pt: 'Cuidados Rosto' }, sortOrder: 1 },
-    { parentSlug: 'skin-care', slug: 'sun-care', name: { en: 'Sun Care', zh: '防晒', id: 'Tabir Surya', pt: 'Proteção Solar' }, sortOrder: 2 },
-    { parentSlug: 'fragrances', slug: 'women', name: { en: 'Women', zh: '女士', id: 'Wanita', pt: 'Mulher' }, sortOrder: 1 },
-    { parentSlug: 'fragrances', slug: 'men', name: { en: 'Men', zh: '男士', id: 'Pria', pt: 'Homem' }, sortOrder: 2 },
-    { parentSlug: 'fragrances', slug: 'unisex', name: { en: 'Unisex', zh: '中性', id: 'Unisex', pt: 'Unisex' }, sortOrder: 3 },
+    { parentSlug: 'groceries', slug: 'fresh-produce', name: { en: 'Fresh Produce', zh: '生鲜果蔬', id: 'Produk Segar', pt: 'Produtos Frescos', tet: 'Produtu Fresu' }, sortOrder: 1 },
+    { parentSlug: 'groceries', slug: 'pantry', name: { en: 'Pantry Staples', zh: '粮油干货', id: 'Bahan Pokok', pt: 'Despensa', tet: 'Aihan Kunsei' }, sortOrder: 2 },
+    { parentSlug: 'groceries', slug: 'snacks', name: { en: 'Snacks', zh: '零食', id: 'Camilan', pt: 'Lanches', tet: 'Hahan Kiak' }, sortOrder: 3 },
+    { parentSlug: 'groceries', slug: 'beverages', name: { en: 'Beverages', zh: '饮料', id: 'Minuman', pt: 'Bebidas', tet: 'Bedik' }, sortOrder: 4 },
+    { parentSlug: 'beauty', slug: 'skincare', name: { en: 'Skincare', zh: '护肤', id: 'Perawatan Wajah', pt: 'Cuidados Rosto', tet: 'Kuidadu Kulit' }, sortOrder: 1 },
+    { parentSlug: 'beauty', slug: 'makeup', name: { en: 'Makeup', zh: '彩妆', id: 'Makeup', pt: 'Maquiagem', tet: 'Dekorasaun' }, sortOrder: 2 },
+    { parentSlug: 'beauty', slug: 'body-care', name: { en: 'Body Care', zh: '身体护理', id: 'Perawatan Tubuh', pt: 'Cuidados Corpo', tet: 'Kuidadu Isin' }, sortOrder: 3 },
+    { parentSlug: 'skin-care', slug: 'face-care', name: { en: 'Face Care', zh: '面部护理', id: 'Perawatan Wajah', pt: 'Cuidados Rosto', tet: 'Kuidadu Oan' }, sortOrder: 1 },
+    { parentSlug: 'skin-care', slug: 'sun-care', name: { en: 'Sun Care', zh: '防晒', id: 'Tabir Surya', pt: 'Proteção Solar', tet: 'Protesaun Kuak' }, sortOrder: 2 },
+    { parentSlug: 'fragrances', slug: 'women', name: { en: 'Women', zh: '女士', id: 'Wanita', pt: 'Mulher', tet: 'Feto' }, sortOrder: 1 },
+    { parentSlug: 'fragrances', slug: 'men', name: { en: 'Men', zh: '男士', id: 'Pria', pt: 'Homem', tet: 'Mane' }, sortOrder: 2 },
+    { parentSlug: 'fragrances', slug: 'unisex', name: { en: 'Unisex', zh: '中性', id: 'Unisex', pt: 'Unisex', tet: 'Unisex' }, sortOrder: 3 },
   ];
   // 每大类的子分类 id 列表（商品按 index 轮流分配，演示子分类有商品）
   const subIdsByParent = new Map<string, string[]>();
@@ -264,7 +264,7 @@ async function main() {
           const subs = subIdsByParent.get(p.category);
           return subs && subs.length ? subs[__withinCat % subs.length] : null;
         })(),
-        name: p.name, // 4 语言简短商品名（apply-translations.mjs 填充）
+        name: p.name, // 5 语言简短商品名（apply-translations.mjs 填充，含 tet）
         description: p.description,
         mainImage: p.mainImage,
         images: p.images,
@@ -281,7 +281,7 @@ async function main() {
     const skuSmall = await prisma.sku.create({
       data: {
         productId: product.id,
-        name: i18n(`${productTitle} (Small)`, `${productTitleZh}（小）`, `${productTitle} (Small)`, `${productTitle} (Pequeno)`),
+        name: i18n(`${productTitle} (Small)`, `${productTitleZh}（小）`, `${productTitle} (Small)`, `${productTitle} (Pequeno)`, `${productTitle} (Ki'ik)`),
         attributes: [{ name: 'size', value: 'small', valueId: 'size-small' }],
         price: p.priceMin,
         status: 'ACTIVE',
@@ -290,7 +290,7 @@ async function main() {
     const skuLarge = await prisma.sku.create({
       data: {
         productId: product.id,
-        name: i18n(`${productTitle} (Large)`, `${productTitleZh}（大）`, `${productTitle} (Large)`, `${productTitle} (Grande)`),
+        name: i18n(`${productTitle} (Large)`, `${productTitleZh}（大）`, `${productTitle} (Large)`, `${productTitle} (Grande)`, `${productTitle} (Bo'ot)`),
         attributes: [{ name: 'size', value: 'large', valueId: 'size-large' }],
         price: Math.round(p.priceMin * 1.8),
         status: 'ACTIVE',

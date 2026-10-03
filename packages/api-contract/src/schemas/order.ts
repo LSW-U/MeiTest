@@ -10,7 +10,7 @@
  * - CLAUDE.md §Token 策略 / §orderNo 格式
  */
 import { z } from 'zod';
-import { Id, IsoTimestamp, Money } from './common';
+import { Id, IsoTimestamp, Money, I18nText } from './common';
 
 /** 16 位订单号：MM + yyyyMMdd(8) + warehouseId(2) + 序号(4) */
 export const OrderNo = z.string().regex(/^MM\d{14}$/, 'ORDER_NO_FORMAT: 16 位');
@@ -76,14 +76,14 @@ export const AddressSnapshot = z.object({
   lng: z.number().nullable(),
 });
 
-/** 订单项（含下单时价格快照） */
+/** 订单项（含下单时价格快照）。productName/skuName 实际写多语 JSON（批1 P3 修正：契约类型从 string 改 I18nText 对齐运行时） */
 export const OrderItem = z.object({
   id: Id,
   productId: Id,
   skuId: Id,
-  productName: z.string(),
+  productName: I18nText,
   productImage: z.string(),
-  skuName: z.string(),
+  skuName: I18nText,
   unitPrice: Money,
   quantity: z.number().int().positive(),
   subtotal: Money,

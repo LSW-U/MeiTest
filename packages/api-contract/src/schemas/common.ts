@@ -20,7 +20,7 @@ export const IsoTimestamp = z.string().datetime();
 /** 多语言文本，键为语言代码（en/id/zh/pt/tet） */
 export const I18nText = z.record(z.string(), z.string());
 
-/** 支持的语言代码 */
+/** 支持的语言代码。批1 B-P0-4 键集结论（2026-10-03）：商品/分类/SKU 等多语 JSON 权威键集为五语 {en,id,pt,tet,zh}，与 LanguageCode 对齐 */
 export const LanguageCode = z.enum(['en', 'id', 'zh', 'pt', 'tet']);
 
 /** 成功响应包装：{ success: true, data, message? } */

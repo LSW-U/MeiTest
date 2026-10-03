@@ -4795,9 +4795,13 @@ export interface paths {
                                 productId: string;
                                 /** Format: uuid */
                                 skuId: string;
-                                productName: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
                                 productImage: string;
-                                skuName: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
@@ -4904,9 +4908,13 @@ export interface paths {
                                 productId: string;
                                 /** Format: uuid */
                                 skuId: string;
-                                productName: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
                                 productImage: string;
-                                skuName: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
@@ -6207,9 +6215,13 @@ export interface paths {
                                 productId: string;
                                 /** Format: uuid */
                                 skuId: string;
-                                productName: string;
+                                productName: {
+                                    [key: string]: string;
+                                };
                                 productImage: string;
-                                skuName: string;
+                                skuName: {
+                                    [key: string]: string;
+                                };
                                 unitPrice: number;
                                 quantity: number;
                                 subtotal: number;
@@ -10026,9 +10038,13 @@ export interface paths {
                                         productId: string;
                                         /** Format: uuid */
                                         skuId: string;
-                                        productName: string;
+                                        productName: {
+                                            [key: string]: string;
+                                        };
                                         productImage: string;
-                                        skuName: string;
+                                        skuName: {
+                                            [key: string]: string;
+                                        };
                                         unitPrice: number;
                                         quantity: number;
                                         subtotal: number;
@@ -10180,9 +10196,13 @@ export interface paths {
                                     productId: string;
                                     /** Format: uuid */
                                     skuId: string;
-                                    productName: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
                                     productImage: string;
-                                    skuName: string;
+                                    skuName: {
+                                        [key: string]: string;
+                                    };
                                     unitPrice: number;
                                     quantity: number;
                                     subtotal: number;
@@ -10307,9 +10327,13 @@ export interface paths {
                                     productId: string;
                                     /** Format: uuid */
                                     skuId: string;
-                                    productName: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
                                     productImage: string;
-                                    skuName: string;
+                                    skuName: {
+                                        [key: string]: string;
+                                    };
                                     unitPrice: number;
                                     quantity: number;
                                     subtotal: number;
@@ -21941,9 +21965,13 @@ export interface components {
                 productId: string;
                 /** Format: uuid */
                 skuId: string;
-                productName: string;
+                productName: {
+                    [key: string]: string;
+                };
                 productImage: string;
-                skuName: string;
+                skuName: {
+                    [key: string]: string;
+                };
                 unitPrice: number;
                 quantity: number;
                 subtotal: number;
@@ -22002,9 +22030,13 @@ export interface components {
             productId: string;
             /** Format: uuid */
             skuId: string;
-            productName: string;
+            productName: {
+                [key: string]: string;
+            };
             productImage: string;
-            skuName: string;
+            skuName: {
+                [key: string]: string;
+            };
             unitPrice: number;
             quantity: number;
             subtotal: number;
