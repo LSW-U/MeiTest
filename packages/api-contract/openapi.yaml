@@ -8181,6 +8181,255 @@ components:
         - deliveredCount
         - failedCount
         - push
+    RiderEarningsSummary:
+      type: object
+      properties:
+        availableBalance:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        today:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        weekly:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        monthly:
+          type: integer
+          minimum: 0
+          maximum: 999999
+      required:
+        - availableBalance
+        - today
+        - weekly
+        - monthly
+    RiderEarningsSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            availableBalance:
+              type: integer
+              minimum: 0
+              maximum: 999999
+            today:
+              type: integer
+              minimum: 0
+              maximum: 999999
+            weekly:
+              type: integer
+              minimum: 0
+              maximum: 999999
+            monthly:
+              type: integer
+              minimum: 0
+              maximum: 999999
+          required:
+            - availableBalance
+            - today
+            - weekly
+            - monthly
+        message:
+          type: string
+      required:
+        - success
+        - data
+    RiderEarningsTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        periodDate:
+          type: string
+        orderCount:
+          type: integer
+          minimum: 0
+        grossAmount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        commission:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        refundAmount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        netAmount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        status:
+          type: string
+        confirmedAt:
+          type: string
+          nullable: true
+          format: date-time
+        paidAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - periodDate
+        - orderCount
+        - grossAmount
+        - commission
+        - refundAmount
+        - netAmount
+        - status
+        - confirmedAt
+        - paidAt
+        - createdAt
+    RiderEarningsTransactionsQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          default: 1
+        pageSize:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 100
+          default: 20
+    RiderEarningsTransactionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  periodDate:
+                    type: string
+                  orderCount:
+                    type: integer
+                    minimum: 0
+                  grossAmount:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  commission:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  refundAmount:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  netAmount:
+                    type: integer
+                    minimum: 0
+                    maximum: 999999
+                  status:
+                    type: string
+                  confirmedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  paidAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - periodDate
+                  - orderCount
+                  - grossAmount
+                  - commission
+                  - refundAmount
+                  - netAmount
+                  - status
+                  - confirmedAt
+                  - paidAt
+                  - createdAt
+            total:
+              type: integer
+            page:
+              type: integer
+            pageSize:
+              type: integer
+          required:
+            - items
+            - total
+            - page
+            - pageSize
+      required:
+        - success
+        - data
+    RiderWithdrawalCreateInput:
+      type: object
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 999999
+        payoutAccount:
+          type: object
+          properties:
+            channel:
+              type: string
+              enum: &a90
+                - BANK_TRANSFER
+                - WECHAT
+                - ALIPAY
+                - PAYPAL
+            account:
+              type: string
+            holderName:
+              type: string
+            bankName:
+              type: string
+            branchName:
+              type: string
+          required:
+            - channel
+            - account
+      required:
+        - amount
+        - payoutAccount
+    RiderWithdrawalQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          default: 1
+        pageSize:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 100
+          default: 20
     ExchangeRateView:
       type: object
       properties:
@@ -35652,6 +35901,689 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/rider/earnings/summary:
+    get:
+      tags:
+        - rider
+      description: '骑手收入汇总（批2 B-P1-2，R11 口径，Role: RIDER）。availableBalance = Σ
+        Settlement.netAmount(subjectType=RIDER, status ∈ {CONFIRMED, PAID}) − Σ
+        WithdrawalRequest.amount(requesterType=RIDER, requesterId=当前骑手,
+        status=PAID)；today/weekly/monthly 同源按 periodDate 滚动窗口（今日/近7天/近30天，仅计
+        CONFIRMED+PAID）。T+1 口径：当日完成订单次日才生成结算单，今日字段可能为
+        0，前端需提示"今日收入次日到账"。DISPUTED/PENDING 结算单不计入。金额单位均为分。'
+      responses:
+        "200":
+          description: 收入汇总（4 字段金额分）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      availableBalance:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      today:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      weekly:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      monthly:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                    required:
+                      - availableBalance
+                      - today
+                      - weekly
+                      - monthly
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "401":
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: 非 RIDER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/rider/earnings/transactions:
+    get:
+      tags:
+        - rider
+      description: "骑手收入流水（批2 B-P1-2，R11 口径，Role: RIDER）。数据源 =
+        Settlement(subjectType=RIDER, subjectId=当前骑手 RiderProfile.id)，按
+        periodDate 倒序 offset 分页（page/pageSize/total）。DISPUTED 结算单也会出现在流水中但不得计入
+        summary/availableBalance 口径（前端展示时标注）。金额单位分。"
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            default: 1
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 100
+            default: 20
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: 流水列表（offset 分页）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            periodDate:
+                              type: string
+                            orderCount:
+                              type: integer
+                              minimum: 0
+                            grossAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            commission:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            netAmount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            status:
+                              type: string
+                            confirmedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            paidAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - periodDate
+                            - orderCount
+                            - grossAmount
+                            - commission
+                            - refundAmount
+                            - netAmount
+                            - status
+                            - confirmedAt
+                            - paidAt
+                            - createdAt
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                    required:
+                      - items
+                      - total
+                      - page
+                      - pageSize
+                required:
+                  - success
+                  - data
+        "401":
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: 非 RIDER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/rider/withdrawals:
+    post:
+      tags:
+        - rider
+      description: "骑手发起提现申请（批2 B-P1-2，R11 口径，Role: RIDER）。requesterType/requesterId
+        由服务端从 JWT 硬编码（RIDER + req.user.sub），不收请求体——防伪造 requesterId 越权。body 仅 {
+        amount, payoutAccount }。复用 admin 侧状态机（PENDING → admin review →
+        PAID），rider 侧不可改状态。余额校验口径同 availableBalance（advisory lock 防并发
+        TOCTOU）。E-SETTLE-001 余额不足。金额单位分。"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  minimum: 0
+                  maximum: 999999
+                payoutAccount:
+                  type: object
+                  properties:
+                    channel:
+                      type: string
+                      enum: *a90
+                    account:
+                      type: string
+                    holderName:
+                      type: string
+                    bankName:
+                      type: string
+                    branchName:
+                      type: string
+                  required:
+                    - channel
+                    - account
+              required:
+                - amount
+                - payoutAccount
+      responses:
+        "200":
+          description: 申请成功（返回 PENDING 记录）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      requesterType:
+                        type: string
+                        enum: &a91
+                          - MERCHANT
+                          - RIDER
+                      requesterId:
+                        type: string
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      status:
+                        type: string
+                        enum: &a92
+                          - PENDING
+                          - APPROVED
+                          - REJECTED
+                          - PAID
+                          - FAILED
+                      payoutAccount:
+                        type: object
+                        properties:
+                          channel:
+                            type: string
+                            enum: *a90
+                          account:
+                            type: string
+                          holderName:
+                            type: string
+                          bankName:
+                            type: string
+                          branchName:
+                            type: string
+                        required:
+                          - channel
+                          - account
+                      rejectReason:
+                        type: string
+                        nullable: true
+                      payoutReference:
+                        type: string
+                        nullable: true
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      paidAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - requesterType
+                      - requesterId
+                      - amount
+                      - status
+                      - payoutAccount
+                      - rejectReason
+                      - payoutReference
+                      - reviewedBy
+                      - reviewedAt
+                      - paidAt
+                      - createdAt
+                      - updatedAt
+                  message:
+                    type: string
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-SETTLE-001 金额超过可用余额 / E-COMMON-001 校验失败
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "401":
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: 非 RIDER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    get:
+      tags:
+        - rider
+      description: "骑手提现记录（批2 B-P1-2，Role:
+        RIDER）。仅返回当前骑手（requesterId=req.user.sub）的申请，按 createdAt 倒序 offset 分页。状态机
+        PENDING → APPROVED → PAID / REJECTED / FAILED，rider 侧只读。"
+      parameters:
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            default: 1
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 100
+            default: 20
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: 提现记录列表（offset 分页）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            requesterType:
+                              type: string
+                              enum: *a91
+                            requesterId:
+                              type: string
+                            amount:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            status:
+                              type: string
+                              enum: *a92
+                            payoutAccount:
+                              type: object
+                              properties:
+                                channel:
+                                  type: string
+                                  enum: *a90
+                                account:
+                                  type: string
+                                holderName:
+                                  type: string
+                                bankName:
+                                  type: string
+                                branchName:
+                                  type: string
+                              required:
+                                - channel
+                                - account
+                            rejectReason:
+                              type: string
+                              nullable: true
+                            payoutReference:
+                              type: string
+                              nullable: true
+                            reviewedBy:
+                              type: string
+                              nullable: true
+                            reviewedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            paidAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - requesterType
+                            - requesterId
+                            - amount
+                            - status
+                            - payoutAccount
+                            - rejectReason
+                            - payoutReference
+                            - reviewedBy
+                            - reviewedAt
+                            - paidAt
+                            - createdAt
+                            - updatedAt
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                    required:
+                      - items
+                      - total
+                      - page
+                      - pageSize
+                required:
+                  - success
+                  - data
+        "401":
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "403":
+          description: 非 RIDER
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/admin/settle/settlements:
     get:
       tags:
@@ -35660,7 +36592,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: &a90
+            enum: &a93
               - MERCHANT
               - RIDER
           required: false
@@ -35683,7 +36615,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a91
+            enum: &a94
               - PENDING
               - CONFIRMED
               - PAID
@@ -35735,7 +36667,7 @@ paths:
                               type: string
                             subjectType:
                               type: string
-                              enum: *a90
+                              enum: *a93
                             subjectId:
                               type: string
                             warehouseId:
@@ -35762,7 +36694,7 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a91
+                              enum: *a94
                             confirmedAt:
                               type: string
                               nullable: true
@@ -35899,7 +36831,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a90
+                        enum: *a93
                       subjectId:
                         type: string
                       warehouseId:
@@ -35926,7 +36858,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a91
+                        enum: *a94
                       confirmedAt:
                         type: string
                         nullable: true
@@ -36025,7 +36957,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a90
+                        enum: *a93
                       subjectId:
                         type: string
                       warehouseId:
@@ -36052,7 +36984,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a91
+                        enum: *a94
                       confirmedAt:
                         type: string
                         nullable: true
@@ -36161,7 +37093,7 @@ paths:
                   type: string
                 subjectType:
                   type: string
-                  enum: *a90
+                  enum: *a93
                 subjectId:
                   type: string
               required:
@@ -36189,7 +37121,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a90
+                        enum: *a93
                       subjectId:
                         type: string
                       warehouseId:
@@ -36216,7 +37148,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a91
+                        enum: *a94
                       confirmedAt:
                         type: string
                         nullable: true
@@ -36294,9 +37226,7 @@ paths:
               properties:
                 requesterType:
                   type: string
-                  enum: &a92
-                    - MERCHANT
-                    - RIDER
+                  enum: *a91
                 requesterId:
                   type: string
                 amount:
@@ -36308,11 +37238,7 @@ paths:
                   properties:
                     channel:
                       type: string
-                      enum: &a93
-                        - BANK_TRANSFER
-                        - WECHAT
-                        - ALIPAY
-                        - PAYPAL
+                      enum: *a90
                     account:
                       type: string
                     holderName:
@@ -36349,7 +37275,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a92
+                        enum: *a91
                       requesterId:
                         type: string
                       amount:
@@ -36358,18 +37284,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: &a94
-                          - PENDING
-                          - APPROVED
-                          - REJECTED
-                          - PAID
-                          - FAILED
+                        enum: *a92
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a93
+                            enum: *a90
                           account:
                             type: string
                           holderName:
@@ -36459,7 +37380,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a92
+            enum: *a91
           required: false
           name: requesterType
           in: query
@@ -36470,7 +37391,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a94
+            enum: *a92
           required: false
           name: status
           in: query
@@ -36516,7 +37437,7 @@ paths:
                               format: uuid
                             requesterType:
                               type: string
-                              enum: *a92
+                              enum: *a91
                             requesterId:
                               type: string
                             amount:
@@ -36525,13 +37446,13 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a94
+                              enum: *a92
                             payoutAccount:
                               type: object
                               properties:
                                 channel:
                                   type: string
-                                  enum: *a93
+                                  enum: *a90
                                 account:
                                   type: string
                                 holderName:
@@ -36684,7 +37605,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a92
+                        enum: *a91
                       requesterId:
                         type: string
                       amount:
@@ -36693,13 +37614,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a94
+                        enum: *a92
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a93
+                            enum: *a90
                           account:
                             type: string
                           holderName:
@@ -36829,7 +37750,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a92
+                        enum: *a91
                       requesterId:
                         type: string
                       amount:
@@ -36838,13 +37759,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a94
+                        enum: *a92
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a93
+                            enum: *a90
                           account:
                             type: string
                           holderName:
@@ -36999,7 +37920,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a92
+                        enum: *a91
                       requesterId:
                         type: string
                       amount:
@@ -37008,13 +37929,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a94
+                        enum: *a92
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a93
+                            enum: *a90
                           account:
                             type: string
                           holderName:

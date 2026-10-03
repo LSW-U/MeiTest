@@ -19766,6 +19766,430 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rider/earnings/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手收入汇总（批2 B-P1-2，R11 口径，Role: RIDER）。availableBalance = Σ Settlement.netAmount(subjectType=RIDER, status ∈ {CONFIRMED, PAID}) − Σ WithdrawalRequest.amount(requesterType=RIDER, requesterId=当前骑手, status=PAID)；today/weekly/monthly 同源按 periodDate 滚动窗口（今日/近7天/近30天，仅计 CONFIRMED+PAID）。T+1 口径：当日完成订单次日才生成结算单，今日字段可能为 0，前端需提示"今日收入次日到账"。DISPUTED/PENDING 结算单不计入。金额单位均为分。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 收入汇总（4 字段金额分） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                availableBalance: number;
+                                today: number;
+                                weekly: number;
+                                monthly: number;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/earnings/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手收入流水（批2 B-P1-2，R11 口径，Role: RIDER）。数据源 = Settlement(subjectType=RIDER, subjectId=当前骑手 RiderProfile.id)，按 periodDate 倒序 offset 分页（page/pageSize/total）。DISPUTED 结算单也会出现在流水中但不得计入 summary/availableBalance 口径（前端展示时标注）。金额单位分。 */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 流水列表（offset 分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    periodDate: string;
+                                    orderCount: number;
+                                    grossAmount: number;
+                                    commission: number;
+                                    refundAmount: number;
+                                    netAmount: number;
+                                    status: string;
+                                    /** Format: date-time */
+                                    confirmedAt: string | null;
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 骑手提现记录（批2 B-P1-2，Role: RIDER）。仅返回当前骑手（requesterId=req.user.sub）的申请，按 createdAt 倒序 offset 分页。状态机 PENDING → APPROVED → PAID / REJECTED / FAILED，rider 侧只读。 */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 提现记录列表（offset 分页） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** @enum {string} */
+                                    requesterType: "MERCHANT" | "RIDER";
+                                    requesterId: string;
+                                    amount: number;
+                                    /** @enum {string} */
+                                    status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                    payoutAccount: {
+                                        /** @enum {string} */
+                                        channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                        account: string;
+                                        holderName?: string;
+                                        bankName?: string;
+                                        branchName?: string;
+                                    };
+                                    rejectReason: string | null;
+                                    payoutReference: string | null;
+                                    reviewedBy: string | null;
+                                    /** Format: date-time */
+                                    reviewedAt: string | null;
+                                    /** Format: date-time */
+                                    paidAt: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                                total: number;
+                                page: number;
+                                pageSize: number;
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 骑手发起提现申请（批2 B-P1-2，R11 口径，Role: RIDER）。requesterType/requesterId 由服务端从 JWT 硬编码（RIDER + req.user.sub），不收请求体——防伪造 requesterId 越权。body 仅 { amount, payoutAccount }。复用 admin 侧状态机（PENDING → admin review → PAID），rider 侧不可改状态。余额校验口径同 availableBalance（advisory lock 防并发 TOCTOU）。E-SETTLE-001 余额不足。金额单位分。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        amount: number;
+                        payoutAccount: {
+                            /** @enum {string} */
+                            channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                            account: string;
+                            holderName?: string;
+                            bankName?: string;
+                            branchName?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description 申请成功（返回 PENDING 记录） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                requesterType: "MERCHANT" | "RIDER";
+                                requesterId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "PAID" | "FAILED";
+                                payoutAccount: {
+                                    /** @enum {string} */
+                                    channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                                    account: string;
+                                    holderName?: string;
+                                    bankName?: string;
+                                    branchName?: string;
+                                };
+                                rejectReason: string | null;
+                                payoutReference: string | null;
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                /** Format: date-time */
+                                paidAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-SETTLE-001 金额超过可用余额 / E-COMMON-001 校验失败 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 未认证 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非 RIDER */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/settle/settlements": {
         parameters: {
             query?: never;
@@ -24102,6 +24526,89 @@ export interface components {
                 mockFlag: boolean;
                 error: string | null;
             };
+        };
+        RiderEarningsSummary: {
+            availableBalance: number;
+            today: number;
+            weekly: number;
+            monthly: number;
+        };
+        RiderEarningsSummaryResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                availableBalance: number;
+                today: number;
+                weekly: number;
+                monthly: number;
+            };
+            message?: string;
+        };
+        RiderEarningsTransaction: {
+            /** Format: uuid */
+            id: string;
+            periodDate: string;
+            orderCount: number;
+            grossAmount: number;
+            commission: number;
+            refundAmount: number;
+            netAmount: number;
+            status: string;
+            /** Format: date-time */
+            confirmedAt: string | null;
+            /** Format: date-time */
+            paidAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RiderEarningsTransactionsQuery: {
+            /** @default 1 */
+            page: number;
+            /** @default 20 */
+            pageSize: number;
+        };
+        RiderEarningsTransactionsResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    periodDate: string;
+                    orderCount: number;
+                    grossAmount: number;
+                    commission: number;
+                    refundAmount: number;
+                    netAmount: number;
+                    status: string;
+                    /** Format: date-time */
+                    confirmedAt: string | null;
+                    /** Format: date-time */
+                    paidAt: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                }[];
+                total: number;
+                page: number;
+                pageSize: number;
+            };
+        };
+        RiderWithdrawalCreateInput: {
+            amount: number;
+            payoutAccount: {
+                /** @enum {string} */
+                channel: "BANK_TRANSFER" | "WECHAT" | "ALIPAY" | "PAYPAL";
+                account: string;
+                holderName?: string;
+                bankName?: string;
+                branchName?: string;
+            };
+        };
+        RiderWithdrawalQuery: {
+            /** @default 1 */
+            page: number;
+            /** @default 20 */
+            pageSize: number;
         };
         ExchangeRateView: {
             /** Format: uuid */

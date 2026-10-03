@@ -221,6 +221,14 @@ import {
   ReviewRefundRequest as ReviewRefundRequestSchema,
   ListRefundsQuery as ListRefundsQuerySchema,
   RefundListResponse as RefundListResponseSchema,
+  // rider earnings（批2 B-P1-2，R11 口径：派生自 Settlement/WithdrawalRequest）
+  RiderEarningsSummary,
+  RiderEarningsSummaryResponse,
+  RiderEarningsTransactionSchema,
+  RiderEarningsTransactionsQuery,
+  RiderEarningsTransactionsResponse,
+  RiderWithdrawalCreateInput,
+  RiderWithdrawalQuery,
   // settle（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册）
   SettlementSchema,
   SettlementQuery,
@@ -4966,6 +4974,79 @@ registry.registerPath({
   },
 });
 
+
+// ============================================================================
+// rider earnings / withdrawals 端点（批2 B-P1-2，R11 口径：派生自 Settlement /
+// WithdrawalRequest，Role: RIDER）
+// ============================================================================
+
+registry.register('RiderEarningsSummary', RiderEarningsSummary);
+registry.register('RiderEarningsSummaryResponse', RiderEarningsSummaryResponse);
+registry.register('RiderEarningsTransaction', RiderEarningsTransactionSchema);
+registry.register('RiderEarningsTransactionsQuery', RiderEarningsTransactionsQuery);
+registry.register('RiderEarningsTransactionsResponse', RiderEarningsTransactionsResponse);
+registry.register('RiderWithdrawalCreateInput', RiderWithdrawalCreateInput);
+registry.register('RiderWithdrawalQuery', RiderWithdrawalQuery);
+
+// 骑手收入汇总
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/earnings/summary',
+  tags: ['rider'],
+  description:
+    '骑手收入汇总（批2 B-P1-2，R11 口径，Role: RIDER）。availableBalance = Σ Settlement.netAmount(subjectType=RIDER, status ∈ {CONFIRMED, PAID}) − Σ WithdrawalRequest.amount(requesterType=RIDER, requesterId=当前骑手, status=PAID)；today/weekly/monthly 同源按 periodDate 滚动窗口（今日/近7天/近30天，仅计 CONFIRMED+PAID）。T+1 口径：当日完成订单次日才生成结算单，今日字段可能为 0，前端需提示"今日收入次日到账"。DISPUTED/PENDING 结算单不计入。金额单位均为分。',
+  responses: {
+    200: { description: '收入汇总（4 字段金额分）', content: { 'application/json': { schema: RiderEarningsSummaryResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手收入流水
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/earnings/transactions',
+  tags: ['rider'],
+  description:
+    '骑手收入流水（批2 B-P1-2，R11 口径，Role: RIDER）。数据源 = Settlement(subjectType=RIDER, subjectId=当前骑手 RiderProfile.id)，按 periodDate 倒序 offset 分页（page/pageSize/total）。DISPUTED 结算单也会出现在流水中但不得计入 summary/availableBalance 口径（前端展示时标注）。金额单位分。',
+  request: { query: RiderEarningsTransactionsQuery },
+  responses: {
+    200: { description: '流水列表（offset 分页）', content: { 'application/json': { schema: RiderEarningsTransactionsResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手提现申请（强制 requesterType=RIDER + requesterId=当前骑手，不收请求体）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/withdrawals',
+  tags: ['rider'],
+  description:
+    '骑手发起提现申请（批2 B-P1-2，R11 口径，Role: RIDER）。requesterType/requesterId 由服务端从 JWT 硬编码（RIDER + req.user.sub），不收请求体——防伪造 requesterId 越权。body 仅 { amount, payoutAccount }。复用 admin 侧状态机（PENDING → admin review → PAID），rider 侧不可改状态。余额校验口径同 availableBalance（advisory lock 防并发 TOCTOU）。E-SETTLE-001 余额不足。金额单位分。',
+  request: { body: { content: { 'application/json': { schema: RiderWithdrawalCreateInput } } } },
+  responses: {
+    200: { description: '申请成功（返回 PENDING 记录）', content: { 'application/json': { schema: WithdrawalDetailResponse } } },
+    400: { description: 'E-SETTLE-001 金额超过可用余额 / E-COMMON-001 校验失败', content: { 'application/json': { schema: ErrorResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手提现记录列表
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/withdrawals',
+  tags: ['rider'],
+  description:
+    '骑手提现记录（批2 B-P1-2，Role: RIDER）。仅返回当前骑手（requesterId=req.user.sub）的申请，按 createdAt 倒序 offset 分页。状态机 PENDING → APPROVED → PAID / REJECTED / FAILED，rider 侧只读。',
+  request: { query: RiderWithdrawalQuery },
+  responses: {
+    200: { description: '提现记录列表（offset 分页）', content: { 'application/json': { schema: WithdrawalListResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
 
 // ============================================================================
 // settle 端点（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册，之前零注册）

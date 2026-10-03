@@ -21,12 +21,16 @@ import { RiderDepositService } from './deposit.service';
 import { AdminDepositController, AdminDepositAggregateController } from './admin-deposit.controller';
 import { AdminDepositService } from './admin-deposit.service';
 import { DepositEligibilityService } from './deposit-eligibility.service';
+// 批2 B-P1-2：骑手收入/提现（R11 派生口径，复用 settle 侧 WithdrawalService 状态机）
+import { RiderEarningsController } from './earnings.controller';
+import { RiderEarningsService } from './earnings.service';
+import { SettleModule } from '../settle/settle.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   // RealtimeModule 提供 RealtimeGateway（RiderLocationController 注入，
   // 复用 WS 广播 order:location，与 dispatch.module 同模式）
-  imports: [RealtimeModule],
+  imports: [RealtimeModule, SettleModule],
   controllers: [
     RiderApplicationController,
     RiderController,
@@ -38,8 +42,10 @@ import { RealtimeModule } from '../realtime/realtime.module';
     // 保证金 admin 侧（批 C，2026-09-02）：tiers/locations/requests + 聚合详情/仓负载
     AdminDepositController,
     AdminDepositAggregateController,
+    // 批2 B-P1-2：骑手收入/流水/提现 4 端点
+    RiderEarningsController,
   ],
-  providers: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService],
-  exports: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService],
+  providers: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService],
+  exports: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService],
 })
 export class RiderModule {}
