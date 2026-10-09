@@ -229,6 +229,16 @@ import {
   RiderEarningsTransactionsResponse,
   RiderWithdrawalCreateInput,
   RiderWithdrawalQuery,
+  // rider order history（骑手端订单历史端点，方案v2-20261009，R12 互斥口径）
+  RiderOrderHistoryItem,
+  RiderOrderHistoryDetailResponse,
+  RiderOrderHistoryStatusCounts,
+  RiderOrderHistoryStatusCountsResponse,
+  // rider order history 批1（history 列表 + today 统计）
+  RiderOrderHistoryQuery,
+  RiderOrderHistoryListResponse,
+  RiderOrderTodayStats,
+  RiderOrderTodayStatsResponse,
   // settle（W3 M 流程：结算 + 提现，审查 P0-1 修复补注册）
   SettlementSchema,
   SettlementQuery,
@@ -4987,6 +4997,76 @@ registry.register('RiderEarningsTransactionsQuery', RiderEarningsTransactionsQue
 registry.register('RiderEarningsTransactionsResponse', RiderEarningsTransactionsResponse);
 registry.register('RiderWithdrawalCreateInput', RiderWithdrawalCreateInput);
 registry.register('RiderWithdrawalQuery', RiderWithdrawalQuery);
+
+// ---- 骑手订单历史（骑手端订单历史端点，方案v2-20261009，R12 互斥口径） ----
+registry.register('RiderOrderHistoryItem', RiderOrderHistoryItem);
+registry.register('RiderOrderHistoryDetailResponse', RiderOrderHistoryDetailResponse);
+registry.register('RiderOrderHistoryStatusCounts', RiderOrderHistoryStatusCounts);
+registry.register('RiderOrderHistoryStatusCountsResponse', RiderOrderHistoryStatusCountsResponse);
+// 批1（P1）：history 列表 + today 统计
+registry.register('RiderOrderHistoryQuery', RiderOrderHistoryQuery);
+registry.register('RiderOrderHistoryListResponse', RiderOrderHistoryListResponse);
+registry.register('RiderOrderTodayStats', RiderOrderTodayStats);
+registry.register('RiderOrderTodayStatsResponse', RiderOrderTodayStatsResponse);
+
+// 骑手订单历史列表（R12 三态全查，status 过滤在派生映射后做，offset 分页）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/orders/history',
+  tags: ['rider'],
+  description:
+    '骑手订单历史列表（方案v2 §2.1，R12 互斥口径，Role: RIDER）。三态全查（DELIVERED / FAILED / 关联订单 CANCELLED）后派生 status：Order CANCELLED → cancelled（优先）；task FAILED 且订单未取消 → transferred；task DELIVERED 且订单未取消 → completed。query.status 过滤在派生映射后做（可选 completed/cancelled/transferred，不透传 Prisma 枚举）。deliveredAt/updatedAt 倒序，page/pageSize + total（offset 分页）。字段口径：income = order.deliveryFee（分，配送费收入）；completedAt = deliveredAt（completed）/ updatedAt（其余）epoch ms；durationMinutes = pickedUpAt→deliveredAt 差值缺失给 0；dropoffName = order.deliveryAddress.name；pickupName = warehouse.name.en 回退 code；distanceKm = pickup→dropoff Haversine 回退计费距离兜底 0。金额单位分。',
+  request: { query: RiderOrderHistoryQuery },
+  responses: {
+    200: { description: '历史订单列表（offset 分页）', content: { 'application/json': { schema: RiderOrderHistoryListResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手订单今日统计（count 与 totalIncome 同口径只算 completed，Dili 当日）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/orders/stats/today',
+  tags: ['rider'],
+  description:
+    '骑手订单今日统计（方案v2 §2.3，R12 口径，Role: RIDER）。count = 今日（Asia/Dili 当日，shared/datetime MARKET_TIMEZONE helper，非手写 offset）completed 任务数；totalIncome = 同口径 order.deliveryFee 求和（分）——count 与 totalIncome 严格同口径只算 completed。前端 profile 页「今日订单/收入」+ history 页底栏消费。',
+  responses: {
+    200: { description: '今日统计（count + totalIncome 分）', content: { 'application/json': { schema: RiderOrderTodayStatsResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手订单详情（delivery task id；R12 三态派生，income=配送费分）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/orders/{id}',
+  tags: ['rider'],
+  description:
+    '骑手订单历史详情（方案v2 §2.4，Role: RIDER）。路径参数 = history 列表项 id（delivery task id）。响应同 §2.1 单对象：R12 互斥口径派生 status（Order CANCELLED → cancelled 优先；task FAILED 且订单未取消 → transferred；DELIVERED → completed）；income = order.deliveryFee（分，配送费收入）；completedAt = deliveredAt（completed）/ updatedAt（其余）；durationMinutes = pickedUpAt→deliveredAt 差值缺失给 0。归属校验：task.riderId ≠ 当前骑手 RiderProfile.id → 404（E-RIDER-001，与 listMyTasks 不泄露他人任务存在性同语义）。',
+  request: { params: z.object({ id: Id }) },
+  responses: {
+    200: { description: '历史订单详情（单对象）', content: { 'application/json': { schema: RiderOrderHistoryDetailResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-RIDER-001 任务不存在或不属于当前骑手', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 骑手订单历史状态计数（R12 互斥：all = completed + cancelled + transferred）
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/rider/orders/stats/status-counts',
+  tags: ['rider'],
+  description:
+    '骑手订单历史状态计数（方案v2 §2.2，R12 互斥口径，Role: RIDER）。数据源同 history 列表过滤条件聚合 count：completed = task DELIVERED 且订单未取消；cancelled = 关联 Order CANCELLED（优先，双命中时不计入 completed/transferred）；transferred = task FAILED 且订单未取消；all = 三者之和（tab 徽标不双计）。历史数据注记：当前库 99 FAILED 任务全部关联 CANCELLED 订单 → transferred 预期 0，属预期非 bug。',
+  responses: {
+    200: { description: '四值状态计数', content: { 'application/json': { schema: RiderOrderHistoryStatusCountsResponse } } },
+    401: { description: '未认证', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: '非 RIDER', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
 
 // 骑手收入汇总
 registry.registerPath({

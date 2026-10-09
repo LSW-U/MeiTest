@@ -24,6 +24,9 @@ import { DepositEligibilityService } from './deposit-eligibility.service';
 // 批2 B-P1-2：骑手收入/提现（R11 派生口径，复用 settle 侧 WithdrawalService 状态机）
 import { RiderEarningsController } from './earnings.controller';
 import { RiderEarningsService } from './earnings.service';
+// 骑手端订单历史（批1 P1 + 批2 P2，方案v2-20261009：history/today/status-counts/详情）
+import { RiderOrderHistoryController } from './order-history.controller';
+import { RiderOrderHistoryService } from './order-history.service';
 import { SettleModule } from '../settle/settle.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 
@@ -44,8 +47,10 @@ import { RealtimeModule } from '../realtime/realtime.module';
     AdminDepositAggregateController,
     // 批2 B-P1-2：骑手收入/流水/提现 4 端点
     RiderEarningsController,
+    // 骑手端订单历史（批1 P1 + 批2 P2）：history + today + status-counts + 详情
+    RiderOrderHistoryController,
   ],
-  providers: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService],
-  exports: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService],
+  providers: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService, RiderOrderHistoryService],
+  exports: [RiderService, RiderDepositService, AdminDepositService, DepositEligibilityService, RiderEarningsService, RiderOrderHistoryService],
 })
 export class RiderModule {}

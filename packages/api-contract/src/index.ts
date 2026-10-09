@@ -26,6 +26,7 @@ export * from './schemas/refund';
 export * from './schemas/review';
 export * from './schemas/rider';
 export * from './schemas/rider-earnings';
+export * from './schemas/rider-order-history';
 export * from './schemas/search';
 export * from './schemas/settle';
 export * from './schemas/shop';
