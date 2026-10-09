@@ -6,7 +6,9 @@
  * 数据形态（Warehouse.operatingHours Json?，契约 warehouse.ts OperatingHours 同构）：
  *   `{ mon..sun: { open: 'HH:mm' | '', close: 'HH:mm' | '', rest?: boolean } }`
  *   - rest: true 或 open/close 为空字符串 = 休息日（不营业）
- *   - 本期不跨天（T5-d 拍板）：close <= open 的日 = 异常数据 → 视为该日打烊 + log.warn
+ *   - 跨午夜窗口（close < open，如 22:20-00:50）= 合法营业窗口（2026-10-09 修复，
+ *     原 T5-d「不跨天」拍板被 CI 动态窗口用例实证推翻）；close === open 仍视为
+ *     异常数据 → 该日打烊 + log.warn
  *
  * 防御解析（v2 风险 1）：
  *   - operatingHours 为 null / 非对象 / 缺当日键 → 视为 24h 营业（保守不打烊）
@@ -117,9 +119,20 @@ export function isWarehouseOpen(operatingHours: OperatingHoursLike, now: Date = 
   if (!operatingHours || typeof operatingHours !== 'object') return true;
 
   const { hour, minute, dayKey } = diliParts(now);
+  const nowMin = hour * 60 + minute;
   const day = operatingHours[dayKey] as DayHours | undefined;
   // 缺当日键 → 同样保守视为营业
   if (!day || typeof day !== 'object') return true;
+
+  // 跨午夜窗口的凌晨余段挂在**前一日**键上（昨日 22:20-00:50，今日 00:xx 仍属昨日营业区间）：
+  // 昨日 close < open 且 nowMin < 昨日 close → 仍在昨日窗口内 → 营业
+  const prevKey = DAY_KEYS[(DAY_KEYS.indexOf(dayKey) + 6) % 7];
+  const prev = operatingHours[prevKey] as DayHours | undefined;
+  if (prev && typeof prev === 'object' && prev.rest !== true && prev.open !== '' && prev.close !== '') {
+    const pOpen = parseHHmm(prev.open);
+    const pClose = parseHHmm(prev.close);
+    if (pOpen !== null && pClose !== null && pClose < pOpen && nowMin < pClose) return true;
+  }
 
   // 休息日
   if (day.rest === true) return false;
@@ -138,18 +151,22 @@ export function isWarehouseOpen(operatingHours: OperatingHoursLike, now: Date = 
     });
     return false;
   }
-  // 跨零点异常数据（close <= open）→ 本期不支持，视为该日打烊 + log.warn（T5-d 拍板）
-  if (close <= open) {
+  // close === open → 异常数据，视为该日打烊 + log.warn
+  if (close === open) {
     logger.warn({
-      msg: 'OPERATING_HOURS_OVERNIGHT_UNSUPPORTED',
+      msg: 'OPERATING_HOURS_OVERNIGHT_INVALID',
       day: dayKey,
       open: day.open,
       close: day.close,
     });
     return false;
   }
+  // 跨午夜窗口（close < open）：营业区间环绕零点 → now ≥ open（当晚段）；
+  // 次日凌晨段（now < close）已由上方 prev 检查覆盖，此处兜底当日键同款窗口
+  if (close < open) {
+    return nowMin >= open;
+  }
 
-  const nowMin = hour * 60 + minute;
   return nowMin >= open && nowMin < close;
 }
 
@@ -181,7 +198,9 @@ export function nextOpenAt(operatingHours: OperatingHoursLike, now: Date = new D
     if (hours.open === '' || hours.close === '') continue;
     const open = parseHHmm(hours.open);
     const close = parseHHmm(hours.close);
-    if (open === null || close === null || close <= open) continue; // 畸形/跨零点日跳过（warn 已在 isWarehouseOpen 记）
+    if (open === null || close === null || close === open) continue; // 畸形/异常日跳过（warn 已在 isWarehouseOpen 记）
+    // 跨午夜窗口（close < open）无需特判：「下一次开门事件」只看当日 open——
+    // 已过 open（当晚段营业中）→ 跳到下一天；未到 open（含凌晨余段，nowMin < close < open）→ 今日 open
     // 今天：还没到开门点 → 今天 open；已过开门点 → 看下一天
     if (offset === 0 && nowMin >= open) continue;
     return diliWallToInstant(now, offset, open);

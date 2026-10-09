@@ -93,9 +93,23 @@ describe('isWarehouseOpen（A3/T5-c 本期不跨天，Dili 墙钟）', () => {
     expect(isWarehouseOpen(hours, DILI_THU_0830)).toBe(false);
   });
 
-  it('跨零点异常数据（close <= open）→ false（T5-d 拍板：本期不支持跨天营业）', () => {
-    const hours = { ...FULL_WEEK, thu: { open: '22:00', close: '06:00' } };
-    expect(isWarehouseOpen(hours, DILI_THU_2330)).toBe(false); // Dili 23:30 在 22:00-06:00 区间内，但跨零点不支持 → 打烊
+  it('跨午夜合法窗口（close < open，如 22:20-00:50）→ 环绕零点判定（2026-10-09 修复）', () => {
+    const hours = { ...FULL_WEEK, thu: { open: '22:20', close: '00:50' } };
+    // Dili 周四 23:30 在当晚段（≥22:20）→ 营业
+    expect(isWarehouseOpen(hours, DILI_THU_2330)).toBe(true);
+    // Dili 周四 22:19 → 未到 open → 打烊
+    expect(isWarehouseOpen(hours, utcToDiliWall(2026, 9, 10, 13, 19))).toBe(false);
+    // Dili 周四 22:20 整 → 营业
+    expect(isWarehouseOpen(hours, utcToDiliWall(2026, 9, 10, 13, 20))).toBe(true);
+    // Dili 周五 00:49 在次日凌晨段（<00:50）→ 营业（星期键已翻日：按周五键读同款窗口）
+    expect(isWarehouseOpen(hours, utcToDiliWall(2026, 9, 10, 15, 49))).toBe(true);
+    // Dili 周五 00:50 → 打烊（已过 close）
+    expect(isWarehouseOpen(hours, utcToDiliWall(2026, 9, 10, 15, 50))).toBe(false);
+    // Dili 周五 00:51 → 打烊（周五键同款跨午夜窗口，凌晨段已过）
+    expect(isWarehouseOpen(hours, utcToDiliWall(2026, 9, 10, 15, 51))).toBe(false);
+  });
+
+  it('close === open → false（异常数据仍打烊）', () => {
     const equal = { ...FULL_WEEK, thu: { open: '08:00', close: '08:00' } };
     expect(isWarehouseOpen(equal, DILI_THU_0830)).toBe(false);
   });
@@ -140,6 +154,49 @@ describe('nextOpenAt（A3/T5-a 预约单下次开门时间，Dili 墙钟）', ()
       Object.keys(FULL_WEEK).map((k) => [k, { open: '08:00', close: '20:00', rest: true }]),
     );
     expect(nextOpenAt(allRest, DILI_THU_0830)).toBeNull();
+  });
+
+  it('跨午夜窗口：Dili 周四 23:30 已在营业中 → 下一次 = 明日（周五）open（2026-10-09 修复）', () => {
+    const hours = { ...FULL_WEEK, thu: { open: '22:20', close: '00:50' }, fri: { open: '09:00', close: '18:00' } };
+    const next = nextOpenAt(hours, DILI_THU_2330);
+    expect(diliWallMinutesForTest(next!).dayKey).toBe('fri');
+    expect(diliWallMinutesForTest(next!).hour).toBe(9);
+  });
+
+  it('跨午夜窗口：Dili 周四 21:00 未到 open → 今日（周四）22:20 开门', () => {
+    const hours = { ...FULL_WEEK, thu: { open: '22:20', close: '00:50' } };
+    // UTC 2026-09-10 12:00 = Dili 21:00
+    const next = nextOpenAt(hours, utcToDiliWall(2026, 9, 10, 12, 0));
+    const p = diliWallMinutesForTest(next!);
+    expect(p.dayKey).toBe('thu');
+    expect(p.hour).toBe(22);
+    expect(p.minute).toBe(20);
+    // 精确毫秒：Dili 周四 22:20 = UTC 2026-09-10 13:20
+    expect(next!.toISOString()).toBe('2026-09-10T13:20:00.000Z');
+  });
+
+  it('跨午夜窗口：Dili 周五 00:30（前一日非跨午夜，仓已打烊）→ 下一次 = 今日（周五）22:20', () => {
+    const hours = { ...FULL_WEEK, fri: { open: '22:20', close: '00:50' } };
+    // UTC 2026-09-10 15:30 = Dili 周五 00:30。周四键是常规 08-20（已打烊），周五跨午夜窗口
+    // 当晚 22:20 才开 → nextOpenAt = 今日 22:20
+    const next = nextOpenAt(hours, utcToDiliWall(2026, 9, 10, 15, 30));
+    const p = diliWallMinutesForTest(next!);
+    expect(p.dayKey).toBe('fri');
+    expect(p.hour).toBe(22);
+    expect(p.minute).toBe(20);
+    // 精确毫秒：Dili 周五 22:20 = UTC 2026-09-11 13:20
+    expect(next!.toISOString()).toBe('2026-09-11T13:20:00.000Z');
+  });
+
+  it('跨午夜窗口：Dili 周六 00:30 → 周五跨午夜余段营业中（调用前提不成立），防御语义返回周六常规 open 08:00', () => {
+    // 周五跨午夜 → 周六 00:30 实际营业中，正常不会调 nextOpenAt；防御语义下
+    // 周六键 = FULL_WEEK 常规 08:00（nowMin 30 < 480）→ 返回今日（周六）08:00
+    const hours = { ...FULL_WEEK, fri: { open: '22:20', close: '00:50' } };
+    const next = nextOpenAt(hours, utcToDiliWall(2026, 9, 11, 15, 30));
+    const p = diliWallMinutesForTest(next!);
+    expect(p.dayKey).toBe('sat');
+    expect(p.hour).toBe(8);
+    expect(p.minute).toBe(0);
   });
 });
 
