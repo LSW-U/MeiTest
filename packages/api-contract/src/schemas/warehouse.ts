@@ -29,7 +29,8 @@ export const GeoJsonPoint = z.object({
  *
  * 结构约定（Warehouse 模块完善批 B，与 seed.ts/批 C 周表一致）：
  * - open/close: 'HH:mm' 或 ''（空 = 休息日）；rest: true = 休息日
- * - 非休息日（open/close 均非空且 rest 非 true）要求 close > open（不支持跨天，已知限制）
+ * - 非休息日（open/close 均非空且 rest 非 true）要求 close !== open：close > open = 常规
+ *   窗口；close < open = 合法跨午夜窗口（2026-10-09 P2-1 放行）；close === open 拒（异常数据）
  */
 export const OperatingHours = z.record(
   z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
@@ -119,7 +120,9 @@ const OPERATING_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as cons
  * 1. operatingHours 非 null/undefined 时 7 天齐全（缺日拒；zod v3 record 枚举键不强制齐全）
  * 2. 休息日约定：rest:true 或 open/close 同空 = 休息日；半空日（一空一非空）拒（P3-1，
  *    避免「未设置但 rest=false」的矛盾态入库）
- * 3. 非休息日 close > open（不支持跨天，已知限制）
+ * 3. 非休息日 close !== open：close > open = 常规窗口；close < open = 合法跨午夜窗口
+ *    （2026-10-09 P2-1 放行，与 apps/api shared/db/warehouse-hours.ts 判定口径对齐）；
+ *    close === open 拒（异常数据）
  */
 const operatingHoursComplete = (data: { operatingHours?: Record<string, unknown> | null }) =>
   !data.operatingHours || OPERATING_DAYS.every((d) => d in data.operatingHours!);
@@ -133,14 +136,14 @@ const operatingHoursSemantic = (data: {
     const hasOpen = !!day.open;
     const hasClose = !!day.close;
     if (hasOpen !== hasClose) return false; // 半空日拒
-    if (hasOpen && day.close <= day.open) return false; // 不支持跨天
+    if (hasOpen && day.close === day.open) return false; // 开门=关门异常数据
     return true;
   });
 };
 
 const OPERATING_REFINE_OPTIONS = [
   { message: 'operatingHours: all 7 days (mon..sun) are required' },
-  { message: 'operatingHours: close must be later than open on non-rest days (no cross-midnight); a day is a rest day only if rest=true or open/close are both empty' },
+  { message: 'operatingHours: close must not equal open on non-rest days (cross-midnight windows close<open are allowed); a day is a rest day only if rest=true or open/close are both empty' },
 ] as const;
 
 /** 创建仓库请求（全必填；operatingHours 可为 null = 未设置） */

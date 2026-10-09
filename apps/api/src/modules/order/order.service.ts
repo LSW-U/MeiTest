@@ -249,7 +249,8 @@ export class OrderService {
     // ===== Step 2.5: 营业时间判断（保证金批A T5-a/b/c，2026-09-10）=====
     // 单仓匹配（LIMIT 1）无候选集合：匹配仓打烊 → 该单走预约（scheduledFor=下次开门时间），
     // 不换仓不拒单（超市模式 T5-b）；未打烊 → 即时单（scheduledFor=null）。
-    // 防御解析在 isWarehouseOpen 内：无配置=24h 营业；close<=open 视为打烊（本期不跨天 T5-d）。
+    // 防御解析在 isWarehouseOpen 内：无配置=24h 营业；close<open = 合法跨午夜窗口
+    // （环绕零点判定，2026-10-09 修复）；close===open 视为异常数据打烊。
     const operatingHours = (warehouse as { operatingHours?: unknown }).operatingHours ?? null;
     const warehouseOpen = isWarehouseOpen(operatingHours as Record<string, unknown> | null);
     const scheduledFor = warehouseOpen ? null : nextOpenAt(operatingHours as Record<string, unknown> | null);

@@ -405,11 +405,16 @@ describe('operatingHours Zod（契约 UpsertWarehouseRequest safeParse，批 B�
     expect(UpsertWarehouseRequest.safeParse({ ...VALID_UPSERT, operatingHours: hours }).success).toBe(false);
   });
 
-  it('非休息日 close<=open 拒绝（不支持跨天）', () => {
+  it('跨午夜合法窗口（close<open，如 22:20-00:50）可写入（P2-1 放行，2026-10-09）', () => {
+    const overnight = { ...FULL_HOURS, sun: { open: '22:20', close: '00:50' } };
+    expect(UpsertWarehouseRequest.safeParse({ ...VALID_UPSERT, operatingHours: overnight }).success).toBe(true);
+    // Update 同源校验同样放行
+    expect(UpdateWarehouseRequest.safeParse({ operatingHours: overnight }).success).toBe(true);
+  });
+
+  it('非休息日 close===open 拒绝（开门=关门异常数据）', () => {
     const eq = { ...FULL_HOURS, sun: { open: '08:00', close: '08:00' } };
     expect(UpsertWarehouseRequest.safeParse({ ...VALID_UPSERT, operatingHours: eq }).success).toBe(false);
-    const cross = { ...FULL_HOURS, sun: { open: '22:00', close: '08:00' } };
-    expect(UpsertWarehouseRequest.safeParse({ ...VALID_UPSERT, operatingHours: cross }).success).toBe(false);
   });
 
   it('半空日拒绝（一空一非空，批 B 审查 P3-1：避免未设置但 rest=false 的矛盾态）', () => {
@@ -439,15 +444,18 @@ describe('UpdateWarehouseRequest（批 B 审查 P2-1，用户拍板选 a）', ()
     expect(UpsertWarehouseRequest.safeParse({ name: { en: 'x' }, address: 'x', isActive: true }).success).toBe(false);
   });
 
-  it('update 传 operatingHours 时仍走同源语义校验（缺日/跨天/半空日拒绝）', () => {
+  it('update 传 operatingHours 时仍走同源语义校验（缺日/close==open/半空日拒绝；跨午夜放行）', () => {
     const ok = UpdateWarehouseRequest.safeParse({ operatingHours: FULL_HOURS });
     expect(ok.success).toBe(true);
 
     const { sun: _omit, ...sixDays } = FULL_HOURS;
     expect(UpdateWarehouseRequest.safeParse({ operatingHours: sixDays }).success).toBe(false);
 
-    const cross = { ...FULL_HOURS, sun: { open: '22:00', close: '08:00' } };
-    expect(UpdateWarehouseRequest.safeParse({ operatingHours: cross }).success).toBe(false);
+    // close===open 异常数据仍拒；close<open 跨午夜合法（P2-1 放行）→ 断言通过
+    const eq = { ...FULL_HOURS, sun: { open: '08:00', close: '08:00' } };
+    expect(UpdateWarehouseRequest.safeParse({ operatingHours: eq }).success).toBe(false);
+    const overnight = { ...FULL_HOURS, sun: { open: '22:20', close: '00:50' } };
+    expect(UpdateWarehouseRequest.safeParse({ operatingHours: overnight }).success).toBe(true);
 
     const half = { ...FULL_HOURS, sun: { open: '08:00', close: '' } };
     expect(UpdateWarehouseRequest.safeParse({ operatingHours: half }).success).toBe(false);
