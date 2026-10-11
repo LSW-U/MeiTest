@@ -9,3 +9,9 @@ allowBuilds:
   msgpackr-extract: false
   prisma: true
   unrs-resolver: true
+overrides:
+  'socket.io@<4.8.4': '>=4.8.4 <5'
+  'engine.io@<6.6.10': '>=6.6.10 <7'
+  'socket.io-parser@<4.2.7': '>=4.2.7 <5'
+  'multer@<2.2.0': '>=2.2.0 <3'
+  'multer@2.2.0': '>=2.3.0 <3'

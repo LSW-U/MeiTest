@@ -1,0 +1,357 @@
+{
+  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 88 条存量（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。",
+  "entries": [
+    {
+      "key": "glob@1109842::GHSA-5j98-mcp5-4vw2",
+      "reason": "high: eslint-config-next 传递依赖，仅 lint 期"
+    },
+    {
+      "key": "next@1112593::GHSA-9g9p-9gw9-jx7f",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1112653::GHSA-h25m-26qc-wcjf",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1114897::GHSA-ggv3-7p47-pfv8",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1114940::GHSA-3x4c-7xq6-9pq8",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "lodash@1115806::GHSA-r5fr-rjxr-66jc",
+      "reason": "high: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "lodash@1115810::GHSA-f23m-r3pf-42rh",
+      "reason": "moderate: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "next@1116376::GHSA-q4gf-8mx6-v5v3",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "postcss@1117015::GHSA-qx2v-qp2m-jg93",
+      "reason": "moderate: admin-web 构建链（next/autoprefixer 内嵌）传递依赖，仅构建期"
+    },
+    {
+      "key": "next-intl@1117062::GHSA-8f24-v5vv-gm5j",
+      "reason": "moderate: admin-web i18n 库 moderate。与 next 版本联动，随 next 大版本升级一并处理"
+    },
+    {
+      "key": "next-intl@1117718::GHSA-4c35-wcg5-mm9h",
+      "reason": "moderate: admin-web i18n 库 moderate。与 next 版本联动，随 next 大版本升级一并处理"
+    },
+    {
+      "key": "next@1117931::GHSA-8h8q-6873-q5fj",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118942::GHSA-3g8h-86w9-wvmq",
+      "reason": "low: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118944::GHSA-ffhc-5mcf-pf4q",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118946::GHSA-vfv6-92ff-j949",
+      "reason": "low: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118948::GHSA-gx5p-jg67-6x7h",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118952::GHSA-h64f-5h5j-jqjh",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118954::GHSA-c4j6-fc7j-m34r",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118958::GHSA-wfc6-r584-vfw7",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1118962::GHSA-36qx-fr4f-26g5",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "uuid@1119441::GHSA-w5hq-g745-h8pq",
+      "reason": "moderate: tencentcloud-sdk-nodejs-sms 传递依赖，仓内仅使用 v4 随机语义，不触发受影响 v3/v5 路径"
+    },
+    {
+      "key": "lodash@1120370::GHSA-xxjr-mmjv-4gpg",
+      "reason": "moderate: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "js-yaml@1121859::GHSA-h67p-54hq-rp68",
+      "reason": "moderate: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "js-yaml@1121860::GHSA-h67p-54hq-rp68",
+      "reason": "moderate: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期"
+    },
+    {
+      "key": "brace-expansion@1123896::GHSA-3jxr-9vmj-r5cp",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1123897::GHSA-3jxr-9vmj-r5cp",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1123898::GHSA-3jxr-9vmj-r5cp",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "js-yaml@1123911::GHSA-52cp-r559-cp3m",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期"
+    },
+    {
+      "key": "js-yaml@1123912::GHSA-52cp-r559-cp3m",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "fast-uri@1124064::GHSA-v2hh-gcrm-f6hx",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "next@1124172::GHSA-m99w-x7hq-7vfj",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124185::GHSA-89xv-2m56-2m9x",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124187::GHSA-68g3-v927-f742",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124189::GHSA-4633-3j49-mh5q",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124191::GHSA-4c39-4ccg-62r3",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124193::GHSA-p9j2-gv94-2wf4",
+      "reason": "high: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "next@1124197::GHSA-955p-x3mx-jcvp",
+      "reason": "moderate: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "postcss@1124252::GHSA-6g55-p6wh-862q",
+      "reason": "high: admin-web 构建链（next/autoprefixer 内嵌）传递依赖，仅构建期"
+    },
+    {
+      "key": "brace-expansion@1130588::GHSA-mh99-v99m-4gvg",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1130589::GHSA-mh99-v99m-4gvg",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1130591::GHSA-mh99-v99m-4gvg",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "postcss@1130709::GHSA-fxqj-rqcc-2cmp",
+      "reason": "moderate: admin-web 构建链（next/autoprefixer 内嵌）传递依赖，仅构建期"
+    },
+    {
+      "key": "fast-uri@1130720::GHSA-7p8r-x3mc-p8w7",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1130734::GHSA-rgw5-rvv9-x895",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1130736::GHSA-rgw5-rvv9-x895",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1130737::GHSA-rgw5-rvv9-x895",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "js-yaml@1138114::GHSA-5p4m-2wfm-xmqj",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "js-yaml@1138115::GHSA-5p4m-2wfm-xmqj",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期"
+    },
+    {
+      "key": "nanoid@1138811::GHSA-28wg-ghj8-5hjv",
+      "reason": "high: admin-web 构建链（autoprefixer>postcss）传递依赖，仅构建期"
+    },
+    {
+      "key": "nanoid@1139427::GHSA-2v37-7h3g-55p8",
+      "reason": "high: admin-web 构建链（autoprefixer>postcss）传递依赖，仅构建期"
+    },
+    {
+      "key": "postcss@1139510::GHSA-r28c-9q8g-f849",
+      "reason": "high: admin-web 构建链（next/autoprefixer 内嵌）传递依赖，仅构建期"
+    },
+    {
+      "key": "fast-xml-parser@1139512::GHSA-8r6m-32jq-jx6q",
+      "reason": "high: minio 传递依赖。minio@8.0.7 为最新，上游 fast-xml-parser 修复随 minio 发版"
+    },
+    {
+      "key": "decode-uri-component@1147955::GHSA-vcc3-ghjq-m6fr",
+      "reason": "moderate: minio>query-string 传递依赖"
+    },
+    {
+      "key": "browserslist@1153171::GHSA-c83g-rgw3-j3cx",
+      "reason": "high: admin-web 构建链（autoprefixer）传递依赖，仅构建期"
+    },
+    {
+      "key": "browserslist@1153172::GHSA-73wf-gq98-2v4g",
+      "reason": "high: admin-web 构建链（autoprefixer）传递依赖，仅构建期"
+    },
+    {
+      "key": "@faker-js/faker@1158500::GHSA-qxc2-j82w-r537",
+      "reason": "high: prism mock server 工具链，仅 dev 联调 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "qs@1158506::GHSA-x5fp-wj9c-mxmx",
+      "reason": "moderate:  [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "qs@1158507::GHSA-4mjr-xmp4-gh2g",
+      "reason": "moderate:  [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "fast-uri@1158524::GHSA-f65p-4m7j-42xc",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "fast-uri@1158527::GHSA-fph4-wmhf-6fwf",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "fast-uri@1158530::GHSA-jqff-g426-hqxp",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "stream-json@1164823::GHSA-528h-pc64-c93x",
+      "reason": "moderate: minio 传递依赖，仅上传流处理，无受影响调用路径"
+    },
+    {
+      "key": "next@1193677::GHSA-p293-qw3h-jr36",
+      "reason": "critical: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "vitest@1193683::GHSA-82fw-gwwq-j7x9",
+      "reason": "moderate: 测试框架自身 advisory，仅测试期"
+    },
+    {
+      "key": "@vitest/mocker@1193684::GHSA-82fw-gwwq-j7x9",
+      "reason": "moderate: vitest 内部模块，仅测试期"
+    },
+    {
+      "key": "baseline-browser-mapping@1193686::GHSA-w5vr-8v7q-w6rv",
+      "reason": "moderate: admin-web 构建链（autoprefixer>browserslist）传递依赖，仅构建期"
+    },
+    {
+      "key": "js-yaml@1193726::GHSA-2883-xcg3-v3hh",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "js-yaml@1193727::GHSA-2883-xcg3-v3hh",
+      "reason": "high: eslint>@eslint/eslintrc / @nestjs/cli 链传递依赖，仅开发期"
+    },
+    {
+      "key": "next@1193733::GHSA-2xp9-vwfh-vxw4",
+      "reason": "critical: admin-web Next.js。升级需跨主版本 14→15/16（breaking，另行立项）"
+    },
+    {
+      "key": "fast-uri@1204921::GHSA-4c8g-83qw-93j6",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "fast-uri@1239943::GHSA-qw65-cvwx-89v3",
+      "reason": "high: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "fast-uri@1240091::GHSA-hrr3-gc8f-f4qj",
+      "reason": "moderate: @nestjs/cli>ajv / @sentry 链传递依赖，仅开发期构建用，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240100::GHSA-q2hr-2g5m-vwhr",
+      "reason": "moderate: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240101::GHSA-q2hr-2g5m-vwhr",
+      "reason": "moderate: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240103::GHSA-q2hr-2g5m-vwhr",
+      "reason": "moderate: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240104::GHSA-qhr7-859c-m2p7",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240105::GHSA-qhr7-859c-m2p7",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240107::GHSA-qhr7-859c-m2p7",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240108::GHSA-6j4f-fj2g-mc7p",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240109::GHSA-6j4f-fj2g-mc7p",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "brace-expansion@1240111::GHSA-6j4f-fj2g-mc7p",
+      "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
+    },
+    {
+      "key": "braces@1240992::GHSA-vfj7-8cjw-p6xm",
+      "reason": "high: tailwindcss>chokidar / eslint 链传递依赖，仅构建期"
+    },
+    {
+      "key": "sprintf-js@1241202::GHSA-hp3w-g68c-fv3c",
+      "reason": "moderate: prism 工具链传递依赖，仅 dev 联调 [contract] prism mock server 工具链，仅 dev 联调"
+    },
+    {
+      "key": "source-map-js@1241209::GHSA-68fv-2mgg-jv7q",
+      "reason": "high: admin-web 构建链（autoprefixer>postcss）传递依赖，仅构建期"
+    },
+    {
+      "key": "postcss-selector-parser@1241232::GHSA-rj75-hqrm-r3gf",
+      "reason": "tailwindcss>postcss-nested 传递依赖，仅构建期"
+    },
+    {
+      "key": "fast-copy@1241257::GHSA-jggr-w7fw-pc2j",
+      "reason": "moderate: pino-pretty（开发日志美化）传递依赖，仅开发期"
+    },
+    {
+      "key": "stream-json@1241262::GHSA-hqr4-qq8f-hg3x",
+      "reason": "moderate: minio 传递依赖，仅上传流处理，无受影响调用路径"
+    },
+    {
+      "key": "stream-json@1241263::GHSA-mjw6-4jj6-33hc",
+      "reason": "moderate: minio 传递依赖，仅上传流处理，无受影响调用路径"
+    }
+  ]
+}

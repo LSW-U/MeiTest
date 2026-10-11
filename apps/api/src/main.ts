@@ -17,6 +17,7 @@ import { logger as pinoLogger } from './shared/logger/logger';
 import { initSentry } from './shared/monitoring/sentry';
 import { assertAllJwtSecrets } from './shared/auth/assert-jwt-secret';
 import { assertSmsStartupConfig } from './shared/monitoring/sms-startup-check';
+import { assertPaymentStrategyConsistent } from './infrastructure/payment/payment.factory';
 import swaggerUi from 'swagger-ui-express';
 import yaml from 'yaml';
 import helmet from 'helmet';
@@ -34,6 +35,10 @@ assertAllJwtSecrets();
 // —— gateway/tencent 凭据缺失：error 日志不退进程（SMS 拒发由 sendCode 运行时兜底 503 E-SMS-001，R8）
 // —— prod + SMS_STUB_ALLOWED=true：fail-fast process.exit(1)（安全专项批1A P1-1）
 assertSmsStartupConfig();
+
+// P1-8：支付开关声明与工厂策略一致性校验（PAYMENT_STRATEGY 声明 real/列表
+// 但注册表仍有 isMock=true 策略 → fail-fast；未声明 → 维持现状 mock 短路）
+assertPaymentStrategyConsistent();
 
 // P1-8 修复：prod 强制 WS_URL 配置（漏配时 IM 客户端会拿到错误的兜底 wsUrl）
 // dev/staging 不强制（兜底 ws://localhost:3001 可用）

@@ -7,7 +7,9 @@
  *   / WECHAT_GLOBAL / ALIPAY_CN / LOCAL_PSP（批B stub 占位，available=false 挡下单）
  * - mock/stub 实现日志标 [MOCK] / [STUB]，便于排查
  *
- * 切换策略只改 .env 的 PAYMENT_STRATEGY，不改代码
+ * 切换策略 = 改本文件下方的策略注册表（payment.factory.ts STRATEGIES）。
+ * PAYMENT_STRATEGY 环境变量仅作启动断言校验（assertPaymentStrategyConsistent），
+ * 默认未声明时维持 mock 短路行为，无代码按它选策略。
  */
 
 /**

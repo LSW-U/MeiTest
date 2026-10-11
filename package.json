@@ -13,7 +13,8 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "audit:gate": "pnpm audit --json > node_modules/.audit.json || true && node scripts/gate/audit-check.mjs node_modules/.audit.json scripts/gate/audit-allowlist.json"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
