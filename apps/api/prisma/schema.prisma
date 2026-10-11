@@ -503,6 +503,8 @@ model Stock {
   // 行锁防超卖:SELECT ... WHERE warehouse_id=? AND sku_id=? AND quantity>=? FOR UPDATE
   @@unique([warehouseId, skuId])
   @@index([warehouseId])
+  // 批1性能清理（§七）：sku_id 前缀查询（batchGetProductStock），raw CONCURRENTLY 见 migration 20261012000001
+  @@index([skuId])
   @@map("stocks")
 }
 
@@ -637,6 +639,8 @@ model OrderItem {
   sku   Sku   @relation(fields: [skuId], references: [id])
 
   @@index([orderId])
+  // 批1性能清理（§七）：退款销量回滚按 sku_id 前缀查询，raw CONCURRENTLY 见 migration 20261012000002
+  @@index([skuId])
   // 统计批A（2026-09-09）：raw SQL migration 补 (product_id, order_id) 复合索引（商品排行 R9 聚合），
   // Prisma 不支持 @@index 声明为 CONCURRENTLY，见 migration 20260909000002_add_order_items_product_idx
   @@map("order_items")
@@ -953,6 +957,8 @@ model Favorite {
 
   @@unique([userId, productId])
   @@index([userId])
+  // 批1性能清理（§七）：按商品维度查收藏，raw CONCURRENTLY 见 migration 20261012000005
+  @@index([productId])
   @@map("favorites")
 }
 
@@ -1171,6 +1177,8 @@ model Settlement {
 
   @@unique([periodDate, subjectType, subjectId])
   @@index([subjectType, status])
+  // 批1性能清理（§七）：按结算对象取周期列表，raw CONCURRENTLY 见 migration 20261012000003
+  @@index([subjectType, subjectId])
   @@index([periodDate])
   @@map("settlements")
 }
@@ -1196,6 +1204,8 @@ model WithdrawalRequest {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([requesterType, status])
+  // 批1性能清理（§七）：按申请方取提现列表，raw CONCURRENTLY 见 migration 20261012000004
+  @@index([requesterType, requesterId])
   @@index([status, createdAt])
   @@map("withdrawal_requests")
 }
