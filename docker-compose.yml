@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err} # D5：env 注入（root .env 提供本地 dev 默认值；staging/prod 必须注入强口令）
       POSTGRES_DB: meimart
     ports:
       - '5432:5432'
@@ -39,13 +39,16 @@ services:
     restart: unless-stopped
     # maxmemory + volatile-lru：仅淘汰设了 TTL 的键，保护永久键（BullMQ 队列 meta/repeat、hotsearch 缓存等无 TTL 键不被淘汰）
     # 来源：DBA 批次1-3（2026-08-27）。CONFIG REWRITE 不可用（容器无 redis.conf），故在启动参数固化。
-    command: ['redis-server', '--maxmemory', '256mb', '--maxmemory-policy', 'volatile-lru']
+    # D5：requirepass 口令注入（env REDIS_PASSWORD）；healthcheck 用 CMD-SHELL 读容器内同名 env
+    command: ['redis-server', '--maxmemory', '256mb', '--maxmemory-policy', 'volatile-lru', '--requirepass', '${REDIS_PASSWORD:?err}']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?err}
     ports:
       - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -57,8 +60,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?err}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?err}
     ports:
       - '9000:9000' # S3 API
       - '9001:9001' # Web Console
@@ -90,7 +93,7 @@ services:
     environment:
       PGHOST: postgres
       PGUSER: postgres
-      PGPASSWORD: dev
+      PGPASSWORD: ${POSTGRES_PASSWORD:?err}
       PGDATABASE: meimart
       TZ: Asia/Dili
     depends_on:

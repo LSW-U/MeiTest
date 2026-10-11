@@ -49,6 +49,9 @@ export async function isApiServerUp(): Promise<boolean> {
  */
 export const API_SERVER_UP = await isApiServerUp();
 
+/** 被 describe.skip 跳过的 e2e 套件计数（describeWhenApiUp 离线分支累加） */
+let skippedSuites = 0;
+
 if (!API_SERVER_UP) {
   console.warn(
     `[e2e-guard] API server 不在线（${originOf(API)}/health 不通）→ e2e 套件全部 skip。` +
@@ -59,7 +62,25 @@ if (!API_SERVER_UP) {
 /**
  * e2e describe 守卫：server 在线 → 正常 describe；不在线 → describe.skip 全文件跳过。
  * 与原生 describe 签名一致（name + fn），fn 内 it/beforeAll/afterAll 照常写。
+ * 离线分支：套件数 +1，并在 process exit 前打印显式 skip 汇总（非静默，D4）。
  */
 export function describeWhenApiUp(name: string, fn: () => void): void {
-  (API_SERVER_UP ? describe : describe.skip)(name, fn);
+  if (API_SERVER_UP) {
+    describe(name, fn);
+    return;
+  }
+  skippedSuites += 1;
+  console.warn(`[e2e-guard] SKIP suite #${skippedSuites}: ${name}`);
+  describe.skip(name, fn);
 }
+
+// 汇总输出：beforeExit 在 vitest 环境不一定触发，仅作尽力兜底；
+// 主要可见性靠上面的逐套件 SKIP 计数行 + vitest 汇总的 skipped 数。
+process.on('beforeExit', () => {
+  if (!API_SERVER_UP && skippedSuites > 0) {
+    console.warn(
+      `[e2e-guard] e2e skip 汇总：${skippedSuites} 个套件被跳过（API server 离线）——` +
+        'skip ≠ 通过，CI/本地复核时须确认 server 在线跑真 e2e。',
+    );
+  }
+});

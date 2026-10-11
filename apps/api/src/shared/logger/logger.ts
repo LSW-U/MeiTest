@@ -16,8 +16,8 @@ import { getTraceId } from './trace-context';
 
 const globalForLogger = globalThis as unknown as { __meimartLogger?: Logger };
 
-/** 全字段 mask（password/token/secret 等） */
-const FULL_REDACT_KEYS = ['password', 'token', 'authorization', 'secret', 'apikey', 'clientsecret'];
+/** 全字段 mask（含匹配：键名小写后含任一子串即命中——accesstoken/refreshToken 等嵌套键全覆盖） */
+const FULL_REDACT_KEYS = ['password', 'token', 'authorization', 'secret', 'apikey', 'clientsecret', 'accesstoken', 'refreshtoken'];
 /**
  * 部分脱敏（last 4 digits/chars）
  *
@@ -27,7 +27,8 @@ const FULL_REDACT_KEYS = ['password', 'token', 'authorization', 'secret', 'apike
 const LAST4_KEYS = ['phone', 'telephone', 'idcard', 'mobile', 'email'];
 
 /**
- * 递归 mask 对象（精确小写匹配，WeakSet 防循环引用）
+ * 递归 mask 对象（FULL_REDACT_KEYS 含匹配：小写键名 includes 任一 redact 键即命中，
+ * WeakSet 防循环引用）
  */
 function maskObject(obj: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
   if (obj === null || typeof obj !== 'object') return obj;
@@ -41,9 +42,9 @@ function maskObject(obj: unknown, seen: WeakSet<object> = new WeakSet()): unknow
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
     const lowerK = k.toLowerCase();
-    if (FULL_REDACT_KEYS.includes(lowerK)) {
+    if (FULL_REDACT_KEYS.some((key) => lowerK.includes(key))) {
       result[k] = '[REDACTED]';
-    } else if (LAST4_KEYS.includes(lowerK)) {
+    } else if (LAST4_KEYS.some((key) => lowerK.includes(key))) {
       const s = String(v ?? '');
       result[k] = s.length <= 4 ? '***' : `***${s.slice(-4)}`;
     } else if (v !== null && typeof v === 'object') {

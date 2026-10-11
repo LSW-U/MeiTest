@@ -14,7 +14,7 @@ jobs:
   deploy:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: []
+    needs: [quality, contract]
     environment: staging
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,10 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/staging_key
           chmod 600 ~/.ssh/staging_key
-          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+          # D5：禁 ssh-keyscan（TOFU 无校验，可被中间人替换主机钥）——
+          # 改用预置指纹：secret STAGING_HOST_FINGERPRINT 为 `host:port ssh-ed25519 AAAA...`（可多行）
+          echo "${{ secrets.STAGING_HOST_FINGERPRINT }}" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Sync code to staging
         run: |

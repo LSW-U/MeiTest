@@ -17,13 +17,37 @@ function createMinio(): MinioClient {
   const port = Number(portStr ?? 9000);
   const useSSL = (process.env.OSS_ENDPOINT ?? '').startsWith('https');
 
-  return new MinioClient({
+  // D5（批2 staging 口令）：去掉 minioadmin 兜底——OSS 凭据缺失直接 fail-fast，
+  // 防止带着默认口令把 staging/prod MinIO 静默连上（口令注入由 .env / 部署 env 提供）。
+  // 惰性 throw：缺凭据返回 Proxy，首次真正调用任一方法才抛——模块加载期不炸
+  // （单测/工具脚本 import infrastructure 链不需要真实 OSS）。
+  const accessKey = process.env.OSS_ACCESS_KEY;
+  const secretKey = process.env.OSS_SECRET_KEY;
+  if (!accessKey || !secretKey) {
+    const failFast = (): never => {
+      throw new Error(
+        '[oss] OSS_ACCESS_KEY / OSS_SECRET_KEY 未配置：拒绝使用默认口令访问 MinIO/OSS。' +
+          '本地 dev 请从 .env.example 复制默认值到 .env；staging/prod 由部署环境注入强口令。',
+      );
+    };
+    return new Proxy({} as MinioClient, {
+      get() {
+        failFast();
+      },
+    });
+  }
+
+  const client = new MinioClient({
     endPoint: host,
     port,
     useSSL,
-    accessKey: process.env.OSS_ACCESS_KEY ?? 'minioadmin',
-    secretKey: process.env.OSS_SECRET_KEY ?? 'minioadmin',
+    accessKey,
+    secretKey,
   });
+  if (process.env.NODE_ENV !== 'production') {
+    globalForMinio.minio = client;
+  }
+  return client;
 }
 
 export const minio: MinioClient = globalForMinio.minio ?? createMinio();

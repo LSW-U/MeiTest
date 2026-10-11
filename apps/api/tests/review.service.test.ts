@@ -491,4 +491,32 @@ describe('ReviewService (reviews-2)', () => {
       expect(mockDb.review.findMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('getRiderReviewByOrder - P2 收口（订单存在 + 归属校验）', () => {
+    it('订单存在 + 归属 → 返骑手评价（或 null）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ id: 'o1', userId: 'u1' });
+      mockDb.riderReview.findUnique.mockResolvedValue(null);
+      const result = await service.getRiderReviewByOrder('o1', 'u1');
+      expect(result).toBeNull();
+      expect(mockDb.riderReview.findUnique).toHaveBeenCalledWith({ where: { orderId: 'o1' } });
+    });
+
+    it('订单不存在 → E-REVIEW-001 404（不查 riderReview）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(null);
+      await expect(service.getRiderReviewByOrder('o-x', 'u1')).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-001' },
+        status: 404,
+      });
+      expect(mockDb.riderReview.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('订单不归属 → E-REVIEW-005 403（不泄露他人订单骑手评价）', async () => {
+      mockDb.order.findUnique.mockResolvedValue({ id: 'o1', userId: 'other' });
+      await expect(service.getRiderReviewByOrder('o1', 'u1')).rejects.toMatchObject({
+        response: { code: 'E-REVIEW-005' },
+        status: 403,
+      });
+      expect(mockDb.riderReview.findUnique).not.toHaveBeenCalled();
+    });
+  });
 });

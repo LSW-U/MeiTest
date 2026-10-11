@@ -119,10 +119,16 @@ export class ReviewController {
     return { success: true as const, data: result };
   }
 
-  /** 订单的骑手评价（C 端订单详情展示） */
+  /** 订单的骑手评价（C 端订单详情展示；P2 收口：登录态 + 订单归属校验，对齐 listOrderReviews） */
   @Get('orders/:id/rider-review')
-  async getRiderReview(@Param('id') orderId: string) {
-    const review = await this.reviewService.getRiderReviewByOrder(orderId);
+  async getRiderReview(
+    @Param('id') orderId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const review = await this.reviewService.getRiderReviewByOrder(orderId, req.user.sub);
     return { success: true as const, data: review };
   }
 

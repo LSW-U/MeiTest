@@ -280,8 +280,18 @@ export class ReviewService {
     return reviews.map((r) => this.toReviewView(r));
   }
 
-  /** 订单的骑手评价（C 端订单详情展示） */
-  async getRiderReviewByOrder(orderId: string): Promise<RiderReviewView | null> {
+  /** 订单的骑手评价（C 端订单详情展示；P2 收口：补订单存在 + 归属校验，同 listOrderReviews 模式） */
+  async getRiderReviewByOrder(orderId: string, userId: string): Promise<RiderReviewView | null> {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, userId: true },
+    });
+    if (!order) {
+      throw new NotFoundException({ code: 'E-REVIEW-001', message: 'Order not found' });
+    }
+    if (order.userId !== userId) {
+      throw new ForbiddenException({ code: 'E-REVIEW-005', message: 'Not your order' });
+    }
     const r = await db.riderReview.findUnique({ where: { orderId } });
     return r ? this.toRiderReviewView(r) : null;
   }
