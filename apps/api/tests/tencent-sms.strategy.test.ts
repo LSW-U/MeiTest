@@ -145,9 +145,10 @@ describe('TencentSmsStrategy（批A2 T1）', () => {
     expect((err as HttpException).getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE);
   });
 
-  it('逃生门 SMS_STUB_ALLOWED=true：provider=tencent 也放行 stub（不调 SDK）', async () => {
+  it('逃生门 SMS_STUB_ALLOWED=true：provider=tencent 白名单号码也放行 stub（不调 SDK）', async () => {
     process.env.NODE_ENV = 'production';
-    const s = makeStrategy({ ...TENCENT_ENV, SMS_STUB_ALLOWED: 'true' });
+    // 安全专项批1A：prod 下 stub 收窄到 SMS_STUB_ALLOWLIST（R13：tencent 入口同样汇入 sendStub 单点）
+    const s = makeStrategy({ ...TENCENT_ENV, SMS_STUB_ALLOWED: 'true', SMS_STUB_ALLOWLIST: '+67012345678' });
     expect(s.isMock).toBe(true);
     await s.sendCode({ target: '+67012345678', scene: 'LOGIN' });
     expect(mockRedis.set).toHaveBeenCalled();

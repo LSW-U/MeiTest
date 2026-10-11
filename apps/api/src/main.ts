@@ -30,8 +30,9 @@ initSentry();
 // P0-1：JWT secret 校验紧随 Sentry 之后（漏配时 fail-fast，bootstrap 直接挂）
 assertAllJwtSecrets();
 
-// 批A R8：SMS 网关配置启动软告警（prod + gateway 缺凭据 / 逃生门开着）
-// —— 只 error 日志，不 throw 不退进程（SMS 拒发由策略构造期 fail-fast 兜底，R8）
+// 批A R8：SMS 配置启动检查（prod）
+// —— gateway/tencent 凭据缺失：error 日志不退进程（SMS 拒发由 sendCode 运行时兜底 503 E-SMS-001，R8）
+// —— prod + SMS_STUB_ALLOWED=true：fail-fast process.exit(1)（安全专项批1A P1-1）
 assertSmsStartupConfig();
 
 // P1-8 修复：prod 强制 WS_URL 配置（漏配时 IM 客户端会拿到错误的兜底 wsUrl）

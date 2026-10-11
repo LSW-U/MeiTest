@@ -32,11 +32,17 @@ import { normalizePhoneE164 } from '@meimart/api-contract';
  * ⚠️ 仅测试语义：E2E_RATELIMIT_BYPASS 不得在生产 env / GitHub Secret 配置——
  * 它会让真实 SMS 发码端点失去 IP 维防刷防线（phone/deviceId 维在 service 层不受影响，
  * 但 IP 维是边缘第一道）。生产部署清单不应出现该变量（.env.example 不提供此键）。
+ *
+ * 安全专项收尾批1A（P2-1，2026-10-11）：production 下本豁免**恒 false**——即使
+ * 误配 E2E_RATELIMIT_BYPASS=true 也不生效（体检建议「忽略 flag」路线，不额外抛错
+ * 避免误伤 CI）。dev/test 行为不变。
  */
 const E2E_RATELIMIT_BYPASS_KEYS = ['sms:ip:', 'sms:phone:'];
 
-/** e2e 豁免开关（env 每次现读，测试切换无需重置缓存） */
-function isE2eRateLimitBypass(): boolean {
+/** e2e 豁免开关（env 每次现读，测试切换无需重置缓存；prod 恒 false——P2-1）。
+ * export 仅测试消费（批1A spec），行为纯函数无副作用 */
+export function isE2eRateLimitBypass(): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
   return process.env.E2E_RATELIMIT_BYPASS === 'true';
 }
 

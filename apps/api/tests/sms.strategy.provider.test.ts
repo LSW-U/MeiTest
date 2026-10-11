@@ -130,9 +130,10 @@ describe('SmsStrategy provider 分流（批A R1）', () => {
     );
   });
 
-  it('逃生门 SMS_STUB_ALLOWED=true：prod 缺凭据不拒发，sendCode 放行 stub（isMock=true）', async () => {
+  it('逃生门 SMS_STUB_ALLOWED=true：prod 缺凭据不拒发，白名单号码 sendCode 放行 stub（isMock=true）', async () => {
     process.env.NODE_ENV = 'production';
-    const s = makeStrategy({ SMS_STUB_ALLOWED: 'true' });
+    // 安全专项批1A：prod 下 stub 收窄到 SMS_STUB_ALLOWLIST（R13 收口 sendStub 单点）
+    const s = makeStrategy({ SMS_STUB_ALLOWED: 'true', SMS_STUB_ALLOWLIST: '+67012345678' });
     expect(s.isMock).toBe(true);
     await s.sendCode({ target: '+67012345678', scene: 'LOGIN' });
     expect(mockRedis.set).toHaveBeenCalled(); // stub 通道正常落码
@@ -190,7 +191,7 @@ describe('maskSmsPhone 日志脱敏（N-2 第3项）', () => {
   it('stub 与 gateway 通道日志均输出脱敏 phone（不泄漏明文）', async () => {
     const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     try {
-      // stub 通道
+      // stub 通道（dev 无 allowlist 维持原行为；若 prod 须配 SMS_STUB_ALLOWLIST，见批1A）
       const stub = makeStrategy({ SMS_PROVIDER: 'stub' });
       await stub.sendCode({ target: '+67012345678', scene: 'LOGIN' });
       // gateway 通道

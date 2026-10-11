@@ -87,11 +87,19 @@ describe('assertSmsStartupConfig（R8 启动软告警，不退进程）', () => 
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
-  it('prod + SMS_STUB_ALLOWED=true → error 告警（逃生门开着）', () => {
+  it('prod + SMS_STUB_ALLOWED=true → error 日志 + process.exit(1)（安全专项批1A fail-fast）', () => {
     process.env.NODE_ENV = 'production';
     process.env.SMS_STUB_ALLOWED = 'true';
-    assertSmsStartupConfig();
-    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'STUB_ESCAPE_HATCH_ON' }));
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('__process_exit__');
+    }) as never);
+    try {
+      expect(() => assertSmsStartupConfig()).toThrow('__process_exit__');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'STUB_ESCAPE_HATCH_ON' }));
+    } finally {
+      exitSpy.mockRestore();
+    }
   });
 
   it('prod + 显式 stub → 不告警（stub 是显式决策）', () => {

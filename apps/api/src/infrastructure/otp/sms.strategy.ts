@@ -10,7 +10,11 @@
  *     缺凭据 → sendCode 运行时拒发 503 E-SMS-001（P1-1 审查修复：构造期不校验不
  *     throw，否则 otp.factory 模块作用域 new 会让整个 API 启动即死，违背 R8
  *     「不退进程，爆炸半径=登录」）
- *   - 逃生门：SMS_STUB_ALLOWED=true 时 prod 也允许 stub（R8，仅救急）
+ *   - 逃生门：SMS_STUB_ALLOWED=true 时 prod 也允许 stub（R8，仅救急）；
+ *     安全专项批1A（2026-10-11）收窄：prod 下 stub 必须配 SMS_STUB_ALLOWLIST
+ *     （逗号分隔 E.164 手机号，trim 后精确全等），只有白名单号码才发固定码，
+ *     非白名单号码一律 503 E-SMS-001 拒发（防生产全网可收固定验证码）。
+ *     dev/test 无 allowlist 时维持原行为（stub 全放行）。
  *
  * provider 解析：模块级缓存（照抄 push.strategy.ts:38-80 骨架，测试用
  * clearSmsProviderCache() 重置；env 只在进程启动时读取，缓存安全）。
@@ -77,6 +81,31 @@ export function smsUnavailableException(detail: string): HttpException {
     },
     HttpStatus.SERVICE_UNAVAILABLE,
   );
+}
+
+/**
+ * prod stub 白名单（安全专项收尾批1A，R13 收口实现约束）
+ *
+ * SMS_STUB_ALLOWLIST = 逗号分隔的 E.164 手机号，trim 后**精确全等**匹配（D1 拍板：
+ * 不做前缀/正则，零歧义，演示多号就多写几个）。
+ *
+ * 三者关系（A4 验收线）：
+ *   - resolveProvider()：决定走哪条通道（stub/gateway/tencent），与白名单无关；
+ *     gateway 缺凭据时 resolveGatewayOrEscape() 回退 'stub'、tencent 逃生门
+ *     sendCode 直接回 sendStub——stub 逃生门因此有**两条入口**。
+ *   - resolveGatewayOrEscape()：gateway 通道的逃生门入口（:95 判 SMS_STUB_ALLOWED）。
+ *   - 白名单判断**收口到 sendStub() 单点**：两条入口最终都汇入 sendStub()，
+ *     在此处统一判 prod + 白名单，漏掉任何一条入口都会让收窄形同虚设。
+ */
+function isProd(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+function readStubAllowlist(): string[] {
+  return (process.env.SMS_STUB_ALLOWLIST ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -208,8 +237,28 @@ export class SmsStrategy implements OtpStrategy {
     }
   }
 
-  /** dev stub：固定验证码落 Redis，日志标 [SMS_STUB]（W1 行为保持） */
+  /**
+   * dev/prod-allowlisted stub：固定验证码落 Redis，日志标 [SMS_STUB]（W1 行为保持）
+   *
+   * 安全专项批1A（R13 收口单点）：stub 逃生门两条入口（gateway
+   * resolveGatewayOrEscape 回退 + tencent sendCode 分支）都汇入本方法，
+   * prod 白名单收窄在此统一执行——非白名单号码 503 E-SMS-001 拒发。
+   */
   private async sendStub(input: OtpSendInput): Promise<OtpSendOutput> {
+    if (isProd() && !readStubAllowlist().includes(input.target.trim())) {
+      // R17 拒发计数：not_allowlisted 分桶（安全专项批1A 新增）
+      logger.warn({
+        msg: 'SMS_SEND_REFUSED',
+        reason: 'not_allowlisted',
+        provider: 'stub',
+        phone: maskSmsPhone(input.target),
+        scene: input.scene,
+        note: 'SMS_STUB_ALLOWED=true in production but phone not in SMS_STUB_ALLOWLIST; refusing OTP (503 E-SMS-001)',
+      });
+      throw smsUnavailableException(
+        'phone not in SMS_STUB_ALLOWLIST (stub escape hatch is allowlist-only in production)',
+      );
+    }
     const stubCode = process.env.SMS_STUB_CODE ?? '123456';
     const key = `${KEY_PREFIX}${input.scene}:${input.target}`;
     await redis.set(key, stubCode, 'EX', CODE_TTL_SECONDS);
