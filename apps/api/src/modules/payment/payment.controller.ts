@@ -46,10 +46,21 @@ export class PaymentController {
     return { success: true as const, data: { items } };
   }
 
-  /** 查询 PaymentIntent 状态 */
+  /**
+   * 查询 PaymentIntent 状态（仅订单本人可见，归属校验对齐 refund/order 模式）
+   *
+   * 订单不存在或非本人统一 E-ORDER-004（防枚举，不区分「不存在」与「非本人」）
+   */
   @Get(':orderId')
   @Audit({ resource: 'PaymentIntent' })
-  async getIntent(@Param('orderId') orderId: string) {
+  async getIntent(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const order = await this.orderService.getOrderForOwnership(orderId);
+    if (!order || order.userId !== req.user.sub) {
+      throw new HttpException({ code: 'E-ORDER-004', message: 'Order not found' }, HttpStatus.NOT_FOUND);
+    }
     const intent = await this.paymentService.getIntentByOrder(orderId);
     return { success: true as const, data: intent };
   }
@@ -80,13 +91,23 @@ export class PaymentController {
    * 银行转账凭证上传
    *
    * MVP 假设客户端直接传 OSS 上传后的 URL（OSS 客户端预签名上传由 W 流程 catalog 接入时统一封装）
+   *
+   * 归属校验（P1-2）：仅订单本人可上传，防覆写他人 intent 凭证
    */
   @Post(':orderId/receipt')
   @Audit({ resource: 'PaymentIntent' })
   async uploadReceipt(
     @Param('orderId') orderId: string,
     @Body(new ZodValidationPipe(UploadReceiptRequest)) body: z.infer<typeof UploadReceiptRequest>,
+    @Req() req: RequestWithUser,
   ) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const order = await this.orderService.getOrderForOwnership(orderId);
+    if (!order || order.userId !== req.user.sub) {
+      throw new HttpException({ code: 'E-ORDER-004', message: 'Order not found' }, HttpStatus.NOT_FOUND);
+    }
     const intent = await this.paymentService.uploadReceipt(orderId, body.receiptUrl);
     return { success: true as const, data: intent };
   }

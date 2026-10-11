@@ -121,10 +121,13 @@ export class ClientRefundController {
     return { success: true as const, data: refunds };
   }
 
-  /** 退款详情 */
+  /** 退款详情（客户端视角：仅本人可见，归属校验在 service E-AUTH-012） */
   @Get(':id')
-  async detail(@Param('id', new ParseUUIDPipe()) id: string) {
-    const refund = await this.refundService.getRefundDetail(id);
+  async detail(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: RequestWithUser) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const refund = await this.refundService.getRefundDetail(id, req.user.sub);
     return { success: true as const, data: refund };
   }
 
