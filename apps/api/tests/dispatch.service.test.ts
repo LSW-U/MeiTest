@@ -410,7 +410,9 @@ describe('DispatchService', () => {
       );
       mockHelpers.withTransaction.mockImplementation(async (fn) =>
         fn({
-          deliveryTask: { update: txDeliveryTaskUpdate },
+          // P1-7：pickupTask 守卫翻转（乐观锁成功 count=1）
+          $executeRaw: vi.fn().mockResolvedValue(1),
+          deliveryTask: { update: txDeliveryTaskUpdate, findUnique: vi.fn().mockResolvedValue({ status: 'PICKED_UP' }) },
           order: { update: txOrderUpdate },
           refund: { update: vi.fn() },
         }),
@@ -446,7 +448,9 @@ describe('DispatchService', () => {
       );
       mockHelpers.withTransaction.mockImplementation(async (fn) =>
         fn({
-          deliveryTask: { update: txDeliveryTaskUpdate },
+          // P1-7：pickupTask 守卫翻转（乐观锁成功 count=1）
+          $executeRaw: vi.fn().mockResolvedValue(1),
+          deliveryTask: { update: txDeliveryTaskUpdate, findUnique: vi.fn().mockResolvedValue({ status: 'PICKED_UP' }) },
           order: { update: vi.fn().mockResolvedValue({}) },
           refund: { update: vi.fn() },
         }),
@@ -545,6 +549,145 @@ describe('DispatchService', () => {
           evidenceUrls: ['http://x/1.jpg'],
         }),
       ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-003' } });
+    });
+  });
+
+  // ============================================================
+  // A2.6（P1-7，方案v2 20261011）：并发取货/送达只计一次积分/销量
+  // COD 与非 COD 一并断言（方案 v2 修正：CashCollection 零唯一约束，
+  // COD 无 DB 兜底——WHERE status 守卫是四项计数唯一防线）。
+  // 守卫语义：tx.$executeRaw UPDATE ... WHERE id AND status IN (前置状态)，
+  // 赢家 flipped=1 继续计数；输家 flipped=0 → E-DISPATCH-004 回滚，计数不落。
+  // ============================================================
+  describe('A2.6 - P1-7 WHERE status 守卫（并发取货/送达只计一次）', () => {
+    function setupDeliverTask(status: string, paymentMethod: 'COD' | 'WECHAT') {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({
+          riderId: 'r1',
+          status,
+          taskType: 'delivery',
+          orderId: 'order-1',
+          order: {
+            orderNo: 'MM1',
+            payableAmount: 100,
+            paymentMethod,
+            deliveryFee: 250,
+          },
+        }),
+      );
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED', taskType: 'delivery' }),
+      );
+      mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1' });
+      // tx 复用 mockDb（P1-2 先例）；守卫经 mockDb.$executeRaw
+      mockHelpers.withTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+      );
+    }
+
+    it('并发取货输家（flipped=0）→ E-DISPATCH-004 且不推进 Order 状态机（PICKED 不落）', async () => {
+      mockDb.deliveryTask.findUnique.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'ASSIGNED', taskType: 'delivery', orderId: 'order-1' }),
+      );
+      const txOrderUpdate = vi.fn().mockResolvedValue({});
+      mockDb.$executeRaw.mockResolvedValue(0); // 输家：并发赢家已翻走 ASSIGNED
+      mockDb.deliveryTask.findUnique
+        .mockResolvedValueOnce(buildTask({ riderId: 'r1', status: 'ASSIGNED', taskType: 'delivery' }))
+        .mockResolvedValueOnce({ status: 'PICKED_UP' }); // 事务内输家重查
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          $executeRaw: mockDb.$executeRaw,
+          deliveryTask: { update: vi.fn(), findUnique: vi.fn().mockResolvedValue({ status: 'PICKED_UP' }) },
+          order: { update: txOrderUpdate },
+          refund: { update: vi.fn() },
+        }),
+      );
+
+      await expect(
+        service.pickupTask({ riderId: 'r1', taskId: 'task-1' }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-004' } });
+
+      // 守卫 SQL 带状态前置（WHERE ... AND status = 'ASSIGNED'）
+      expect(mockDb.$executeRaw).toHaveBeenCalledTimes(1);
+      const sql = mockDb.$executeRaw.mock.calls[0][0].join(' ');
+      expect(sql).toContain("status = 'ASSIGNED'");
+      // 输家：Order 状态机不推进（PICKED 不落库）
+      expect(txOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it('并发送达输家（flipped=0）→ E-DISPATCH-004 回滚：销量/积分/收款全不落（COD 无 DB 兜底，守卫是唯一防线）', async () => {
+      setupDeliverTask('PICKED_UP', 'COD');
+      mockDb.$executeRaw.mockResolvedValue(0); // 输家：另一笔并发送达已翻走
+      mockDb.deliveryTask.findUnique
+        .mockResolvedValueOnce(buildTask({
+          riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery', orderId: 'order-1',
+          order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD' },
+        }))
+        .mockResolvedValueOnce({ status: 'DELIVERED' }); // 事务内输家重查
+      mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'DELIVERED' }));
+
+      await expect(
+        service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 }),
+      ).rejects.toMatchObject({ response: { code: 'E-DISPATCH-004' } });
+
+      // 守卫 SQL 前置状态含 PICKED_UP/DELIVERING 双值（第二次调用=送达守卫，第一次=前置断言无关）
+      const deliverGuardCall = mockDb.$executeRaw.mock.calls.find((call) =>
+        call[0].join(' ').includes('IN ('),
+      );
+      expect(deliverGuardCall![0].join(' ')).toContain("IN ('PICKED_UP', 'DELIVERING')");
+      // COD 四项计数全不落（守卫翻转失败 → 事务内计数代码未执行）
+      expect(mockSalesIncrement).not.toHaveBeenCalled(); // 销量
+      expect(mockDb.cashCollection.create).not.toHaveBeenCalled(); // 收款
+      expect(mockDb.riderProfile.update).not.toHaveBeenCalled(); // 积分
+      expect(mockDb.order.update).not.toHaveBeenCalled(); // 订单状态
+    });
+
+    it('并发送达赢家（flipped=1）→ COD 单笔送达销量/积分/收款正常落（计数只此一次）', async () => {
+      setupDeliverTask('PICKED_UP', 'COD');
+      mockDb.$executeRaw.mockResolvedValue(1); // 赢家
+      mockSalesIncrement.mockResolvedValue(undefined);
+      mockDb.cashCollection.create.mockResolvedValue({ id: 'cash-1' });
+      mockDb.riderProfile.findUnique
+        .mockResolvedValueOnce({ id: 'r1' }) // resolveRiderProfileId
+        .mockResolvedValueOnce({ points: 110 }); // 事务内重读 points 算 tier
+
+      await service.deliverTask({ riderId: 'r1', taskId: 'task-1', collectedAmount: 100 });
+
+      // 守卫 SQL 翻转成功 → 四项计数各落一次
+      expect(mockSalesIncrement).toHaveBeenCalledTimes(1);
+      expect(mockDb.cashCollection.create).toHaveBeenCalledTimes(1);
+      expect(mockDb.riderProfile.update).toHaveBeenCalledTimes(2); // increment points + set tier
+      expect(mockDb.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'DELIVERED_PAID' }),
+        }),
+      );
+    });
+
+    it('非 COD（预付 WECHAT）并发送达赢家 → DELIVERED 状态推进，无收款/销量（销量已在 markPaid 累加）', async () => {
+      setupDeliverTask('PICKED_UP', 'WECHAT');
+      mockDb.$executeRaw.mockResolvedValue(1); // 赢家
+      mockDb.order.update.mockResolvedValue({});
+      mockDb.deliveryTask.update.mockResolvedValue(
+        buildTask({ riderId: 'r1', status: 'DELIVERED', taskType: 'delivery' }),
+      );
+
+      const result = await service.deliverTask({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(result.status).toBe('DELIVERED');
+      expect(mockDb.order.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: 'DELIVERED' }),
+        }),
+      );
+      // 预付单：deliverTask 不建收款、不累加销量（markPaidTx 已累加）
+      expect(mockDb.cashCollection.create).not.toHaveBeenCalled();
+      expect(mockSalesIncrement).not.toHaveBeenCalled();
+      // 守卫 SQL 同样前置状态（非 COD 与 COD 共用同一唯一防线）
+      const sql2 = mockDb.$executeRaw.mock.calls.find((call) =>
+        call[0].join(' ').includes('IN ('),
+      );
+      expect(sql2![0].join(' ')).toContain("IN ('PICKED_UP', 'DELIVERING')");
     });
   });
 
@@ -1017,12 +1160,15 @@ describe('DispatchService', () => {
       );
       mockHelpers.withTransaction.mockImplementation(async (fn) =>
         fn({
+          // P1-7：pickupTask 守卫翻转（乐观锁成功 count=1）
+          $executeRaw: vi.fn().mockResolvedValue(1),
           deliveryTask: {
             update: vi
               .fn()
               .mockResolvedValue(
                 buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'return', refundId: 'refund-1' }),
               ),
+            findUnique: vi.fn().mockResolvedValue({ status: 'PICKED_UP' }),
           },
           order: { update: vi.fn().mockResolvedValue({}) },
           refund: { update: txRefundUpdate },
@@ -1052,10 +1198,13 @@ describe('DispatchService', () => {
       );
       mockHelpers.withTransaction.mockImplementation(async (fn) =>
         fn({
+          // P1-7：pickupTask 守卫翻转（乐观锁成功 count=1）
+          $executeRaw: vi.fn().mockResolvedValue(1),
           deliveryTask: {
             update: vi
               .fn()
               .mockResolvedValue(buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery' })),
+            findUnique: vi.fn().mockResolvedValue({ status: 'PICKED_UP' }),
           },
           order: { update: vi.fn().mockResolvedValue({}) },
           refund: { update: txRefundUpdate },

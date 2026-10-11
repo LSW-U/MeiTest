@@ -962,6 +962,8 @@ describe('OrderService.createOrder', () => {
             items: [],
           }),
           update: vi.fn().mockResolvedValue({}),
+          // P1-6：WHERE status 守卫翻转
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
         deliveryTask: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
@@ -971,6 +973,109 @@ describe('OrderService.createOrder', () => {
     const result = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
     expect(result.cancelled).toBe(true);
     expect(result.fromStatus).toBe('PENDING_PAYMENT');
+  });
+
+  // ===== A2.5（P1-6，方案v2 20261011）：并发取消只释放一次库存 =====
+  // 两笔并发取消（用户取消 + 超时 job）都可能读到非终态快照。P1-6 后以
+  // updateMany WHERE status notIn(终态) 作乐观锁守卫：只有赢家（count=1）走
+  // releaseStock/写事件/关任务；输家（count=0）幂等 return，不重复释放。
+  it('A2.5：P1-6 守卫赢家 → 翻转 WHERE 前置终态排除 + 释放库存', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_PAYMENT',
+      scheduledFor: null,
+      userId: 'user-1',
+      orderNo: 'MM1',
+    });
+    const txUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const txOrderEventCreate = vi.fn().mockResolvedValue({});
+    const txDeliveryTaskUpdateMany = vi.fn().mockResolvedValue({ count: 0 });
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'order-1',
+            status: 'PENDING_PAYMENT',
+            orderNo: 'MM1',
+            warehouseId: 'wh-1',
+            riderId: null,
+            items: [{ skuId: 'sku-1', quantity: 2 }],
+          }),
+          update: vi.fn().mockResolvedValue({}),
+          updateMany: txUpdateMany,
+        },
+        orderEvent: { create: txOrderEventCreate },
+        deliveryTask: { updateMany: txDeliveryTaskUpdateMany },
+      };
+      return fn(tx);
+    });
+
+    await service.cancelOrderInternal('order-1', {
+      deviceType: 'client_app',
+      reason: 'USER_CANCEL',
+    });
+
+    // 翻转 WHERE 前置终态排除（乐观锁语义：只有非终态能被翻成 CANCELLED）
+    expect(txUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'order-1', status: { notIn: ['CANCELLED', 'COMPLETED'] } },
+        data: expect.objectContaining({ status: 'CANCELLED', cancelReason: 'USER_CANCEL' }),
+      }),
+    );
+    // 赢家：库存释放（每 item 一次）+ OrderEvent + 关任务
+    expect(mockHelpers.releaseStock).toHaveBeenCalledTimes(1);
+    expect(mockHelpers.releaseStock).toHaveBeenCalledWith(
+      expect.anything(), 'wh-1', 'sku-1', 2, 'RELEASE',
+      expect.objectContaining({ reason: 'USER_CANCEL' }),
+    );
+    expect(txOrderEventCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'CANCELLED', toStatus: 'CANCELLED' }),
+      }),
+    );
+  });
+
+  it('A2.5：P1-6 守卫输家（count=0，并发赢家已翻终态）→ 幂等 return，不重复释放库存', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_PAYMENT',
+      scheduledFor: null,
+      userId: 'user-1',
+      orderNo: 'MM1',
+    });
+    // 事务内快照仍是旧值（读后判断窗口），但守卫翻转 count=0 → 输家
+    const txUpdateMany = vi.fn().mockResolvedValue({ count: 0 });
+    const txOrderEventCreate = vi.fn().mockResolvedValue({});
+    const txDeliveryTaskUpdateMany = vi.fn().mockResolvedValue({ count: 0 });
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'order-1',
+            status: 'PENDING_PAYMENT', // 旧快照（赢家已翻走，DB 真实值已 CANCELLED）
+            orderNo: 'MM1',
+            warehouseId: 'wh-1',
+            riderId: null,
+            items: [{ skuId: 'sku-1', quantity: 2 }],
+          }),
+          update: vi.fn(),
+          updateMany: txUpdateMany,
+        },
+        orderEvent: { create: txOrderEventCreate },
+        deliveryTask: { updateMany: txDeliveryTaskUpdateMany },
+      };
+      return fn(tx);
+    });
+
+    // 输家不抛错（幂等 return）
+    await expect(
+      service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'USER_CANCEL' }),
+    ).resolves.toBeUndefined();
+
+    // 关键断言：输家不重复释放库存 / 不写事件 / 不关任务
+    expect(mockHelpers.releaseStock).not.toHaveBeenCalled();
+    expect(txOrderEventCreate).not.toHaveBeenCalled();
+    expect(txDeliveryTaskUpdateMany).not.toHaveBeenCalled();
   });
 });
 

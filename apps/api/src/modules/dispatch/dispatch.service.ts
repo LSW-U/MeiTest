@@ -551,14 +551,39 @@ export class DispatchService {
     }
 
     // P14 ④：走 withTransaction，taskType=return 时事务内额外写 refund.pickupAt
+    // P1-7（方案v2 20261011）：WHERE status 乐观锁守卫（对齐 acceptTask :421 $executeRaw 先例）——
+    // 事务外 findUnique 断言存在并发窗口，守卫是 COD/非 COD 唯一防线（CashCollection 零唯一约束）
     const { updated } = await withTransaction(async (tx: Tx) => {
+      const now = new Date();
+      // P1-7：先按状态条件翻状态（count=0 → 并发输家），再在事务内组装响应视图
+      const flipped = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET status = 'PICKED_UP',
+            picked_up_at = ${now},
+            note = ${input.note ?? task.note},
+            evidence_urls = ${evidenceUrls}::text[],
+            updated_at = ${now}
+        WHERE id = ${input.taskId}
+          AND status = 'ASSIGNED'
+      `;
+      if (flipped === 0) {
+        const existing = await tx.deliveryTask.findUnique({
+          where: { id: input.taskId },
+          select: { status: true },
+        });
+        throw new ConflictException({
+          code: 'E-DISPATCH-004',
+          message: `Task already ${existing?.status ?? 'unknown'} (cannot be picked up, concurrent state change)`,
+        });
+      }
       const t = await tx.deliveryTask.update({
         where: { id: input.taskId },
         data: {
+          // 状态已由上方 $executeRaw 翻转；此 update 仅组装响应视图（include order/warehouse）
+          // 与落 note/evidenceUrls 兜底（幂等重写同值）
           status: 'PICKED_UP',
-          pickedUpAt: new Date(),
+          pickedUpAt: now,
           note: input.note ?? task.note,
-          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
           ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {
@@ -688,14 +713,38 @@ export class DispatchService {
           : 'DELIVERED_UNPAID';
 
     // P1-2 修复：deliverTask 多步操作包进事务（task.update + order.update + cashCollection.create）
+    // P1-7（方案v2 20261011）：WHERE status 乐观锁守卫——重复送达/并发送达只有一笔能翻
+    // DELIVERED；输家抛 E-DISPATCH-004 回滚。COD 无 DB 兜底（CashCollection 零唯一约束），
+    // 守卫是销量/积分/收款/台账四项只计一次的唯一防线
     const { updated } = await withTransaction(async (tx: Tx) => {
+      const now = new Date();
+      const flipped = await tx.$executeRaw`
+        UPDATE "delivery_tasks"
+        SET status = 'DELIVERED',
+            delivered_at = ${now},
+            note = ${input.note ?? task.note},
+            evidence_urls = ${evidenceUrls}::text[],
+            updated_at = ${now}
+        WHERE id = ${input.taskId}
+          AND status IN ('PICKED_UP', 'DELIVERING')
+      `;
+      if (flipped === 0) {
+        const existing = await tx.deliveryTask.findUnique({
+          where: { id: input.taskId },
+          select: { status: true },
+        });
+        throw new ConflictException({
+          code: 'E-DISPATCH-004',
+          message: `Task already ${existing?.status ?? 'unknown'} (cannot be delivered, concurrent state change)`,
+        });
+      }
       const t = await tx.deliveryTask.update({
         where: { id: input.taskId },
         data: {
+          // 状态已由上方 $executeRaw 翻转；此 update 仅组装响应视图 + 幂等重写同值
           status: 'DELIVERED',
-          deliveredAt: new Date(),
+          deliveredAt: now,
           note: input.note ?? task.note,
-          // 批2：取证照片落库（已过 validateEvidenceUrls 校验）
           ...(evidenceUrls.length > 0 ? { evidenceUrls } : {}),
         },
         include: {

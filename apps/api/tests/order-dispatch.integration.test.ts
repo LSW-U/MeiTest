@@ -438,14 +438,35 @@ describe('Order → Dispatch 全链路集成测试', () => {
     expect(task?.status).toBe('PENDING_ASSIGN');
 
     // === 5. 骑手抢单 ===
-    mockDb.$executeRaw.mockImplementation(async () => {
-      // 模拟乐观锁 UPDATE：更新 in-memory task + 返回 1 行影响
+    // P1-7 乐观锁后 pickupTask/deliverTask 也走 tx.$executeRaw（WHERE status 守卫），
+    // mock 必须按 SQL 文本分派三种状态翻转，否则取货/送达被抢单 mock 拦截 → flipped=0 → E-DISPATCH-004
+    mockDb.$executeRaw.mockImplementation(async (strings: TemplateStringsArray) => {
+      const sql = strings.join(' ');
       const t = mockDb._tables.deliveryTasks.get('task-1');
-      if (t && t.status === 'PENDING_ASSIGN') {
-        t.status = 'ASSIGNED';
-        t.riderId = 'rider-1';
-        t.assignedAt = new Date();
-        return 1;
+      if (sql.includes("status = 'PENDING_ASSIGN'")) {
+        // 抢单：PENDING_ASSIGN → ASSIGNED
+        if (t && t.status === 'PENDING_ASSIGN') {
+          t.status = 'ASSIGNED';
+          t.riderId = 'rider-1';
+          t.assignedAt = new Date();
+          return 1;
+        }
+        return 0;
+      }
+      if (sql.includes("status = 'ASSIGNED'")) {
+        // 取货：ASSIGNED → PICKED_UP（picked_up_at 由后续 tx.deliveryTask.update 幂等重写）
+        if (t && t.status === 'ASSIGNED') {
+          t.status = 'PICKED_UP';
+          return 1;
+        }
+        return 0;
+      }
+      if (sql.includes("IN ('PICKED_UP', 'DELIVERING')")) {
+        // 送达：PICKED_UP/DELIVERING → DELIVERED
+        if (t && (t.status === 'PICKED_UP' || t.status === 'DELIVERING')) {
+          t.status = 'DELIVERED';
+          return 1;
+        }
       }
       return 0;
     });

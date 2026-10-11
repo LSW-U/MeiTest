@@ -15,9 +15,10 @@ import { SettlementController } from './settlement.controller';
 import { WithdrawalController } from './withdraw.controller';
 import {
   SettlementService,
-  MockOrderAggregator,
   SETTLE_ORDER_AGGREGATOR,
 } from './settlement.service';
+// P0-1（2026-10-11）：真实订单聚合器切换（方案v2-后端资金越权并发修复 批2）
+import { RealOrderAggregator } from './real-order-aggregator.service';
 import { WithdrawalService } from './withdraw.service';
 import { SettleProcessor } from './settle.processor';
 import { SettleScheduler } from './settle.scheduler';
@@ -43,8 +44,9 @@ import { NotificationEventService } from '../notification/notification-event.ser
   providers: [
     SettlementService,
     WithdrawalService,
-    // MVP 阶段 mock 订单聚合；C 流程订单完成后改 useClass: RealOrderAggregator
-    { provide: SETTLE_ORDER_AGGREGATOR, useClass: MockOrderAggregator },
+    // P0-1（2026-10-11）：切真实订单聚合（MockOrderAggregator 保留作测试 fallback，
+    // 由 settlement.service 继续导出，单测仍可 new）
+    { provide: SETTLE_ORDER_AGGREGATOR, useClass: RealOrderAggregator },
     SettleProcessor,
     SettleScheduler,
     // 批A A4：显式 token 防 tsx 装饰器元数据缺失；useExisting 指向类，避免自引用

@@ -588,6 +588,18 @@ export class OrderService {
   /**
    * 客户端取消订单
    */
+  /**
+   * 订单归属断言辅助（payment.controller getIntent/uploadReceipt 归属校验用，P1-2）
+   *
+   * 只查 userId 最小字段；不存在返回 null，由调用方统一按 E-ORDER-004 处理（防枚举）
+   */
+  async getOrderForOwnership(orderId: string): Promise<{ userId: string } | null> {
+    return db.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true },
+    });
+  }
+
   async cancelOrder(
     orderId: string,
     userId: string,
@@ -686,6 +698,15 @@ export class OrderService {
    *   - 写 OrderEvent(CANCELLED)
    *
    * 预付场景已支付的订单取消：W5 接入 RefundService 触发退款（这里留 TODO）
+   *
+   * P1-6（方案v2-后端资金越权并发修复 20261011）：读后判断幂等存在并发窗口——
+   * 两笔并发取消都可能读到非终态快照、都释放库存。改 updateMany WHERE status
+   * 条件守卫（同文件 markPaid P2-1 先例 / 方案 :758/:883 先例）：count=0 说明
+   * 并发赢家已翻 CANCELLED/COMPLETED → 直接幂等 return，不再重复释放库存。
+   *
+   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 refund.service.ts cancelOrderInTx 是
+   * 刻意保留的平行实现（后者接收外部 tx 供退款同事务收口）——两版逻辑必须保持同构，
+   * 任何一侧加列/改口径时另一侧同步改。
    */
   async cancelOrderInternal(
     orderId: string,
@@ -719,6 +740,28 @@ export class OrderService {
         return;
       }
 
+      // P1-6：WHERE status 条件守卫（乐观锁翻转）——只有一笔并发取消能把非终态翻成
+      // CANCELLED；输家 count=0 幂等 return，不重复释放库存/写事件/关任务
+      const flipped = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          status: { notIn: ['CANCELLED', 'COMPLETED'] },
+        },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          cancelReason: ctx.reason,
+        },
+      });
+      if (flipped.count === 0) {
+        logger.info({
+          msg: 'ORDER_CANCELLED_CONCURRENT_LOSER',
+          orderId,
+          reason: ctx.reason,
+        });
+        return;
+      }
+
       // 释放库存（无论之前是什么状态，已扣的库存都要回滚）
       for (const item of order.items) {
         await releaseStock(tx, order.warehouseId, item.skuId, item.quantity, 'RELEASE', {
@@ -728,15 +771,6 @@ export class OrderService {
           operatorId: ctx.operatorId,
         });
       }
-
-      const updated = await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status: 'CANCELLED',
-          cancelledAt: new Date(),
-          cancelReason: ctx.reason,
-        },
-      });
 
       await tx.orderEvent.create({
         data: {
@@ -780,7 +814,6 @@ export class OrderService {
         fromStatus: order.status,
         reason: ctx.reason,
       });
-      void updated;
     });
 
     // W4-REVIEW P0-3 修复：取消订单后广播业务事件

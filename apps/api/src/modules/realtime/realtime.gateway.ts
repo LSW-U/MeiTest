@@ -267,6 +267,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
    *
    * 用法（客户端 App）：
    *   socket.emit('join:order', { orderId: 'xxx' });
+   *
+   * 订单参与断言（P1-3，对齐 im:join assertParticipant 语义）：
+   *   - SUPER_ADMIN / CUSTOMER_SERVICE：放行（平台监管 + 客服介入，同会话域口径）
+   *   - CUSTOMER：必须是订单 userId
+   *   - RIDER：必须是订单 riderId（已派单，RiderProfile.id 域，见 assertOrderParticipant）
+   *   - 其他一律拒绝，拒绝原因不外泄（统一 forbidden）
    */
   @SubscribeMessage('join:order')
   async handleJoinOrder(
@@ -279,6 +285,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
     if (!data?.orderId) {
       return { ok: false, error: 'orderId required' };
+    }
+
+    const isParticipant = await this.assertOrderParticipant(data.orderId, user);
+    if (!isParticipant) {
+      logger.warn({
+        msg: 'ws_join_order_forbidden',
+        userId: user.sub,
+        role: user.role,
+        orderId: data.orderId,
+      });
+      return { ok: false, error: 'forbidden: not an order participant' };
     }
 
     const room = `${ORDER_ROOM_PREFIX}${data.orderId}`;
@@ -686,9 +703,57 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /**
-   * 校验订单归属（customer_rider 会话用）
-   * C 流程订单/支付完成后此项真实有效；MVP 早期 Order 表为空时返回 false
+   * 校验 user 是否为订单参与方（join:order 用，P1-3）
+   *
+   * 语义对齐 assertParticipant（im:join）：
+   *   - SUPER_ADMIN / CUSTOMER_SERVICE：放行（平台监管 + 客服介入）
+   *   - CUSTOMER：order.userId === user.sub
+   *   - RIDER：resolveRiderProfileId(user.sub) 转 RiderProfile.id 后比对 order.riderId
+   *     （Order.riderId 写入的是 RiderProfile.id，dispatch acceptTask/adminAssign/reassign
+   *     三个写入点均经 resolveRiderProfileId 转换，dispatch.service.ts:354 注释先例；
+   *     P1-2 修复：直接比 user.sub=User.id 恒不匹配，被派骑手永远进不了订单房间）
+   *
+   * @returns true 放行；false 拒绝（订单不存在 / 非参与者 / 查询异常，不区分原因防信息泄露）
    */
+  private async assertOrderParticipant(orderId: string, user: WsUser): Promise<boolean> {
+    if (user.role === 'SUPER_ADMIN' || user.role === 'CUSTOMER_SERVICE') {
+      return true;
+    }
+    try {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { userId: true, riderId: true },
+      });
+      if (!order) {
+        return false;
+      }
+      if (user.role === 'CUSTOMER') {
+        return order.userId === user.sub;
+      }
+      if (user.role === 'RIDER') {
+        // P1-2（20261012 审查修复）：order.riderId 存的是 RiderProfile.id（非 User.id），
+        // 须先转 profile 再比对，对齐 dispatch.service resolveRiderProfileId 先例（:357）
+        const profile = await db.riderProfile.findUnique({
+          where: { userId: user.sub },
+          select: { id: true },
+        });
+        if (!profile) {
+          return false;
+        }
+        return order.riderId === profile.id;
+      }
+      return false;
+    } catch (err) {
+      logger.error({
+        msg: 'ws_join_order_verify_failed',
+        orderId,
+        userId: user.sub,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return false;
+    }
+  }
+
   private async verifyOrderOwnership(orderId: string, customerId: string): Promise<boolean> {
     try {
       const order = await db.order.findUnique({

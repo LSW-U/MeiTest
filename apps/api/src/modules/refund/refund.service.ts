@@ -19,10 +19,16 @@ import {
   withTransaction,
   rollbackSalesCountForRefundItems,
   rollbackSalesCountForFullOrder,
+  releaseStock,
 } from '../../shared/db';
 import type { Tx } from '../../shared/db';
+// D8（方案v3 20261012）：退款负向调整 Settlement（settle 模块 helper，refund → settle 单向依赖）
+import { applyRefundSettlementAdjustment } from '../settle/real-order-aggregator.service';
 import { logger } from '../../shared/logger/logger';
-import { OrderService } from '../order/order.service';
+// P1-5：cancelOrderInTx 需要 toPrismaDeviceType（OrderEvent 写入）
+import { toPrismaDeviceType } from '../order/order.types';
+// P1-5（2026-10-11）：cancelOrderInTx 事务内直取，OrderService/ModuleRef 注入已不再需要
+// import { OrderService } from '../order/order.service';  ← 已删除（原事务外 cancelOrderInternal 调用点）
 // P14 ④：refund APPROVE + RETURN_REFUND 触发建 return task（DispatchService via ModuleRef，避免循环依赖）
 import { DispatchService } from '../dispatch/dispatch.service';
 import { StorageService } from '../../shared/storage/storage.service';
@@ -128,7 +134,10 @@ export class RefundService {
       });
     }
 
-    // 校验是否已有进行中的退款
+    // 校验是否已有进行中的退款（事务外快查，快速失败给 409；权威校验在事务内，见 withTransaction 块）
+    // P1-4（方案v2 20261011）：本检查在事务外存在 TOCTOU 竞态——并发双 POST 都读到
+    // 「无进行中退款」→ 双插 PENDING。事务内用同订单维度 advisory lock（withdraw.service
+    // createRequest 先例）串行化后重查，杜绝双插（Refund 0 唯一约束，见评估结论）。
     const existing = await db.refund.findFirst({
       where: {
         orderId: input.orderId,
@@ -257,6 +266,28 @@ export class RefundService {
     // 批A（2026-09-07）：autoApprove 经 completeRefundTx 单点标 COMPLETED（销量回滚守卫同事务）
     // 未支付订单（PENDING_PAYMENT/PENDING_CONFIRM）从未累加过销量，completeRefundTx 内守卫会跳过回滚
     const refund = await withTransaction(async (tx) => {
+      // P1-4（方案v2 20261011）：in-flight 权威校验移入事务内。与 withdraw.service.createRequest
+      // 同款 pg_advisory_xact_lock（同订单维度 hash key）——并发双 POST 在锁上串行化，
+      // 后到者读到先到者已插入的 PENDING → E-REFUND-002，杜绝双插。
+      // ⚠️ 两参整型对（P1-1 修复 20261012）：hashtext() 返回 integer，PG 两参重载只有
+      // (integer, integer)——不能 ::bigint（42883，真库实证）。域隔离：withdraw 用单参
+      // bigint 键（typePart<<56 | hash），本处两参 (3, hashtext) 的同 64 位键空间区间
+      // 不重叠（withdraw 高位 typePart 段 vs 低位 int 对），互不干扰。
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(3, hashtext(${input.orderId}))`;
+      const inFlight = await tx.refund.findFirst({
+        where: {
+          orderId: input.orderId,
+          status: { in: ['PENDING', 'APPROVED'] },
+        },
+        select: { status: true },
+      });
+      if (inFlight) {
+        throw new ConflictException({
+          code: 'E-REFUND-002',
+          message: `Refund already in progress (status: ${inFlight.status})`,
+        });
+      }
+
       const created = await tx.refund.create({
         data: {
           orderId: input.orderId,
@@ -289,53 +320,32 @@ export class RefundService {
       });
 
       if (autoApprove) {
-        return this.completeRefundTx(tx, created.id, { reviewerId: null, reviewNote: null });
-      }
-      return created;
-    });
-
-    // 自动通过时同步取消订单 + 释放库存
-    if (autoApprove) {
-      // P0 修复：接单前退款必须同步取消订单 + 释放库存
-      // 动态注入 OrderService（避免循环依赖，复用 W3 的 ModuleRef token 注入模式）
-      try {
-        const orderService = this.moduleRef.get(OrderService, { strict: false });
-
-        if (!orderService) {
-          logger.error({
-            msg: 'REFUND_AUTO_APPROVE_ORDER_SERVICE_NULL',
-            refundId: refund.id,
-            orderId: input.orderId,
-          });
-          // OrderService null 不阻塞 refund 返回（但订单状态不一致，需人工介入）
-          return this.toView(refund);
-        }
-
-        await orderService.cancelOrderInternal(input.orderId, {
+        // P1-5（方案v2 20261011）：订单取消收进同一事务——退款 COMPLETED 与订单 CANCELLED
+        // 原子提交，取消失败必须抛错回滚（账实不符 = 退款完成而订单未取消）。原实现把
+        // cancelOrderInternal 放事务外且 catch 吞错（REFUND_AUTO_APPROVE_CANCEL_ORDER_FAILED
+        // 不抛）/ OrderService null 不阻塞两处「人工介入」路径均已删除。
+        // cancelOrderInternal 带 tx 版本：P1-6 WHERE status 守卫保证并发取消只有一笔释放库存，
+        // 已终态幂等 return（同一订单已被超时 job 取消时本事务不炸）。
+        await this.cancelOrderInTx(tx, input.orderId, {
           operatorId: order.userId,
           deviceType: 'client_app',
           perspective: 'customer',
           reason: 'REFUND_AUTO_APPROVED',
         });
-
-        logger.info({
-          msg: 'REFUND_AUTO_COMPLETED_WITH_ORDER_CANCEL',
-          refundId: refund.id,
-          orderId: input.orderId,
-          amount,
-          reason: 'order not yet confirmed, stock released',
-        });
-      } catch (err) {
-        // cancelOrderInternal 失败 → 记录异常，不阻塞 refund 返回（但订单状态不一致）
-        logger.error({
-          msg: 'REFUND_AUTO_APPROVE_CANCEL_ORDER_FAILED',
-          refundId: refund.id,
-          orderId: input.orderId,
-          error: err instanceof Error ? err.message : String(err),
-          stack: err instanceof Error ? err.stack : undefined,
-        });
-        // 不抛异常，让 refund 正常返回（后续人工介入或脚本修复）
+        return this.completeRefundTx(tx, created.id, { reviewerId: null, reviewNote: null });
       }
+      return created;
+    });
+
+    // 自动通过时订单取消已在事务内完成（P1-5）；此处只保留成功留痕
+    if (autoApprove) {
+      logger.info({
+        msg: 'REFUND_AUTO_COMPLETED_WITH_ORDER_CANCEL',
+        refundId: refund.id,
+        orderId: input.orderId,
+        amount,
+        reason: 'order not yet confirmed, cancelled + stock released in same tx',
+      });
     } else {
       logger.info({
         msg: 'REFUND_CREATED',
@@ -347,6 +357,114 @@ export class RefundService {
     }
 
     return this.toView(refund);
+  }
+
+  /**
+   * P1-5（方案v2 20261011）：事务内取消订单（自动退款同事务收口）
+   *
+   * cancelOrderInternal 的 tx 版本：复用同一 cancelOrderInternal 逻辑但接收外部 tx，
+   * 不再自开事务。实现保持与 order.service.cancelOrderInternal 同构：
+   *   - WHERE status notIn (CANCELLED, COMPLETED) 条件守卫（P1-6 先例）——已终态幂等
+   *     return（订单已被超时 job / 用户并发取消时不炸本事务）
+   *   - 释放库存 + 写 OrderEvent + 关闭未接单任务
+   *   - 失败抛错 → 外层 withTransaction 整体回滚（退款不落地）
+   *
+   * P0 修复保留：接单前退款必须同步取消订单 + 释放库存
+   *
+   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 order.service.ts cancelOrderInternal（:711 起，
+   * 守卫 :739）是刻意保留的平行实现——本方法接收外部 tx 供退款同事务收口，order.service 版
+   * 自开事务供取消链路复用。两版逻辑（守卫/releaseStock/OrderEvent/关任务/清 riderId）必须
+   * 保持同构，任何一侧加列/改口径时另一侧同步改，漂移风险见审查报告 P3-1。
+   */
+  private async cancelOrderInTx(
+    tx: Tx,
+    orderId: string,
+    ctx: {
+      operatorId?: string;
+      deviceType?: string;
+      perspective?: string;
+      reason: string;
+    },
+  ): Promise<void> {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (!order) {
+      throw new NotFoundException({
+        code: 'E-ORDER-004',
+        message: `Order not found: ${orderId}`,
+      });
+    }
+    if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
+      // 幂等：已终态直接 return
+      logger.info({
+        msg: 'REFUND_AUTO_APPROVE_ORDER_ALREADY_TERMINAL',
+        orderId,
+        status: order.status,
+      });
+      return;
+    }
+
+    // P1-6 同款 WHERE status 守卫：并发取消只有一笔翻走
+    const flipped = await tx.order.updateMany({
+      where: { id: orderId, status: { notIn: ['CANCELLED', 'COMPLETED'] } },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelReason: ctx.reason,
+      },
+    });
+    if (flipped.count === 0) {
+      logger.info({
+        msg: 'REFUND_AUTO_APPROVE_CANCEL_CONCURRENT_LOSER',
+        orderId,
+      });
+      return;
+    }
+
+    // 释放库存（同事务）
+    for (const item of order.items) {
+      await releaseStock(tx, order.warehouseId, item.skuId, item.quantity, 'RELEASE', {
+        reason: ctx.reason,
+        referenceType: 'ORDER',
+        referenceId: order.id,
+        operatorId: ctx.operatorId,
+      });
+    }
+
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        eventType: 'CANCELLED',
+        fromStatus: order.status,
+        toStatus: 'CANCELLED',
+        operatorId: ctx.operatorId ?? null,
+        deviceType: toPrismaDeviceType(ctx.deviceType as never),
+        perspective: ctx.perspective ?? null,
+        metadata: { reason: ctx.reason } as Prisma.InputJsonValue,
+      },
+    });
+
+    // 联动关闭未接单/已接单任务（对齐 order.service.cancelOrderInternal 联动口径）
+    const cancelledTasks = await tx.deliveryTask.updateMany({
+      where: { orderId, status: { in: ['PENDING_ASSIGN', 'ASSIGNED'] } },
+      data: { status: 'FAILED' },
+    });
+    if (cancelledTasks.count > 0 && order.riderId) {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { riderId: null },
+      });
+    }
+
+    logger.info({
+      msg: 'ORDER_CANCELLED_IN_REFUND_TX',
+      orderId,
+      orderNo: order.orderNo,
+      fromStatus: order.status,
+      reason: ctx.reason,
+    });
   }
 
   /**
@@ -386,7 +504,8 @@ export class RefundService {
 
     const order = await tx.order.findUnique({
       where: { id: refund.orderId },
-      select: { id: true, paymentStatus: true, paymentMethod: true },
+      // D8：warehouse.shopId 供退款负向调整 Settlement 归属商家（subjectId=shopId）
+      select: { id: true, paymentStatus: true, paymentMethod: true, warehouse: { select: { shopId: true } } },
     });
     if (!order) {
       throw new NotFoundException({
@@ -452,6 +571,18 @@ export class RefundService {
         await rollbackSalesCountForFullOrder(tx, refund.orderId, { operatorId });
       }
     }
+
+    // 3. D8（方案v3 20261012，P2-1 修复）：退款负向调整 Settlement —— 同事务原子
+    //    按 completedAt 归属当期 Dili 结算期间（新建负向调整行 / 冲减当期行），
+    //    commission clamp ≥ 0，不改写历史已生成 Settlement。
+    //    依赖：order 快照须含 warehouse.shopId（上方 select 已带，MVP 单商家）；
+    //    subjectId = shopId 与 RealOrderAggregator.aggregateMerchant 归属口径一致
+    await applyRefundSettlementAdjustment(
+      tx,
+      refund.amount,
+      updated.completedAt as Date,
+      order.warehouse.shopId,
+    );
 
     logger.info({
       msg: 'REFUND_COMPLETED_TX',
@@ -658,8 +789,11 @@ export class RefundService {
 
   /**
    * 查询退款详情
+   *
+   * @param userId 客户端视角传登录用户 id 做归属校验（非本人抛 E-AUTH-012，对齐 cancelRefund 先例）；
+   *               admin 视角传 null 跳过归属校验（admin 端点已有 Roles 门禁）
    */
-  async getRefundDetail(refundId: string): Promise<RefundView> {
+  async getRefundDetail(refundId: string, userId?: string | null): Promise<RefundView> {
     const refund = await db.refund.findUnique({
       where: { id: refundId },
       include: { items: true },
@@ -668,6 +802,12 @@ export class RefundService {
       throw new NotFoundException({
         code: 'E-REFUND-003',
         message: `Refund not found: ${refundId}`,
+      });
+    }
+    if (userId && refund.userId !== userId) {
+      throw new ForbiddenException({
+        code: 'E-AUTH-012',
+        message: 'Refund does not belong to this user',
       });
     }
     return this.toView(refund);

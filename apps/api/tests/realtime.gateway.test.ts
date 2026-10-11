@@ -17,16 +17,24 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { JwtService } from '@nestjs/jwt';
 import { RealtimeGateway, type RiderLocationUpdate } from '../src/modules/realtime/realtime.gateway';
 import type { WsUser } from '../src/modules/realtime/realtime.gateway';
+import { db } from '../src/shared/db';
 
 // 设置 JWT secrets（assertJwtSecret 要求）
 process.env.JWT_ACCESS_SECRET = 'test-access-secret-at-least-32-characters-long';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-at-least-32-characters-long';
 
-// P1-9 修复后 handleLocationUpdate 调 db.order.findUnique 校验 riderId 绑定
+// P1-9 修复后 handleLocationUpdate 调 db.order.findUnique 校验 riderId 绑定；
+// P1-3 join:order 参与断言同样查 order（select userId+riderId），默认返回参与双方
+// P1-2（20261012 审查修复）：RIDER 分支经 db.riderProfile.findUnique 把 User.id(sub)
+// 转 RiderProfile.id 再比对（Order.riderId 存 profile id）——默认 mock：sub 'rider-1'
+// → profile id 'profile-rider-1'，与 order.riderId='profile-rider-1' 匹配
 vi.mock('../src/shared/db', () => ({
   db: {
     order: {
-      findUnique: vi.fn().mockResolvedValue({ riderId: 'rider-1' }),  // 默认匹配 rider-1
+      findUnique: vi.fn().mockResolvedValue({ userId: 'c-1', riderId: 'profile-rider-1' }),
+    },
+    riderProfile: {
+      findUnique: vi.fn().mockResolvedValue({ id: 'profile-rider-1' }),
     },
   },
 }));
@@ -72,6 +80,18 @@ describe('RealtimeGateway', () => {
   let serverToMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // P2-1（审查 2026-10-11）：db.order.findUnique 是模块级共享 mock，每个用例前显式重置
+    // 为默认值，防 mockResolvedValueOnce 排队未消费 / 用例顺序变化导致跨 describe 串值
+    (db.order.findUnique as ReturnType<typeof vi.fn>).mockReset();
+    (db.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      userId: 'c-1',
+      // P1-2：riderId = RiderProfile.id（'profile-rider-1'），非 User.id
+      riderId: 'profile-rider-1',
+    });
+    (db.riderProfile.findUnique as ReturnType<typeof vi.fn>).mockReset();
+    (db.riderProfile.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'profile-rider-1',
+    });
     gateway = createGateway();
     serverEmitMock = vi.fn();
     serverToMock = vi.fn().mockReturnValue({ emit: serverEmitMock });
@@ -137,7 +157,7 @@ describe('RealtimeGateway', () => {
   });
 
   describe('handleJoinOrder', () => {
-    it('合法 orderId → 加入对应 room', async () => {
+    it('订单顾客 join → 加入对应 room', async () => {
       const client = createMockClient({
         user: { sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' },
       });
@@ -146,6 +166,91 @@ describe('RealtimeGateway', () => {
 
       expect(result).toEqual({ ok: true, room: 'order:order-123' });
       expect(client.join).toHaveBeenCalledWith('order:order-123');
+    });
+
+    it('被派骑手 join → 放行（P1-2：sub=User.id 经 riderProfile 转换后与 riderId=profile.id 比对）', async () => {
+      const client = createMockClient({
+        user: { sub: 'rider-1', role: 'RIDER', deviceType: 'rider_app' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result).toEqual({ ok: true, room: 'order:order-123' });
+      expect(client.join).toHaveBeenCalledWith('order:order-123');
+      // P1-2 断言：确实走了 profile 转换（sub → RiderProfile.id）
+      expect(db.riderProfile.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'rider-1' } }),
+      );
+    });
+
+    it('SUPER_ADMIN 放行（平台监管，对齐 im:join 口径）', async () => {
+      const client = createMockClient({
+        user: { sub: 'admin-1', role: 'SUPER_ADMIN', deviceType: 'admin_web' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result).toEqual({ ok: true, room: 'order:order-123' });
+      expect(client.join).toHaveBeenCalledWith('order:order-123');
+    });
+
+    it('CUSTOMER_SERVICE 放行（客服介入，对齐 im:join 口径）', async () => {
+      const client = createMockClient({
+        user: { sub: 'cs-1', role: 'CUSTOMER_SERVICE', deviceType: 'admin_web' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result).toEqual({ ok: true, room: 'order:order-123' });
+    });
+
+    it('非参与者顾客 join → 拒绝 + 不 join + 不外泄原因', async () => {
+      const client = createMockClient({
+        user: { sub: 'stranger-1', role: 'CUSTOMER', deviceType: 'client_app' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result).toEqual({ ok: false, error: 'forbidden: not an order participant' });
+      expect(client.join).not.toHaveBeenCalled();
+    });
+
+    it('未派单骑手 join → 拒绝（riderId 非本人 profile）', async () => {
+      (db.riderProfile.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'profile-someone-else',
+      });
+      const client = createMockClient({
+        user: { sub: 'rider-other', role: 'RIDER', deviceType: 'rider_app' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result.ok).toBe(false);
+      expect(client.join).not.toHaveBeenCalled();
+    });
+
+    it('骑手无 profile → 拒绝（P1-2：resolveRiderProfileId 查无即 fail-closed）', async () => {
+      (db.riderProfile.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      const client = createMockClient({
+        user: { sub: 'rider-noprofile', role: 'RIDER', deviceType: 'rider_app' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-123' }, client);
+
+      expect(result.ok).toBe(false);
+      expect(client.join).not.toHaveBeenCalled();
+    });
+
+    it('订单不存在 → 拒绝', async () => {
+      (db.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const client = createMockClient({
+        user: { sub: 'c-1', role: 'CUSTOMER', deviceType: 'client_app' },
+      });
+
+      const result = await gateway.handleJoinOrder({ orderId: 'order-404' }, client);
+
+      expect(result.ok).toBe(false);
+      expect(client.join).not.toHaveBeenCalled();
     });
 
     it('缺 orderId → 返回 ok: false', async () => {
@@ -176,9 +281,16 @@ describe('RealtimeGateway', () => {
       timestamp: Date.now(),
     };
 
-    it('rider 推位置 → 广播到 order room', async () => {
+    it('rider 推位置 → 广播到 order room（D9：guard 经 profile 转换后比对 riderId）', async () => {
       const client = createMockClient({
         user: { sub: 'rider-1', role: 'RIDER', deviceType: 'rider_app' },
+      });
+      // D9（20261012）：assertRiderOwnsOrder 已修复——riderProfile.findUnique 把
+      // sub='rider-1' 转 profile id 'profile-rider-1' 再与 order.riderId 比对，
+      // 此用例 mock 与 join:order 的 profile mock 对齐（撤销批2 收尾时的临时回退）
+      (db.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        userId: 'c-1',
+        riderId: 'profile-rider-1',
       });
 
       const result = await gateway.handleLocationUpdate(validUpdate, client);
