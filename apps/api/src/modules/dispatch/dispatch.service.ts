@@ -87,8 +87,6 @@ export interface DeliveryTaskView {
    * 从 order.delivery_fee_breakdown.distanceFee 透传（订单快照）；breakdown 缺失 → undefined。
    */
   distanceFee?: number;
-  /** W7 补字段：订单项摘要（如"牛奶 x1, 鸡蛋 x2"） */
-  itemsSummary?: string;
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
   contactPhone?: string;
   /**
@@ -1973,16 +1971,8 @@ export class DispatchService {
   private toView(
     t: any,  // 宽松类型（运行时不会 crash，JS 不检查类型）
   ): DeliveryTaskView {
-    // W7 补：订单项摘要（从 productName JSON 取当前语言，fallback en）
-    // 注意：order.items 可能不存在（查询时没 include），需要 null 检查
-    const items = (t.order as any)?.items as Array<{ productName: unknown; quantity: number }> | undefined;
-    const itemsSummary = items
-      ?.map((item) => {
-        const nameObj = item.productName as Record<string, string> | null;
-        const name = nameObj?.en ?? nameObj?.zh ?? nameObj?.id ?? nameObj?.pt ?? 'Unknown';
-        return `${name} x${item.quantity}`;
-      })
-      .join(', ');
+    // 批3（20261012）死代码删除：W7 itemsSummary 已随前端弃用移除
+    // （前端仓 + @meimart/api-contract 契约均零引用，grep 证据见批3交付说明；:1952 依赖复核无下游计算）
 
     // P6 #7 配送距离/时长（pickup → dropoff 的 Haversine 距离 + 时长推导）
     // 任一坐标缺失（含 (0,0) 哨兵——历史无坐标存 0，haversine(0,0,0,0) 返回 0 不是 null，需显式拦截）→ undefined，前端降级隐藏
@@ -2035,7 +2025,6 @@ export class DispatchService {
       billingDistanceKm:
         ((t.order as any)?.deliveryFeeBreakdown as { distanceKm?: number | null } | null)?.distanceKm ??
         undefined,
-      itemsSummary,
       // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
       contactPhone:
         ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,

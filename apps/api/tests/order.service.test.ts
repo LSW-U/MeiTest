@@ -495,7 +495,7 @@ describe('OrderService.createOrder', () => {
   });
 
   it('P1 领券体系: 传 couponId -> applyCoupon + 回填 UserCoupon.orderId + 写 OrderPromotion 关联', async () => {
-    // 注入 promotionService mock（applyCoupon 替代 applyPromotion）
+    // 注入 promotionService mock（applyCoupon 为唯一下单折扣入口，旧 applyPromotion 已删）
     const mockApplyCoupon = vi.fn().mockResolvedValue({
       userCouponId: 'uc-1',
       promotionId: 'promo-1',

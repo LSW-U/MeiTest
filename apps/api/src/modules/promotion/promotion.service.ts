@@ -5,7 +5,8 @@
  * - CLAUDE.md §业务决策 4：MVP 同步事务
  * - 3 类型：PERCENTAGE（百分比）/ FIXED_AMOUNT（立减）/ FREE_DELIVERY（免配送费）
  * - 配额：totalQuota（总量）+ perUserLimit（单用户限用）+ 时间窗（startAt/endAt）
- * - 下单时 createOrder 调 applyPromotion 校验 + 计算 discountAmount + 原子 increment
+ * - 下单时 createOrder 调 applyCoupon（事务内校验 + 翻转 UserCoupon UNUSED→USED；
+ *   促销码路径已被券制替代，促销模板仅作券模板发放源）
  *
  * 错误码段：E-PROMO-001 ~ E-PROMO-099
  */
@@ -64,14 +65,6 @@ export interface UpdatePromotionInput {
   perUserLimit?: number;
   startAt?: string;
   endAt?: string;
-}
-
-/** 折扣计算结果（createOrder 用） */
-export interface AppliedDiscount {
-  promotionId: string;
-  code: string;
-  type: PromotionTypeValue;
-  discountAmount: number;
 }
 
 /** 客户端优惠券视图（B10，隐藏 createdBy/usedCount/totalQuota/perUserLimit 等管理字段） */
@@ -299,87 +292,9 @@ export class PromotionService {
   }
 
   /**
-   * 应用促销码（createOrder 调用）
-   *
-   * 校验：存在 + ACTIVE + 时间窗 + minOrderAmount + perUserLimit + totalQuota
-   * 计算：按 type 算 discountAmount
-   * 原子 increment usedCount（带 totalQuota 守卫，防超发）
-   *
-   * 返回 AppliedDiscount；无效码抛 BadRequestException
-   */
-  async applyPromotion(
-    code: string,
-    userId: string,
-    totalAmount: number,
-    deliveryFee: number,
-    tx?: Tx,
-  ): Promise<AppliedDiscount> {
-    const client = tx ?? db;
-    const normalizedCode = code.trim().toUpperCase();
-    const promo = await client.promotion.findUnique({ where: { code: normalizedCode } });
-    if (!promo) {
-      throw new BadRequestException({ code: 'E-PROMO-009', message: 'Invalid promotion code' });
-    }
-    if (promo.status !== 'ACTIVE') {
-      throw new BadRequestException({ code: 'E-PROMO-010', message: 'Promotion is not active' });
-    }
-    const now = new Date();
-    if (now < promo.startAt || now > promo.endAt) {
-      throw new BadRequestException({ code: 'E-PROMO-011', message: 'Promotion is not within valid period' });
-    }
-    if (totalAmount < promo.minOrderAmount) {
-      throw new BadRequestException({
-        code: 'E-PROMO-012',
-        message: `Order amount does not meet minimum ${promo.minOrderAmount}`,
-      });
-    }
-
-    // P1-1：单用户限用校验（事务内 count OrderPromotion，防超 perUserLimit 滥用）
-    const userUsedCount = await client.orderPromotion.count({
-      where: { promotionId: promo.id, order: { userId } },
-    });
-    if (userUsedCount >= promo.perUserLimit) {
-      throw new BadRequestException({
-        code: 'E-PROMO-020',
-        message: `Promotion per-user limit reached (${promo.perUserLimit})`,
-      });
-    }
-
-    const discountAmount = this.computeDiscount(promo, totalAmount, deliveryFee);
-
-    // 原子 increment + 配额守卫（仿 deductStock：UPDATE ... WHERE used_count < total_quota）
-    // 消除 read-check-then-write race，防并发超发。
-    // $executeRaw 返回影响行数：0 = 配额已满（或并发抢光），抛 E-PROMO-013
-    const affected = await client.$executeRaw`
-      UPDATE "promotions"
-      SET used_count = used_count + 1
-      WHERE id = ${promo.id}
-        AND (total_quota IS NULL OR used_count < total_quota)
-    `;
-    if (affected === 0) {
-      throw new ConflictException({ code: 'E-PROMO-013', message: 'Promotion quota exhausted' });
-    }
-
-    logger.info({
-      msg: 'PROMOTION_APPLIED',
-      promotionId: promo.id,
-      code: promo.code,
-      userId,
-      discountAmount,
-    });
-
-    return {
-      promotionId: promo.id,
-      code: promo.code,
-      type: promo.type,
-      discountAmount,
-    };
-  }
-
-  /**
    * 客户端校验促销码（W7-ext-G P1-3）：购物车实时预览折扣
    *
-   * 与 applyPromotion 的区别：只读校验，不 increment usedCount。
+   * 与 applyCoupon 的区别：只读校验，不翻转 UserCoupon 状态。
    * 返回 { valid, discount, reason?, type? }，reason 仅 valid=false 时有值。
    */
   async validatePromotion(
@@ -578,7 +493,7 @@ export class PromotionService {
   }
 
   /**
-   * 下单用券（createOrder 事务内调用，替代旧 applyPromotion）
+   * 下单用券（createOrder 事务内调用；批3 20261012 已删旧 applyPromotion，本方法为唯一下单折扣入口）
    *
    * 校验：归属（userId）+ 状态（UNUSED，未过期）+ 模板（ACTIVE）+ 门槛
    * 副作用：UserCoupon UNUSED -> USED（写 usedAt，不写 orderId -- 由 order.service 在 order.create 后回填）

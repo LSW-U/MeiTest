@@ -81,7 +81,7 @@ export const CheckoutPreview = z.object({
   discount: Money,
   /** 回显传入的券码（未传=null） */
   couponCode: z.string().nullable(),
-  /** 券是否有效（F12：即时校验快照，不保证下单成功，以下单事务 applyPromotion 为准） */
+  /** 券是否有效（F12：即时校验快照，不保证下单成功，以下单事务 applyCoupon 为准） */
   couponValid: z.boolean(),
   /** 券无效原因（couponValid=false 时回显，F14，如 NOT_IN_PERIOD/BELOW_MIN_ORDER；valid=true 时 null） */
   couponReason: z.string().nullable().optional(),

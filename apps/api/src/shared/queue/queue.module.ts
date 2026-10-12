@@ -24,7 +24,7 @@ import { BullModule } from '@nestjs/bullmq';
         enableReadyCheck: true,
       },
       // V2-S8 修复：独立 prefix，与业务 cache (meimart:) 隔离
-      //   - 业务缓存：meimart:cart:* / meimart:rider:online:* / meimart:jwt-blacklist:*
+      //   - 业务缓存：meimart:cart:* / meimart:rider:online:*（jwt-blacklist 已随批3删除，logout 走 refresh-session 失效）
       //   - BullMQ 队列：bull:* （内部 key 格式 bull:<queue>:<id>）
       //   - 运维 redis-cli --scan --pattern 'meimart:*' | xargs del 不会误删队列
       // 注：BullMQ 不支持 ioredis 的 keyPrefix 选项（会抛错），用 BullMQ 自己的 prefix

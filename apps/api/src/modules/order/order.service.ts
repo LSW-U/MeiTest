@@ -1084,7 +1084,7 @@ export class OrderService {
           message: `Order not found: ${orderId}`,
         });
       }
-      // 幂等：已确认直接 return
+      // 幂等守卫：非 PENDING_CONFIRM 拒绝（批3 20261012 注释订正——原「已确认直接 return」与实现相反，实为 throw E-ORDER-003）
       if (order.status !== 'PENDING_CONFIRM') {
         throw new ConflictException({
           code: 'E-ORDER-003',
@@ -1177,7 +1177,7 @@ export class OrderService {
           message: `Order not found: ${orderId}`,
         });
       }
-      // 幂等：已拣货直接 return
+      // 幂等守卫：非 CONFIRMED 拒绝（批3 20261012 注释订正——原「已拣货直接 return」与实现相反，实为 throw E-ORDER-003）
       if (order.status !== 'CONFIRMED') {
         throw new ConflictException({
           code: 'E-ORDER-003',

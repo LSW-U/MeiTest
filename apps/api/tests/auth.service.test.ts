@@ -9,8 +9,6 @@ import {
 // Mock Redis cache module
 // Mock Redis cache module（v1.2：refresh-session 函数替代 blacklist）
 vi.mock('../src/shared/cache', () => ({
-  blacklistJti: vi.fn().mockResolvedValue(undefined),
-  isBlacklisted: vi.fn().mockResolvedValue(false),
   createRefreshSession: vi.fn().mockResolvedValue(undefined),
   consumeRefreshSession: vi.fn().mockResolvedValue({
     status: 'OK',

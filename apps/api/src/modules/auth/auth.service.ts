@@ -1,14 +1,17 @@
 /**
- * JWT 服务（签发 + 校验 + logout 黑名单）
+ * JWT 服务（签发 + 校验 + refresh session 会话失效）
  *
- * 决策依据：v0.3 决策 C（payload 字段）+ E（分端 TTL）+ F（logout 黑名单）
+ * 决策依据：v0.3 决策 C（payload 字段）+ E（分端 TTL）；
+ * 原「决策 F logout 黑名单」方案未落地——shared/cache/jwt-blacklist.ts 从未接入任何调用方，
+ * 已随批3（20261012）死代码删除。现网 logout 靠 refresh-session（jti 会话表 revokeFamily）失效，
+ * accessToken 自然过期（见 logout :229 注释）。
  *
  * 关键 API：
  *   - signAccessToken(userId, role, deviceType): { token, expiresIn }
  *   - signRefreshToken(userId, deviceType): { token, jti, expiresIn }
  *   - verifyAccessToken(token): JwtPayload
- *   - verifyRefreshToken(token): { payload, jti }（检查 Redis 黑名单）
- *   - logout(refreshToken): 把 jti 加入 Redis 黑名单（TTL = refresh 剩余有效期）
+ *   - verifyRefreshToken(token): { payload, session }（校验 refresh-session 会话有效性）
+ *   - logout(refreshToken): revokeFamily 使整个 token family 失效（Redis 黑名单已废弃）
  */
 import { Injectable, UnauthorizedException, Inject, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';

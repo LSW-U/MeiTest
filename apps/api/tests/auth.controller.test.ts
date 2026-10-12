@@ -10,8 +10,6 @@ import { UnauthorizedException } from '@nestjs/common';
 
 // Mock cache（refresh 不查 Redis，但 verifyRefreshToken 依赖）
 vi.mock('../src/shared/cache', () => ({
-  blacklistJti: vi.fn().mockResolvedValue(undefined),
-  isBlacklisted: vi.fn().mockResolvedValue(false),
   createRefreshSession: vi.fn().mockResolvedValue(undefined),
   consumeRefreshSession: vi.fn().mockResolvedValue({
     status: 'OK',
