@@ -1,8 +1,8 @@
 /**
  * WarehouseOperatingHoursCard — 详情页·营业时间周表卡（Codex设计 §3.3）
  *
- * 语义（与批 B Zod 契约一致）：
- * - rest:true 或 open/close 同空 = 休息日；非休息日 close > open；不支持跨天
+ * 语义（与契约 warehouse.ts OperatingHours 一致）：
+ * - rest:true 或 open/close 同空 = 休息日；非休息日 close < open = 合法跨午夜窗口；close === open 拒
  * - rest 开启时禁用时间输入；提交统一 { open:'', close:'', rest:true }
  * - 套用默认模板：直接覆盖本地表单态（mon..sun 08:00–22:00），保存仍需点保存
  */
@@ -45,8 +45,13 @@ function toLocalHours(hours: OperatingHours | null | undefined): Record<Operatin
   ) as Record<OperatingDay, OperatingHour>;
 }
 
+/** 非法窗口单点判定：close === open 拒；close < open = 合法跨午夜窗口（契约 2026-10-09 P2-1 放行） */
+function isInvalidWindow(open: string, close: string): boolean {
+  return open !== '' && close !== '' && close === open;
+}
+
 /** 提交归一化（Codex设计 §3.3 伪代码）；返回 null 表示存在非法日 */
-function normalizeForSave(
+export function normalizeForSave(
   local: Record<OperatingDay, OperatingHour>,
 ): OperatingHours | null {
   const out: Partial<Record<OperatingDay, OperatingHour>> = {};
@@ -54,8 +59,8 @@ function normalizeForSave(
     const row = local[day];
     if (row.rest || !row.open || !row.close) {
       out[day] = { open: '', close: '', rest: true };
-    } else if (row.close <= row.open) {
-      return null; // 非休息日 close > open（不支持跨天）
+    } else if (isInvalidWindow(row.open, row.close)) {
+      return null; // 等值窗口非法（跨午夜 close < open 合法）
     } else {
       out[day] = { open: row.open, close: row.close, rest: false };
     }
@@ -165,7 +170,7 @@ export function WarehouseOperatingHoursCard({
                   value={row.open}
                   onChange={(e) => updateDay(day, { open: e.target.value })}
                   disabled={isRest || saving}
-                  className={`w-28 ${row.close && row.open && row.close <= row.open ? 'border-destructive' : ''}`}
+                  className={`w-28 ${isInvalidWindow(row.open, row.close) ? 'border-destructive' : ''}`}
                   aria-label={t('w.warehouses.openTime')}
                 />
                 <span className="text-xs text-muted-foreground">–</span>
@@ -174,7 +179,7 @@ export function WarehouseOperatingHoursCard({
                   value={row.close}
                   onChange={(e) => updateDay(day, { close: e.target.value })}
                   disabled={isRest || saving}
-                  className={`w-28 ${row.close && row.open && row.close <= row.open ? 'border-destructive' : ''}`}
+                  className={`w-28 ${isInvalidWindow(row.open, row.close) ? 'border-destructive' : ''}`}
                   aria-label={t('w.warehouses.closeTime')}
                 />
               </div>
@@ -185,7 +190,7 @@ export function WarehouseOperatingHoursCard({
           );
         })}
 
-        {(invalid || Object.values(local).some((r) => !r.rest && r.open && r.close && r.close <= r.open)) && (
+        {(invalid || Object.values(local).some((r) => isInvalidWindow(r.open, r.close))) && (
           <p className="text-xs text-destructive">{t('w.warehouses.invalidOperatingHours')}</p>
         )}
 

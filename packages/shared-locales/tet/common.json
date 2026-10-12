@@ -277,7 +277,7 @@
       "operating": "Loke",
       "closed": "Taka",
       "applyDefaultHours": "Aplika modelu padraun",
-      "invalidOperatingHours": "Iha loron serbisu, oráriu hari tenke liu oráriu taka.",
+      "invalidOperatingHours": "Oráriu hari no oráriu taka la bele hanesan; se oráriu taka antes liu oráriu hari, ne'e períodu serbisu thorok kalan ne'ebé loloos.",
       "perKmFeeLabel": "Suplementu por km",
       "perKmFeeUnitUsd": "USD/km",
       "perKmFeeUnitCents": "sentavu/km",

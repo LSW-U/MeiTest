@@ -108,7 +108,7 @@ function diliWallToInstant(base: Date, offsetDays: number, minutes: number): Dat
 }
 
 /**
- * 仓库当前是否营业（本期不跨天，T5-d）
+ * 仓库当前是否营业（跨午夜窗口按环绕判定，2026-10-09 bc17955）
  *
  * @param operatingHours Warehouse.operatingHours（Json?，可 null/畸形）
  * @param now 判定时刻（默认当前；测试注入用——传 UTC instant，内部按 Dili 墙钟判定）

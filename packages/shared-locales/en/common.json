@@ -280,7 +280,7 @@
       "operating": "Open",
       "closed": "Closed",
       "applyDefaultHours": "Apply default template",
-      "invalidOperatingHours": "On non-rest days, opening time must be earlier than closing time.",
+      "invalidOperatingHours": "Opening and closing times cannot be identical; a closing time earlier than the opening time is treated as an overnight window.",
       "perKmFeeLabel": "Per-km surcharge",
       "perKmFeeUnitUsd": "USD/km",
       "perKmFeeUnitCents": "cents/km",

@@ -22,7 +22,7 @@ export interface GeoJsonPolygon {
   coordinates: number[][][];
 }
 
-/** 营业时间（批 B 契约 OperatingHours）：open/close 'HH:mm' 或 ''；rest:true 或空 = 休息日；不支持跨天 */
+/** 营业时间（契约 OperatingHours）：open/close 'HH:mm' 或 ''；rest:true 或空 = 休息日；close < open = 合法跨午夜窗口，close === open 拒 */
 export type OperatingDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 export interface OperatingHour {

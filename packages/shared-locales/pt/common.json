@@ -277,7 +277,7 @@
       "operating": "Aberto",
       "closed": "Fechado",
       "applyDefaultHours": "Aplicar modelo predefinido",
-      "invalidOperatingHours": "Em dias úteis, a hora de abertura deve ser anterior à de fecho.",
+      "invalidOperatingHours": "A hora de abertura e a de fecho não podem ser iguais; fecho anterior à abertura é tratado como janela da madrugada.",
       "perKmFeeLabel": "Suplemento por km",
       "perKmFeeUnitUsd": "USD/km",
       "perKmFeeUnitCents": "cêntimos/km",

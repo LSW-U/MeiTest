@@ -277,7 +277,7 @@
       "operating": "营业",
       "closed": "休息",
       "applyDefaultHours": "套用默认模板",
-      "invalidOperatingHours": "非休息日的开始时间必须早于结束时间。",
+      "invalidOperatingHours": "开始与结束时间相同无效；结束早于开始视为跨午夜营业窗口。",
       "perKmFeeLabel": "每公里加价",
       "perKmFeeUnitUsd": "USD/km",
       "perKmFeeUnitCents": "分/km",

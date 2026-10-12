@@ -277,7 +277,7 @@
       "operating": "Buka",
       "closed": "Tutup",
       "applyDefaultHours": "Terapkan template default",
-      "invalidOperatingHours": "Pada hari kerja, waktu buka harus lebih awal dari waktu tutup.",
+      "invalidOperatingHours": "Waktu buka dan tutup tidak boleh sama; waktu tutup lebih awal dari buka dianggap sesi lintas tengah malam.",
       "perKmFeeLabel": "Biaya per km",
       "perKmFeeUnitUsd": "USD/km",
       "perKmFeeUnitCents": "sen/km",
