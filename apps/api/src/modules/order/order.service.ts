@@ -263,7 +263,14 @@ export class OrderService {
     }
 
     // ===== Step 3: 一次性查所有 SKU =====
-    const skuIds = input.items.map((i) => i.skuId);
+    // 批2 性能清理（20261012）：同 skuId 多行（购物车合并场景）先合并数量——
+    // 原实现 skuIds 含重复会导致 findMany 返回数 < 请求行数误抛 E-ORDER-005；
+    // 对照 listOrders skuId 去重 Set 先例（同文件）。qtyMap 语义同步升级为「合并后总量」。
+    const qtyMap = new Map<string, number>();
+    for (const item of input.items) {
+      qtyMap.set(item.skuId, (qtyMap.get(item.skuId) ?? 0) + item.quantity);
+    }
+    const skuIds = [...qtyMap.keys()];
     const skus = await db.sku.findMany({
       where: { id: { in: skuIds }, status: 'ACTIVE' },
       include: { product: true },
@@ -284,8 +291,6 @@ export class OrderService {
     }
 
     // ===== Step 4: 计算金额（整数分） =====
-    const qtyMap = new Map(input.items.map((i) => [i.skuId, i.quantity]));
-
     let itemsSubtotal = 0;
     const orderItemData = skus.map((sku) => {
       const qty = qtyMap.get(sku.id) ?? 0;

@@ -19,7 +19,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 const { mockDb } = vi.hoisted(() => ({
   mockDb: {
     user: { findMany: vi.fn() },
-    notification: { createMany: vi.fn(), findMany: vi.fn(), count: vi.fn() },
+    // 批2 性能清理：readCount 改 groupBy 批量聚合（原逐行 count N+1）
+    notification: { createMany: vi.fn(), findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
     deviceToken: { findMany: vi.fn() },
     notificationBatch: {
       create: vi.fn(),
@@ -231,15 +232,19 @@ describe('AdminNotificationService - A5 批次历史 + retry', () => {
       },
     ]);
     mockDb.notificationBatch.count.mockResolvedValueOnce(1);
-    mockDb.notification.count.mockResolvedValueOnce(890);
+    mockDb.notification.groupBy.mockResolvedValueOnce([{ batchId: 'batch-1', _count: { _all: 890 } }]);
 
     const result = await service.listHistory({});
 
     expect(mockDb.notificationBatch.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
     );
-    expect(mockDb.notification.count).toHaveBeenCalledWith({
-      where: { batchId: 'batch-1', isRead: true },
+    // 批2 性能清理：readCount 查询计数断言——groupBy 恰好 1 次（原逐行 count N 次）
+    expect(mockDb.notification.groupBy).toHaveBeenCalledTimes(1);
+    expect(mockDb.notification.groupBy).toHaveBeenCalledWith({
+      by: ['batchId'],
+      where: { batchId: { in: ['batch-1'] }, isRead: true },
+      _count: { _all: true },
     });
     expect(result.items[0]).toEqual({
       id: 'batch-1',

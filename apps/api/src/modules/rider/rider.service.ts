@@ -22,10 +22,11 @@
  *   - 班次管理（W4+）
  */
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { db } from '../../shared/db';
+import { db, withTransaction } from '../../shared/db';
 import { redis } from '../../shared/cache';
 import { logger } from '../../shared/logger/logger';
 import { decimalToNumber } from '@meimart/shared-utils';
+import { MARKET_TIMEZONE, getDaysAgoInTz } from '../../shared/datetime';
 
 /** 骑手申请状态 */
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -249,26 +250,32 @@ export class RiderService {
       });
     }
 
-    const updated = await db.riderProfile.update({
-      where: { id: input.applicationId },
-      data: {
-        applicationStatus: input.decision,
-        reviewedById: input.reviewerId,
-        reviewedAt: new Date(),
-        rejectReason:
-          input.decision === 'REJECTED'
-            ? input.rejectReason
-            : profile.rejectReason,
-      },
-    });
-
-    // 审核通过时更新 User.role 为 RIDER（否则重登后 role 还是 CUSTOMER，调 /rider/* 会 403）
-    if (input.decision === 'APPROVED') {
-      await db.user.update({
-        where: { id: profile.userId },
-        data: { role: 'RIDER' },
+    // 批2 性能清理（20261012，方案v2 D9）：审核双写事务化——原 riderProfile.update 与
+    // APPROVED 分支的 user.update(role=RIDER) 非事务双写，中途失败会留下
+    // 「申请已通过但 role 仍 CUSTOMER」的不一致（骑手调 /rider/* 403）
+    const updated = await withTransaction(async (tx) => {
+      const u = await tx.riderProfile.update({
+        where: { id: input.applicationId },
+        data: {
+          applicationStatus: input.decision,
+          reviewedById: input.reviewerId,
+          reviewedAt: new Date(),
+          rejectReason:
+            input.decision === 'REJECTED'
+              ? input.rejectReason
+              : profile.rejectReason,
+        },
       });
-    }
+
+      // 审核通过时更新 User.role 为 RIDER（否则重登后 role 还是 CUSTOMER，调 /rider/* 会 403）
+      if (input.decision === 'APPROVED') {
+        await tx.user.update({
+          where: { id: profile.userId },
+          data: { role: 'RIDER' },
+        });
+      }
+      return u;
+    });
 
     logger.info({
       msg: 'RIDER_APPLICATION_REVIEWED',
@@ -592,8 +599,10 @@ export class RiderService {
 
     // 批 E 审查 P1-2（2026-09-03 裁决：做）：列表补保证金/今日单量轻量冗余字段——
     //   口径与批 C 聚合详情一致（maxOrderAmount = 启用档派生，停用档回落）
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // 批2 性能清理（20261012）：今日边界改 Dili 时区（原 setHours(0,0,0,0) 用服务器本地时区，
+    //   UTC 服务器上「今日单量」会在 Dili 00:00-09:00 之间算错一天；
+    //   对齐 order-history.service getTodayStats 的 getDaysAgoInTz(0, MARKET_TIMEZONE) 模式）
+    const todayStart = new Date(`${getDaysAgoInTz(0, MARKET_TIMEZONE)}T00:00:00.000Z`);
     const [enabledTiers, todayCounts] = await Promise.all([
       db.riderDepositTier.findMany({
         where: { enabled: true },
@@ -743,8 +752,11 @@ export class RiderService {
       throw new ConflictException({ code: 'E-RIDER-002', message: 'Rider already suspended' });
     }
 
-    await db.user.update({ where: { id: profile.userId }, data: { status: 'SUSPENDED' } });
-    await db.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+    // 批2 性能清理（20261012，方案v2 D9）：user.update + riderProfile.update 双写事务化
+    await withTransaction(async (tx) => {
+      await tx.user.update({ where: { id: profile.userId }, data: { status: 'SUSPENDED' } });
+      await tx.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+    });
 
     // 清除 Redis 在线状态，dispatch 拒接单
     try {
@@ -796,8 +808,11 @@ export class RiderService {
       throw new ConflictException({ code: 'E-RIDER-006', message: 'Rider already deleted' });
     }
 
-    await db.user.update({ where: { id: profile.userId }, data: { status: 'DELETED' } });
-    await db.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+    // 批2 性能清理（20261012，方案v2 D9）：user.update + riderProfile.update 双写事务化
+    await withTransaction(async (tx) => {
+      await tx.user.update({ where: { id: profile.userId }, data: { status: 'DELETED' } });
+      await tx.riderProfile.update({ where: { id }, data: { status: 'OFFLINE' } });
+    });
 
     try {
       await redis.del(this.onlineKey(profile.userId));

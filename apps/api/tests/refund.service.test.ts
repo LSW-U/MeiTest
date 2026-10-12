@@ -65,6 +65,8 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDi
     withTransaction: vi.fn(),
     rollbackSalesCountForRefundItems: vi.fn(),
     rollbackSalesCountForFullOrder: vi.fn(),
+    // 批2 item7：RETURN_REFUND 回补库存（releaseStock 原实现走 $queryRaw，mock 后可断言）
+    releaseStock: vi.fn(),
   },
   // P1-4：advisory lock 的 $executeRaw 直接挂在 mockDb 上（withTransaction 默认 tx=mockDb）
   mockLogger: {
@@ -102,6 +104,7 @@ vi.mock('../src/shared/db', () => ({
   withTransaction: mockHelpers.withTransaction,
   rollbackSalesCountForRefundItems: mockHelpers.rollbackSalesCountForRefundItems,
   rollbackSalesCountForFullOrder: mockHelpers.rollbackSalesCountForFullOrder,
+  releaseStock: mockHelpers.releaseStock,
 }));
 vi.mock('../src/shared/logger/logger', () => ({ logger: mockLogger }));
 vi.mock('../src/modules/order/order.service', () => ({
@@ -180,6 +183,8 @@ describe('RefundService', () => {
     // 批A 销量真实统计：reset helper mocks + withTransaction 默认 tx 复用 mockDb
     mockHelpers.rollbackSalesCountForRefundItems.mockReset();
     mockHelpers.rollbackSalesCountForFullOrder.mockReset();
+    // 批2 item7：reset 回补库存 mock（默认不调用）
+    mockHelpers.releaseStock.mockReset();
     mockHelpers.withTransaction.mockReset();
     mockHelpers.withTransaction.mockImplementation(
       async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
@@ -816,7 +821,14 @@ describe('RefundService', () => {
 
     it('APPROVE + RETURN_REFUND → 触发 createTaskForReturn(refundId)', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND' });
-      mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED', warehouse: { shopId: 'shop-1' } });
+      // 批2 item7：completeRefundTx select 扩了 items/warehouseId，order mock 补齐
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 10000,
+        status: 'CONFIRMED',
+        warehouseId: 'wh-1',
+        warehouse: { shopId: 'shop-1' },
+        items: [],
+      });
       mockDispatchService.createTaskForReturn.mockResolvedValue({} as never);
 
       await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
@@ -826,7 +838,9 @@ describe('RefundService', () => {
 
     it('APPROVE + REFUND_ONLY → 不触发 createTaskForReturn（向后兼容）', async () => {
       mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'REFUND_ONLY' });
-      mockDb.order.findUnique.mockResolvedValue({ payableAmount: 10000, status: 'CONFIRMED', warehouse: { shopId: 'shop-1' } });
+      mockDb.order.findUnique.mockResolvedValue({
+        payableAmount: 10000, status: 'CONFIRMED', warehouseId: 'wh-1', warehouse: { shopId: 'shop-1' }, items: [],
+      });
 
       await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
 
@@ -966,6 +980,107 @@ describe('RefundService', () => {
 
       expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
       expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================
+  // 批2 item7（20261012）：RETURN_REFUND 回补库存（releaseStock changeType=RETURN）
+  // 对齐同文件 cancel 先例（releaseStock 'RETURN'）；走取消-退款链路：
+  //   - reviewRefund APPROVE + RETURN_REFUND → 按单回补（部分 refundQty / 整单 OrderItem）
+  //   - autoApprove（接单前取消）走 cancelOrderInTx 的 RELEASE，不重复回补
+  // ============================================================
+  describe('批2 item7 - RETURN_REFUND 回补库存', () => {
+    function setupReturnApprove(refundOverrides: Record<string, unknown>, orderOverrides: Record<string, unknown>) {
+      mockDb.refund.findUnique.mockResolvedValue({
+        ...baseRefund,
+        refundType: 'RETURN_REFUND',
+        ...refundOverrides,
+      });
+      mockDb.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        paymentStatus: 'PENDING', // 未支付 → 销量守卫跳过，隔离回补断言
+        paymentMethod: 'COD',
+        warehouseId: 'wh-1',
+        warehouse: { shopId: 'shop-1' },
+        items: [
+          { skuId: 'sku-1', quantity: 3 },
+          { skuId: 'sku-2', quantity: 1 },
+        ],
+        ...orderOverrides,
+      });
+    }
+
+    it('APPROVE + RETURN_REFUND 整单退款（items=[]）→ 按 OrderItem 全量回补 changeType=RETURN', async () => {
+      setupReturnApprove({ items: [] }, {});
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.releaseStock).toHaveBeenCalledTimes(2);
+      expect(mockHelpers.releaseStock).toHaveBeenCalledWith(
+        mockDb, 'wh-1', 'sku-1', 3, 'RETURN',
+        expect.objectContaining({ referenceType: 'REFUND', referenceId: 'refund-1', operatorId: 'admin-1' }),
+      );
+      expect(mockHelpers.releaseStock).toHaveBeenCalledWith(
+        mockDb, 'wh-1', 'sku-2', 1, 'RETURN', expect.objectContaining({ referenceId: 'refund-1' }),
+      );
+    });
+
+    it('APPROVE + RETURN_REFUND 部分退款（有 items）→ 按 RefundItem.refundQty 回补', async () => {
+      setupReturnApprove(
+        { items: [{ skuId: 'sku-1', refundQty: 2 }] },
+        {},
+      );
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.releaseStock).toHaveBeenCalledTimes(1);
+      expect(mockHelpers.releaseStock).toHaveBeenCalledWith(
+        mockDb, 'wh-1', 'sku-1', 2, 'RETURN', expect.objectContaining({ referenceId: 'refund-1' }),
+      );
+    });
+
+    it('APPROVE + REFUND_ONLY → 不回补（仅 RETURN_REFUND 才回仓）', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...baseRefund, refundType: 'REFUND_ONLY' });
+      mockDb.order.findUnique.mockResolvedValue({
+        id: 'order-1', paymentStatus: 'PENDING', paymentMethod: 'COD',
+        warehouseId: 'wh-1', warehouse: { shopId: 'shop-1' }, items: [{ skuId: 'sku-1', quantity: 3 }],
+      });
+
+      await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      expect(mockHelpers.releaseStock).not.toHaveBeenCalled();
+    });
+
+    it('接单前自动通过（autoApprove）→ 走 cancelOrderInTx 的 RELEASE，不在此处回补', async () => {
+      // PENDING_PAYMENT 命中 AUTO_APPROVE_STATUSES：completeRefundTx 不传 restock
+      setupReturnApprove({ items: [] }, { status: 'PENDING_PAYMENT' });
+      mockDb.order.findUnique.mockImplementation(((args: { where: { id: string } }) => {
+        // createRefund 校验用 baseOrder，completeRefundTx 查单时返回可回补快照
+        return Promise.resolve({
+          id: args.where.id, userId: 'user-1', status: 'PENDING_PAYMENT',
+          payableAmount: 10000, paymentStatus: 'PENDING', paymentMethod: 'WECHAT',
+          warehouseId: 'wh-1', warehouse: { shopId: 'shop-1' }, items: [],
+          riderId: null,
+        });
+      }) as never);
+      mockDb.refund.findFirst.mockResolvedValue(null);
+      mockDb.paymentIntent.findUnique.mockResolvedValue({ method: 'WECHAT' });
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, refundType: 'RETURN_REFUND', status: 'COMPLETED' });
+      mockDb.refund.findUnique.mockResolvedValue({
+        ...baseRefund, refundType: 'RETURN_REFUND', status: 'COMPLETED', items: [],
+      });
+      // A2.4 用例遗留的 orderEvent.create rejection 未在 beforeEach 重置，此处补默认成功
+      mockDb.orderEvent.create.mockResolvedValue({});
+
+      await service.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        reasonDetail: 'not received',
+      });
+
+      // autoApprove 路径：releaseStock 不被 refund 侧调用（取消链路已在 cancelOrderInTx RELEASE）
+      expect(mockHelpers.releaseStock).not.toHaveBeenCalled();
     });
   });
 

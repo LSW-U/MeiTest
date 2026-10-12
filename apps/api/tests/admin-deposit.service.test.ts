@@ -14,7 +14,7 @@
  *
  * mock：db（tier/location/deposit/profile/task/settlement/withdrawal/warehouse）+ redis + withTransaction
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { mockDb, mockRedis, mockWithTransaction, mockEligibility } = vi.hoisted(() => ({
   mockDb: {
@@ -109,6 +109,10 @@ function buildDeposit(overrides: Partial<Record<string, unknown>> = {}) {
 
 describe('AdminDepositService', () => {
   let service: AdminDepositService;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     service = new AdminDepositService(mockEligibility as never);
@@ -470,6 +474,34 @@ describe('AdminDepositService', () => {
       const detail = await service.getRiderDepositDetail('rider-1');
       expect(detail.realtime.isOnline).toBe(false);
       expect(detail.finance.settleBalance).toBe(0); // null ?? 0
+    });
+
+    // 批2 时区（20261012）：今日单量边界用 Dili 当日日期（getTodayStats 先例口径）
+    it('批2 时区：todayDeliveries 边界 = Dili 当日日期的 T00:00:00Z（非服务器本地午夜）', async () => {
+      vi.useFakeTimers();
+      // 2026-10-11T17:00:00Z = Dili 2026-10-12 02:00 → Dili 当日 = 2026-10-12
+      vi.setSystemTime(new Date('2026-10-11T17:00:00Z'));
+      mockDb.riderProfile.findUnique.mockResolvedValue({
+        id: 'rider-1',
+        depositAmount: 0,
+        applicationStatus: 'APPROVED',
+        preferredWarehouseIds: [],
+        user: { id: 'user-1' },
+      });
+      mockDb.deliveryTask.count.mockResolvedValue(0);
+      mockDb.riderDeposit.findMany.mockResolvedValue([]);
+      mockDb.settlement.aggregate.mockResolvedValue({ _sum: { netAmount: null } });
+      mockDb.withdrawalRequest.aggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockDb.riderDepositTier.findFirst.mockResolvedValue(null);
+      mockRedis.pipeline.mockReturnValue(chainPipeline([[null, 0]]));
+
+      await service.getRiderDepositDetail('rider-1');
+
+      // deliveryTask.count 第二次调用 = todayDeliveries（第一次是 activeTasks）
+      const todayCall = mockDb.deliveryTask.count.mock.calls[1]?.[0] as {
+        where: { updatedAt: { gte: Date } };
+      };
+      expect(todayCall.where.updatedAt.gte.toISOString()).toBe('2026-10-12T00:00:00.000Z');
     });
   });
 

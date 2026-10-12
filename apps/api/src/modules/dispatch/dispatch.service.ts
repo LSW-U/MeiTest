@@ -28,6 +28,8 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { DEFAULT_ETA_MINUTES } from './dispatch.config';
 import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
+// 批2 v2 D8（20261012）：DeliveryTask 专属状态机（纯函数断言，与 Order 机独立）
+import { assertCanTransition as assertTaskTransition } from './delivery-task-status.machine';
 import {
   fetchRiderLocations,
   bucketRiderLocReadMetrics,
@@ -316,30 +318,48 @@ export class DispatchService {
     // 预约单可见性（T5-c）：now 之后开门的预约单不进大厅
     const now = new Date();
 
-    const tasks = await db.deliveryTask.findMany({
-      where: {
-        status: 'PENDING_ASSIGN',
-        ...warehouseFilter,
-        ...(options.warehouseId ? { warehouseId: options.warehouseId } : {}),
-        // 预约单可见性（保证金批A T5-c，2026-09-10）：开门前不可见，开门后自然进入候选
-        //（无定时任务推状态，靠查询条件实现"开门自动接单"）
-        order: {
-          OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-      take: limit,
-      include: {
-        // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
-        warehouse: { select: { code: true } },
-      },
-    });
-
-    // 档位过滤（内存过滤：单次查启用档后逐单比对，SQL 不动——金额在 order 关联上）
+    // 档位过滤（批2 性能清理 20261012：先过滤后分页——原 take:limit 后内存过滤会
+    // 返回 <limit 且漏掉本应进下一页的单。改为查询 limit + 过滤后不足再补查，
+    // 保证返回 ≤limit 且不漏单；enabledTiers 单次查启用档）
     const enabledTiers = await this.eligibility.getEnabledTiers();
     const snapshot = this.eligibility.deriveEligibility(profile.id, profile.depositAmount, enabledTiers);
-    const visible = tasks.filter((t) => this.eligibility.isEligible(snapshot, t.order?.payableAmount ?? 0));
+
+    const allWhere = {
+      status: 'PENDING_ASSIGN' as const,
+      ...warehouseFilter,
+      ...(options.warehouseId ? { warehouseId: options.warehouseId } : {}),
+      // 预约单可见性（保证金批A T5-c，2026-09-10）：开门前不可见，开门后自然进入候选
+      //（无定时任务推状态，靠查询条件实现"开门自动接单"）
+      order: {
+        OR: [{ scheduledFor: null }, { scheduledFor: { lte: now } }],
+      },
+    };
+    const include = {
+      // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
+      order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+      warehouse: { select: { code: true } },
+    };
+
+    const visible: Awaited<ReturnType<typeof db.deliveryTask.findMany>> = [];
+    let skip = 0;
+    // 档位过滤在 SQL 外（金额在 order 关联上），按批捞取再内存过滤；
+    // 单批上限 = limit，最多补捞 3 批（防极端全滤场景无限翻页）
+    for (let round = 0; round < 3 && visible.length < limit; round++) {
+      const take = limit - visible.length;
+      const batch = await db.deliveryTask.findMany({
+        where: allWhere,
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take,
+        include,
+      });
+      const eligible = batch.filter((t) =>
+        this.eligibility.isEligible(snapshot, t.order?.payableAmount ?? 0),
+      );
+      visible.push(...eligible);
+      if (batch.length < take) break; // 本批捞尽，无更多
+      skip += batch.length;
+    }
 
     return {
       items: visible.map((t) => this.toView(t)),
@@ -549,6 +569,8 @@ export class DispatchService {
         message: `Task status ${task.status} cannot be picked up`,
       });
     }
+    // 批2 v2 D8：状态机断言（ASSIGNED → PICKED_UP，与守卫双保险）
+    assertTaskTransition(task.status, 'PICKED_UP');
 
     // P14 ④：走 withTransaction，taskType=return 时事务内额外写 refund.pickupAt
     // P1-7（方案v2 20261011）：WHERE status 乐观锁守卫（对齐 acceptTask :421 $executeRaw 先例）——
@@ -658,6 +680,9 @@ export class DispatchService {
         message: `Task status ${task.status} cannot be delivered`,
       });
     }
+    // 批2 v2 D8：状态机断言（与上行守卫双保险；PICKED_UP→DELIVERED 跳步边为现网
+    // delivery 两步流放行，见 machine 文件头差异登记）
+    assertTaskTransition(task.status, 'DELIVERED');
 
     // F1 修复（2026-08-24 审查报告）：return 任务送达走独立分支，不复用 delivery 状态机推进
     //   - return 任务（退货回仓）送达：只推进 deliveryTask → DELIVERED，不碰 Order（订单已是 CANCELLED）、
@@ -903,6 +928,8 @@ export class DispatchService {
         message: `Task status ${task.status} cannot start delivering`,
       });
     }
+    // 批2 v2 D8：状态机断言（return 任务三步流的第二步，与守卫双保险）
+    assertTaskTransition(task.status, 'DELIVERING');
 
     // 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)
     const { updated } = await withTransaction(async (tx: Tx) => {

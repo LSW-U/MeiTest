@@ -26,6 +26,7 @@ import {
 import { db } from '../../shared/db';
 import { withTransaction } from '../../shared/db';
 import { redis } from '../../shared/cache';
+import { MARKET_TIMEZONE, getDaysAgoInTz } from '../../shared/datetime';
 import { DepositEligibilityService } from './deposit-eligibility.service';
 
 /** DTO：档位编辑（POST 全量 / PATCH 局部） */
@@ -371,8 +372,9 @@ export class AdminDepositService {
       throw new NotFoundException({ code: 'E-RIDER-001', message: `Rider profile not found (${riderProfileId})` });
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // 批2 性能清理（20261012）：今日边界改 Dili 时区（原 setHours(0,0,0,0) 用服务器本地时区，
+    // 对齐 order-history.service getTodayStats 的 getDaysAgoInTz(0, MARKET_TIMEZONE) 模式）
+    const todayStart = new Date(`${getDaysAgoInTz(0, MARKET_TIMEZONE)}T00:00:00.000Z`);
 
     // ② 在途任务 + ③ 今日单量 + ⑤ 缴存记录 + ④ 结算余额 并行
     const [activeTasks, todayDeliveries, depositRequests, settlements, withdrawals, tier, onlineFlags] =

@@ -489,7 +489,12 @@ export class RefundService {
   private async completeRefundTx(
     tx: Tx,
     refundId: string,
-    opts: { reviewerId?: string | null; reviewNote?: string | null },
+    opts: {
+      reviewerId?: string | null;
+      reviewNote?: string | null;
+      /** 批2（20261012）：RETURN_REFUND 回补库存（reviewRefund APPROVE 传 true；autoApprove 不回补） */
+      restock?: boolean;
+    },
   ): Promise<Prisma.RefundGetPayload<{ include: { items: true } }>> {
     const refund = await tx.refund.findUnique({
       where: { id: refundId },
@@ -505,7 +510,15 @@ export class RefundService {
     const order = await tx.order.findUnique({
       where: { id: refund.orderId },
       // D8：warehouse.shopId 供退款负向调整 Settlement 归属商家（subjectId=shopId）
-      select: { id: true, paymentStatus: true, paymentMethod: true, warehouse: { select: { shopId: true } } },
+      // 批2：restock 需 warehouseId + items（skuId/quantity）
+      select: {
+        id: true,
+        paymentStatus: true,
+        paymentMethod: true,
+        warehouseId: true,
+        warehouse: { select: { shopId: true } },
+        items: { select: { skuId: true, quantity: true } },
+      },
     });
     if (!order) {
       throw new NotFoundException({
@@ -583,6 +596,35 @@ export class RefundService {
       updated.completedAt as Date,
       order.warehouse.shopId,
     );
+
+    // 4. 批2 性能清理（20261012）：RETURN_REFUND 回补库存（对齐 :428 cancel 的 releaseStock
+    //    先例，changeType=RETURN 退货回仓语义）。仅 reviewRefund APPROVE 传 restock=true；
+    //    autoApprove（接单前取消）已走 cancelOrderInTx 的 RELEASE，不重复回补。
+    //    部分退款按 RefundItem.refundQty；整单（无 items）按 OrderItem 全量回补。
+    //    P2-1 核实（20261012 批2修复）：整单分支按 OrderItem 全量回补（非「剩余未回滚」口径）
+    //    不会重复回补——「部分退款后再整单退款」在 createRefund 侧已被封死（P2-2 金额累计
+    //    校验 :252-263，Σ COMPLETED + payableAmount > payableAmount 必抛 E-REFUND-009），
+    //    整单退款存在时该单必无任何先期 COMPLETED 退款，全量口径即精确口径。降级 P3，不改码。
+    if (opts.restock) {
+      const restockLines =
+        refund.items.length > 0
+          ? refund.items.map((i) => ({ skuId: i.skuId, quantity: i.refundQty }))
+          : order.items.map((i) => ({ skuId: i.skuId, quantity: i.quantity }));
+      for (const line of restockLines) {
+        await releaseStock(tx, order.warehouseId, line.skuId, line.quantity, 'RETURN', {
+          reason: `refund ${refundId} completed (RETURN_REFUND)`,
+          referenceType: 'REFUND',
+          referenceId: refundId,
+          operatorId: opts.reviewerId ?? refund.userId,
+        });
+      }
+      logger.info({
+        msg: 'REFUND_RESTOCK_DONE',
+        refundId,
+        orderId: refund.orderId,
+        lines: restockLines.length,
+      });
+    }
 
     logger.info({
       msg: 'REFUND_COMPLETED_TX',
@@ -673,8 +715,16 @@ export class RefundService {
       }
 
       // 通过 → mock 原路回款 → COMPLETED（批A：经 completeRefundTx 单点，销量回滚同事务）
+      // 批2 性能清理（20261012）：RETURN_REFUND 回补库存并入同事务——对齐本文件 :428
+      // cancelOrderInTx 的 releaseStock 先例（changeType=RETURN 语义：退货回仓）。
+      // 原实现退货退款只回款+回滚销量，库存从未加回（丢货）。
+      // 库存来源：部分退款按 RefundItem.refundQty；整单（无 items）按 OrderItem 全量。
       const updated = await withTransaction((tx) =>
-        this.completeRefundTx(tx, refundId, { reviewerId, reviewNote: reviewNote ?? null }),
+        this.completeRefundTx(tx, refundId, {
+          reviewerId,
+          reviewNote: reviewNote ?? null,
+          restock: refund.refundType === 'RETURN_REFUND',
+        }),
       );
 
       logger.info({

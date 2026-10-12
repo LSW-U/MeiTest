@@ -85,6 +85,9 @@ export class CatalogService {
 
     // Why: 搜索用 raw ILIKE（大小写不敏感，5 语言 OR）- 修 string_contains 大小写敏感 bug
     //   搜 Apple/apple 都能匹配 name.en "Apple"（ILIKE 大小写不敏感）
+    // 批2 性能清理（20261012）：补 LIMIT（pageSize×3）——ILIKE 5 列 OR 无索引全表扫代价高，
+    //   命中集只喂下游 IN 过滤 + 分页（pageSize 上限 100 → LIMIT 300 ≥ 下游 take，不截断结果）。
+    //   极端长尾关键词命中 >300 时列表可能漏长尾项，trgm 索引上线后代价可控，MVP 接受。
     if (kw) {
       const pattern = `%${kw}%`;
       const rows = await db.$queryRaw<{ id: string }[]>`
@@ -94,6 +97,7 @@ export class CatalogService {
            OR name->>'id' ILIKE ${pattern}
            OR name->>'pt' ILIKE ${pattern}
            OR name->>'tet' ILIKE ${pattern}
+        LIMIT ${pageSize * 3}
       `;
       where.id = { in: rows.map((r) => r.id) };
     }

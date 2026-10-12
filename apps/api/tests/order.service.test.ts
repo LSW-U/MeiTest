@@ -248,6 +248,86 @@ describe('OrderService.createOrder', () => {
     ).rejects.toThrow(/SKUs are invalid or inactive/);
   });
 
+  // 批2 性能清理（20261012）：重复 skuId 合并数量——原实现误抛 E-ORDER-005
+  it('重复 skuId 多行 → 合并数量下单（不误抛 E-ORDER-005），qtyMap 为合并后总量', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    // DB 只有一行 sku-1（去重后查询）
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20260625010000001');
+    const createMany = vi.fn().mockResolvedValue({});
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: {
+          create: vi.fn().mockResolvedValue(mockCreatedOrder()),
+          findUnique: vi.fn().mockResolvedValue(null),
+        },
+        orderItem: { createMany },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    // COD 走 mock strategy：mockPayment 注入（happy path 同款）
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+    mockDb.orderItem.findMany.mockResolvedValue([
+      {
+        id: 'oi-1', productId: 'p-1', skuId: 'sku-1', productName: { en: 'Milk' },
+        productImage: 'img', skuName: { en: '1L' }, unitPrice: 100, quantity: 3, subtotal: 300,
+      },
+    ]);
+
+    const result = await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      // 同一 skuId 拆两行（购物车合并场景）：1 + 2 = 3
+      items: [
+        { skuId: 'sku-1', quantity: 1 },
+        { skuId: 'sku-1', quantity: 2 },
+      ],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+
+    // 查询用去重后的 skuIds（1 个），不误抛 E-ORDER-005
+    expect(mockDb.sku.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: ['sku-1'] }, status: 'ACTIVE' } }),
+    );
+    // 金额按合并后数量算：100 × 3 = 300（mockCreatedOrder 快照默认 200，
+    // 真实金额断言落 OrderItem 数据与 deductStock 入参，见下）
+    // OrderItem 落库 quantity=3（合并后总量），扣库存同行
+    expect(createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ skuId: 'sku-1', quantity: 3, subtotal: 300 })],
+      }),
+    );
+    expect(mockHelpers.deductStock).toHaveBeenCalledWith(
+      expect.anything(), 'wh-1', 'sku-1', 3, expect.anything(),
+    );
+  });
+
   it('product 已下架 → 抛 E-ORDER-005', async () => {
     mockDb.address.findUnique.mockResolvedValue({
       id: 'a1',

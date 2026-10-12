@@ -299,26 +299,30 @@ export class AdminNotificationService {
       db.notificationBatch.count({ where }),
     ]);
 
-    // readCount 实时聚合（分页行数 ≤100，逐行 count 可接受；MVP 不做 groupBy 缓存）
-    const items = await Promise.all(
-      rows.map(async (r) => {
-        const readCount = await db.notification.count({
-          where: { batchId: r.id, isRead: true },
-        });
-        return {
-          id: r.id,
-          type: r.type as AdminNotificationTypeView,
-          target: r.target as NotificationTargetView,
-          totalRecipients: r.totalRecipients,
-          deliveredCount: r.deliveredCount,
-          failedCount: r.failedCount,
-          readCount,
-          title: r.title as Record<string, string>,
-          content: r.content as Record<string, string>,
-          createdAt: r.createdAt.toISOString(),
-        } satisfies AdminNotificationHistoryItemView;
-      }),
-    );
+    // 批2 性能清理（20261012）：readCount 改一次 groupBy 批量聚合（原逐行 count，
+    // pageSize=100 时 100 次往返 N+1）；无行批次 readCount=0
+    const readGroups = rows.length
+      ? await db.notification.groupBy({
+          by: ['batchId'],
+          where: { batchId: { in: rows.map((r) => r.id) }, isRead: true },
+          _count: { _all: true },
+        })
+      : [];
+    const readMap = new Map(readGroups.map((g) => [g.batchId, g._count._all]));
+    const items = rows.map((r) => {
+      return {
+        id: r.id,
+        type: r.type as AdminNotificationTypeView,
+        target: r.target as NotificationTargetView,
+        totalRecipients: r.totalRecipients,
+        deliveredCount: r.deliveredCount,
+        failedCount: r.failedCount,
+        readCount: readMap.get(r.id) ?? 0,
+        title: r.title as Record<string, string>,
+        content: r.content as Record<string, string>,
+        createdAt: r.createdAt.toISOString(),
+      };
+    });
 
     return {
       items,

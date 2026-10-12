@@ -260,6 +260,45 @@ describe('DispatchService', () => {
       expect(call.take).toBe(100);
     });
 
+    // 批2 性能清理（20261012）：先过滤后分页——捞取批里含不合格单时补捞，保证返回 ≤limit 且不漏单
+    it('批2 先过滤后分页：首批含档位不合格单 → 补捞第二批凑满 limit', async () => {
+      // 第一批：take=3 返满 3 单，其中 1 单超档位（payableAmount 5000 > maxOrderAmount 1000）
+      mockDb.deliveryTask.findMany.mockResolvedValueOnce([
+        buildTask({ id: 't-ok', order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 } }),
+        buildTask({ id: 't-ok1b', order: { orderNo: 'MM4', payableAmount: 300, paymentMethod: 'COD', deliveryFee: 250 } }),
+        buildTask({ id: 't-over', order: { orderNo: 'MM2', payableAmount: 5000, paymentMethod: 'COD', deliveryFee: 250 } }),
+      ]);
+      // 第二批补捞：1 单合格（此时 visible 尚缺 1）
+      mockDb.deliveryTask.findMany.mockResolvedValueOnce([
+        buildTask({ id: 't-ok2', order: { orderNo: 'MM3', payableAmount: 200, paymentMethod: 'COD', deliveryFee: 250 } }),
+      ]);
+      // 第三批不捞（验证只调 2 次）
+      mockDb.deliveryTask.findMany.mockResolvedValueOnce([]);
+
+      mockEligibility.isEligible.mockImplementation(
+        (_snap: unknown, amount: number) => amount <= 1000,
+      );
+
+      const result = await service.listPendingTasks({ riderId: 'r1', limit: 3 });
+
+      // 恰好 2 次查询（首批 + 补捞），首批合格 2 条 + 第二批合格 1 条 = 3
+      expect(mockDb.deliveryTask.findMany).toHaveBeenCalledTimes(2);
+      // 第二批用 skip=3 续捞
+      const second = mockDb.deliveryTask.findMany.mock.calls[1]?.[0] as { skip: number };
+      expect(second.skip).toBe(3);
+      expect(result.items).toHaveLength(3);
+      expect(mockEligibility.isEligible).toHaveBeenCalled();
+    });
+
+    it('批2 先过滤后分页：首批全部合格且不足 limit → 不补捞（batch 捞尽即止）', async () => {
+      mockDb.deliveryTask.findMany.mockResolvedValueOnce([
+        buildTask({ order: { orderNo: 'MM1', payableAmount: 100, paymentMethod: 'COD', deliveryFee: 250 } }),
+      ]);
+      const result = await service.listPendingTasks({ riderId: 'r1', limit: 50 });
+      expect(mockDb.deliveryTask.findMany).toHaveBeenCalledTimes(1);
+      expect(result.items).toHaveLength(1);
+    });
+
     it('批A A4/T5-c 预约单可见性：where 带 order OR（scheduledFor null 或已到时）', async () => {
       mockDb.deliveryTask.findMany.mockResolvedValue([]);
       await service.listPendingTasks({ riderId: 'r1' });

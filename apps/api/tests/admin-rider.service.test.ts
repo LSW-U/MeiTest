@@ -1,7 +1,7 @@
 /**
  * Admin Rider Service tests (W7-ext-D)
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { mockDb, mockRedis } = vi.hoisted(() => ({
   mockDb: {
@@ -29,7 +29,11 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../src/shared/db', () => ({ db: mockDb }));
+// 批2 D9：suspend/delete 双写事务化——withTransaction 让 tx 复用 mockDb（断言不变）
+vi.mock('../src/shared/db', () => ({
+  db: mockDb,
+  withTransaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb)),
+}));
 vi.mock('../src/shared/cache', () => ({ redis: mockRedis }));
 vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -39,6 +43,10 @@ import { RiderService } from '../src/modules/rider/rider.service';
 
 describe('RiderService.adminRiders (W7-ext-D)', () => {
   let service: RiderService;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     Object.values(mockDb).forEach((table) => Object.values(table).forEach((fn) => fn.mockReset()));
@@ -233,6 +241,21 @@ describe('RiderService.adminRiders (W7-ext-D)', () => {
         where: { id: 'rider-1' },
         data: { vehiclePlate: null },
       });
+    });
+    it('批2 时区：今日单量边界用 Dili 当日日期（getDaysAgoInTz 模式），随 Dili 日切而非 UTC/本地午夜', async () => {
+      vi.useFakeTimers();
+      // 2026-10-11T17:00:00Z = Dili 2026-10-12 02:00 → Dili 当日日期 = 2026-10-12，
+      // 边界 = getTodayStats 同款 `${diliDate}T00:00:00.000Z`（先例口径，order-history.service:267）
+      vi.setSystemTime(new Date('2026-10-11T17:00:00Z'));
+      mockDb.riderProfile.findMany.mockResolvedValue([sampleProfile]);
+      mockDb.deliveryTask.groupBy.mockResolvedValue([]);
+
+      await service.adminListRiders({});
+
+      const call = mockDb.deliveryTask.groupBy.mock.calls[0]?.[0] as {
+        where: { updatedAt: { gte: Date } };
+      };
+      expect(call.where.updatedAt.gte.toISOString()).toBe('2026-10-12T00:00:00.000Z');
     });
   });
 

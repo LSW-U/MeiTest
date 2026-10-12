@@ -33,7 +33,12 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../src/shared/db', () => ({ db: mockDb }));
+// 批2 D9：review 双写事务化——withTransaction 让 tx 复用 mockDb（tx.riderProfile/tx.user
+// 即 mockDb 同一 mock 实例，现有断言不变）
+vi.mock('../src/shared/db', () => ({
+  db: mockDb,
+  withTransaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb)),
+}));
 vi.mock('../src/shared/cache', () => ({ redis: mockRedis }));
 vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
