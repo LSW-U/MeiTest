@@ -4,24 +4,23 @@
 --
 -- 表达式索引 (name->>'lang') 而非 jsonb GIN：jsonb GIN 只加速 @>/?，不加速 ->> 后 ILIKE
 -- 5 语言全建：catalog.service 5 语言 OR 查询要每支都走索引规划器才能 BitmapOr 合并
--- CONCURRENTLY 不锁表（dev/prod 已有数据），IF NOT EXISTS 幂等
+-- IF NOT EXISTS 幂等
 -- 注意：Prisma 不支持表达式索引 @@index 声明，schema.prisma 仅注释占位（见 Product model）
 --
--- ⚠️ 部署注意（prisma migrate deploy 5.22 不会自动跳事务）：
---   实测 prisma 5.22 对多条 CONCURRENTLY 的 migration 仍包事务（单条 CONCURRENTLY 可自动跳，
---   见 add_orders_status_created_at_idx_w；多条 + 表达式索引语法不匹配检测正则），deploy 报
---   25001 "CREATE INDEX CONCURRENTLY cannot run inside a transaction block"。
---   deploy 流程（dev 已按此 apply，生产同）：
---   1. prisma migrate deploy（add_pg_trgm_extension 自动成功；本 migration 报 25001 失败）
---   2. psql -d $DB -v ON_ERROR_STOP=1 < prisma/migrations/20260805120001_add_products_name_trgm_idx/migration.sql
---   3. prisma migrate resolve --applied 20260805120001_add_products_name_trgm_idx
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "products_name_en_trgm"
+-- 批1 增补（20261012，总指挥拍板 v2.1）：原 5 条 CREATE INDEX CONCURRENTLY（5 语言索引，git 历史
+--   为准）改写为普通 CREATE INDEX IF NOT EXISTS——Prisma migrate deploy 会把整个 migration
+--   包进事务，多条 CONCURRENTLY 报 25001，干库 fresh deploy 从未走通过（历来靠 psql 直 apply +
+--   migrate resolve --applied 补票）。存量 dev/prod 库早已手工 apply，无需重跑；改普通语句后
+--   shadow 回放不再 P3006，干库 migrate deploy 全程可走通。
+-- 沉淀规则（交付说明）：新 migration 禁用 CONCURRENTLY；大表在线加索引用运维脚本（psql 直跑）
+--   + prisma migrate resolve --applied 记账。
+CREATE INDEX IF NOT EXISTS "products_name_en_trgm"
   ON "products" USING gin ((name->>'en') gin_trgm_ops);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "products_name_zh_trgm"
+CREATE INDEX IF NOT EXISTS "products_name_zh_trgm"
   ON "products" USING gin ((name->>'zh') gin_trgm_ops);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "products_name_id_trgm"
+CREATE INDEX IF NOT EXISTS "products_name_id_trgm"
   ON "products" USING gin ((name->>'id') gin_trgm_ops);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "products_name_pt_trgm"
+CREATE INDEX IF NOT EXISTS "products_name_pt_trgm"
   ON "products" USING gin ((name->>'pt') gin_trgm_ops);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "products_name_tet_trgm"
+CREATE INDEX IF NOT EXISTS "products_name_tet_trgm"
   ON "products" USING gin ((name->>'tet') gin_trgm_ops);
