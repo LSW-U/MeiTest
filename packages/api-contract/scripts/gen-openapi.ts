@@ -287,6 +287,10 @@ import {
   UploadResponseData,
   // home（活动入口 PromoDock）
   HomeEntry,
+  // onboarding（引导页内容可配置 2026-10-14）
+  OnboardingSlide,
+  CreateOnboardingSlideRequest,
+  UpdateOnboardingSlideRequest,
   // search（热搜 2026-07-31）
   HotSearchTermItem,
   HotSearchTerm,
@@ -4469,6 +4473,32 @@ registry.registerPath({
     },
   },
 });
+
+// ===== Admin Upload - slide-image（引导页内容可配置 批1，2026-10-14）=====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/uploads/slide-image',
+  tags: ['upload'],
+  description:
+    '引导页 slide 图片上传（引导页内容可配置 批1，2026-10-14）。multipart/form-data，field name="file"。SUPER_ADMIN/WAREHOUSE_STAFF 权限（与 upload.controller 类级 @Roles 一致）。支持 jpg/png/webp，size ≤ 5MB，宽度 600-2000px，宽高比 3:4 - 1:1（竖向偏方，方案v2 D2 拍板建议区间）。MinIO 路径前缀 onboarding/slide-。前端拿到 URL 后提交 POST /admin/onboarding/slides 的 imageUrl。',
+  responses: {
+    200: {
+      description: '上传成功，返回公开 URL + key + size',
+      content: { 'application/json': { schema: UploadResponseData } },
+    },
+    400: {
+      description: '不支持的 mime / 空文件 / magic bytes 不匹配 / 宽度出界（600-2000px）/ 宽高比出界（3:4-1:1）',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    401: { description: 'E-AUTH-003 未授权', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 无权限（非 SUPER_ADMIN/WAREHOUSE_STAFF）', content: { 'application/json': { schema: ErrorResponse } } },
+    413: { description: '文件超过 5MB 上限', content: { 'application/json': { schema: ErrorResponse } } },
+    500: {
+      description: 'E-UPLOAD-001 存储服务错误（StorageError）/ E-UPLOAD-002 其他上传错误',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
 registry.registerPath({
   method: 'get',
   path: '/api/v1/client/home-entries',
@@ -4479,6 +4509,65 @@ registry.registerPath({
       description: '活动入口列表',
       content: { 'application/json': { schema: HomeEntry.array() } },
     },
+  },
+});
+
+// ===== Onboarding（引导页内容可配置，2026-10-14）=====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/onboarding/slides',
+  tags: ['onboarding'],
+  description:
+    '引导页 slide 列表（@Public 匿名可达，首启无 token 场景）。enabled=true 按 sortOrder 升序；空表返回 []（客户端回退本地 SLIDES 兜底）。',
+  responses: {
+    200: {
+      description: '引导页 slide 列表（可为空数组）',
+      content: { 'application/json': { schema: OnboardingSlide.array() } },
+    },
+  },
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/onboarding/slides',
+  tags: ['onboarding'],
+  description:
+    '创建引导页 slide（SUPER_ADMIN）。title/description 五语 JSON（en 必填非空，服务端校验）。icon/imageUrl 二选一。',
+  responses: {
+    200: { description: '创建后的 slide', content: { 'application/json': { schema: OnboardingSlide } } },
+    400: {
+      description: 'E-ONBOARDING-001 五语对象非法（缺 en 或键集越界）/ E-COMMON-001 zod 校验失败',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+    403: { description: 'E-AUTH-001 非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-ONBOARDING-003 imageUrl 非本服务上传 URL', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/onboarding/slides/{id}',
+  tags: ['onboarding'],
+  description: '修改引导页 slide（SUPER_ADMIN），部分字段（含 sortOrder、enabled）。',
+  request: { params: z.object({ id: z.string() }), body: { content: { 'application/json': { schema: UpdateOnboardingSlideRequest } } } },
+  responses: {
+    200: { description: '修改后的 slide', content: { 'application/json': { schema: OnboardingSlide } } },
+    404: { description: 'E-ONBOARDING-002 slide 不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/onboarding/slides/{id}',
+  tags: ['onboarding'],
+  description: '删除引导页 slide（SUPER_ADMIN，物理删除）。',
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    // P3-1 修复（2026-10-14）：实际返回 { success: true, data: null }，非 ErrorResponse 形状
+    200: {
+      description: '删除成功',
+      content: { 'application/json': { schema: z.object({ success: z.boolean(), data: z.null() }) } },
+    },
+    404: { description: 'E-ONBOARDING-002 slide 不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    403: { description: 'E-AUTH-001 非 SUPER_ADMIN', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
@@ -4722,6 +4811,10 @@ registry.register('DispatchCandidateList', DispatchCandidateList);
 registry.register('CreateReviewRequest', CreateReviewRequest);
 registry.register('CreateRiderReviewRequest', CreateRiderReviewRequest);
 registry.register('HomeEntry', HomeEntry);
+// onboarding（引导页内容可配置 2026-10-14）
+registry.register('OnboardingSlide', OnboardingSlide);
+registry.register('CreateOnboardingSlideRequest', CreateOnboardingSlideRequest);
+registry.register('UpdateOnboardingSlideRequest', UpdateOnboardingSlideRequest);
 registry.register('HotSearchTermItem', HotSearchTermItem);
 registry.register('HotSearchTerm', HotSearchTerm);
 registry.register('CreateHotSearchTermRequest', CreateHotSearchTermRequestSchema);
@@ -5358,6 +5451,7 @@ const openapi = generator.generateDocument({
     { name: 'review', description: '评论中心（客户评论 + 骑手评价，reviews-2）' },
     { name: 'feedback', description: '用户反馈（P22 反馈页）' },
     { name: 'home', description: '首页活动入口（PromoDock）' },
+    { name: 'onboarding', description: '引导页内容可配置（slides 管理 + 客户端下发）' },
     { name: 'search', description: '热搜词（Redis ZSET + 运营种子词）' },
     { name: 'rate', description: '汇率（批A USD→CNY 每日汇率 + 下单快照兜底）' },
   ],

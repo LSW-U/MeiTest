@@ -21,6 +21,7 @@ import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { HomeModule } from './modules/home/home.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { AboutModule } from './modules/about/about.module';
 import { ImModule } from './modules/im/im.module';
 import { ImportLogModule } from './modules/import-log/import-log.module';
@@ -64,6 +65,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     DispatchModule,
     FeedbackModule,
     HomeModule,
+    OnboardingModule,
     ImModule,
     ImportLogModule,
     InventoryModule,

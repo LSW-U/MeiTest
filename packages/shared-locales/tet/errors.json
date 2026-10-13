@@ -171,5 +171,10 @@
   "E-SMS-006": "Notifikasaun SMS falla atu manda",
   "E-SMS-007": "Webhook resibu SMS desativadu",
   "E-SMS-008": "Verifikasaun asin webhook resibu SMS falla",
-  "E-CAPTCHA-001": "Verifikasaun captcha falha, favor tenta fali"
+  "E-CAPTCHA-001": "Verifikasaun captcha falha, favor tenta fali",
+  "E-UPLOAD-023": "Imajen slide nia largura liur (600-2000px)",
+  "E-UPLOAD-024": "Imajen slide nia razaun liur (3:4 - 1:1)",
+  "E-ONBOARDING-001": "Títulu/deskripsiu teni ser objetu i18n ho valor \"en\" laos mamuk",
+  "E-ONBOARDING-002": "Slide onboarding lae hetan",
+  "E-ONBOARDING-003": "URL imajen teni husi aman servisu upload"
 }

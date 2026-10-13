@@ -171,5 +171,10 @@
   "E-SMS-006": "Falha ao enviar notificação SMS",
   "E-SMS-007": "Webhook de recibo de SMS desativado",
   "E-SMS-008": "Falha na verificação de assinatura do webhook de recibo de SMS",
-  "E-CAPTCHA-001": "Verificação captcha falhou, tente novamente"
+  "E-CAPTCHA-001": "Verificação captcha falhou, tente novamente",
+  "E-UPLOAD-023": "Largura da imagem de slide fora do intervalo (600-2000px)",
+  "E-UPLOAD-024": "Proporção da imagem de slide fora do intervalo (3:4 - 1:1)",
+  "E-ONBOARDING-001": "Título/descrição devem ser um objeto i18n com valor \"en\" não vazio",
+  "E-ONBOARDING-002": "Slide de onboarding não encontrado",
+  "E-ONBOARDING-003": "O URL da imagem deve ser do nosso serviço de upload"
 }

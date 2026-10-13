@@ -17,6 +17,7 @@ export * from './schemas/home';
 export * from './schemas/im';
 export * from './schemas/import-log';
 export * from './schemas/inventory';
+export * from './schemas/onboarding';
 export * from './schemas/order';
 export * from './schemas/payment';
 export * from './schemas/platform';

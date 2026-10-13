@@ -171,5 +171,10 @@
   "E-SMS-006": "SMS notification failed to send",
   "E-SMS-007": "SMS receipt webhook is disabled",
   "E-SMS-008": "SMS receipt webhook signature verification failed",
-  "E-CAPTCHA-001": "Captcha verification failed, please retry"
+  "E-CAPTCHA-001": "Captcha verification failed, please retry",
+  "E-ONBOARDING-001": "Title/description must be an i18n object with a non-empty \"en\" value",
+  "E-ONBOARDING-002": "Onboarding slide not found",
+  "E-ONBOARDING-003": "Image URL must be from our upload service",
+  "E-UPLOAD-023": "Slide image width out of range (600-2000px)",
+  "E-UPLOAD-024": "Slide image aspect ratio out of range (3:4 - 1:1)"
 }

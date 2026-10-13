@@ -171,5 +171,10 @@
   "E-SMS-006": "Notifikasi SMS gagal dikirim",
   "E-SMS-007": "Webhook terima SMS dinonaktifkan",
   "E-SMS-008": "Verifikasi tanda tangan webhook terima SMS gagal",
-  "E-CAPTCHA-001": "Verifikasi captcha gagal, silakan coba lagi"
+  "E-CAPTCHA-001": "Verifikasi captcha gagal, silakan coba lagi",
+  "E-UPLOAD-023": "Lebar gambar slide di luar rentang (600-2000px)",
+  "E-UPLOAD-024": "Rasio gambar slide di luar rentang (3:4 - 1:1)",
+  "E-ONBOARDING-001": "Judul/deskripsi harus berupa objek i18n dengan nilai \"en\" tidak kosong",
+  "E-ONBOARDING-002": "Slide onboarding tidak ditemukan",
+  "E-ONBOARDING-003": "URL gambar harus dari layanan unggahan kami"
 }

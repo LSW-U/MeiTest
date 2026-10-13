@@ -1104,6 +1104,31 @@ model Feedback {
   @@map("feedbacks")
 }
 
+/// 引导页 slide（引导页内容可配置，2026-10-14）
+/// 客户端 App 首启 onboarding 屏内容：admin 可配排序/启停/五语文案/配图。
+/// 独立表拍板（方案v2 D1）：SystemConfig 是 key-value 字符串存储，不适合结构化多行数据。
+/// title/description 为五语 JSON {en,pt,tet,id,zh}，en 必填（service 校验），缺失语言由前端 fallback en。
+/// icon（Material Symbol 名）/ imageUrl（slide-image 上传端点产出）二选一；空表时客户端回退本地 SLIDES。
+model OnboardingSlide {
+  id          String   @id @default(uuid())
+  /// Material Symbol 图标名（纯文字屏用，与 imageUrl 二选一）
+  icon        String?
+  /// 配图 URL（slide-image 上传端点产出，与 icon 二选一）
+  imageUrl    String?  @map("image_url")
+  /// 五语标题 {en,pt,tet,id,zh}，en 必填
+  title       Json
+  /// 五语描述，同 title 键集
+  description Json
+  /// 排序（升序）
+  sortOrder   Int      @default(0) @map("sort_order")
+  /// 启停（false 不下发客户端）
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("onboarding_slides")
+}
+
 /// 法律文档（P5 #3，2026-08-25）
 /// 服务条款(TERMS)/隐私政策(PRIVACY) 正文，按版本管理；
 /// content 为多语言 JSON（en/zh/id/pt/tet），接口按 Accept-Language 切片下发。

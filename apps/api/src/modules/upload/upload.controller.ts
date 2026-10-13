@@ -55,6 +55,12 @@ const BANNER_MAX_WIDTH = 2000; // 宽上限（超过此渲染慢 + 浪费带宽�
 const BANNER_MIN_RATIO = 1.5; // 宽高比下限 1.5:1（区间带下界）
 const BANNER_MAX_RATIO = 3.0; // 宽高比上限 3:1（区间带上界；client BannerCarousel 实际显示 ≈2:1，区间给运营裁切余地）
 
+/** 引导页 slide 图尺寸约束（引导页内容可配置 批1 2026-10-14）— admin slide-image 端点专用 */
+const SLIDE_MIN_WIDTH = 600; // 宽下限（与 banner/product 同基线）
+const SLIDE_MAX_WIDTH = 2000; // 宽上限
+const SLIDE_MIN_RATIO = 0.75; // 宽高比下限 3:4（竖向偏方，引导屏主流 9:16~3:4 取带内）
+const SLIDE_MAX_RATIO = 1.0; // 宽高比上限 1:1（方案v2 拍板：竖向 1:1~3:4）
+
 @Controller('api/v1/admin/uploads')
 @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
 export class UploadController {
@@ -296,6 +302,134 @@ export class UploadController {
     }
     this.logger.log({
       msg: 'banner_image_uploaded',
+      key: result.key,
+      size: result.size,
+      mime: file.mimetype,
+    });
+    return {
+      success: true,
+      data: { url: result.url, key: result.key, size: result.size },
+    };
+  }
+
+  /**
+   * 引导页 slide 图上传（引导页内容可配置 批1，2026-10-14）
+   *
+   * 与 product-image/banner-image 同校验范式（magic bytes + 尺寸 + 比例），
+   * 仅约束分化：宽 600-2000px + 宽高比 3:4~1:1（竖向偏方，方案v2 D2 拍板建议区间）。
+   * MinIO 路径前缀 onboarding/slide-*（语义隔离，便于审计/清理）。
+   */
+  @Post('slide-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        // 错误码化对齐既有样板：E-UPLOAD-010 不支持的图片类型
+        if (!ALLOWED_MIME[file.mimetype]) {
+          cb(
+            new BadRequestException({
+              code: 'E-UPLOAD-010',
+              message: `Unsupported image type: ${file.mimetype}, only jpg/png/webp allowed`,
+              details: { mime: file.mimetype },
+            }),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadSlideImage(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<{ success: true; data: { url: string; key: string; size: number } }> {
+    if (!file) {
+      throw new BadRequestException('未收到文件（field name 必须为 "file"）');
+    }
+    // 空文件校验
+    if (!file.buffer || file.buffer.length < MIN_FILE_SIZE) {
+      throw new BadRequestException('文件为空');
+    }
+    // magic bytes 校验（防 mime 欺骗）+ 与 header 一致性
+    const detected = detectImageFormat(file.buffer);
+    if (!detected) {
+      throw new BadRequestException(
+        `文件内容不是有效的图片（jpg/png/webp），可能 mime 类型被伪造`,
+      );
+    }
+    if (detected !== ALLOWED_MIME[file.mimetype]) {
+      throw new BadRequestException(
+        `文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`,
+      );
+    }
+    // 尺寸校验（宽 600-2000px，区间带模式同 banner）
+    let dims: { width: number; height: number };
+    try {
+      const r = imageSize(file.buffer);
+      if (!r.width || !r.height) {
+        throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
+      }
+      dims = { width: r.width, height: r.height };
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
+    }
+    if (dims.width < SLIDE_MIN_WIDTH) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-023',
+        message: `图片宽度 ${dims.width} 过小，slide 最小宽度 ${SLIDE_MIN_WIDTH}px`,
+        details: { width: dims.width, min: SLIDE_MIN_WIDTH },
+      });
+    }
+    if (dims.width > SLIDE_MAX_WIDTH) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-023',
+        message: `图片宽度 ${dims.width} 过大，slide 最大宽度 ${SLIDE_MAX_WIDTH}px`,
+        details: { width: dims.width, max: SLIDE_MAX_WIDTH },
+      });
+    }
+    // 宽高比区间带校验（竖向 3:4 ~ 1:1）
+    const ratio = dims.width / dims.height;
+    if (ratio < SLIDE_MIN_RATIO || ratio > SLIDE_MAX_RATIO) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-024',
+        message: `图片比例 ${dims.width}:${dims.height} 不在 3:4 - 1:1 区间内，会导致客户端引导屏变形`,
+        details: { width: dims.width, height: dims.height, minRatio: SLIDE_MIN_RATIO, maxRatio: SLIDE_MAX_RATIO },
+      });
+    }
+    const ext = detected;
+    const rand = randomBytes(4).toString('hex');
+    const key = `onboarding/slide-${Date.now()}-${rand}.${ext}`;
+    let result;
+    try {
+      result = await this.storage.uploadFile({
+        key,
+        buffer: file.buffer,
+        contentType: file.mimetype,
+      });
+    } catch (err) {
+      this.logger.error({
+        msg: 'slide_image_upload_failed',
+        key,
+        size: file.buffer.length,
+        mime: file.mimetype,
+        error: (err as Error).message,
+      });
+      if (err instanceof StorageError) {
+        throw new InternalServerErrorException({
+          code: 'E-UPLOAD-001',
+          message: `上传失败: ${err.message}`,
+        });
+      }
+      throw new InternalServerErrorException({
+        code: 'E-UPLOAD-002',
+        message: '上传失败，请稍后重试',
+      });
+    }
+    this.logger.log({
+      msg: 'slide_image_uploaded',
       key: result.key,
       size: result.size,
       mime: file.mimetype,
