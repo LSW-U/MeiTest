@@ -9,7 +9,8 @@
  *   - product-main-create / product-main-edit：商品主图（product-image，1:1 200-2000px）
  *   - product-image-wall：商品图片墙（product-image，批C 图片墙底层调用替换，交互不动）
  *   - category-icon：分类图标（product-image，1:1 约束一致——U7 拍板不开新口子）
- *   - banner：banner 宽幅图（banner-image，宽 600-2000px + 比例 1.5:1-3:1——U7/U8/U9 拍板）
+ *   - banner：banner 宽幅图（banner-image，宽 600-2000px 宽幅 + 1.5:1~3:1 横幅约束——U7/U8/U9 拍板）
+ *   - onboarding-slide：引导页轮播图（slide-image，竖向 1:1~3:4 + 宽 600-2000px——引导页内容可配置批1 端点/批2 接线）
  * 非图片场景（CSV 导入）：inventory-import / products-import 两调用点
  * 仍直调 apiUploadFile（须带各自 mode/query 参数，YAGNI 不进注册表——批A 审查 P3-4）。
  *
@@ -42,6 +43,8 @@ export const UPLOAD_SCENES = {
   'category-icon': '/api/v1/admin/uploads/product-image',
   /** banner 宽幅图（U8：独立端点，宽 600-2000px + 比例 1.5:1-3:1） */
   banner: '/api/v1/admin/uploads/banner-image',
+  /** 引导页轮播图（引导页内容可配置批2：竖向 1:1~3:4 + 宽 600-2000px，批1 新增端点） */
+  'onboarding-slide': '/api/v1/admin/uploads/slide-image',
 } as const;
 
 export type UploadScene = keyof typeof UPLOAD_SCENES;

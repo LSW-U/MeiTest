@@ -93,6 +93,12 @@ const NAV_ITEMS: NavItem[] = [
     perspectives: ['platform'],
   },
   {
+    labelKey: 'menu.onboardingSlides',
+    href: '/onboarding-slides',
+    icon: Smartphone,
+    perspectives: ['platform'],
+  },
+  {
     labelKey: 'menu.warehouses',
     href: '/warehouses',
     icon: Warehouse,
@@ -241,7 +247,7 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', icon: LayoutGrid, hrefs: ['/dashboard', '/statistics'] },
-  { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/hot-search'] },
+  { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/onboarding-slides', '/hot-search'] },
   { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
   { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/riders/deposit-tiers', '/riders/deposit-locations', '/riders/deposit-requests', '/warehouses', '/inventory'] },
   { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', icon: Users, hrefs: ['/customers'] },

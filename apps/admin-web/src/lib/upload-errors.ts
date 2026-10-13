@@ -141,6 +141,7 @@ export function localizeUploadError(
  * admin 场景（对齐 upload-core SCENE_RULES）：
  *   - product-image：1:1 容差5% + 200–2000px + ≤5MB（主图/图片墙/分类图标）
  *   - banner-image：宽 600–2000 + 比例 1.5–3.0 + ≤5MB（宽度违规报 021）
+ *   - slide-image：宽 600–2000 + 竖向比例 0.75–1.0（3:4~1:1）+ ≤5MB（023 宽度/024 比例，引导页内容可配置；不设 maxEdge——后端无最大边校验，P3-3）
  */
 
 /** admin 预校验失败（code 与后端 E-UPLOAD 对齐，走 localizeUploadError 直接本地化） */
@@ -171,6 +172,8 @@ export interface UploadSceneRule {
   ratioRange?: [number, number];
   /** minWidth 违规的错误码覆盖（默认 E-UPLOAD-016；banner 后端用 021 宽度越界） */
   minWidthCode?: string;
+  /** ratioRange 违规的错误码覆盖（默认 E-UPLOAD-022；slide 后端用 024） */
+  ratioCode?: string;
 }
 
 /** admin 两场景规则表（与 upload-core SCENE_RULES 对齐；client/rider 场景在 MeiMart1.0 侧消费） */
@@ -179,6 +182,10 @@ export const UPLOAD_SCENE_RULES: Record<string, UploadSceneRule> = {
   'product-image': { minEdge: 200, maxEdge: 2000, square: true, squareTolerance: 0.05 },
   // admin banner：宽 600–2000 + 比例 1.5–3.0（宽度违规后端报 021）
   'banner-image': { minWidth: 600, maxEdge: 2000, ratioRange: [1.5, 3.0], minWidthCode: 'E-UPLOAD-021' },
+  // admin 引导页轮播图：宽 600–2000 + 竖向比例 0.75–1.0（3:4~1:1，后端 023 宽度/024 比例）
+  // P3-3（20261014 拍板）：不设 maxEdge——后端 slide-image 只校验宽度与比例、无最大边校验，
+  // 前端若加 maxEdge 会拒掉 height>2000 但后端会收的竖图（口径差），故只留 minWidth + ratioRange
+  'slide-image': { minWidth: 600, ratioRange: [0.75, 1.0], minWidthCode: 'E-UPLOAD-023', ratioCode: 'E-UPLOAD-024' },
 };
 
 /** 预校验输入（尺寸由调用方提供：web Image 解码 / 上传前 readImageDimensions） */
@@ -224,7 +231,10 @@ export function precheckUploadImage(
     const ratio = width / height;
     const [min, max] = rule.ratioRange;
     if (ratio < min || ratio > max) {
-      throw new PrecheckError('E-UPLOAD-022', `Aspect ratio ${width}:${height} out of range ${min}:1 - ${max}:1`);
+      throw new PrecheckError(
+        rule.ratioCode ?? 'E-UPLOAD-022',
+        `Aspect ratio ${width}:${height} out of range ${min}:1 - ${max}:1`,
+      );
     }
   }
   if (rule.minEdge !== undefined && Math.min(width, height) < rule.minEdge) {
@@ -255,6 +265,7 @@ const SCENE_TO_PRECHECK_RULE: Record<string, string> = {
   'product-image-wall': 'product-image',
   'category-icon': 'product-image',
   banner: 'banner-image',
+  'onboarding-slide': 'slide-image',
 };
 
 /**

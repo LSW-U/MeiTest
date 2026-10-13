@@ -45,7 +45,8 @@
     "groupUsers": "",
     "groupMarketing": "",
     "groupFinance": "",
-    "groupSystem": ""
+    "groupSystem": "",
+    "onboardingSlides": "Slides de Onboarding"
   },
   "dashboard": {
     "title": "Painel da Plataforma",

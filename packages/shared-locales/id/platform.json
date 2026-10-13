@@ -45,7 +45,8 @@
     "groupUsers": "",
     "groupMarketing": "",
     "groupFinance": "",
-    "groupSystem": ""
+    "groupSystem": "",
+    "onboardingSlides": "Slide Onboarding"
   },
   "dashboard": {
     "title": "Dasbor Platform",

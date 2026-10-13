@@ -45,7 +45,8 @@
     "groupUsers": "用户",
     "groupMarketing": "营销",
     "groupFinance": "财务",
-    "groupSystem": "系统"
+    "groupSystem": "系统",
+    "onboardingSlides": "引导页配置"
   },
   "dashboard": {
     "title": "平台数据看板",
