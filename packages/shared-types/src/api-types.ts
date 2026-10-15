@@ -1445,6 +1445,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/notifications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 软删成功（非本人/不存在均 404，不暴露存在性） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/notifications/batch-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 批量软删成功（ids 空 400 / 上限 100 / 全部限定本人） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/device-tokens": {
         parameters: {
             query?: never;
@@ -4843,6 +4923,8 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            /** Format: date-time */
+                            deletedAt: string | null;
                             promotion: {
                                 /** Format: uuid */
                                 promotionId: string;
@@ -4956,6 +5038,8 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            /** Format: date-time */
+                            deletedAt: string | null;
                             promotion: {
                                 /** Format: uuid */
                                 promotionId: string;
@@ -6263,6 +6347,8 @@ export interface paths {
                             /** Format: date-time */
                             cancelledAt: string | null;
                             cancelReason: string | null;
+                            /** Format: date-time */
+                            deletedAt: string | null;
                             promotion: {
                                 /** Format: uuid */
                                 promotionId: string;
@@ -6298,7 +6384,67 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /** @description 删除订单（软删 deletedAt，仅本人；非本人/不存在 404；软删后 client list/detail/counts 不可见，admin 不过滤） */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+                /** @description ORDER_NOT_FOUND */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 非终态订单不可删除 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -6352,6 +6498,50 @@ export interface paths {
                                     [key: string]: unknown;
                                 };
                             };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/batch-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量删除订单（软删，与通知批量删除同形状：ids 空 400 / 上限 100 / 全部限定本人） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 批量删除成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
                         };
                     };
                 };
@@ -10086,6 +10276,8 @@ export interface paths {
                                     /** Format: date-time */
                                     cancelledAt: string | null;
                                     cancelReason: string | null;
+                                    /** Format: date-time */
+                                    deletedAt: string | null;
                                     promotion: {
                                         /** Format: uuid */
                                         promotionId: string;
@@ -10244,6 +10436,8 @@ export interface paths {
                                 /** Format: date-time */
                                 cancelledAt: string | null;
                                 cancelReason: string | null;
+                                /** Format: date-time */
+                                deletedAt: string | null;
                                 promotion: {
                                     /** Format: uuid */
                                     promotionId: string;
@@ -10375,6 +10569,8 @@ export interface paths {
                                 /** Format: date-time */
                                 cancelledAt: string | null;
                                 cancelReason: string | null;
+                                /** Format: date-time */
+                                deletedAt: string | null;
                                 promotion: {
                                     /** Format: uuid */
                                     promotionId: string;
@@ -22445,6 +22641,12 @@ export interface components {
         MarkNotificationReadResponse: {
             success: boolean;
         };
+        BatchDeleteNotificationsRequest: {
+            ids: string[];
+        };
+        DeleteNotificationResponse: {
+            success: boolean;
+        };
         AdminUserListItem: {
             /** Format: uuid */
             id: string;
@@ -23288,6 +23490,8 @@ export interface components {
             /** Format: date-time */
             cancelledAt: string | null;
             cancelReason: string | null;
+            /** Format: date-time */
+            deletedAt: string | null;
             promotion: {
                 /** Format: uuid */
                 promotionId: string;
@@ -23355,6 +23559,12 @@ export interface components {
                 COMPLETED?: number;
                 CANCELLED?: number;
             };
+        };
+        BatchDeleteOrdersRequest: {
+            ids: string[];
+        };
+        DeleteOrderResponse: {
+            success: boolean;
         };
         Cart: {
             /** Format: uuid */

@@ -34,7 +34,9 @@ import {
   UpdateAddressRequest,
   FavoriteToggleRequest,
   UpdateNotificationPreferencesRequest,
+  BatchDeleteNotificationsRequest,
 } from '@meimart/api-contract';
+import { z } from 'zod';
 import { UserService } from './user.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -234,6 +236,26 @@ export class NotificationController {
   @HttpCode(HttpStatus.OK)
   async markAllRead(@Request() req: { user: RequestUser }) {
     const data = await this.users.markAllNotificationsRead(req.user.sub);
+    return { success: true, data };
+  }
+
+  // ===== P26 批B1（2026-10-13）：通知删除（软删）=====
+  @Delete(':id')
+  @Audit({ resource: 'Notification', skip: true })
+  async deleteNotification(@Request() req: { user: RequestUser }, @Param('id') id: string) {
+    const data = await this.users.deleteNotification(req.user.sub, id);
+    return { success: true, data };
+  }
+
+  @Post('batch-delete')
+  @Audit({ resource: 'Notification', skip: true })
+  @HttpCode(HttpStatus.OK)
+  async deleteNotifications(
+    @Request() req: { user: RequestUser },
+    @Body(new ZodValidationPipe(BatchDeleteNotificationsRequest))
+    body: z.infer<typeof BatchDeleteNotificationsRequest>,
+  ) {
+    const data = await this.users.deleteNotifications(req.user.sub, body.ids);
     return { success: true, data };
   }
 }

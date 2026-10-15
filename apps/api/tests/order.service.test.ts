@@ -26,7 +26,7 @@ const { mockDb, mockHelpers, mockOrderNo, mockPayment, mockQueue, mockCart, mock
     // 批A 汇率快照（审查 P3-2）：WECHAT 下单 Step 5.5 查当日汇率
     exchangeRate: { findUnique: vi.fn() },
     sku: { findMany: vi.fn() },
-    order: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    order: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn() },
     orderItem: { findMany: vi.fn() },
     orderEvent: { create: vi.fn() },
   },
@@ -1589,5 +1589,112 @@ describe('OrderService.markPaidTx - 批A 销量真实统计', () => {
     ).rejects.toMatchObject({ response: { code: 'E-ORDER-003' } });
 
     expect(mockSalesIncrement).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// P27 批B1（2026-10-13）：客户端订单删除（软删）
+// ============================================================================
+describe('OrderService.deleteOrder / deleteOrders (P27 批B1 软删)', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    Object.values(mockDb).forEach((table) => {
+      Object.values(table).forEach((fn) => fn.mockReset());
+    });
+    service = new OrderService(
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      null,
+      {} as never,
+      {} as never,
+      null,
+      null,
+      null,
+    );
+  });
+
+  it('归属校验：非本人订单 → 404 E-ORDER-004（不暴露存在性）', async () => {
+    mockDb.order.findUnique.mockResolvedValueOnce({ id: 'order-1', userId: 'other-user', status: 'COMPLETED' });
+    await expect(service.deleteOrder('order-1', 'user-1')).rejects.toMatchObject({
+      response: { code: 'E-ORDER-004' },
+    });
+  });
+
+  it('订单不存在 → 404 E-ORDER-004', async () => {
+    mockDb.order.findUnique.mockResolvedValueOnce(null);
+    await expect(service.deleteOrder('missing', 'user-1')).rejects.toMatchObject({
+      response: { code: 'E-ORDER-004' },
+    });
+  });
+
+  it('非终态订单（进行中）→ 409 E-ORDER-003', async () => {
+    mockDb.order.findUnique.mockResolvedValueOnce({ id: 'order-1', userId: 'user-1', status: 'OUT_FOR_DELIVERY' });
+    await expect(service.deleteOrder('order-1', 'user-1')).rejects.toMatchObject({
+      response: { code: 'E-ORDER-003' },
+    });
+  });
+
+  it('终态订单 → 软删 deletedAt=Date（不物理删）', async () => {
+    mockDb.order.findUnique.mockResolvedValueOnce({ id: 'order-1', userId: 'user-1', status: 'COMPLETED' });
+    mockDb.order.update.mockResolvedValueOnce({ id: 'order-1', deletedAt: new Date() });
+    const result = await service.deleteOrder('order-1', 'user-1');
+    expect(result.success).toBe(true);
+    expect(mockDb.order.update).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it('批量：空数组 → 400 E-ORDER-008', async () => {
+    await expect(service.deleteOrders('user-1', [])).rejects.toMatchObject({
+      response: { code: 'E-ORDER-008' },
+    });
+  });
+
+  it('批量：上限 100 → 400 E-ORDER-009', async () => {
+    await expect(service.deleteOrders('user-1', new Array(101).fill('id'))).rejects.toMatchObject({
+      response: { code: 'E-ORDER-009' },
+    });
+  });
+
+  it('批量：含非终态订单 → 409 E-ORDER-003（不部分删除）', async () => {
+    mockDb.order.findMany.mockResolvedValueOnce([
+      { id: 'order-1', status: 'COMPLETED' },
+      { id: 'order-2', status: 'PENDING_CONFIRM' },
+    ]);
+    await expect(service.deleteOrders('user-1', ['order-1', 'order-2'])).rejects.toMatchObject({
+      response: { code: 'E-ORDER-003' },
+    });
+    expect(mockDb.order.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('批量：全部本人终态订单 → updateMany 限定 userId 软删', async () => {
+    mockDb.order.findMany.mockResolvedValueOnce([
+      { id: 'order-1', status: 'COMPLETED' },
+      { id: 'order-2', status: 'CANCELLED' },
+    ]);
+    mockDb.order.updateMany.mockResolvedValueOnce({ count: 2 });
+    const result = await service.deleteOrders('user-1', ['order-1', 'order-2']);
+    expect(result.success).toBe(true);
+    expect(mockDb.order.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['order-1', 'order-2'] }, userId: 'user-1' },
+      select: { id: true, status: true },
+    });
+    expect(mockDb.order.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['order-1', 'order-2'] }, userId: 'user-1' },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it('counts groupBy 过滤软删订单（P27：4 宫格计数不含已删）', async () => {
+    mockDb.order.groupBy = mockDb.order.groupBy ?? vi.fn();
+    mockDb.order.groupBy.mockResolvedValueOnce([]);
+    await service.getOrderCounts('user-1');
+    expect(mockDb.order.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) }),
+    );
   });
 });

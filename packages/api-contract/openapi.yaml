@@ -658,6 +658,25 @@ components:
           type: boolean
       required:
         - success
+    BatchDeleteNotificationsRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+      required:
+        - ids
+    DeleteNotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
     AdminUserListItem:
       type: object
       properties:
@@ -2511,6 +2530,10 @@ components:
         cancelReason:
           type: string
           nullable: true
+        deletedAt:
+          type: string
+          nullable: true
+          format: date-time
         promotion:
           type: object
           nullable: true
@@ -2557,6 +2580,7 @@ components:
         - deliveredAt
         - cancelledAt
         - cancelReason
+        - deletedAt
         - promotion
         - scheduledFor
         - acceptingReservation
@@ -2686,6 +2710,25 @@ components:
             CANCELLED: *a16
       required:
         - counts
+    BatchDeleteOrdersRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+      required:
+        - ids
+    DeleteOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
     Cart:
       type: object
       properties:
@@ -10540,6 +10583,53 @@ paths:
                     type: boolean
                 required:
                   - success
+  /api/v1/client/notifications/{id}:
+    delete:
+      tags:
+        - notification
+      responses:
+        "200":
+          description: 软删成功（非本人/不存在均 404，不暴露存在性）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+  /api/v1/client/notifications/batch-delete:
+    post:
+      tags:
+        - notification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - ids
+      responses:
+        "200":
+          description: 批量软删成功（ids 空 400 / 上限 100 / 全部限定本人）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
   /api/v1/client/device-tokens:
     post:
       tags:
@@ -14798,6 +14888,10 @@ paths:
                   cancelReason:
                     type: string
                     nullable: true
+                  deletedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
                   promotion:
                     type: object
                     nullable: true
@@ -14844,6 +14938,7 @@ paths:
                   - deliveredAt
                   - cancelledAt
                   - cancelReason
+                  - deletedAt
                   - promotion
                   - scheduledFor
                   - acceptingReservation
@@ -15040,6 +15135,10 @@ paths:
                     cancelReason:
                       type: string
                       nullable: true
+                    deletedAt:
+                      type: string
+                      nullable: true
+                      format: date-time
                     promotion:
                       type: object
                       nullable: true
@@ -15086,6 +15185,7 @@ paths:
                     - deliveredAt
                     - cancelledAt
                     - cancelReason
+                    - deletedAt
                     - promotion
                     - scheduledFor
                     - acceptingReservation
@@ -16828,6 +16928,10 @@ paths:
                   cancelReason:
                     type: string
                     nullable: true
+                  deletedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
                   promotion:
                     type: object
                     nullable: true
@@ -16874,11 +16978,87 @@ paths:
                   - deliveredAt
                   - cancelledAt
                   - cancelReason
+                  - deletedAt
                   - promotion
                   - scheduledFor
                   - acceptingReservation
         "404":
           description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+    delete:
+      tags:
+        - order
+      description: 删除订单（软删 deletedAt，仅本人；非本人/不存在 404；软删后 client list/detail/counts
+        不可见，admin 不过滤）
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+        "404":
+          description: ORDER_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: 非终态订单不可删除
           content:
             application/json:
               schema:
@@ -16955,6 +17135,38 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/client/orders/batch-delete:
+    post:
+      tags:
+        - order
+      description: 批量删除订单（软删，与通知批量删除同形状：ids 空 400 / 上限 100 / 全部限定本人）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 100
+              required:
+                - ids
+      responses:
+        "200":
+          description: 批量删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
   /api/v1/client/cart:
     get:
       tags:
@@ -22339,6 +22551,10 @@ paths:
                             cancelReason:
                               type: string
                               nullable: true
+                            deletedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
                             promotion:
                               type: object
                               nullable: true
@@ -22385,6 +22601,7 @@ paths:
                             - deliveredAt
                             - cancelledAt
                             - cancelReason
+                            - deletedAt
                             - promotion
                             - scheduledFor
                             - acceptingReservation
@@ -22636,6 +22853,10 @@ paths:
                       cancelReason:
                         type: string
                         nullable: true
+                      deletedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                       promotion:
                         type: object
                         nullable: true
@@ -22682,6 +22903,7 @@ paths:
                       - deliveredAt
                       - cancelledAt
                       - cancelReason
+                      - deletedAt
                       - promotion
                       - scheduledFor
                       - acceptingReservation
@@ -22904,6 +23126,10 @@ paths:
                       cancelReason:
                         type: string
                         nullable: true
+                      deletedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
                       promotion:
                         type: object
                         nullable: true
@@ -22950,6 +23176,7 @@ paths:
                       - deliveredAt
                       - cancelledAt
                       - cancelReason
+                      - deletedAt
                       - promotion
                       - scheduledFor
                       - acceptingReservation

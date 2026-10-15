@@ -42,6 +42,16 @@ export const MarkNotificationReadResponse = z.object({
   success: z.boolean(),
 });
 
+/** 批量删除通知请求（P26 批B1 2026-10-13：空 400 / 上限 100 / 后端限定本人） */
+export const BatchDeleteNotificationsRequest = z.object({
+  ids: z.array(Id).min(1).max(100),
+});
+
+/** 通知删除响应（单条/批量同形，与订单删除 P27 一致） */
+export const DeleteNotificationResponse = z.object({
+  success: z.boolean(),
+});
+
 /** 通知偏好（GET 响应 / PATCH 返回全量；批A 扩 riderTasks/wallet 两键） */
 export const NotificationPreferences = z.object({
   orderUpdates: z.boolean(),

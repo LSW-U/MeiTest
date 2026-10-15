@@ -35,7 +35,7 @@ import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, i
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { OrderNoService } from './order-no.service';
-import { getInitialState, assertCanTransition, isUserCancellable } from './order-status.machine';
+import { getInitialState, assertCanTransition, isUserCancellable, isTerminalStatus } from './order-status.machine';
 import type {
   CreateOrderInput,
   CreatedOrder,
@@ -117,6 +117,11 @@ export interface OrderWithRelations {
   completedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /**
+   * P27 批B1（2026-10-13）：软删标记 ISO。client 详情恒 null（getOrderDetail 过滤软删行）；
+   * admin 详情非 null = 「用户已删除」展示依据。
+   */
+  deletedAt: string | null;
   items: Array<{
     id: string;
     productId: string;
@@ -1307,7 +1312,8 @@ export class OrderService {
         },
       },
     });
-    if (!order || order.userId !== userId) {
+    // P27 批B1：软删订单对 client 不可见；非本人订单按 404（不暴露存在性）
+    if (!order || order.userId !== userId || order.deletedAt) {
       throw new NotFoundException({
         code: 'E-ORDER-004',
         message: 'Order not found',
@@ -1325,7 +1331,8 @@ export class OrderService {
     options: { status?: OrderStatusValue[]; cursor?: string; limit?: number },
   ): Promise<{ items: OrderWithRelations[]; nextCursor: string | null; hasMore: boolean }> {
     const limit = Math.min(options.limit ?? 20, 50);
-    const where: Record<string, unknown> = { userId };
+    // P27 批B1（2026-10-13）：软删订单对 client 不可见
+    const where: Record<string, unknown> = { userId, deletedAt: null };
     if (options.status && options.status.length > 0) {
       where.status = { in: options.status };
     }
@@ -1370,7 +1377,8 @@ export class OrderService {
   async getOrderCounts(userId: string): Promise<{ counts: Record<string, number> }> {
     const rows = await db.order.groupBy({
       by: ['status'],
-      where: { userId },
+      // P27 批B1（2026-10-13）：软删订单不参与 4 宫格计数
+      where: { userId, deletedAt: null },
       _count: { _all: true },
     });
     // F3：从 contract OrderStatus 派生，消除手动同步（改枚举自动跟随）
@@ -1378,6 +1386,60 @@ export class OrderService {
     for (const s of OrderStatus.options) counts[s] = 0;
     for (const r of rows) counts[r.status] = r._count._all;
     return { counts };
+  }
+
+  /**
+   * P27 批B1（2026-10-13）：软删单条订单（D8 拍板不物理删）
+   *
+   * - 归属硬校验：非本人/不存在 → 404 E-ORDER-004（不暴露存在性）
+   * - 业务约束：仅终态（COMPLETED/CANCELLED）可删，进行中 409 E-ORDER-003
+   * - 软删：置 deletedAt = now()；client list/detail/counts 过滤，admin 不过滤
+   */
+  async deleteOrder(orderId: string, userId: string): Promise<{ success: boolean }> {
+    const order = await db.order.findUnique({ where: { id: orderId } });
+    if (!order || order.userId !== userId) {
+      throw new NotFoundException({ code: 'E-ORDER-004', message: 'Order not found' });
+    }
+    if (!isTerminalStatus(order.status)) {
+      throw new ConflictException({
+        code: 'E-ORDER-003',
+        message: `Order status ${order.status} cannot be deleted (only terminal orders)`,
+      });
+    }
+    await db.order.update({
+      where: { id: orderId },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  /**
+   * P27 批B1：批量软删订单。ids 空 400 / 上限 100（契约 zod 已拦，服务层兜底）/ 逐条终态校验 + 本人限定。
+   * 错误码 E-ORDER-008/009（审查 P1-1：006/007 已有既定文案「已付款不能直接取消/退款金额不一致」，撞码换新段）。
+   */
+  async deleteOrders(userId: string, ids: string[]): Promise<{ success: boolean }> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BadRequestException({ code: 'E-ORDER-008', message: 'ids is required' });
+    }
+    if (ids.length > 100) {
+      throw new BadRequestException({ code: 'E-ORDER-009', message: 'ids limit 100' });
+    }
+    const orders = await db.order.findMany({
+      where: { id: { in: ids }, userId },
+      select: { id: true, status: true },
+    });
+    const nonTerminal = orders.find((o) => !isTerminalStatus(o.status));
+    if (nonTerminal) {
+      throw new ConflictException({
+        code: 'E-ORDER-003',
+        message: `Order status ${nonTerminal.status} cannot be deleted (only terminal orders)`,
+      });
+    }
+    await db.order.updateMany({
+      where: { id: { in: orders.map((o) => o.id) }, userId },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
   }
 
   /**
@@ -1512,6 +1574,7 @@ export class OrderService {
       completedAt: Date | null;
       cancelledAt: Date | null;
       cancelReason: string | null;
+      deletedAt?: Date | null; // P27 批B1：软删标记（admin 详情读非 null 标「用户已删除」）
       items: Array<Record<string, unknown>>;
       events: Array<Record<string, unknown>>;
       orderPromotions?: Array<Record<string, unknown>>;
@@ -1569,6 +1632,8 @@ export class OrderService {
       completedAt: toIso(o.completedAt),
       cancelledAt: toIso(o.cancelledAt),
       cancelReason: o.cancelReason,
+      // P27 批B1：软删标记透出（client 详情过滤软删行恒 null；admin 详情非 null = 「用户已删除」）
+      deletedAt: toIso(o.deletedAt ?? null),
       items: o.items.map((i) => ({
         id: i.id as string,
         productId: i.productId as string,

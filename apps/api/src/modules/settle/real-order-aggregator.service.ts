@@ -88,6 +88,9 @@ export class RealOrderAggregator implements OrderAggregator {
         createdAt: { gte: windowStart, lt: windowEnd },
         status: { in: [...MERCHANT_COUNTED_STATUSES] },
         warehouse: { shopId },
+        // P27 批B1：客户端软删订单不计入结算口径（结算语义与删除语义正交——软删不回退已生成 Settlement，
+        // 仅聚合窗口内新订单排除软删行，与通知 readCount 不过滤的批次统计语义决策一致）
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -126,7 +129,7 @@ export class RealOrderAggregator implements OrderAggregator {
         taskType: 'delivery',
         status: 'DELIVERED',
         deliveredAt: { gte: windowStart, lt: windowEnd },
-        order: { status: { not: 'CANCELLED' } },
+        order: { status: { not: 'CANCELLED' }, deletedAt: null }, // P27 批B1：软删订单不计入骑手配送费聚合
       },
       select: { order: { select: { deliveryFee: true } } },
     });

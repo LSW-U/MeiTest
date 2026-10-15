@@ -301,6 +301,8 @@ export class AdminNotificationService {
 
     // 批2 性能清理（20261012）：readCount 改一次 groupBy 批量聚合（原逐行 count，
     // pageSize=100 时 100 次往返 N+1）；无行批次 readCount=0
+    // P26 批B1（2026-10-13，有意决策 D9）：不过滤 deletedAt——批次统计语义 =
+    // 「发出后已读过的量」，用户删除通知不回退批次统计（client 侧查询才过滤软删）
     const readGroups = rows.length
       ? await db.notification.groupBy({
           by: ['batchId'],

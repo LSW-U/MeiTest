@@ -133,7 +133,8 @@ describe('RealOrderAggregator', () => {
           taskType: 'delivery',
           status: 'DELIVERED',
           deliveredAt: { gte: expect.any(Date), lt: expect.any(Date) },
-          order: { status: { not: 'CANCELLED' } },
+          // P27 批B1：软删订单不计入骑手配送费聚合
+          order: { status: { not: 'CANCELLED' }, deletedAt: null },
         },
         select: { order: { select: { deliveryFee: true } } },
       });

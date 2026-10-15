@@ -36,7 +36,7 @@ vi.mock('../src/shared/logger/logger', () => ({
 
 import { DeviceTokenService } from '../src/modules/notification/device-token.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('DeviceTokenService（批A A1）', () => {
   let service: DeviceTokenService;
@@ -151,6 +151,7 @@ describe('NotificationService（批A A3：client/rider 共用底层）', () => {
       expect.objectContaining({
         where: {
           userId: 'rider-1',
+          deletedAt: null, // P26 批B1：软删通知对 client/rider 侧不可见
           type: { in: ['ORDER_UPDATE', 'PROMOTION', 'SYSTEM', 'RIDER_TASK', 'WALLET'] },
         },
         take: 100,
@@ -165,6 +166,74 @@ describe('NotificationService（批A A3：client/rider 共用底层）', () => {
 
     await expect(service.markNotificationRead('user-1', 'missing')).rejects.toThrow(
       NotFoundException,
+    );
+  });
+});
+
+// ============================================================================
+// P26 批B1（2026-10-13）：通知删除（软删）
+// ============================================================================
+describe('NotificationService.deleteNotification / deleteNotifications (P26 批B1)', () => {
+  let service: NotificationService;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    service = new NotificationService();
+  });
+
+  it('归属校验：非本人/不存在 → 404 E-USER-007', async () => {
+    mockDb.notification.findFirst.mockResolvedValueOnce(null);
+    await expect(service.deleteNotification('user-1', 'missing')).rejects.toThrow(NotFoundException);
+  });
+
+  it('软删生效：置 deletedAt=Date（不物理删）', async () => {
+    mockDb.notification.findFirst.mockResolvedValueOnce({ id: 'n1', userId: 'user-1' });
+    mockDb.notification.update.mockResolvedValueOnce({ id: 'n1' });
+    const result = await service.deleteNotification('user-1', 'n1');
+    expect(result.success).toBe(true);
+    expect(mockDb.notification.update).toHaveBeenCalledWith({
+      where: { id: 'n1' },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it('批量：空数组 → 400', async () => {
+    await expect(service.deleteNotifications('user-1', [])).rejects.toThrow(BadRequestException);
+  });
+
+  it('批量：上限 100 → 400', async () => {
+    await expect(service.deleteNotifications('user-1', new Array(101).fill('id'))).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('批量：updateMany 限定本人 userId（软删）', async () => {
+    mockDb.notification.updateMany.mockResolvedValueOnce({ count: 2 });
+    const result = await service.deleteNotifications('user-1', ['n1', 'n2']);
+    expect(result.success).toBe(true);
+    expect(mockDb.notification.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['n1', 'n2'] }, userId: 'user-1' },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it('list 过滤软删通知（deletedAt IS NULL）', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({ notificationPreferences: null });
+    mockDb.notification.findMany.mockResolvedValueOnce([]);
+    await service.listNotifications('user-1');
+    expect(mockDb.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deletedAt: null }),
+      }),
+    );
+  });
+
+  it('unread-count 过滤软删通知', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce({ notificationPreferences: null });
+    mockDb.notification.count.mockResolvedValueOnce(0);
+    await service.getUnreadCount('user-1');
+    expect(mockDb.notification.count).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) }),
     );
   });
 });

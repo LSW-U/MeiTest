@@ -120,6 +120,11 @@ export const Order = z.object({
   deliveredAt: IsoTimestamp.nullable(),
   cancelledAt: IsoTimestamp.nullable(),
   cancelReason: z.string().nullable(),
+  /**
+   * P27 批B1（2026-10-13）：软删标记。client list/detail 恒 null（后端过滤软删行）；
+   * admin 详情非 null = 「用户已删除」展示依据。
+   */
+  deletedAt: IsoTimestamp.nullable(),
   /** 应用的促销（W7-ext-G-fix2）：null = 未用码 */
   promotion: z
     .object({
@@ -178,4 +183,18 @@ export const CancelOrderRequest = z.object({
  */
 export const OrderCounts = z.object({
   counts: z.record(OrderStatus, z.number().int().nonnegative()),
+});
+
+// ============================================================================
+// P27 批B1（2026-10-13）：客户端订单删除（软删）
+// ============================================================================
+
+/** 批量删除订单请求（与 P26 通知批量删除同形状：空 400 / 上限 100 / 后端限定本人） */
+export const BatchDeleteOrdersRequest = z.object({
+  ids: z.array(Id).min(1).max(100),
+});
+
+/** 订单删除响应（单条/批量同形；仅终态可删，进行中 409） */
+export const DeleteOrderResponse = z.object({
+  success: z.boolean(),
 });

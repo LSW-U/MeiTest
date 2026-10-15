@@ -46,6 +46,8 @@ import {
   FavoriteListItem,
   NotificationItem,
   MarkNotificationReadResponse,
+  BatchDeleteNotificationsRequest,
+  DeleteNotificationResponse,
   NotificationPreferences,
   UpdateNotificationPreferencesRequest,
   UserSession,
@@ -98,6 +100,8 @@ import {
   OrderItem,
   CreateOrderRequest,
   CancelOrderRequest,
+  BatchDeleteOrdersRequest,
+  DeleteOrderResponse,
   UpdateOrderRequest,
   OrderNo,
   PaymentMethod,
@@ -394,6 +398,8 @@ registry.register('FavoriteToggleResponse', FavoriteToggleResponse);
 registry.register('FavoriteListItem', FavoriteListItem);
 registry.register('NotificationItem', NotificationItem);
 registry.register('MarkNotificationReadResponse', MarkNotificationReadResponse);
+registry.register('BatchDeleteNotificationsRequest', BatchDeleteNotificationsRequest);
+registry.register('DeleteNotificationResponse', DeleteNotificationResponse);
 registry.register('AdminUserListItem', AdminUserListItem);
 registry.register('AdminUserListResponseData', AdminUserListResponseData);
 registry.register('ListUsersQuery', ListUsersQuery);
@@ -444,6 +450,8 @@ registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
 registry.register('OrderStatus', OrderStatus);
 registry.register('OrderCounts', OrderCounts);
+registry.register('BatchDeleteOrdersRequest', BatchDeleteOrdersRequest);
+registry.register('DeleteOrderResponse', DeleteOrderResponse);
 
 registry.register('Cart', Cart);
 registry.register('CartItem', CartItem);
@@ -967,6 +975,36 @@ registry.registerPath({
     200: {
       description: '全部标记已读',
       content: { 'application/json': { schema: MarkNotificationReadResponse } },
+    },
+  },
+});
+
+// ===== P26 批B1（2026-10-13）：通知删除（软删）=====
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/notifications/{id}',
+  tags: ['notification'],
+  responses: {
+    200: {
+      description: '软删成功（非本人/不存在均 404，不暴露存在性）',
+      content: { 'application/json': { schema: DeleteNotificationResponse } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/notifications/batch-delete',
+  tags: ['notification'],
+  request: {
+    body: {
+      content: { 'application/json': { schema: BatchDeleteNotificationsRequest } },
+    },
+  },
+  responses: {
+    200: {
+      description: '批量软删成功（ids 空 400 / 上限 100 / 全部限定本人）',
+      content: { 'application/json': { schema: DeleteNotificationResponse } },
     },
   },
 });
@@ -1939,6 +1977,38 @@ registry.registerPath({
   responses: {
     200: { description: '取消成功' },
     409: { description: 'ORDER_STATUS_NOT_CANCELLABLE', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ===== P27 批B1（2026-10-13）：客户端订单删除（软删）=====
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/orders/{id}',
+  tags: ['order'],
+  description: '删除订单（软删 deletedAt，仅本人；非本人/不存在 404；软删后 client list/detail/counts 不可见，admin 不过滤）',
+  responses: {
+    200: {
+      description: '删除成功',
+      content: { 'application/json': { schema: DeleteOrderResponse } },
+    },
+    404: { description: 'ORDER_NOT_FOUND', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: '非终态订单不可删除', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/orders/batch-delete',
+  tags: ['order'],
+  description: '批量删除订单（软删，与通知批量删除同形状：ids 空 400 / 上限 100 / 全部限定本人）',
+  request: {
+    body: { content: { 'application/json': { schema: BatchDeleteOrdersRequest } } },
+  },
+  responses: {
+    200: {
+      description: '批量删除成功',
+      content: { 'application/json': { schema: DeleteOrderResponse } },
+    },
   },
 });
 

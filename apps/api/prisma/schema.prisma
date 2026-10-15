@@ -611,7 +611,12 @@ model Order {
   orderPromotions OrderPromotion[]
   userCoupons     UserCoupon[]
 
+  // P27 批B1（2026-10-13）：客户端软删订单。client list/detail/counts 过滤 deletedAt IS NULL；admin 不过滤
+  deletedAt DateTime? @map("deleted_at")
+
   @@index([userId, createdAt])
+  /// P27 批B1：客户端订单列表（含 counts groupBy）软删过滤走该索引
+  @@index([userId, deletedAt])
   @@index([warehouseId, status])
   // 保证金批A T5-c（2026-09-10）：预约单大厅可见性查询用（scheduledFor<=now 过滤）
   @@index([scheduledFor, status])
@@ -1056,6 +1061,8 @@ model Notification {
   data      Json?
   /// 群发批次 ID（批A 2026-09-09 新增，nullable：事件通知无批次）
   batchId   String?          @map("batch_id")
+  /// 软删除标记（P26 批B1 2026-10-13：客户端删除通知；null = 未删除）
+  deletedAt DateTime?        @map("deleted_at")
   createdAt DateTime         @default(now()) @map("created_at")
 
   @@index([userId, isRead])

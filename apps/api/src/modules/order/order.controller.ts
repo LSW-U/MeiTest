@@ -18,6 +18,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -27,9 +28,10 @@ import {
   Headers,
   Inject,
   BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { CreateOrderRequest, CancelOrderRequest } from '@meimart/api-contract';
+import { CreateOrderRequest, CancelOrderRequest, BatchDeleteOrdersRequest } from '@meimart/api-contract';
 import { OrderService } from './order.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -269,5 +271,43 @@ export class OrderController {
       perspective,
     });
     return { success: true as const, data: { id, status: 'CANCELLED' } };
+  }
+
+  /**
+   * P27 批B1（2026-10-13）：删除订单（软删）
+   *
+   * 仅终态订单可删（COMPLETED/CANCELLED/DELIVERED_*），进行中 409；
+   * 非本人按 404（不暴露存在性）；软删后 client list/detail/counts 不可见，admin 不过滤。
+   */
+  @Delete(':id')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async deleteOrder(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    await this.orderService.deleteOrder(id, user.sub);
+    return { success: true as const, data: { success: true } };
+  }
+
+  /**
+   * P27 批B1：批量删除订单（软删；ids 空 400 / 上限 100 / 全部限定本人）
+   *
+   * 必须在 @Delete(':id') 之前注册语义上无冲突（POST vs DELETE 不同 method），
+   * 但 batch-delete 是 POST，与 @Post(':id/cancel') 同 method——路径段固定无 :id 冲突。
+   */
+  @Post('batch-delete')
+  @Audit({ resource: 'Order' })
+  @HttpCode(HttpStatus.OK)
+  async deleteOrders(
+    @Body(new ZodValidationPipe(BatchDeleteOrdersRequest)) body: z.infer<typeof BatchDeleteOrdersRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    await this.orderService.deleteOrders(user.sub, body.ids);
+    return { success: true as const, data: { success: true } };
   }
 }

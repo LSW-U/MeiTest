@@ -13,7 +13,7 @@
  *
  * DI：tsx 无 decorator metadata，controller 必须显式 @Inject(NotificationService)。
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { db } from '../../shared/db';
 import { Prisma, NotificationType } from '../../prisma/client';
@@ -99,6 +99,8 @@ export class NotificationService {
     const items = await db.notification.findMany({
       where: {
         userId,
+        // P26 批B1（2026-10-13）：软删通知对 client/rider 侧不可见（admin readCount 聚合不过滤，见 admin-notification.service.ts）
+        deletedAt: null,
         ...(onlyUnread ? { isRead: false } : {}),
         type: { in: enabledTypes },
       },
@@ -120,7 +122,7 @@ export class NotificationService {
   /** 标记单条已读（幂等；不存在抛 E-USER-007） */
   async markNotificationRead(userId: string, notificationId: string): Promise<{ success: boolean }> {
     const existing = await db.notification.findFirst({
-      where: { id: notificationId, userId },
+      where: { id: notificationId, userId, deletedAt: null },
     });
     if (!existing) {
       throw new NotFoundException({ code: 'E-USER-007', message: 'Notification not found' });
@@ -132,23 +134,58 @@ export class NotificationService {
     return { success: true };
   }
 
-  /** 全部标记已读（幂等 updateMany） */
+  /** 全部标记已读（幂等 updateMany；P26 批B1：软删通知不参与） */
   async markAllNotificationsRead(userId: string): Promise<{ success: boolean }> {
     await db.notification.updateMany({
-      where: { userId, isRead: false },
+      where: { userId, isRead: false, deletedAt: null },
       data: { isRead: true },
     });
     return { success: true };
   }
 
-  /** 未读数量（与 listNotifications 同步偏好过滤） */
+  /** 未读数量（与 listNotifications 同步偏好过滤；P26 批B1：软删通知不参与） */
   async getUnreadCount(userId: string): Promise<{ count: number }> {
     const prefs = await this.getNotificationPreferences(userId);
     const enabledTypes = this.enabledNotificationTypes(prefs);
     const count = await db.notification.count({
-      where: { userId, isRead: false, type: { in: enabledTypes } },
+      where: { userId, isRead: false, deletedAt: null, type: { in: enabledTypes } },
     });
     return { count };
+  }
+
+  /**
+   * P26 批B1（2026-10-13）：软删单条通知（D9 拍板不物理删）。
+   * 归属硬校验：非本人按 404 处理（仓内惯例，不暴露存在性）。
+   */
+  async deleteNotification(userId: string, notificationId: string): Promise<{ success: boolean }> {
+    const existing = await db.notification.findFirst({
+      where: { id: notificationId, userId },
+    });
+    if (!existing) {
+      throw new NotFoundException({ code: 'E-USER-007', message: 'Notification not found' });
+    }
+    await db.notification.update({
+      where: { id: notificationId },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
+  }
+
+  /**
+   * P26 批B1：批量软删通知。ids 空 400 / 上限 100 / 全部限定本人（updateMany where 天然限定）。
+   */
+  async deleteNotifications(userId: string, ids: string[]): Promise<{ success: boolean }> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BadRequestException({ code: 'E-USER-008', message: 'ids is required' });
+    }
+    if (ids.length > 100) {
+      throw new BadRequestException({ code: 'E-USER-009', message: 'ids limit 100' });
+    }
+    await db.notification.updateMany({
+      where: { id: { in: ids }, userId },
+      data: { deletedAt: new Date() },
+    });
+    return { success: true };
   }
 }
 

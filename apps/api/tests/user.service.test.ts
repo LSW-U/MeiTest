@@ -410,12 +410,12 @@ describe('UserService', () => {
       );
     });
 
-    it('markAllRead 触发 updateMany', async () => {
+    it('markAllRead 触发 updateMany（P26 批B1：软删通知不参与）', async () => {
       dbMocks.notificationUpdateMany.mockResolvedValueOnce({ count: 5 });
       const result = await service.markAllNotificationsRead('user-1');
       expect(result.success).toBe(true);
       expect(dbMocks.notificationUpdateMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1', isRead: false },
+        where: { userId: 'user-1', isRead: false, deletedAt: null },
         data: { isRead: true },
       });
     });
@@ -494,6 +494,7 @@ describe('UserService', () => {
         where: {
           userId: 'user-1',
           isRead: false,
+          deletedAt: null, // P26 批B1：软删通知不参与
           type: { in: ['ORDER_UPDATE', 'RIDER_TASK', 'WALLET'] },
         },
       });

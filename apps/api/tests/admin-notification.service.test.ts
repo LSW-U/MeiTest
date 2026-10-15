@@ -241,11 +241,14 @@ describe('AdminNotificationService - A5 批次历史 + retry', () => {
     );
     // 批2 性能清理：readCount 查询计数断言——groupBy 恰好 1 次（原逐行 count N 次）
     expect(mockDb.notification.groupBy).toHaveBeenCalledTimes(1);
+    // P26 批B1（有意决策）：readCount 聚合不过滤 deletedAt——批次统计语义 =「发出后已读过的量」，
+    // 用户删除通知不回退批次统计（与 client 侧 list/unread-count 过滤 deletedAt 相反）
     expect(mockDb.notification.groupBy).toHaveBeenCalledWith({
       by: ['batchId'],
       where: { batchId: { in: ['batch-1'] }, isRead: true },
       _count: { _all: true },
     });
+    expect(mockDb.notification.groupBy.mock.calls[0][0].where).not.toHaveProperty('deletedAt');
     expect(result.items[0]).toEqual({
       id: 'batch-1',
       type: 'PROMOTION',

@@ -94,6 +94,8 @@ export class UserService {
     points: number;
     memberLevel: 'gold' | 'silver' | 'bronze';
   }> {
+    // P3-1（批B1 审查 2026-10-15，调度拍板）：不过滤 deletedAt——积分不回退语义，
+    // 与通知 readCount 聚合（D9）同一决策族：用户删除订单不回退已累积的会员积分
     const agg = await db.order.aggregate({
       where: { userId, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
       _sum: { totalAmount: true },
@@ -344,6 +346,16 @@ export class UserService {
 
   async markAllNotificationsRead(userId: string): Promise<{ success: boolean }> {
     return this.notificationService.markAllNotificationsRead(userId);
+  }
+
+  /** P26 批B1：软删单条通知（实现收敛到 NotificationService，同批A 惯例） */
+  async deleteNotification(userId: string, notificationId: string): Promise<{ success: boolean }> {
+    return this.notificationService.deleteNotification(userId, notificationId);
+  }
+
+  /** P26 批B1：批量软删通知 */
+  async deleteNotifications(userId: string, ids: string[]): Promise<{ success: boolean }> {
+    return this.notificationService.deleteNotifications(userId, ids);
   }
 
   async getUnreadCount(userId: string): Promise<{ count: number }> {
@@ -643,7 +655,8 @@ export class UserService {
   }) {
     const [recentOrders, addresses, agg] = await Promise.all([
       db.order.findMany({
-        where: { userId: user.id, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
+        // P27 批B1：软删订单不出现在个人中心 recentOrders/统计
+        where: { userId: user.id, deletedAt: null, status: { in: ['DELIVERED_PAID', 'COMPLETED'] } },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: {
@@ -661,6 +674,7 @@ export class UserService {
       db.order.aggregate({
         where: {
           userId: user.id,
+          deletedAt: null, // P27 批B1：软删订单不计入 orderCount/totalSpent
           status: { in: ['DELIVERED_PAID', 'COMPLETED'] },
         },
         _count: { _all: true },
