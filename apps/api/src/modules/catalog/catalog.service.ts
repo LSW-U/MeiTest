@@ -273,14 +273,70 @@ export class CatalogService {
     }));
   }
 
-  /** 再买一次（按用户历史简化：返回销量 top N 偏移 limit） */
-  async getBuyAgain(limit = 6) {
+  /**
+   * 再买一次（个性化推荐批1 2026-10-17：per-user 化）
+   *
+   * - userId 非空：聚合该用户历史订单（status IN [COMPLETED, CANCELLED]；不过滤 deletedAt——
+   *   v2 拍板"买过就算"，软删仅客户端列表隐藏）的 OrderItem，按 productId 分组，
+   *   频次 COUNT desc 优先、同次数 MAX(Order.createdAt) desc 次之，取 top limit；
+   *   二次过滤 product.status = ACTIVE（剔除后不足 limit 不回填，回退语义仅针对无历史）
+   * - userId 为空或无历史：回退现有销量 skip limit/ take limit 切片（第 7~12 名）
+   * - 组装 DTO 与 getRecommendations 完全一致（batchGet* 同套）
+   */
+  async getBuyAgain(userId: string | null, limit = 6) {
+    if (userId) {
+      const items = await this.aggregateUserBuyAgain(userId, limit);
+      if (items.length > 0) return items;
+    }
+    // 回退切片：与旧行为一致（销量第 limit+1 ~ 2*limit 名）
+    return this.getSalesSlice(limit);
+  }
+
+  /** 聚合用户历史订单商品（频次优先，同次数时间次之），ACTIVE 过滤，最多 limit 条 */
+  private async aggregateUserBuyAgain(userId: string, limit: number) {
+    // 两条查询防 N+1：先按用户聚合 productId，再批量取商品行
+    const rows = (await db.$queryRaw<
+      { product_id: string; freq: bigint; last_at: Date }[]
+    >`
+      SELECT oi.product_id, COUNT(*)::bigint AS freq, MAX(o.created_at) AS last_at
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      WHERE o.user_id = ${userId}
+        AND o.status IN ('COMPLETED', 'CANCELLED')
+      GROUP BY oi.product_id
+      ORDER BY freq DESC, last_at DESC
+      LIMIT ${limit}
+    `) as { product_id: string; freq: bigint; last_at: Date }[];
+    if (rows.length === 0) return [];
+
+    const productIds = rows.map((r) => r.product_id);
+    // 二次过滤 ACTIVE：按聚合顺序保留（非 ACTIVE 剔除后不足 limit 不回填）
+    const products = await db.product.findMany({
+      where: { id: { in: productIds }, status: 'ACTIVE' },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const ordered = productIds
+      .map((id) => productMap.get(id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+    if (ordered.length === 0) return [];
+
+    return this.assembleProductCards(ordered);
+  }
+
+  /** 销量切片回退（原 getBuyAgain 行为：skip limit, take limit） */
+  private async getSalesSlice(limit: number) {
     const items = await db.product.findMany({
       where: { status: 'ACTIVE' },
       orderBy: { salesCount: 'desc' },
       skip: limit,
       take: limit,
     });
+    if (items.length === 0) return [];
+    return this.assembleProductCards(items);
+  }
+
+  /** 批量组装推荐卡片 DTO（与 getRecommendations 字段结构完全一致；items 为完整 Product 行） */
+  private async assembleProductCards(items: Array<{ id: string; categoryId: string | null }>) {
     const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
       this.batchGetDefaultSkuIds(items.map((p) => p.id)),
       this.batchGetProductStock(items.map((p) => p.id)),
@@ -289,7 +345,7 @@ export class CatalogService {
       getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
     ]);
     return items.map((p) => ({
-      ...this.toProductDTO(p),
+      ...this.toProductDTO(p as Parameters<CatalogService['toProductDTO']>[0]),
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),

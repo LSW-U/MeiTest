@@ -13521,6 +13521,59 @@ paths:
                     - status
                     - salesCount
                     - isCategoryTop3
+  /api/v1/client/products/buy-again:
+    get:
+      tags:
+        - product
+      description: "再买一次（个性化推荐批1：per-user——带有效 token 聚合该用户历史订单频次；匿名/无效 token 回退销量第
+        limit+1~2*limit 名切片；响应 Cache-Control: no-store）"
+      responses:
+        "200":
+          description: 再买一次列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    mainImage:
+                      type: string
+                    priceMin:
+                      type: integer
+                      minimum: 0
+                      maximum: 999999
+                    defaultSkuId:
+                      type: string
+                      nullable: true
+                      format: uuid
+                    status:
+                      type: string
+                      enum: *a9
+                    salesCount:
+                      type: integer
+                    isCategoryTop3:
+                      type: boolean
+                    stock:
+                      type: integer
+                    rating:
+                      type: number
+                  required:
+                    - id
+                    - name
+                    - mainImage
+                    - priceMin
+                    - defaultSkuId
+                    - status
+                    - salesCount
+                    - isCategoryTop3
   /api/v1/client/products/search:
     get:
       tags:

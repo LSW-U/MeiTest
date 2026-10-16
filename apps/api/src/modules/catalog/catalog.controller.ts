@@ -21,6 +21,7 @@ import {
   Inject,
   HttpCode,
   HttpStatus,
+  Header,
 } from '@nestjs/common';
 import { detectLanguage } from '@meimart/shared-utils';
 import {
@@ -39,6 +40,7 @@ import {
 import { CatalogService } from './catalog.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Public } from '../../shared/decorators/public.decorator';
+import { OptionalAuth } from '../../shared/decorators/optional-auth.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { Audit } from '../../shared/decorators/audit.decorator';
 
@@ -73,7 +75,8 @@ export class ClientProductController {
       pageSize: pageSize ? Number(pageSize) : undefined,
       sortBy: sortBy as ProductSortBy | undefined,
       lang,
-      userId: req?.user?.id ?? null,
+      // RequestUser = { sub, role, deviceType }，无 id 字段（旧代码误取 id 致热搜 userId 恒 null）
+      userId: req?.user?.sub ?? null,
       clientIp,
     });
     return { success: true, data };
@@ -85,9 +88,23 @@ export class ClientProductController {
     return { success: true, data };
   }
 
+  /**
+   * 再买一次（个性化推荐批1 2026-10-17：per-user 化）
+   * 可选登录：带有效 token 聚合该用户历史订单频次；匿名/无效 token 回退销量 7~12 名切片。
+   * no-store：响应随用户身份变化，禁止任何中间层缓存（仓内首例 Cache-Control 设置点）
+   */
   @Get('buy-again')
-  async buyAgain(@Query('limit') limit?: string) {
-    const data = await this.catalog.getBuyAgain(limit ? Number(limit) : undefined);
+  @OptionalAuth()
+  @Header('Cache-Control', 'no-store')
+  async buyAgain(@Query('limit') limit?: string, @Req() req?: any) {
+    // 取 sub（非 id）：RequestUser 无 id 字段
+    // clamp 1~20（审查 P2-1，对齐 search.controller suggest R2 先例）：负值/NaN 兜底默认 6，
+    // 防公开端点 LIMIT 负值 500 + 超大值全量聚合放大
+    const parsed = Number(limit);
+    const safeLimit = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(Math.floor(parsed), 20)
+      : undefined;
+    const data = await this.catalog.getBuyAgain(req?.user?.sub ?? null, safeLimit);
     return { success: true, data };
   }
 
@@ -109,7 +126,7 @@ export class ClientProductController {
       page: page ? Number(page) : undefined,
       sortBy: sortBy as ProductSortBy | undefined,
       lang,
-      userId: req?.user?.id ?? null,
+      userId: req?.user?.sub ?? null, // 旧代码误取 id（RequestUser 无 id），热搜 userId 恒 null——顺手修复
       clientIp,
     });
     return { success: true, data };

@@ -3735,6 +3735,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/products/buy-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 再买一次（个性化推荐批1：per-user——带有效 token 聚合该用户历史订单频次；匿名/无效 token 回退销量第 limit+1~2*limit 名切片；响应 Cache-Control: no-store） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 再买一次列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                [key: string]: string;
+                            };
+                            mainImage: string;
+                            priceMin: number;
+                            /** Format: uuid */
+                            defaultSkuId: string | null;
+                            /** @enum {string} */
+                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                            salesCount: number;
+                            isCategoryTop3: boolean;
+                            stock?: number;
+                            rating?: number;
+                        }[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/products/search": {
         parameters: {
             query?: never;

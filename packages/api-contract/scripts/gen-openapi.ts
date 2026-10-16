@@ -1362,6 +1362,17 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/v1/client/products/buy-again',
+  tags: ['product'],
+  description:
+    '再买一次（个性化推荐批1：per-user——带有效 token 聚合该用户历史订单频次；匿名/无效 token 回退销量第 limit+1~2*limit 名切片；响应 Cache-Control: no-store）',
+  responses: {
+    200: { description: '再买一次列表', content: { 'application/json': { schema: ProductSummary.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/v1/client/products/search',
   tags: ['product'],
   description: '搜索商品（按多语言 name 匹配）',
