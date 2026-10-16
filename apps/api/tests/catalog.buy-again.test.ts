@@ -346,22 +346,29 @@ describe('CatalogService.getRecommendations（类目偏好加权）', () => {
     expect(sql).not.toContain('deleted_at');
   });
 
-  it('非 ACTIVE 过滤：历史商品全部下架且类目池空 → 退化销量 top N', async () => {
+  it('P3-1 tiebreak：聚合 SQL ORDER BY 含 last_at 次序（对齐批1 buy-again 口径）', async () => {
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+
+    await service.getRecommendations('user-A', 6);
+
+    const sql: string = m.queryRaw.mock.calls[0]![0].join('');
+    expect(sql).toContain('MAX(o.created_at) AS last_at');
+    expect(sql).toContain('ORDER BY freq DESC, last_at DESC');
+  });
+
+  it('非 ACTIVE 过滤：历史商品全下架但类目池有货 → 类目池商品透传（P3-3）', async () => {
     mockQuery([{ product_id: 'prod-dead', freq: 2n, category_id: 'cat-1' }]);
     m.productFindMany
-      .mockResolvedValueOnce([]) // 历史商品 ACTIVE 过滤后空
-      .mockResolvedValueOnce([]) // 类目池空
-      .mockResolvedValueOnce([]); // 回退现状 top N 查询
+      .mockResolvedValueOnce([]) // 历史商品 ACTIVE 过滤后空（全下架）
+      .mockResolvedValueOnce([productRow('pool-1', { categoryId: 'cat-1' })]) // 类目池有 1 条
+      .mockResolvedValueOnce([]); // top3 徽章查询
 
     const result = await service.getRecommendations('user-A', 6);
 
-    // 加权结果空 → 回退现状 top N（第 3 次调用 = 现状查询；ordered 空→top3 徽章不查）
-    expect(m.productFindMany).toHaveBeenNthCalledWith(3, {
-      where: { status: 'ACTIVE' },
-      orderBy: { salesCount: 'desc' },
-      take: 6,
-    });
-    expect(result).toHaveLength(0);
+    // 历史全下架 → 同类目池商品透传（不退化、不空窗）
+    expect(result).toHaveLength(1);
+    expect(result[0]!.id).toBe('pool-1');
   });
 
   it('controller recommendations 注入 sub + limit clamp（-1→默认 6，1000→20）', async () => {

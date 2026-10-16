@@ -285,18 +285,18 @@ export class CatalogService {
     // 复用批 1 聚合：用户买过商品按频次排序（LIMIT 放大到全量历史商品以支撑类目分布统计，
     // 上限 100 防超大历史放大；推荐候选池内再 take limit）
     const rows = (await db.$queryRaw<
-      { product_id: string; freq: bigint; category_id: string | null }[]
+      { product_id: string; freq: bigint; last_at: Date; category_id: string | null }[]
     >`
-      SELECT oi.product_id, COUNT(*)::bigint AS freq, p.category_id
+      SELECT oi.product_id, COUNT(*)::bigint AS freq, MAX(o.created_at) AS last_at, p.category_id
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       JOIN products p ON p.id = oi.product_id
       WHERE o.user_id = ${userId}
         AND o.status IN ('COMPLETED', 'CANCELLED')
       GROUP BY oi.product_id, p.category_id
-      ORDER BY freq DESC
+      ORDER BY freq DESC, last_at DESC
       LIMIT 100
-    `) as { product_id: string; freq: bigint; category_id: string | null }[];
+    `) as { product_id: string; freq: bigint; last_at: Date; category_id: string | null }[];
     if (rows.length === 0) return [];
 
     // 历史类目分布（按频次降序去重）
