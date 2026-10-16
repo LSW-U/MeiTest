@@ -401,10 +401,10 @@ describe('CatalogService', () => {
   });
 
   describe('getRecommendations', () => {
-    it('按 salesCount desc 返 top N', async () => {
+    it('未登录退化：按 salesCount desc 返 top N（批2 改签名后旧行为保持）', async () => {
       m.productFindMany.mockResolvedValueOnce([mockProduct]);
       m.skuFindMany.mockResolvedValueOnce([]);
-      const result = await service.getRecommendations(6);
+      const result = await service.getRecommendations(null, 6);
       expect(result).toHaveLength(1);
       expect(m.productFindMany).toHaveBeenCalledWith(
         expect.objectContaining({

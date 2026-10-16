@@ -173,7 +173,7 @@ describe('CatalogService.getBuyAgain（per-user 化）', () => {
 
     m.productFindMany.mockResolvedValueOnce([productRow('prod-1', { salesCount: 7 })]);
     m.skuFindMany.mockResolvedValueOnce([{ id: 'sku-1', productId: 'prod-1' }]);
-    const rec = await service.getRecommendations(6);
+    const rec = await service.getRecommendations(null, 6);
 
     expect(Object.keys(buyAgain[0]!).sort()).toEqual(Object.keys(rec[0]!).sort());
     expect(buyAgain[0]).toMatchObject({ id: 'prod-1', defaultSkuId: 'sku-1', salesCount: 7 });
@@ -268,7 +268,130 @@ describe('热搜记录 userId（顺手修 id→sub）', () => {
   });
 });
 
-// ===== OptionalAuth guard：无效 token 匿名不 401 / 未标记路由零变化 =====
+// ===== 批2：recommendations 类目偏好加权（R1）=====
+
+describe('CatalogService.getRecommendations（类目偏好加权）', () => {
+  let service: CatalogService;
+  const recordSearch = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    service = new CatalogService({ recordSearch } as never);
+    m.stockFindMany.mockResolvedValue([]);
+    m.reviewGroupBy.mockResolvedValue([]);
+    m.categoryFindMany.mockResolvedValue([]);
+    m.redisGet.mockResolvedValue(null);
+    m.skuFindMany.mockResolvedValue([]);
+  });
+
+  it('未登录（userId=null）：退化为销量 top N，不查聚合（旧行为逐参数一致）', async () => {
+    m.productFindMany.mockResolvedValueOnce([productRow('top-1')]);
+
+    const result = await service.getRecommendations(null, 6);
+
+    expect(m.queryRaw).not.toHaveBeenCalled();
+    expect(m.productFindMany).toHaveBeenCalledWith({
+      where: { status: 'ACTIVE' },
+      orderBy: { salesCount: 'desc' },
+      take: 6,
+    });
+    expect(result[0]!.id).toBe('top-1');
+  });
+
+  it('无历史（聚合空）：退化为销量 top N', async () => {
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([productRow('top-2')]);
+
+    const result = await service.getRecommendations('user-A', 6);
+
+    expect(m.queryRaw).toHaveBeenCalledTimes(1);
+    expect(result[0]!.id).toBe('top-2');
+  });
+
+  it('加权生效：历史商品（频次序）优先，同类目高销量补足排后', async () => {
+    // 用户历史：prod-h1(freq 3, cat-1) > prod-h2(freq 1, cat-2)
+    mockQuery([
+      { product_id: 'prod-h1', freq: 3n, category_id: 'cat-1' },
+      { product_id: 'prod-h2', freq: 1n, category_id: 'cat-2' },
+    ]);
+    m.productFindMany
+      // 第 1 次：历史商品 ACTIVE 过滤（h1 活跃，h2 已下架被剔）
+      .mockResolvedValueOnce([productRow('prod-h1', { categoryId: 'cat-1' })])
+      // 第 2 次：偏好类目池（高销量候选）
+      .mockResolvedValueOnce([
+        productRow('prod-s1', { categoryId: 'cat-1', salesCount: 500 }),
+        productRow('prod-s2', { categoryId: 'cat-2', salesCount: 400 }),
+      ])
+      // 第 3 次：getCategoryTop3ProductIds 徽章查询（cat-1/cat-2）
+      .mockResolvedValueOnce([
+        { id: 'prod-h1', categoryId: 'cat-1' },
+        { id: 'prod-s1', categoryId: 'cat-1' },
+        { id: 'prod-s2', categoryId: 'cat-2' },
+      ]);
+
+    const result = await service.getRecommendations('user-A', 6);
+
+    // 历史活跃在前 → 同类目（cat-1 优先于 cat-2 的偏好顺序）高销量续排
+    expect(result.map((r) => r.id)).toEqual(['prod-h1', 'prod-s1', 'prod-s2']);
+  });
+
+  it('软删口径：SQL 不过滤 deleted_at（复用批1聚合口径，v2 拍板买过就算）', async () => {
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+
+    await service.getRecommendations('user-A', 6);
+
+    const sql: string = m.queryRaw.mock.calls[0]![0].join('');
+    expect(sql).toContain("'COMPLETED', 'CANCELLED'");
+    expect(sql).not.toContain('deleted_at');
+  });
+
+  it('非 ACTIVE 过滤：历史商品全部下架且类目池空 → 退化销量 top N', async () => {
+    mockQuery([{ product_id: 'prod-dead', freq: 2n, category_id: 'cat-1' }]);
+    m.productFindMany
+      .mockResolvedValueOnce([]) // 历史商品 ACTIVE 过滤后空
+      .mockResolvedValueOnce([]) // 类目池空
+      .mockResolvedValueOnce([]); // 回退现状 top N 查询
+
+    const result = await service.getRecommendations('user-A', 6);
+
+    // 加权结果空 → 回退现状 top N（第 3 次调用 = 现状查询；ordered 空→top3 徽章不查）
+    expect(m.productFindMany).toHaveBeenNthCalledWith(3, {
+      where: { status: 'ACTIVE' },
+      orderBy: { salesCount: 'desc' },
+      take: 6,
+    });
+    expect(result).toHaveLength(0);
+  });
+
+  it('controller recommendations 注入 sub + limit clamp（-1→默认 6，1000→20）', async () => {
+    const controller = new ClientProductController(service);
+    const req = { user: { sub: 'user-sub-9', role: 'CUSTOMER', deviceType: 'client_app' } };
+    m.productFindMany.mockResolvedValue([]);
+    m.queryRaw.mockResolvedValue([]);
+
+    await controller.recommendations('-1', req);
+    // -1 兜底默认 6 → 未登录/空聚合退化 top N 路径（take 6）
+    expect(m.productFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ take: 6 }),
+    );
+
+    await controller.recommendations('1000', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ take: 20 }),
+    );
+
+    // sub 透传：带历史路径 queryRaw 第 1 参数（strings 后）是 userId
+    mockQuery([{ product_id: 'prod-h1', freq: 1n, category_id: 'cat-1' }]);
+    m.productFindMany.mockReset();
+    m.productFindMany
+      .mockResolvedValueOnce([productRow('prod-h1')]) // 历史商品
+      .mockResolvedValueOnce([]) // 类目池
+      .mockResolvedValueOnce([]); // top3 徽章
+    await controller.recommendations(undefined, req);
+    expect(m.queryRaw.mock.calls.at(-1)![1]).toBe('user-sub-9');
+  });
+});
 
 describe('JwtAuthGuard optional 分支', () => {
   const makeContext = (metadata: Record<string, unknown>, handlerUser?: unknown) => {

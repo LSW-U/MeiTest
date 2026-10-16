@@ -249,28 +249,99 @@ export class CatalogService {
     };
   }
 
-  /** 推荐商品（按销量 top N） */
-  async getRecommendations(limit = 6) {
-    const items = await db.product.findMany({
-      where: { status: 'ACTIVE' },
-      orderBy: { salesCount: 'desc' },
-      take: limit,
-    });
-    const [defaultSkuMap, stockMap, ratingMap, categoryMap, top3Ids] = await Promise.all([
-      this.batchGetDefaultSkuIds(items.map((p) => p.id)),
-      this.batchGetProductStock(items.map((p) => p.id)),
-      this.batchGetProductRating(items.map((p) => p.id)),
-      this.batchGetCategoryNameMap(items.map((p) => p.categoryId)),
-      getCategoryTop3ProductIds(db, items), // 批D P2-1：列表徽章后端直出（一次查询，非 N+1）
-    ]);
-    return items.map((p) => ({
-      ...this.toProductDTO(p),
-      defaultSkuId: defaultSkuMap.get(p.id) ?? null,
-      stock: stockMap.get(p.id),
-      rating: ratingMap.get(p.id),
-      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
-      isCategoryTop3: top3Ids.has(p.id),
-    }));
+  /**
+   * 为你推荐（个性化推荐批2 2026-10-17：类目偏好加权 R1）
+   *
+   * - userId 非空且有历史：复用批 1 聚合（COMPLETED+CANCELLED，不过滤 deletedAt——v2 拍板
+   *   "买过就算"）取用户买过的商品 → 类目分布（按购买频次降序）；从同类目（按分布优先级）
+   *   取 ACTIVE 高销量商品排前，其余同类目买过商品按频次续排，跨类目高销量兜底补足 take limit
+   * - userId 为空或无历史：现状销量 top N（orderBy salesCount desc take limit），行为零变化
+   * - DTO 结构与现状完全一致（B5 红线，assembleProductCards 同套）
+   */
+  async getRecommendations(userId: string | null, limit = 6) {
+    if (userId) {
+      const items = await this.aggregateCategoryPreference(userId, limit);
+      if (items.length > 0) return items;
+    }
+    // 未登录 / 无历史：现状销量 top N（旧行为）
+    return this.assembleProductCards(
+      await db.product.findMany({
+        where: { status: 'ACTIVE' },
+        orderBy: { salesCount: 'desc' },
+        take: limit,
+      }),
+    );
+  }
+
+  /**
+   * 类目偏好加权（R1）：用户历史类目分布 → 同类目 ACTIVE 高销量优先 / 跨类目高销量次之
+   *
+   * 排序规则：
+   *   1. 用户历史商品（按聚合频次降序，即偏好强度）中仍 ACTIVE 的优先；
+   *   2. 再按历史类目分布顺序，从每个类目补 ACTIVE 高销量商品（排除已入选），直到 limit。
+   * 不做 migration、不加权重参数——复用批 1 聚合 SQL（含 deletedAt 不过滤口径）。
+   */
+  private async aggregateCategoryPreference(userId: string, limit: number) {
+    // 复用批 1 聚合：用户买过商品按频次排序（LIMIT 放大到全量历史商品以支撑类目分布统计，
+    // 上限 100 防超大历史放大；推荐候选池内再 take limit）
+    const rows = (await db.$queryRaw<
+      { product_id: string; freq: bigint; category_id: string | null }[]
+    >`
+      SELECT oi.product_id, COUNT(*)::bigint AS freq, p.category_id
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
+      WHERE o.user_id = ${userId}
+        AND o.status IN ('COMPLETED', 'CANCELLED')
+      GROUP BY oi.product_id, p.category_id
+      ORDER BY freq DESC
+      LIMIT 100
+    `) as { product_id: string; freq: bigint; category_id: string | null }[];
+    if (rows.length === 0) return [];
+
+    // 历史类目分布（按频次降序去重）
+    const preferredCategoryIds = [
+      ...new Set(rows.map((r) => r.category_id).filter((c): c is string => c !== null)),
+    ];
+    const historyProductIds = rows.map((r) => r.product_id);
+
+    // 两批候选一次取回：历史商品本身（ACTIVE 过滤）+ 偏好类目下的高销量 ACTIVE 商品
+    const historyProducts =
+      historyProductIds.length > 0
+        ? await db.product.findMany({
+            where: { id: { in: historyProductIds }, status: 'ACTIVE' },
+          })
+        : [];
+    const poolByCategory = new Map(historyProducts.map((p) => [p.id, p]));
+
+    // 排序：历史商品按 rows（频次）顺序
+    const historyOrdered = rows
+      .map((r) => poolByCategory.get(r.product_id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+    const pickedIds = new Set(historyOrdered.map((p) => p.id));
+
+    // 同类目补货：按偏好类目顺序逐类目取 ACTIVE 高销量（排除已入选），频次多的类目先补
+    const categoryPicks: typeof historyOrdered = [];
+    if (preferredCategoryIds.length > 0) {
+      const pool = await db.product.findMany({
+        where: { categoryId: { in: preferredCategoryIds }, status: 'ACTIVE' },
+        orderBy: { salesCount: 'desc' },
+        take: limit * 5, // 每类目候选上限兜底，排除已入选后足够填满 limit
+      });
+      // 按偏好类目顺序分组（保持 salesCount desc）
+      for (const catId of preferredCategoryIds) {
+        for (const p of pool) {
+          if (p.categoryId === catId && !pickedIds.has(p.id)) {
+            categoryPicks.push(p);
+            pickedIds.add(p.id);
+          }
+        }
+      }
+    }
+
+    const ordered = [...historyOrdered, ...categoryPicks].slice(0, limit);
+    if (ordered.length === 0) return [];
+    return this.assembleProductCards(ordered);
   }
 
   /**

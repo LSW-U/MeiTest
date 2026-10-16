@@ -238,6 +238,7 @@ docker compose up -d
 ## 文档索引
 
 - `CLAUDE.md` — 项目根指令（必读）
+- 个性化推荐口径（2026-10-17）：`GET /client/products/recommendations` 与 `GET /client/products/buy-again` 均可选登录——带有效 token 按用户历史订单（COMPLETED+CANCELLED，含软删）个性化（recommendations=类目偏好加权，buy-again=频次加权），匿名/无历史退化为销量切片；两响应均 `Cache-Control: no-store`
 - Obsidian `04-后端记录/`：
   - `MeiMart-ADR-技术栈选型-20260617.md` — ADR
   - `MeiMart-W1共享前置层-AI执行版-20260617.md` — W1 任务清单

@@ -82,9 +82,21 @@ export class ClientProductController {
     return { success: true, data };
   }
 
+  /**
+   * 为你推荐（个性化推荐批2 2026-10-17：类目偏好加权 R1）
+   * 可选登录：带有效 token 按用户历史订单类目分布加权；匿名/无历史退化为销量 top N（与旧行为一致）。
+   * no-store：响应随用户身份变化，禁止中间层缓存（同 buy-again B7 语义）
+   */
   @Get('recommendations')
-  async recommendations(@Query('limit') limit?: string) {
-    const data = await this.catalog.getRecommendations(limit ? Number(limit) : undefined);
+  @OptionalAuth()
+  @Header('Cache-Control', 'no-store')
+  async recommendations(@Query('limit') limit?: string, @Req() req?: any) {
+    // clamp 1~20 同 buy-again（批1 P2-1 同款）：负值/NaN 兜底默认 6
+    const parsed = Number(limit);
+    const safeLimit = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(Math.floor(parsed), 20)
+      : undefined;
+    const data = await this.catalog.getRecommendations(req?.user?.sub ?? null, safeLimit);
     return { success: true, data };
   }
 

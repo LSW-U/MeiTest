@@ -1354,7 +1354,8 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/client/products/recommendations',
   tags: ['product'],
-  description: '推荐商品（按销量 top N）',
+  description:
+    '为你推荐（个性化推荐批2：类目偏好加权——带有效 token 按用户历史订单类目分布加权，同类目高销量优先；匿名/无历史退化为销量 top N；响应 Cache-Control: no-store）',
   responses: {
     200: { description: '推荐列表', content: { 'application/json': { schema: ProductSummary.array() } } },
   },
