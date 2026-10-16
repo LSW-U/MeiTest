@@ -255,20 +255,24 @@ export class CatalogService {
    * - userId 非空且有历史：复用批 1 聚合（COMPLETED+CANCELLED，不过滤 deletedAt——v2 拍板
    *   "买过就算"）取用户买过的商品 → 类目分布（按购买频次降序）；从同类目（按分布优先级）
    *   取 ACTIVE 高销量商品排前，其余同类目买过商品按频次续排，跨类目高销量兜底补足 take limit
-   * - userId 为空或无历史：现状销量 top N（orderBy salesCount desc take limit），行为零变化
+   * - userId 为空或无历史：现状销量 top N（orderBy salesCount desc take limit skip offset），offset=0 行为零变化
    * - DTO 结构与现状完全一致（B5 红线，assembleProductCards 同套）
+   *
+   * offset 翻页（换一批按钮 批1 2026-10-17）：个性化路径无单条 SQL 可加 OFFSET
+   * （Prisma 多段查询+内存拼装）→ offset 落点为内存切片；回退路径 skip: offset。
    */
-  async getRecommendations(userId: string | null, limit = 6) {
+  async getRecommendations(userId: string | null, limit = 6, offset = 0) {
     if (userId) {
-      const items = await this.aggregateCategoryPreference(userId, limit);
+      const items = await this.aggregateCategoryPreference(userId, limit, offset);
       if (items.length > 0) return items;
     }
-    // 未登录 / 无历史：现状销量 top N（旧行为）
+    // 未登录 / 无历史：销量 top N，skip: offset（offset=0 与现状逐参数一致）
     return this.assembleProductCards(
       await db.product.findMany({
         where: { status: 'ACTIVE' },
         orderBy: { salesCount: 'desc' },
         take: limit,
+        skip: offset,
       }),
     );
   }
@@ -281,7 +285,7 @@ export class CatalogService {
    *   2. 再按历史类目分布顺序，从每个类目补 ACTIVE 高销量商品（排除已入选），直到 limit。
    * 不做 migration、不加权重参数——复用批 1 聚合 SQL（含 deletedAt 不过滤口径）。
    */
-  private async aggregateCategoryPreference(userId: string, limit: number) {
+  private async aggregateCategoryPreference(userId: string, limit: number, offset = 0) {
     // 复用批 1 聚合：用户买过商品按频次排序（LIMIT 放大到全量历史商品以支撑类目分布统计，
     // 上限 100 防超大历史放大；推荐候选池内再 take limit）
     const rows = (await db.$queryRaw<
@@ -339,7 +343,9 @@ export class CatalogService {
       }
     }
 
-    const ordered = [...historyOrdered, ...categoryPicks].slice(0, limit);
+    // offset 翻页：候选全量有序后内存切片（换一批按钮 批1 2026-10-17）；
+    // offset=0 时 slice(0, limit) 与现状一致；候选耗尽返回空数组（E4 回绕信号，不抛错）
+    const ordered = [...historyOrdered, ...categoryPicks].slice(offset, offset + limit);
     if (ordered.length === 0) return [];
     return this.assembleProductCards(ordered);
   }
@@ -354,17 +360,17 @@ export class CatalogService {
    * - userId 为空或无历史：回退现有销量 skip limit/ take limit 切片（第 7~12 名）
    * - 组装 DTO 与 getRecommendations 完全一致（batchGet* 同套）
    */
-  async getBuyAgain(userId: string | null, limit = 6) {
+  async getBuyAgain(userId: string | null, limit = 6, offset = 0) {
     if (userId) {
-      const items = await this.aggregateUserBuyAgain(userId, limit);
+      const items = await this.aggregateUserBuyAgain(userId, limit, offset);
       if (items.length > 0) return items;
     }
-    // 回退切片：与旧行为一致（销量第 limit+1 ~ 2*limit 名）
-    return this.getSalesSlice(limit);
+    // 回退切片：避开推荐第一屏（skip limit）+ 本端点游标 offset
+    return this.getSalesSlice(limit, offset);
   }
 
   /** 聚合用户历史订单商品（频次优先，同次数时间次之），ACTIVE 过滤，最多 limit 条 */
-  private async aggregateUserBuyAgain(userId: string, limit: number) {
+  private async aggregateUserBuyAgain(userId: string, limit: number, offset = 0) {
     // 两条查询防 N+1：先按用户聚合 productId，再批量取商品行
     const rows = (await db.$queryRaw<
       { product_id: string; freq: bigint; last_at: Date }[]
@@ -377,6 +383,7 @@ export class CatalogService {
       GROUP BY oi.product_id
       ORDER BY freq DESC, last_at DESC
       LIMIT ${limit}
+      OFFSET ${offset}
     `) as { product_id: string; freq: bigint; last_at: Date }[];
     if (rows.length === 0) return [];
 
@@ -394,12 +401,12 @@ export class CatalogService {
     return this.assembleProductCards(ordered);
   }
 
-  /** 销量切片回退（原 getBuyAgain 行为：skip limit, take limit） */
-  private async getSalesSlice(limit: number) {
+  /** 销量切片回退（原 getBuyAgain 行为：skip limit, take limit；offset 游标叠加 → skip: limit + offset） */
+  private async getSalesSlice(limit: number, offset = 0) {
     const items = await db.product.findMany({
       where: { status: 'ACTIVE' },
       orderBy: { salesCount: 'desc' },
-      skip: limit,
+      skip: limit + offset,
       take: limit,
     });
     if (items.length === 0) return [];

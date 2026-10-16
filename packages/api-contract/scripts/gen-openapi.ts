@@ -1356,6 +1356,24 @@ registry.registerPath({
   tags: ['product'],
   description:
     '为你推荐（个性化推荐批2：类目偏好加权——带有效 token 按用户历史订单类目分布加权，同类目高销量优先；匿名/无历史退化为销量 top N；响应 Cache-Control: no-store）',
+  parameters: [
+    {
+      name: 'limit',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 1, maximum: 20, default: 6 },
+      description: '每批数量，默认 6，上限 20',
+    },
+    {
+      // 换一批按钮 批1 2026-10-17：offset 翻页游标，服务端 clamp 0~1000（负值/NaN→0）
+      name: 'offset',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 0, default: 0 },
+      description:
+        '翻页偏移（游标语义，换一批按钮）：按批推进 offset += limit；offset=0 与首屏一致；超出候选总量返回短批/空数组（前端据此回绕 offset=0）；服务端 clamp 0~1000',
+    },
+  ],
   responses: {
     200: { description: '推荐列表', content: { 'application/json': { schema: ProductSummary.array() } } },
   },
@@ -1367,6 +1385,24 @@ registry.registerPath({
   tags: ['product'],
   description:
     '再买一次（个性化推荐批1：per-user——带有效 token 聚合该用户历史订单频次；匿名/无效 token 回退销量第 limit+1~2*limit 名切片；响应 Cache-Control: no-store）',
+  parameters: [
+    {
+      name: 'limit',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 1, maximum: 20, default: 6 },
+      description: '每批数量，默认 6，上限 20',
+    },
+    {
+      // 换一批按钮 批1 2026-10-17：offset 翻页游标，服务端 clamp 0~1000（负值/NaN→0）
+      name: 'offset',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 0, default: 0 },
+      description:
+        '翻页偏移（游标语义，换一批按钮）：按批推进 offset += limit；offset=0 与首屏一致（回退切片仍避开推荐第一屏 skip limit）；超出候选总量返回短批/空数组（前端据此回绕 offset=0）；服务端 clamp 0~1000',
+    },
+  ],
   responses: {
     200: { description: '再买一次列表', content: { 'application/json': { schema: ProductSummary.array() } } },
   },

@@ -48,6 +48,16 @@ import { Audit } from '../../shared/decorators/audit.decorator';
 // 客户端：商品浏览（公开）
 // ============================================================================
 
+/**
+ * offset 翻页参数 clamp（换一批按钮 批1 2026-10-17）：负值/NaN → 0，上限 1000（防深翻页放大）
+ * @Query 恒为 string | undefined，与 limit 同款范式
+ */
+function clampOffset(offset?: string): number {
+  const parsed = Number(offset);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.min(Math.floor(parsed), 1000);
+}
+
 @Controller('api/v1/client/products')
 @Public()
 export class ClientProductController {
@@ -90,13 +100,21 @@ export class ClientProductController {
   @Get('recommendations')
   @OptionalAuth()
   @Header('Cache-Control', 'no-store')
-  async recommendations(@Query('limit') limit?: string, @Req() req?: any) {
+  async recommendations(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Req() req?: any,
+  ) {
     // clamp 1~20 同 buy-again（批1 P2-1 同款）：负值/NaN 兜底默认 6
     const parsed = Number(limit);
     const safeLimit = Number.isFinite(parsed) && parsed > 0
       ? Math.min(Math.floor(parsed), 20)
       : undefined;
-    const data = await this.catalog.getRecommendations(req?.user?.sub ?? null, safeLimit);
+    const data = await this.catalog.getRecommendations(
+      req?.user?.sub ?? null,
+      safeLimit,
+      clampOffset(offset),
+    );
     return { success: true, data };
   }
 
@@ -108,7 +126,11 @@ export class ClientProductController {
   @Get('buy-again')
   @OptionalAuth()
   @Header('Cache-Control', 'no-store')
-  async buyAgain(@Query('limit') limit?: string, @Req() req?: any) {
+  async buyAgain(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Req() req?: any,
+  ) {
     // 取 sub（非 id）：RequestUser 无 id 字段
     // clamp 1~20（审查 P2-1，对齐 search.controller suggest R2 先例）：负值/NaN 兜底默认 6，
     // 防公开端点 LIMIT 负值 500 + 超大值全量聚合放大
@@ -116,7 +138,11 @@ export class ClientProductController {
     const safeLimit = Number.isFinite(parsed) && parsed > 0
       ? Math.min(Math.floor(parsed), 20)
       : undefined;
-    const data = await this.catalog.getBuyAgain(req?.user?.sub ?? null, safeLimit);
+    const data = await this.catalog.getBuyAgain(
+      req?.user?.sub ?? null,
+      safeLimit,
+      clampOffset(offset),
+    );
     return { success: true, data };
   }
 
