@@ -230,7 +230,8 @@ describe('热搜记录 userId（顺手修 id→sub）', () => {
     m.productFindMany.mockResolvedValue([productRow('prod-1')]);
     m.skuFindMany.mockResolvedValue([]);
 
-    const result = await controller.buyAgain(undefined, req);
+    // 批1 换一批：controller 签名插入 offset（第 2 参），旧行为 offset=undefined→0
+    const result = await controller.buyAgain(undefined, undefined, req);
 
     expect(m.queryRaw.mock.calls[0]![1]).toBe('user-sub-2');
     expect(result).toMatchObject({ success: true });
@@ -290,10 +291,12 @@ describe('CatalogService.getRecommendations（类目偏好加权）', () => {
     const result = await service.getRecommendations(null, 6);
 
     expect(m.queryRaw).not.toHaveBeenCalled();
+    // 批1 换一批：回退路径加 skip: offset，offset 默认 0 与旧行为逐参数一致
     expect(m.productFindMany).toHaveBeenCalledWith({
       where: { status: 'ACTIVE' },
       orderBy: { salesCount: 'desc' },
       take: 6,
+      skip: 0,
     });
     expect(result[0]!.id).toBe('top-1');
   });
@@ -395,8 +398,166 @@ describe('CatalogService.getRecommendations（类目偏好加权）', () => {
       .mockResolvedValueOnce([productRow('prod-h1')]) // 历史商品
       .mockResolvedValueOnce([]) // 类目池
       .mockResolvedValueOnce([]); // top3 徽章
-    await controller.recommendations(undefined, req);
+    await controller.recommendations(undefined, undefined, req);
     expect(m.queryRaw.mock.calls.at(-1)![1]).toBe('user-sub-9');
+  });
+});
+
+// ===== 换一批按钮 批1：offset 翻页（2026-10-17）=====
+
+describe('offset 翻页（换一批按钮 批1）', () => {
+  let service: CatalogService;
+  const recordSearch = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    service = new CatalogService({ recordSearch } as never);
+    m.stockFindMany.mockResolvedValue([]);
+    m.reviewGroupBy.mockResolvedValue([]);
+    m.categoryFindMany.mockResolvedValue([]);
+    m.redisGet.mockResolvedValue(null);
+    m.skuFindMany.mockResolvedValue([]);
+  });
+
+  it('getBuyAgain offset=0 回归：SQL 含 OFFSET 0 参数、回退 skip 6（逐参数与现状一致）', async () => {
+    mockQuery([{ product_id: 'prod-1', freq: 1n, last_at: new Date() }]);
+    m.productFindMany.mockResolvedValueOnce([productRow('prod-1')]);
+
+    await service.getBuyAgain('user-A', 6, 0);
+
+    // tagged template 参数：strings 后依次 userId, limit, offset
+    expect(m.queryRaw.mock.calls[0]![1]).toBe('user-A');
+    expect(m.queryRaw.mock.calls[0]![2]).toBe(6);
+    expect(m.queryRaw.mock.calls[0]![3]).toBe(0);
+    const sql: string = m.queryRaw.mock.calls[0]![0].join('');
+    expect(sql).toContain('OFFSET');
+
+    // offset=0 回退路径：skip = limit + 0 = 6（旧行为）
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await service.getBuyAgain('user-A', 6, 0);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ skip: 6, take: 6 }),
+    );
+  });
+
+  it('getBuyAgain offset=limit：SQL OFFSET 6，第二批与第一批不重叠（回退 skip 12）', async () => {
+    mockQuery([{ product_id: 'prod-b1', freq: 1n, last_at: new Date() }]);
+    m.productFindMany.mockResolvedValueOnce([productRow('prod-b1')]);
+
+    await service.getBuyAgain('user-A', 6, 6);
+
+    expect(m.queryRaw.mock.calls[0]![3]).toBe(6);
+    expect(m.queryRaw.mock.calls[0]![2]).toBe(6);
+
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await service.getBuyAgain('user-A', 6, 6);
+    // 回退：skip = limit + offset = 12（第二批避开回退第一屏 6 名）
+    expect(m.productFindMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ skip: 12, take: 6 }),
+    );
+  });
+
+  it('getRecommendations 个性化路径：offset 内存切片（offset=6 取候选第 7~12 名）', async () => {
+    const setupHistory = () => {
+      // 历史商品 prod-h1 + 类目池 prod-s1..s7 → 有序候选 = [h1, s1..s7]
+      mockQuery([{ product_id: 'prod-h1', freq: 3n, category_id: 'cat-1' }]);
+      m.productFindMany
+        .mockResolvedValueOnce([productRow('prod-h1', { categoryId: 'cat-1' })]) // 历史商品
+        .mockResolvedValueOnce(
+          ['s1', 's2', 's3', 's4', 's5', 's6', 's7'].map((id) =>
+            productRow(`prod-${id}`, { categoryId: 'cat-1', salesCount: 100 }),
+          ),
+        ) // 类目池
+        .mockResolvedValueOnce([]); // top3 徽章
+    };
+
+    setupHistory();
+    const first = await service.getRecommendations('user-A', 6, 0);
+    expect(first.map((r) => r.id)).toEqual(['prod-h1', 'prod-s1', 'prod-s2', 'prod-s3', 'prod-s4', 'prod-s5']);
+
+    setupHistory();
+    const second = await service.getRecommendations('user-A', 6, 6);
+    // 第二批从候选第 7 名起：与第一批零重叠
+    expect(second.map((r) => r.id)).toEqual(['prod-s6', 'prod-s7']);
+    expect(second.some((r) => first.some((f) => f.id === r.id))).toBe(false);
+  });
+
+  it('getRecommendations 个性化路径候选耗尽：返回空数组不抛错（E4 回绕信号）', async () => {
+    mockQuery([{ product_id: 'prod-h1', freq: 1n, category_id: 'cat-1' }]);
+    m.productFindMany
+      .mockResolvedValueOnce([productRow('prod-h1', { categoryId: 'cat-1' })])
+      .mockResolvedValueOnce([]) // 类目池无补货候选
+      .mockResolvedValueOnce([]); // top3 徽章（不会走到，切片为空提前返回）
+
+    // offset 超过候选总量（仅 1 条历史）
+    await expect(service.getRecommendations('user-A', 6, 100)).resolves.toEqual([]);
+  });
+
+  it('getRecommendations 回退路径：skip = offset（offset=6 → skip 6, take 6）', async () => {
+    m.productFindMany.mockResolvedValueOnce([productRow('top-7')]);
+
+    const result = await service.getRecommendations(null, 6, 6);
+
+    expect(m.queryRaw).not.toHaveBeenCalled();
+    expect(m.productFindMany).toHaveBeenCalledWith({
+      where: { status: 'ACTIVE' },
+      orderBy: { salesCount: 'desc' },
+      take: 6,
+      skip: 6,
+    });
+    expect(result[0]!.id).toBe('top-7');
+  });
+
+  it('getRecommendations 候选耗尽：个性化路径空数组时回退路径透传（不抛错）', async () => {
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+
+    await expect(service.getRecommendations('user-A', 6, 100)).resolves.toEqual([]);
+  });
+
+  it('controller offset clamp 三态：-1→0 / NaN→0 / 1001→1000（buy-again）', async () => {
+    const controller = new ClientProductController(service);
+    const req = { user: { sub: 'user-sub-7', role: 'CUSTOMER', deviceType: 'client_app' } };
+
+    // -1 → clamp 0：回退 skip = 6 + 0
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.buyAgain(undefined, '-1', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 6 }));
+
+    // NaN → clamp 0
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.buyAgain(undefined, 'abc', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 6 }));
+
+    // 1001 → clamp 1000：回退 skip = 6 + 1000
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.buyAgain(undefined, '1001', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 1006 }));
+  });
+
+  it('controller offset clamp 三态：-1→0 / NaN→0 / 1001→1000（recommendations）', async () => {
+    const controller = new ClientProductController(service);
+    const req = { user: { sub: 'user-sub-8', role: 'CUSTOMER', deviceType: 'client_app' } };
+
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.recommendations(undefined, '-1', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0 }));
+
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.recommendations(undefined, 'abc', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 0 }));
+
+    mockQuery([]);
+    m.productFindMany.mockResolvedValueOnce([]);
+    await controller.recommendations(undefined, '1001', req);
+    expect(m.productFindMany).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 1000 }));
   });
 });
 
