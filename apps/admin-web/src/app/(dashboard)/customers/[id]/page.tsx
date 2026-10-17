@@ -52,6 +52,8 @@ import {
 } from '@/hooks/api/use-customers';
 import { formatCurrency } from '@/lib/utils';
 import { ROLE_LABEL_KEY, type UserRole } from '../_constants';
+// 客户画像批1（2026-10-18）：画像 360 + 客户标记区块（拆出组件文件）
+import { Profile360Section, CustomerNotesSection } from './profile-section';
 
 const ROLE_OPTIONS: { value: UserRole; labelKey: string }[] = (
   Object.keys(ROLE_LABEL_KEY) as UserRole[]
@@ -461,6 +463,10 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
           )}
         </CardContent>
       </Card>
+
+      {/* 画像 360（查看即审计：每次拉取在服务端落 VIEW_CUSTOMER_PROFILE）+ 客户标记（D6） */}
+      <Profile360Section id={id} />
+      <CustomerNotesSection id={id} />
 
       {/* Suspend Dialog */}
       <Dialog open={suspendOpen} onOpenChange={setSuspendOpen}>

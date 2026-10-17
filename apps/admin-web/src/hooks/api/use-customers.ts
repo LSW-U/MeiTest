@@ -160,3 +160,85 @@ export function useResetPassword() {
     },
   });
 }
+
+// ===== 客户画像批1（2026-10-18）：单客 360 画像 + D6 客户标记 =====
+// 后端：apps/api/src/modules/profile/admin-profile.controller.ts
+//   - GET   /admin/users/:id/profile          360 画像（查看即审计 VIEW_CUSTOMER_PROFILE）
+//   - GET   /admin/users/:id/notes            标记列表
+//   - POST  /admin/users/:id/notes            新增标记（@Audit 自动审计）
+//   - PATCH /admin/users/:id/notes/:noteId    编辑标记
+//   - DELETE /admin/users/:id/notes/:noteId   删除标记
+
+export type CustomerProfile360 = Schemas['CustomerProfile360Data'];
+export type CustomerNote = Schemas['CustomerNoteItem'];
+export type CreateNoteInput = Schemas['CreateCustomerNoteRequest'];
+export type UpdateNoteInput = Schemas['UpdateCustomerNoteRequest'];
+
+/** 单客 360 画像（查看即审计：每次拉取都会在服务端落 VIEW_CUSTOMER_PROFILE 审计行） */
+export function useCustomerProfile360(id: string | undefined) {
+  return useQuery<CustomerProfile360>({
+    queryKey: ['customers', id, 'profile'],
+    queryFn: () =>
+      apiFetch<ApiSuccess<CustomerProfile360>>(`/admin/users/${id}/profile`).then(
+        (res) => res.data,
+      ),
+    enabled: !!id,
+  });
+}
+
+/** 客户标记列表 */
+export function useCustomerNotes(id: string | undefined) {
+  return useQuery<{ items: CustomerNote[] }>({
+    queryKey: ['customers', id, 'notes'],
+    queryFn: () =>
+      apiFetch<ApiSuccess<{ items: CustomerNote[] }>>(`/admin/users/${id}/notes`).then(
+        (res) => res.data,
+      ),
+    enabled: !!id,
+  });
+}
+
+function useInvalidateCustomerNotes() {
+  const qc = useQueryClient();
+  return (id: string) => {
+    qc.invalidateQueries({ queryKey: ['customers', id, 'notes'] });
+  };
+}
+
+/** 新增标记 */
+export function useCreateCustomerNote() {
+  const invalidate = useInvalidateCustomerNotes();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: CreateNoteInput }) =>
+      apiFetch<ApiSuccess<CustomerNote>>(`/admin/users/${id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }).then((res) => res.data),
+    onSuccess: (_data, vars) => invalidate(vars.id),
+  });
+}
+
+/** 编辑标记 */
+export function useUpdateCustomerNote() {
+  const invalidate = useInvalidateCustomerNotes();
+  return useMutation({
+    mutationFn: ({ id, noteId, input }: { id: string; noteId: string; input: UpdateNoteInput }) =>
+      apiFetch<ApiSuccess<CustomerNote>>(`/admin/users/${id}/notes/${noteId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }).then((res) => res.data),
+    onSuccess: (_data, vars) => invalidate(vars.id),
+  });
+}
+
+/** 删除标记 */
+export function useDeleteCustomerNote() {
+  const invalidate = useInvalidateCustomerNotes();
+  return useMutation({
+    mutationFn: ({ id, noteId }: { id: string; noteId: string }) =>
+      apiFetch<ApiSuccess<{ id: string }>>(`/admin/users/${id}/notes/${noteId}`, {
+        method: 'DELETE',
+      }).then((res) => res.data),
+    onSuccess: (_data, vars) => invalidate(vars.id),
+  });
+}
