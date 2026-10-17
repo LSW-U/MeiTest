@@ -578,7 +578,7 @@ components:
               format: uuid
             status:
               type: string
-              enum: &a10
+              enum: &a5
                 - ACTIVE
                 - INACTIVE
                 - OUT_OF_STOCK
@@ -1594,6 +1594,99 @@ components:
           format: uuid
         enabled:
           type: boolean
+    FrequentBundleData:
+      type: object
+      properties:
+        seed:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: object
+              additionalProperties:
+                type: string
+            mainImage:
+              type: string
+            priceMin:
+              type: integer
+              minimum: 0
+              maximum: 999999
+            defaultSkuId:
+              type: string
+              nullable: true
+              format: uuid
+            status:
+              type: string
+              enum: *a5
+            salesCount:
+              type: integer
+            isCategoryTop3:
+              type: boolean
+            stock:
+              type: integer
+            rating:
+              type: number
+          required:
+            - id
+            - name
+            - mainImage
+            - priceMin
+            - defaultSkuId
+            - status
+            - salesCount
+            - isCategoryTop3
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: object
+                additionalProperties:
+                  type: string
+              mainImage:
+                type: string
+              priceMin:
+                type: integer
+                minimum: 0
+                maximum: 999999
+              defaultSkuId:
+                type: string
+                nullable: true
+                format: uuid
+              status:
+                type: string
+                enum: *a5
+              salesCount:
+                type: integer
+              isCategoryTop3:
+                type: boolean
+              stock:
+                type: integer
+              rating:
+                type: number
+            required:
+              - id
+              - name
+              - mainImage
+              - priceMin
+              - defaultSkuId
+              - status
+              - salesCount
+              - isCategoryTop3
+        coOrderCount:
+          type: integer
+          minimum: 0
+      required:
+        - seed
+        - items
+        - coOrderCount
     CustomerNoteItem:
       type: object
       properties:
@@ -1731,7 +1824,7 @@ components:
           type: string
         status:
           type: string
-          enum: &a5
+          enum: &a6
             - ACTIVE
             - INACTIVE
         businessHours:
@@ -1774,7 +1867,7 @@ components:
           type: string
         status:
           type: string
-          enum: *a5
+          enum: *a6
         businessHours:
           type: string
           nullable: true
@@ -1783,145 +1876,6 @@ components:
           additionalProperties:
             type: string
     Warehouse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          pattern: ^W\d{2}$
-        name:
-          type: object
-          additionalProperties:
-            type: string
-        coverageArea:
-          type: object
-          nullable: true
-          properties:
-            type:
-              type: string
-              enum:
-                - Polygon
-            coordinates:
-              type: array
-              items:
-                type: array
-                items:
-                  type: array
-                  items:
-                    type: number
-          required:
-            - type
-            - coordinates
-        centerPoint:
-          type: object
-          nullable: true
-          properties:
-            type:
-              type: string
-              enum:
-                - Point
-            coordinates:
-              type: array
-              items:
-                type: number
-              minItems: 2
-              maxItems: 2
-          required:
-            - type
-            - coordinates
-        centerLat:
-          type: number
-          nullable: true
-        centerLng:
-          type: number
-          nullable: true
-        address:
-          type: string
-        operatingHours:
-          type: object
-          nullable: true
-          properties:
-            mon: &a6
-              type: object
-              properties:
-                open:
-                  anyOf:
-                    - type: string
-                      pattern: ^\d{2}:\d{2}$
-                    - type: string
-                      enum:
-                        - ""
-                close:
-                  anyOf:
-                    - type: string
-                      pattern: ^\d{2}:\d{2}$
-                    - type: string
-                      enum:
-                        - ""
-                rest:
-                  type: boolean
-              required:
-                - open
-                - close
-            tue: *a6
-            wed: *a6
-            thu: *a6
-            fri: *a6
-            sat: *a6
-            sun: *a6
-        deliveryFee:
-          type: integer
-          minimum: 0
-          maximum: 999999
-          default: 0
-        perKmFee:
-          type: integer
-          minimum: 0
-          maximum: 999999
-          default: 0
-        freeKm:
-          type: number
-          default: 2
-        stockSummary:
-          type: object
-          properties:
-            skuCount:
-              type: integer
-              minimum: 0
-            totalQuantity:
-              type: integer
-              minimum: 0
-            sellableQuantity:
-              type: integer
-              minimum: 0
-          required:
-            - skuCount
-            - totalQuantity
-            - sellableQuantity
-        isActive:
-          type: boolean
-          default: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - code
-        - name
-        - coverageArea
-        - centerPoint
-        - centerLat
-        - centerLng
-        - address
-        - operatingHours
-        - createdAt
-        - updatedAt
-    WarehouseDetailResponse:
       type: object
       properties:
         id:
@@ -2048,6 +2002,145 @@ components:
         updatedAt:
           type: string
           format: date-time
+      required:
+        - id
+        - code
+        - name
+        - coverageArea
+        - centerPoint
+        - centerLat
+        - centerLng
+        - address
+        - operatingHours
+        - createdAt
+        - updatedAt
+    WarehouseDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^W\d{2}$
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        coverageArea:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum:
+                - Polygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+          required:
+            - type
+            - coordinates
+        centerPoint:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+              enum:
+                - Point
+            coordinates:
+              type: array
+              items:
+                type: number
+              minItems: 2
+              maxItems: 2
+          required:
+            - type
+            - coordinates
+        centerLat:
+          type: number
+          nullable: true
+        centerLng:
+          type: number
+          nullable: true
+        address:
+          type: string
+        operatingHours:
+          type: object
+          nullable: true
+          properties:
+            mon: &a8
+              type: object
+              properties:
+                open:
+                  anyOf:
+                    - type: string
+                      pattern: ^\d{2}:\d{2}$
+                    - type: string
+                      enum:
+                        - ""
+                close:
+                  anyOf:
+                    - type: string
+                      pattern: ^\d{2}:\d{2}$
+                    - type: string
+                      enum:
+                        - ""
+                rest:
+                  type: boolean
+              required:
+                - open
+                - close
+            tue: *a8
+            wed: *a8
+            thu: *a8
+            fri: *a8
+            sat: *a8
+            sun: *a8
+        deliveryFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+          default: 0
+        perKmFee:
+          type: integer
+          minimum: 0
+          maximum: 999999
+          default: 0
+        freeKm:
+          type: number
+          default: 2
+        stockSummary:
+          type: object
+          properties:
+            skuCount:
+              type: integer
+              minimum: 0
+            totalQuantity:
+              type: integer
+              minimum: 0
+            sellableQuantity:
+              type: integer
+              minimum: 0
+          required:
+            - skuCount
+            - totalQuantity
+            - sellableQuantity
+        isActive:
+          type: boolean
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
         staffList:
           type: array
           items:
@@ -2123,7 +2216,7 @@ components:
           type: object
           nullable: true
           properties:
-            mon: &a8
+            mon: &a9
               type: object
               properties:
                 open:
@@ -2145,12 +2238,12 @@ components:
               required:
                 - open
                 - close
-            tue: *a8
-            wed: *a8
-            thu: *a8
-            fri: *a8
-            sat: *a8
-            sun: *a8
+            tue: *a9
+            wed: *a9
+            thu: *a9
+            fri: *a9
+            sat: *a9
+            sun: *a9
         deliveryFee:
           type: integer
           minimum: 0
@@ -2213,7 +2306,7 @@ components:
           type: object
           nullable: true
           properties:
-            mon: &a9
+            mon: &a10
               type: object
               properties:
                 open:
@@ -2235,12 +2328,12 @@ components:
               required:
                 - open
                 - close
-            tue: *a9
-            wed: *a9
-            thu: *a9
-            fri: *a9
-            sat: *a9
-            sun: *a9
+            tue: *a10
+            wed: *a10
+            thu: *a10
+            fri: *a10
+            sat: *a10
+            sun: *a10
         deliveryFee:
           type: integer
           minimum: 0
@@ -2337,7 +2430,7 @@ components:
             type: string
         status:
           type: string
-          enum: *a10
+          enum: *a5
         unit:
           type: object
           additionalProperties:
@@ -2400,7 +2493,7 @@ components:
           format: uuid
         status:
           type: string
-          enum: *a10
+          enum: *a5
         salesCount:
           type: integer
         isCategoryTop3:
@@ -2453,7 +2546,7 @@ components:
             type: string
         status:
           type: string
-          enum: *a10
+          enum: *a5
         unit:
           type: object
           additionalProperties:
@@ -2615,7 +2708,7 @@ components:
             type: string
         status:
           type: string
-          enum: *a10
+          enum: *a5
       required:
         - name
         - mainImage
@@ -2649,13 +2742,13 @@ components:
             type: string
         status:
           type: string
-          enum: *a10
+          enum: *a5
     UpdateProductStatusRequest:
       type: object
       properties:
         status:
           type: string
-          enum: *a10
+          enum: *a5
       required:
         - status
     AdminSalesBatchAdjustRequest:
@@ -11067,7 +11160,7 @@ paths:
                           format: uuid
                         status:
                           type: string
-                          enum: *a10
+                          enum: *a5
                         salesCount:
                           type: integer
                         isCategoryTop3:
@@ -12226,7 +12319,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a5
+                    enum: *a6
                   businessHours:
                     type: string
                     nullable: true
@@ -12279,7 +12372,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a5
+                    enum: *a6
                   businessHours:
                     type: string
                     nullable: true
@@ -12327,7 +12420,7 @@ paths:
                   type: string
                 status:
                   type: string
-                  enum: *a5
+                  enum: *a6
                 businessHours:
                   type: string
                   nullable: true
@@ -12360,7 +12453,7 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: *a5
+                    enum: *a6
                   businessHours:
                     type: string
                     nullable: true
@@ -13684,7 +13777,7 @@ paths:
                           format: uuid
                         status:
                           type: string
-                          enum: *a10
+                          enum: *a5
                         salesCount:
                           type: integer
                         isCategoryTop3:
@@ -13760,7 +13853,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a10
+                    enum: *a5
                   unit:
                     type: object
                     additionalProperties:
@@ -13876,7 +13969,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a10
+                    enum: *a5
                   unit:
                     type: object
                     additionalProperties:
@@ -14158,7 +14251,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a10
+                      enum: *a5
                     salesCount:
                       type: integer
                     isCategoryTop3:
@@ -14230,7 +14323,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a10
+                      enum: *a5
                     salesCount:
                       type: integer
                     isCategoryTop3:
@@ -14248,6 +14341,121 @@ paths:
                     - status
                     - salesCount
                     - isCategoryTop3
+  /api/v1/client/products/frequent-bundle:
+    get:
+      tags:
+        - product
+      description: "常买组合一键购（客户画像批3 B8：per-user 简单共现统计，非协同过滤——最常买 seed +
+        与其同单常共现的伙伴商品打包返回，前端一键整包加购；匿名/无历史/无共现/seed 下架返回空组合 items=[] seed=null；响应
+        Cache-Control: no-store）"
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+          description: 伙伴商品数量，默认 5，上限 10（组合是打包加购单元，无需翻页上限）
+      responses:
+        "200":
+          description: 常买组合（空组合=前端整块隐藏）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  seed:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      mainImage:
+                        type: string
+                      priceMin:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      defaultSkuId:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      status:
+                        type: string
+                        enum: *a5
+                      salesCount:
+                        type: integer
+                      isCategoryTop3:
+                        type: boolean
+                      stock:
+                        type: integer
+                      rating:
+                        type: number
+                    required:
+                      - id
+                      - name
+                      - mainImage
+                      - priceMin
+                      - defaultSkuId
+                      - status
+                      - salesCount
+                      - isCategoryTop3
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        mainImage:
+                          type: string
+                        priceMin:
+                          type: integer
+                          minimum: 0
+                          maximum: 999999
+                        defaultSkuId:
+                          type: string
+                          nullable: true
+                          format: uuid
+                        status:
+                          type: string
+                          enum: *a5
+                        salesCount:
+                          type: integer
+                        isCategoryTop3:
+                          type: boolean
+                        stock:
+                          type: integer
+                        rating:
+                          type: number
+                      required:
+                        - id
+                        - name
+                        - mainImage
+                        - priceMin
+                        - defaultSkuId
+                        - status
+                        - salesCount
+                        - isCategoryTop3
+                  coOrderCount:
+                    type: integer
+                    minimum: 0
+                required:
+                  - seed
+                  - items
+                  - coOrderCount
   /api/v1/client/products/search:
     get:
       tags:
@@ -14282,7 +14490,7 @@ paths:
                       format: uuid
                     status:
                       type: string
-                      enum: *a10
+                      enum: *a5
                     salesCount:
                       type: integer
                     isCategoryTop3:
@@ -14469,7 +14677,7 @@ paths:
                     type: string
                 status:
                   type: string
-                  enum: *a10
+                  enum: *a5
               required:
                 - name
                 - mainImage
@@ -14514,7 +14722,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a10
+                    enum: *a5
                   unit:
                     type: object
                     additionalProperties:
@@ -14591,7 +14799,7 @@ paths:
                     type: string
                 status:
                   type: string
-                  enum: *a10
+                  enum: *a5
       responses:
         "200":
           description: 更新成功
@@ -14632,7 +14840,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a10
+                    enum: *a5
                   unit:
                     type: object
                     additionalProperties:
@@ -14692,7 +14900,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum: *a10
+                  enum: *a5
               required:
                 - status
       responses:
@@ -14735,7 +14943,7 @@ paths:
                       type: string
                   status:
                     type: string
-                    enum: *a10
+                    enum: *a5
                   unit:
                     type: object
                     additionalProperties:

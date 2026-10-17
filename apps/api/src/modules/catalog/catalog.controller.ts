@@ -146,6 +146,27 @@ export class ClientProductController {
     return { success: true, data };
   }
 
+  /**
+   * 常买组合一键购（B8，客户画像批3 2026-10-18）
+   * 可选登录：带有效 token 返回「最常买 seed + 同单常共现伙伴」打包组合；匿名/无历史返回空组合。
+   * no-store：响应随用户身份变化（同 buy-again / recommendations 范式）
+   */
+  @Get('frequent-bundle')
+  @OptionalAuth()
+  @Header('Cache-Control', 'no-store')
+  async frequentBundle(
+    @Query('limit') limit?: string,
+    @Req() req?: any,
+  ) {
+    // clamp 1~10（组合是打包加购单元，不需要 20 的翻页上限；负值/NaN 兜底默认 5）
+    const parsed = Number(limit);
+    const safeLimit = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(Math.floor(parsed), 10)
+      : undefined;
+    const data = await this.catalog.getFrequentBundle(req?.user?.sub ?? null, safeLimit);
+    return { success: true, data };
+  }
+
   @Get('search')
   async search(
     @Query('keyword') keyword?: string,

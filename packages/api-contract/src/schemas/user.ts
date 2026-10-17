@@ -511,3 +511,20 @@ export const UpdateSegmentCouponRuleRequest = z.object({
   promotionId: Id.optional(),
   enabled: z.boolean().optional(),
 });
+
+// ============================================================================
+// 客户画像批3（2026-10-18）：前台个性化体验 B8（方案v2 §三 批3）
+// ============================================================================
+
+/**
+ * B8 常买组合一键购响应 data（GET /client/products/frequent-bundle）
+ * 匿名 / 无历史 / 无共现 / seed 下架 → 空组合（items 空、seed null），前端整块隐藏
+ */
+export const FrequentBundleData = z.object({
+  /** 用户最常买商品（组合主商品）；无则 null */
+  seed: ProductSummary.nullable(),
+  /** 与 seed 同单常共现的伙伴商品（共现订单数 desc，ACTIVE 过滤） */
+  items: z.array(ProductSummary),
+  /** 最强组合的共现订单数（seed 订单里同时含 top1 伙伴的订单数）；无组合 0 */
+  coOrderCount: z.number().int().nonnegative(),
+});

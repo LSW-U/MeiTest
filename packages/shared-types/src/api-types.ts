@@ -3797,6 +3797,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/products/frequent-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 常买组合一键购（客户画像批3 B8：per-user 简单共现统计，非协同过滤——最常买 seed + 与其同单常共现的伙伴商品打包返回，前端一键整包加购；匿名/无历史/无共现/seed 下架返回空组合 items=[] seed=null；响应 Cache-Control: no-store） */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 伙伴商品数量，默认 5，上限 10（组合是打包加购单元，无需翻页上限） */
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 常买组合（空组合=前端整块隐藏） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            seed: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                                isCategoryTop3: boolean;
+                                stock?: number;
+                                rating?: number;
+                            } | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                                isCategoryTop3: boolean;
+                                stock?: number;
+                                rating?: number;
+                            }[];
+                            coOrderCount: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/products/search": {
         parameters: {
             query?: never;
@@ -24015,6 +24090,43 @@ export interface components {
             /** Format: uuid */
             promotionId?: string;
             enabled?: boolean;
+        };
+        FrequentBundleData: {
+            seed: {
+                /** Format: uuid */
+                id: string;
+                name: {
+                    [key: string]: string;
+                };
+                mainImage: string;
+                priceMin: number;
+                /** Format: uuid */
+                defaultSkuId: string | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                salesCount: number;
+                isCategoryTop3: boolean;
+                stock?: number;
+                rating?: number;
+            } | null;
+            items: {
+                /** Format: uuid */
+                id: string;
+                name: {
+                    [key: string]: string;
+                };
+                mainImage: string;
+                priceMin: number;
+                /** Format: uuid */
+                defaultSkuId: string | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                salesCount: number;
+                isCategoryTop3: boolean;
+                stock?: number;
+                rating?: number;
+            }[];
+            coOrderCount: number;
         };
         CustomerNoteItem: {
             /** Format: uuid */

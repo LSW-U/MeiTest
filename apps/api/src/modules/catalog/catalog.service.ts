@@ -19,6 +19,7 @@ import { getCategoryTop3ProductIds } from '../../shared/db/category-top3';
 import { SearchService } from '../search/search.service';
 import { redis, setWithTTL } from '../../shared/cache/redis';
 import { ProductSortBy } from '@meimart/api-contract';
+import { getPersonalRankingEnabled } from './recommendation.config';
 
 /**
  * 排序方式 → Prisma orderBy（P8 决策 2-B 后端排序）
@@ -262,6 +263,10 @@ export class CatalogService {
    * （Prisma 多段查询+内存拼装）→ offset 落点为内存切片；回退路径 skip: offset。
    */
   async getRecommendations(userId: string | null, limit = 6, offset = 0) {
+    // B7 预留总闸（客户画像批3 2026-10-18，裁决：本批 OFF=ON=现状加权行为不变）：
+    // 目前读取但零分支——开关是批6「协同过滤 + B7 全量千人千面」的总闸预留位，
+    // 批6 接管时在此分支。读取本身不改变任何排序路径（P3-2 逐字节红线不受影响）。
+    await getPersonalRankingEnabled();
     if (userId) {
       const items = await this.aggregateCategoryPreference(userId, limit, offset);
       if (items.length > 0) return items;
@@ -399,6 +404,80 @@ export class CatalogService {
     if (ordered.length === 0) return [];
 
     return this.assembleProductCards(ordered);
+  }
+
+  /**
+   * 常买组合一键购（B8，客户画像批3 2026-10-18）
+   *
+   * per-user 共现统计（简单共现，非协同过滤——v2 拍板）：
+   *   1. seed = 该用户买得最多的商品（频次 desc + last_at desc，R-a 同源口径）；
+   *   2. items = 与 seed 同单共现的常同购商品（按共现订单数 desc + last_at desc），
+   *      ACTIVE 过滤（seed 或全部伙伴下架 → 空组合，不回填不退化）。
+   * 匿名 / 无历史 / 无共现 → 空组合（items=[]，seed=null），前端整块隐藏。
+   *
+   * 口径：status IN ('COMPLETED','CANCELLED')、不过滤 deletedAt（R-a 红线，与 buy-again 逐字同源）。
+   * no-store + OptionalAuth（同 buy-again 范式）。
+   */
+  async getFrequentBundle(userId: string | null, limit = 5) {
+    if (!userId) return { seed: null, items: [], coOrderCount: 0 };
+
+    // 第 1 查：用户最常买商品（seed）
+    const seedRows = (await db.$queryRaw<
+      { product_id: string; freq: bigint; last_at: Date }[]
+    >`
+      SELECT oi.product_id, COUNT(*)::bigint AS freq, MAX(o.created_at) AS last_at
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      WHERE o.user_id = ${userId}
+        AND o.status IN ('COMPLETED', 'CANCELLED')
+      GROUP BY oi.product_id
+      ORDER BY freq DESC, last_at DESC
+      LIMIT 1
+    `) as { product_id: string; freq: bigint; last_at: Date }[];
+    const seedId = seedRows[0]?.product_id;
+    if (!seedId) return { seed: null, items: [], coOrderCount: 0 };
+
+    // 第 2 查：与 seed 同单共现的其他商品（排除 seed 自身），共现订单数 desc
+    const coRows = (await db.$queryRaw<
+      { product_id: string; co_order_count: bigint; last_at: Date }[]
+    >`
+      SELECT oi2.product_id, COUNT(DISTINCT oi2.order_id)::bigint AS co_order_count, MAX(o2.created_at) AS last_at
+      FROM order_items oi1
+      JOIN order_items oi2 ON oi2.order_id = oi1.order_id AND oi2.product_id <> oi1.product_id
+      JOIN orders o1 ON o1.id = oi1.order_id
+      JOIN orders o2 ON o2.id = oi2.order_id
+      WHERE o1.user_id = ${userId}
+        AND oi1.product_id = ${seedId}
+        AND o1.status IN ('COMPLETED', 'CANCELLED')
+      GROUP BY oi2.product_id
+      ORDER BY co_order_count DESC, last_at DESC
+      LIMIT ${limit}
+    `) as { product_id: string; co_order_count: bigint; last_at: Date }[];
+    if (coRows.length === 0) return { seed: null, items: [], coOrderCount: 0 };
+
+    // ACTIVE 过滤：seed + 伙伴一批取回（非 ACTIVE 剔除后不足 limit 不回填，同 buy-again 语义）
+    const productIds = [seedId, ...coRows.map((r) => r.product_id)];
+    const products = await db.product.findMany({
+      where: { id: { in: productIds }, status: 'ACTIVE' },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const seed = productMap.get(seedId);
+    if (!seed) return { seed: null, items: [], coOrderCount: 0 };
+    const orderedItems = coRows
+      .map((r) => productMap.get(r.product_id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+    if (orderedItems.length === 0) return { seed: null, items: [], coOrderCount: 0 };
+
+    const [seedCards, itemCards] = await Promise.all([
+      this.assembleProductCards([seed]),
+      this.assembleProductCards(orderedItems),
+    ]);
+    return {
+      seed: seedCards[0] ?? null,
+      items: itemCards,
+      // 共现口径：seed 订单里同时含伙伴商品的订单数（取 top1 伙伴的共现数，即最强组合强度）
+      coOrderCount: Number(coRows[0]!.co_order_count),
+    };
   }
 
   /** 销量切片回退（原 getBuyAgain 行为：skip limit, take limit；offset 游标叠加 → skip: limit + offset） */

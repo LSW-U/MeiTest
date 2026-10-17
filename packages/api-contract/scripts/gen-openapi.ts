@@ -83,6 +83,8 @@ import {
   SegmentCouponRuleListData,
   CreateSegmentCouponRuleRequest,
   UpdateSegmentCouponRuleRequest,
+  // 客户画像批3（2026-10-18）
+  FrequentBundleData,
   OrderSummary,
   // shop
   Shop,
@@ -448,6 +450,7 @@ registry.register('SegmentCouponRuleItem', SegmentCouponRuleItem);
 registry.register('SegmentCouponRuleListData', SegmentCouponRuleListData);
 registry.register('CreateSegmentCouponRuleRequest', CreateSegmentCouponRuleRequest);
 registry.register('UpdateSegmentCouponRuleRequest', UpdateSegmentCouponRuleRequest);
+registry.register('FrequentBundleData', FrequentBundleData);
 registry.register('CustomerNoteItem', CustomerNoteItem);
 registry.register('CustomerNoteListData', CustomerNoteListData);
 registry.register('CreateCustomerNoteRequest', CreateCustomerNoteRequest);
@@ -1448,6 +1451,26 @@ registry.registerPath({
   ],
   responses: {
     200: { description: '再买一次列表', content: { 'application/json': { schema: ProductSummary.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/frequent-bundle',
+  tags: ['product'],
+  description:
+    '常买组合一键购（客户画像批3 B8：per-user 简单共现统计，非协同过滤——最常买 seed + 与其同单常共现的伙伴商品打包返回，前端一键整包加购；匿名/无历史/无共现/seed 下架返回空组合 items=[] seed=null；响应 Cache-Control: no-store）',
+  parameters: [
+    {
+      name: 'limit',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 1, maximum: 10, default: 5 },
+      description: '伙伴商品数量，默认 5，上限 10（组合是打包加购单元，无需翻页上限）',
+    },
+  ],
+  responses: {
+    200: { description: '常买组合（空组合=前端整块隐藏）', content: { 'application/json': { schema: FrequentBundleData } } },
   },
 });
 
