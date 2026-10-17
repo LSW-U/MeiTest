@@ -62,11 +62,27 @@ import {
   DeleteUserRequest,
   ResetPasswordResponseData,
   // 客户画像批1（2026-10-18）
+  LifecycleStage,
   CustomerProfile360Data,
   CustomerNoteItem,
   CustomerNoteListData,
   CreateCustomerNoteRequest,
   UpdateCustomerNoteRequest,
+  // 客户画像批2（2026-10-18）
+  SegmentBucketRow,
+  SegmentDashboardData,
+  CoPurchaseItem,
+  CoPurchaseData,
+  SegmentRepurchaseRow,
+  SegmentRepurchaseData,
+  CouponAttributionRow,
+  CouponAttributionData,
+  BatchGrantCouponsRequest,
+  BatchGrantCouponsData,
+  SegmentCouponRuleItem,
+  SegmentCouponRuleListData,
+  CreateSegmentCouponRuleRequest,
+  UpdateSegmentCouponRuleRequest,
   OrderSummary,
   // shop
   Shop,
@@ -417,6 +433,21 @@ registry.register('DeleteUserRequest', DeleteUserRequest);
 registry.register('ResetPasswordResponseData', ResetPasswordResponseData);
 // 客户画像批1（2026-10-18）
 registry.register('CustomerProfile360Data', CustomerProfile360Data);
+// 客户画像批2（2026-10-18）
+registry.register('SegmentBucketRow', SegmentBucketRow);
+registry.register('SegmentDashboardData', SegmentDashboardData);
+registry.register('CoPurchaseItem', CoPurchaseItem);
+registry.register('CoPurchaseData', CoPurchaseData);
+registry.register('SegmentRepurchaseRow', SegmentRepurchaseRow);
+registry.register('SegmentRepurchaseData', SegmentRepurchaseData);
+registry.register('CouponAttributionRow', CouponAttributionRow);
+registry.register('CouponAttributionData', CouponAttributionData);
+registry.register('BatchGrantCouponsRequest', BatchGrantCouponsRequest);
+registry.register('BatchGrantCouponsData', BatchGrantCouponsData);
+registry.register('SegmentCouponRuleItem', SegmentCouponRuleItem);
+registry.register('SegmentCouponRuleListData', SegmentCouponRuleListData);
+registry.register('CreateSegmentCouponRuleRequest', CreateSegmentCouponRuleRequest);
+registry.register('UpdateSegmentCouponRuleRequest', UpdateSegmentCouponRuleRequest);
 registry.register('CustomerNoteItem', CustomerNoteItem);
 registry.register('CustomerNoteListData', CustomerNoteListData);
 registry.register('CreateCustomerNoteRequest', CreateCustomerNoteRequest);
@@ -2856,6 +2887,207 @@ registry.registerPath({
       content: { 'application/json': { schema: CustomerNoteItem } },
     },
     404: { description: 'E-PROFILE-002 标记不存在或不归属', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// 客户画像批2（2026-10-18）：分层运营 D2/D3/D4/D7 + C5
+// ============================================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/dashboard',
+  tags: ['user'],
+  description:
+    'RFM 分层看板（D2）。各生命周期层人数 / GMV（累计实付，分）/ GMV 占比。' +
+    '归层与单客页同源（getLifecycleStage + profile.thresholds G5 同一函数同一阈值），' +
+    '人数与单客页 stage 对账一致（P2-1）。聚合口径 R-a：COMPLETED+CANCELLED、不过滤 deletedAt。仅 SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '分层看板',
+      content: { 'application/json': { schema: SegmentDashboardData } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/co-purchase',
+  tags: ['user'],
+  description:
+    '买 X 还买 Y 共现分析（D3）。OrderItem 共现统计（SQL 聚合非算法）：目标商品所在订单中' +
+    '其他商品按共现订单数排序 top 10；share=共现订单数/目标商品订单数（baseOrderCount）。' +
+    '口径 R-a（COMPLETED+CANCELLED）。仅 SUPER_ADMIN。',
+  request: {
+    query: z.object({ productId: Id, lang: z.enum(['en', 'id', 'zh', 'pt', 'tet']).optional() }),
+  },
+  responses: {
+    200: {
+      description: '共现列表',
+      content: { 'application/json': { schema: CoPurchaseData } },
+    },
+    404: { description: 'E-PROFILE-001 商品不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/repurchase',
+  tags: ['user'],
+  description:
+    '分层回购率（D3）。各层 F≥2 用户占比（回购率）；层人数 0 时 rate=null。' +
+    '归层与看板同源。仅 SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '分层回购率',
+      content: { 'application/json': { schema: SegmentRepurchaseData } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/coupon-attribution/{promotionId}',
+  tags: ['user'],
+  description:
+    '券归因按层拆解（D4）。口径（R2 精神）：claimed=持有该券（UserCoupon 任意状态）人数；' +
+    'redeemed=其中 status=USED 人数（领取≠核销，UNUSED 是领了没用）；redeemRate=redeemed/claimed；' +
+    'repurchaseOrders=领券用户 receivedAt 后 30 天内实付订单数（COMPLETED+CANCELLED 口径，含领券当单）；' +
+    'userCount=该层全体人数（渗透率分母）。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ promotionId: Id }),
+  },
+  responses: {
+    200: {
+      description: '归因行（按生命周期层）',
+      content: { 'application/json': { schema: CouponAttributionData } },
+    },
+    404: { description: 'E-COUPON-004 券模板不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/export',
+  tags: ['user'],
+  description:
+    '按层导出名单 CSV（D7）。列：userId/phone/name/orderCount/gmvUsdCents/lastPurchaseAt（lang 列名五语）。' +
+    'CSV injection 防护（=+-@ 前缀单引号）。查看即审计：落 AuditLog(action=EXPORT_SEGMENT_USERS)。仅 SUPER_ADMIN。',
+  request: {
+    query: z.object({ stage: LifecycleStage, lang: z.enum(['en', 'id', 'zh', 'pt', 'tet']).optional() }),
+  },
+  responses: {
+    200: {
+      description: 'CSV 文件（text/csv）',
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/marketing/segments/coupons/grant',
+  tags: ['user'],
+  description:
+    '批量发券（D7，v2 订正#7 新建 grant 端点）。R-f 防滥用：SUPER_ADMIN 门禁 + Redis 滑动窗口频控' +
+    '（默认 1 次/分钟，G5 可配 segment.batchGrant.rateLimitPerMinute）+ 单批上限（默认 500，' +
+    'G5 可配 segment.batchGrant.batchLimit，硬顶 5000）。' +
+    '幂等：UserCoupon @@unique([userId, promotionId])，撞约束跳过不报错——granted=新发，' +
+    'skipped=已持有跳过，failed=配额满等。配额语义同 claimCoupon（usedCount=已发放数，原子守卫）。仅 SUPER_ADMIN。',
+  request: {
+    body: { content: { 'application/json': { schema: BatchGrantCouponsRequest } } },
+  },
+  responses: {
+    200: {
+      description: '发放结果分账',
+      content: { 'application/json': { schema: BatchGrantCouponsData } },
+    },
+    400: { description: 'E-SEGMENT-002 超单批上限', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-COUPON-004 券模板不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    429: { description: 'E-SEGMENT-003 频控', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/coupon-rules',
+  tags: ['user'],
+  description: '分层定向券规则列表（C5）。规则表 segment_coupon_rules（G5 之外的规则配置，阈值口径仍读 profile.thresholds）。仅 SUPER_ADMIN。',
+  responses: {
+    200: {
+      description: '规则列表',
+      content: { 'application/json': { schema: SegmentCouponRuleListData } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/marketing/segments/coupon-rules',
+  tags: ['user'],
+  description: '新建分层定向券规则（C5，stage+promotionId 唯一）。与批4 自动化流共用 grant 端点。写审计自动。仅 SUPER_ADMIN。',
+  request: {
+    body: { content: { 'application/json': { schema: CreateSegmentCouponRuleRequest } } },
+  },
+  responses: {
+    200: {
+      description: '新建的规则',
+      content: { 'application/json': { schema: SegmentCouponRuleItem } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/marketing/segments/coupon-rules/{id}',
+  tags: ['user'],
+  description: '编辑分层定向券规则（C5）。E-SEGMENT-001 规则不存在。写审计自动。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: UpdateSegmentCouponRuleRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的规则',
+      content: { 'application/json': { schema: SegmentCouponRuleItem } },
+    },
+    404: { description: 'E-SEGMENT-001', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/marketing/segments/coupon-rules/{id}',
+  tags: ['user'],
+  description: '删除分层定向券规则（C5）。写审计自动。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '删除的规则 id',
+      content: { 'application/json': { schema: z.object({ id: Id }) } },
+    },
+    404: { description: 'E-SEGMENT-001', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/segments/coupon-rules/resolve',
+  tags: ['user'],
+  description: '按层解析生效规则（C5，批4 触达自动化共用入口）。仅 SUPER_ADMIN。',
+  request: {
+    query: z.object({ stage: LifecycleStage }),
+  },
+  responses: {
+    200: {
+      description: '该层生效规则（enabled=true，含券模板摘要）',
+      content: {
+        'application/json': {
+          schema: z.object({ items: z.array(z.object({ id: Id, stage: LifecycleStage, promotionId: Id, code: z.string(), name: z.string(), status: z.string() })) }),
+        },
+      },
+    },
   },
 });
 

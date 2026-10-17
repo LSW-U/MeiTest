@@ -392,3 +392,122 @@ export const UpdateCustomerNoteRequest = z.object({
 export const CustomerNoteListData = z.object({
   items: z.array(CustomerNoteItem),
 });
+
+// ============================================================================
+// 客户画像批2（2026-10-18）：分层运营 D2/D3/D4/D7 + C5（方案v2 §三 批2 + 订正#7 + R-f）
+// ============================================================================
+
+/** D2 看板：单层聚合行（归层口径与单客 getLifecycleStage 同源，P2-1 对账一致） */
+export const SegmentBucketRow = z.object({
+  stage: LifecycleStage,
+  userCount: z.number().int().nonnegative(),
+  /** 该层累计实付（分） */
+  gmvTotal: z.number().int().nonnegative(),
+  /** GMV 占比 0-1（全层合计=1） */
+  gmvShare: z.number().min(0).max(1),
+});
+
+/** D2 看板响应 data（GET /admin/marketing/segments/dashboard） */
+export const SegmentDashboardData = z.object({
+  totalUsers: z.number().int().nonnegative(),
+  /** 有聚合基数订单（F≥1）的用户数 */
+  purchasedUsers: z.number().int().nonnegative(),
+  buckets: z.array(SegmentBucketRow),
+  generatedAt: IsoTimestamp,
+});
+
+/** D3 共现项（买 X 还买 Y；share=共现订单数/目标商品订单数） */
+export const CoPurchaseItem = z.object({
+  productId: Id,
+  name: z.string(),
+  coOrderCount: z.number().int().nonnegative(),
+  share: z.number().min(0).max(1),
+});
+
+/** D3 共现响应 data（GET /admin/marketing/segments/co-purchase） */
+export const CoPurchaseData = z.object({
+  product: z.object({ id: Id, name: z.string() }),
+  /** 目标商品出现在多少订单（share 分母） */
+  baseOrderCount: z.number().int().nonnegative(),
+  items: z.array(CoPurchaseItem),
+});
+
+/** D3 分层回购率行 */
+export const SegmentRepurchaseRow = z.object({
+  stage: LifecycleStage,
+  userCount: z.number().int().nonnegative(),
+  /** 该层 F≥2 用户数 */
+  repurchaseUserCount: z.number().int().nonnegative(),
+  /** 回购率 0-1；层人数 0 时 null */
+  repurchaseRate: z.number().min(0).max(1).nullable(),
+});
+
+/** D3 分层回购率响应 data */
+export const SegmentRepurchaseData = z.object({
+  stages: z.array(SegmentRepurchaseRow),
+  generatedAt: IsoTimestamp,
+});
+
+/**
+ * D4 券归因行（口径见端点描述 R2 精神）：
+ *   claimed=持有该券人数；redeemed=USED 人数；redeemRate=redeemed/claimed；
+ *   repurchaseOrders=领券用户 receivedAt 后 30 天内实付订单数（COMPLETED+CANCELLED）。
+ */
+export const CouponAttributionRow = z.object({
+  stage: LifecycleStage,
+  claimed: z.number().int().nonnegative(),
+  redeemed: z.number().int().nonnegative(),
+  redeemRate: z.number().min(0).max(1).nullable(),
+  repurchaseOrders: z.number().int().nonnegative(),
+  /** 该层全体人数（渗透率分母） */
+  userCount: z.number().int().nonnegative(),
+});
+
+/** D4 券归因响应 data（GET /admin/marketing/segments/coupon-attribution/:promotionId） */
+export const CouponAttributionData = z.object({
+  promotionId: Id,
+  rows: z.array(CouponAttributionRow),
+});
+
+/** D7 批量发券请求（POST /admin/marketing/segments/coupons/grant；上限对齐服务端硬顶 5000） */
+export const BatchGrantCouponsRequest = z.object({
+  promotionId: Id,
+  userIds: z.array(Id).min(1).max(5000),
+});
+
+/** D7 批量发券响应 data（granted=新发 skipped=已持有幂等跳过 failed=配额满等） */
+export const BatchGrantCouponsData = z.object({
+  granted: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+});
+
+/** C5 分层定向券规则项 */
+export const SegmentCouponRuleItem = z.object({
+  id: Id,
+  stage: LifecycleStage,
+  promotionId: Id,
+  enabled: z.boolean(),
+  createdAt: IsoTimestamp,
+  updatedAt: IsoTimestamp,
+});
+
+/** C5 规则列表响应 data */
+export const SegmentCouponRuleListData = z.object({
+  items: z.array(SegmentCouponRuleItem),
+});
+
+/** C5 新建规则请求 */
+export const CreateSegmentCouponRuleRequest = z.object({
+  stage: LifecycleStage,
+  promotionId: Id,
+  enabled: z.boolean().optional(),
+});
+
+/** C5 编辑规则请求 */
+export const UpdateSegmentCouponRuleRequest = z.object({
+  stage: LifecycleStage.optional(),
+  promotionId: Id.optional(),
+  enabled: z.boolean().optional(),
+});

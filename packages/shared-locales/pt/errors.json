@@ -110,6 +110,10 @@
   "E-RIDER-004": "Inscrição do rider já processada",
   "E-RIDER-005": "rejectReason obrigatório ao rejeitar",
   "E-RIDER-006": "Rider não aprovado (não pode ficar online)",
+  "E-SEGMENT-001": "Regra de cupom de segmento não encontrada",
+  "E-SEGMENT-002": "Lote excede o limite configurado",
+  "E-SEGMENT-003": "Muitas solicitações, tente novamente mais tarde",
+  "E-SEGMENT-004": "Estágio de ciclo de vida inválido",
   "E-SETTLE-001": "O valor de saque excede o saldo disponível",
   "E-SETTLE-002": "Pedido de saque não encontrado",
   "E-SETTLE-003": "Status do saque não permite esta ação",
@@ -182,5 +186,6 @@
   "E-UPLOAD-024": "Proporção da imagem de slide fora do intervalo (3:4 - 1:1)",
   "E-ONBOARDING-001": "Título/descrição devem ser um objeto i18n com valor \"en\" não vazio",
   "E-ONBOARDING-002": "Slide de onboarding não encontrado",
-  "E-ONBOARDING-003": "O URL da imagem deve ser do nosso serviço de upload"
+  "E-ONBOARDING-003": "O URL da imagem deve ser do nosso serviço de upload",
+  "E-SEGMENT-005": "Produto não encontrado"
 }

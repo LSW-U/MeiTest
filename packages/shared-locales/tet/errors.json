@@ -110,6 +110,10 @@
   "E-RIDER-004": "Aplikasaun rider ona prosese",
   "E-RIDER-005": "rejectReason presiza bainhira rejeita",
   "E-RIDER-006": "Rider seidauk aprova (la bele online)",
+  "E-SEGMENT-001": "Regra kupon segementu laheti",
+  "E-SEGMENT-002": "Batch liu limitu",
+  "E-SEGMENT-003": "Pedidu barak liu, kesi hela",
+  "E-SEGMENT-004": "Estaju siklus vida invalidu",
   "E-SETTLE-001": "Withdrawal amount exceeds available balance",
   "E-SETTLE-002": "Withdrawal request not found",
   "E-SETTLE-003": "Withdrawal status does not allow this action",
@@ -182,5 +186,6 @@
   "E-UPLOAD-024": "Imajen slide nia razaun liur (3:4 - 1:1)",
   "E-ONBOARDING-001": "Títulu/deskripsiu teni ser objetu i18n ho valor \"en\" laos mamuk",
   "E-ONBOARDING-002": "Slide onboarding lae hetan",
-  "E-ONBOARDING-003": "URL imajen teni husi aman servisu upload"
+  "E-ONBOARDING-003": "URL imajen teni husi aman servisu upload",
+  "E-SEGMENT-005": "Produtu laiha"
 }

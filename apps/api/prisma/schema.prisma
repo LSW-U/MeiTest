@@ -783,6 +783,31 @@ model CustomerNote {
 }
 
 // ============================================================================
+// 24. SegmentCouponRule（C5 分层定向券规则，客户画像批2 2026-10-18）
+//     按 RFM 生命周期层配券：stage → promotion。
+//     与批4 自动化流共用 grant 端点（POST /admin/marketing/segments/coupons/grant）；
+//     幂等不在规则层——grant 侧靠 UserCoupon @@unique([userId, promotionId]) 撞约束跳过。
+//     阈值口径（stage 怎么算）读 profile.thresholds（G5 同源），本表只存层→券映射。
+// ============================================================================
+model SegmentCouponRule {
+  id          String   @id @default(uuid())
+  /// 生命周期层（LifecycleStage：NEW/FIRST_PURCHASE/ACTIVE/SLEEPING/CHURNED）
+  stage       String   @db.VarChar(20)
+  /// 目标券模板
+  promotionId String   @map("promotion_id")
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  // 同层同券唯一（防重复配置）
+  @@unique([stage, promotionId])
+  @@index([stage])
+  @@map("segment_coupon_rules")
+}
+
+// ============================================================================
 // 10. RiderLocation + RiderLocationHistory 已删除（W4.5 P0-2）
 // 在线状态走 Redis rider:online:{riderId} SETEX 60s（rider.service heartbeat 维护）
 // 历史轨迹推 W5/W6 真做配送追踪时再加回来
@@ -1392,6 +1417,7 @@ model Promotion {
 
   orderPromotions OrderPromotion[]
   userCoupons     UserCoupon[]
+  segmentRules    SegmentCouponRule[]
 
   @@index([status, startAt, endAt])
   @@index([code])

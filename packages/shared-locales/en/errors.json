@@ -110,6 +110,10 @@
   "E-RIDER-004": "Rider application already processed",
   "E-RIDER-005": "rejectReason required when rejecting",
   "E-RIDER-006": "Rider not approved yet (cannot go online)",
+  "E-SEGMENT-001": "Segment coupon rule not found",
+  "E-SEGMENT-002": "Batch size exceeds the configured limit",
+  "E-SEGMENT-003": "Too many requests, please try again later",
+  "E-SEGMENT-004": "Invalid lifecycle stage",
   "E-SETTLE-001": "Withdrawal amount exceeds available balance",
   "E-SETTLE-002": "Withdrawal request not found",
   "E-SETTLE-003": "Withdrawal status does not allow this action",
@@ -182,5 +186,6 @@
   "E-ONBOARDING-002": "Onboarding slide not found",
   "E-ONBOARDING-003": "Image URL must be from our upload service",
   "E-UPLOAD-023": "Slide image width out of range (600-2000px)",
-  "E-UPLOAD-024": "Slide image aspect ratio out of range (3:4 - 1:1)"
+  "E-UPLOAD-024": "Slide image aspect ratio out of range (3:4 - 1:1)",
+  "E-SEGMENT-005": "Product not found"
 }

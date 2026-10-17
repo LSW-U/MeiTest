@@ -172,6 +172,12 @@ const NAV_ITEMS: NavItem[] = [
     perspectives: ['platform'],
   },
   {
+    labelKey: 'menu.segments',
+    href: '/segments',
+    icon: BarChart3,
+    perspectives: ['platform'],
+  },
+  {
     labelKey: 'menu.hotSearch',
     href: '/hot-search',
     icon: Flame,
@@ -251,7 +257,7 @@ const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
   { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/riders/deposit-tiers', '/riders/deposit-locations', '/riders/deposit-requests', '/warehouses', '/inventory'] },
   { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', icon: Users, hrefs: ['/customers'] },
-  { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions'] },
+  { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions', '/segments'] },
   { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', icon: WalletIcon, hrefs: ['/settlements', '/withdrawals'] },
   { labelKey: 'menu.groupSystem', groupKey: 'groupSystem', icon: Cog, hrefs: ['/apps', '/feedback', '/notifications', '/settings', '/audit-logs'] },
 ];

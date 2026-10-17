@@ -10578,6 +10578,649 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/admin/marketing/segments/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RFM 分层看板（D2）。各生命周期层人数 / GMV（累计实付，分）/ GMV 占比。归层与单客页同源（getLifecycleStage + profile.thresholds G5 同一函数同一阈值），人数与单客页 stage 对账一致（P2-1）。聚合口径 R-a：COMPLETED+CANCELLED、不过滤 deletedAt。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 分层看板 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            totalUsers: number;
+                            purchasedUsers: number;
+                            buckets: {
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                                userCount: number;
+                                gmvTotal: number;
+                                gmvShare: number;
+                            }[];
+                            /** Format: date-time */
+                            generatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/co-purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 买 X 还买 Y 共现分析（D3）。OrderItem 共现统计（SQL 聚合非算法）：目标商品所在订单中其他商品按共现订单数排序 top 10；share=共现订单数/目标商品订单数（baseOrderCount）。口径 R-a（COMPLETED+CANCELLED）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query: {
+                    productId: string;
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 共现列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            product: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            baseOrderCount: number;
+                            items: {
+                                /** Format: uuid */
+                                productId: string;
+                                name: string;
+                                coOrderCount: number;
+                                share: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-PROFILE-001 商品不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/repurchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 分层回购率（D3）。各层 F≥2 用户占比（回购率）；层人数 0 时 rate=null。归层与看板同源。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 分层回购率 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            stages: {
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                                userCount: number;
+                                repurchaseUserCount: number;
+                                repurchaseRate: number | null;
+                            }[];
+                            /** Format: date-time */
+                            generatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/coupon-attribution/{promotionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 券归因按层拆解（D4）。口径（R2 精神）：claimed=持有该券（UserCoupon 任意状态）人数；redeemed=其中 status=USED 人数（领取≠核销，UNUSED 是领了没用）；redeemRate=redeemed/claimed；repurchaseOrders=领券用户 receivedAt 后 30 天内实付订单数（COMPLETED+CANCELLED 口径，含领券当单）；userCount=该层全体人数（渗透率分母）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    promotionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 归因行（按生命周期层） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            promotionId: string;
+                            rows: {
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                                claimed: number;
+                                redeemed: number;
+                                redeemRate: number | null;
+                                repurchaseOrders: number;
+                                userCount: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-COUPON-004 券模板不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 按层导出名单 CSV（D7）。列：userId/phone/name/orderCount/gmvUsdCents/lastPurchaseAt（lang 列名五语）。CSV injection 防护（=+-@ 前缀单引号）。查看即审计：落 AuditLog(action=EXPORT_SEGMENT_USERS)。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query: {
+                    stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                    lang?: "en" | "id" | "zh" | "pt" | "tet";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description CSV 文件（text/csv） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/coupons/grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 批量发券（D7，v2 订正#7 新建 grant 端点）。R-f 防滥用：SUPER_ADMIN 门禁 + Redis 滑动窗口频控（默认 1 次/分钟，G5 可配 segment.batchGrant.rateLimitPerMinute）+ 单批上限（默认 500，G5 可配 segment.batchGrant.batchLimit，硬顶 5000）。幂等：UserCoupon @@unique([userId, promotionId])，撞约束跳过不报错——granted=新发，skipped=已持有跳过，failed=配额满等。配额语义同 claimCoupon（usedCount=已发放数，原子守卫）。仅 SUPER_ADMIN。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        promotionId: string;
+                        userIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 发放结果分账 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            granted: number;
+                            skipped: number;
+                            failed: number;
+                            total: number;
+                        };
+                    };
+                };
+                /** @description E-SEGMENT-002 超单批上限 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-COUPON-004 券模板不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-SEGMENT-003 频控 */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/coupon-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 分层定向券规则列表（C5）。规则表 segment_coupon_rules（G5 之外的规则配置，阈值口径仍读 profile.thresholds）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 规则列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                                /** Format: uuid */
+                                promotionId: string;
+                                enabled: boolean;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 新建分层定向券规则（C5，stage+promotionId 唯一）。与批4 自动化流共用 grant 端点。写审计自动。仅 SUPER_ADMIN。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                        /** Format: uuid */
+                        promotionId: string;
+                        enabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 新建的规则 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                            /** Format: uuid */
+                            promotionId: string;
+                            enabled: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/coupon-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 删除分层定向券规则（C5）。写审计自动。仅 SUPER_ADMIN。 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除的规则 id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                        };
+                    };
+                };
+                /** @description E-SEGMENT-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 编辑分层定向券规则（C5）。E-SEGMENT-001 规则不存在。写审计自动。仅 SUPER_ADMIN。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        stage?: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                        /** Format: uuid */
+                        promotionId?: string;
+                        enabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新后的规则 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                            /** Format: uuid */
+                            promotionId: string;
+                            enabled: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description E-SEGMENT-001 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/segments/coupon-rules/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 按层解析生效规则（C5，批4 触达自动化共用入口）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query: {
+                    stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 该层生效规则（enabled=true，含券模板摘要） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                                /** Format: uuid */
+                                promotionId: string;
+                                code: string;
+                                name: string;
+                                status: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/orders": {
         parameters: {
             query?: never;
@@ -23237,6 +23880,141 @@ export interface components {
                 /** Format: date-time */
                 createdAt: string;
             }[];
+        };
+        SegmentBucketRow: {
+            /** @enum {string} */
+            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            userCount: number;
+            gmvTotal: number;
+            gmvShare: number;
+        };
+        SegmentDashboardData: {
+            totalUsers: number;
+            purchasedUsers: number;
+            buckets: {
+                /** @enum {string} */
+                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                userCount: number;
+                gmvTotal: number;
+                gmvShare: number;
+            }[];
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        CoPurchaseItem: {
+            /** Format: uuid */
+            productId: string;
+            name: string;
+            coOrderCount: number;
+            share: number;
+        };
+        CoPurchaseData: {
+            product: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            baseOrderCount: number;
+            items: {
+                /** Format: uuid */
+                productId: string;
+                name: string;
+                coOrderCount: number;
+                share: number;
+            }[];
+        };
+        SegmentRepurchaseRow: {
+            /** @enum {string} */
+            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            userCount: number;
+            repurchaseUserCount: number;
+            repurchaseRate: number | null;
+        };
+        SegmentRepurchaseData: {
+            stages: {
+                /** @enum {string} */
+                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                userCount: number;
+                repurchaseUserCount: number;
+                repurchaseRate: number | null;
+            }[];
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        CouponAttributionRow: {
+            /** @enum {string} */
+            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            claimed: number;
+            redeemed: number;
+            redeemRate: number | null;
+            repurchaseOrders: number;
+            userCount: number;
+        };
+        CouponAttributionData: {
+            /** Format: uuid */
+            promotionId: string;
+            rows: {
+                /** @enum {string} */
+                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                claimed: number;
+                redeemed: number;
+                redeemRate: number | null;
+                repurchaseOrders: number;
+                userCount: number;
+            }[];
+        };
+        BatchGrantCouponsRequest: {
+            /** Format: uuid */
+            promotionId: string;
+            userIds: string[];
+        };
+        BatchGrantCouponsData: {
+            granted: number;
+            skipped: number;
+            failed: number;
+            total: number;
+        };
+        SegmentCouponRuleItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            /** Format: uuid */
+            promotionId: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SegmentCouponRuleListData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                /** Format: uuid */
+                promotionId: string;
+                enabled: boolean;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            }[];
+        };
+        CreateSegmentCouponRuleRequest: {
+            /** @enum {string} */
+            stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            /** Format: uuid */
+            promotionId: string;
+            enabled?: boolean;
+        };
+        UpdateSegmentCouponRuleRequest: {
+            /** @enum {string} */
+            stage?: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            /** Format: uuid */
+            promotionId?: string;
+            enabled?: boolean;
         };
         CustomerNoteItem: {
             /** Format: uuid */

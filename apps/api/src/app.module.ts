@@ -30,6 +30,7 @@ import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 // 客户画像批1（2026-10-18）：共享画像聚合 + 单客背调（批 2~6 地基）
 import { ProfileModule } from './modules/profile/profile.module';
+import { SegmentModule } from './modules/segment/segment.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { RateModule } from './modules/rate/rate.module';
@@ -77,6 +78,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     PlatformModule,
     // 客户画像批1（2026-10-18）：共享画像聚合 + 单客背调（批 2~6 地基）
     ProfileModule,
+    SegmentModule,
     PricingModule,
     RateModule,
     RealtimeModule,
