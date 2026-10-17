@@ -82,6 +82,8 @@
   "E-PRODUCT-IMPORT-002": "Hanya file CSV yang didukung",
   "E-PRODUCT-IMPORT-003": "File tidak diterima (nama field harus \"file\")",
   "E-PRODUCT-IMPORT-004": "Mode impor tidak valid (harus skip/overwrite/error)",
+  "E-PROFILE-001": "Pengguna tidak ditemukan",
+  "E-PROFILE-002": "Catatan tidak ditemukan atau bukan milik pelanggan ini",
   "E-PROMO-020": "Batas penggunaan kupon per pengguna tercapai",
   "E-RATE-001": "Nilai kurs harus berupa angka lebih dari 0 dan kurang dari 10000",
   "E-RATE-002": "Tanggal efektif harus berupa tanggal kalender yang valid (YYYY-MM-DD)",

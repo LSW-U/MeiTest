@@ -295,3 +295,100 @@ export const ResetPasswordResponseData = z.object({
   temporaryPassword: z.string().length(12),
   generatedAt: IsoTimestamp,
 });
+
+// ============================================================================
+// 客户画像批1（2026-10-18）：单客 360 画像 + D6 客户标记（方案v2 §三 批1）
+// ============================================================================
+
+/** RFM 值（口径同源 R-a：COMPLETED+CANCELLED、不过滤 deletedAt，见 profile.service） */
+export const ProfileRfm = z.object({
+  /** 距最近一次购买天数（Dili 当地日历日差）；无购买 null */
+  rDays: z.number().int().nonnegative().nullable(),
+  /** 聚合基数订单数 */
+  fCount: z.number().int().nonnegative(),
+  /** 累计实付金额（分） */
+  mTotal: z.number().int().nonnegative(),
+  /** 最近一次购买时间；无购买 null */
+  lastPurchaseAt: IsoTimestamp.nullable(),
+  /** 首次购买时间；无购买 null */
+  firstPurchaseAt: IsoTimestamp.nullable(),
+});
+
+/** 生命周期阶段（阈值可配 G5，判定顺序 NEW → FIRST_PURCHASE → CHURNED → SLEEPING → ACTIVE） */
+export const LifecycleStage = z.enum(['NEW', 'FIRST_PURCHASE', 'ACTIVE', 'SLEEPING', 'CHURNED']);
+
+/** 品类偏好分布项 */
+export const ProfileCategoryPreferenceItem = z.object({
+  categoryId: Id.nullable(),
+  /** 多语言类目名切片（fallback en；无类目空串） */
+  name: z.string(),
+  freq: z.number().int().nonnegative(),
+  /** 占总频次比例 0-1 */
+  share: z.number().min(0).max(1),
+});
+
+/** 常用地址项（按订单配送快照聚合，非 Address 表） */
+export const ProfileFrequentAddressItem = z.object({
+  detail: z.string(),
+  region: z.string(),
+  freq: z.number().int().nonnegative(),
+});
+
+/** 订单史时间线项（近 20 单，含 CANCELLED——背调需要看见取消行为） */
+export const ProfileTimelineItem = z.object({
+  id: Id,
+  orderNo: OrderNo,
+  status: OrderStatus,
+  payableAmount: z.number().int().nonnegative(),
+  discountAmount: z.number().int().nonnegative(),
+  createdAt: IsoTimestamp,
+});
+
+/** 单客 360 画像响应 data（GET /admin/users/:id/profile） */
+export const CustomerProfile360Data = z.object({
+  rfm: ProfileRfm,
+  lifecycle: z.object({ stage: LifecycleStage }),
+  categoryPreferences: z.array(ProfileCategoryPreferenceItem),
+  priceBand: z.object({
+    min: z.number().int().nonnegative(),
+    avg: z.number().min(0).nullable(),
+    max: z.number().int().nonnegative(),
+  }),
+  discountSensitivity: z.object({
+    discountOrderCount: z.number().int().nonnegative(),
+    totalOrderCount: z.number().int().nonnegative(),
+    /** 折扣订单占比 0-1；无订单 null */
+    ratio: z.number().min(0).max(1).nullable(),
+  }),
+  peakHours: z.array(z.object({ hour: z.number().int().min(0).max(23), freq: z.number().int().nonnegative() })),
+  frequentAddresses: z.array(ProfileFrequentAddressItem),
+  timeline: z.array(ProfileTimelineItem),
+});
+
+/** 客户标记项（D6） */
+export const CustomerNoteItem = z.object({
+  id: Id,
+  userId: Id,
+  /** 标记类型（自由标签，如 VIP / RISK / COMPLAINT） */
+  type: z.string().min(1).max(30),
+  content: z.string().min(1).max(500),
+  createdBy: Id,
+  createdAt: IsoTimestamp,
+});
+
+/** 新增标记请求（POST /admin/users/:id/notes） */
+export const CreateCustomerNoteRequest = z.object({
+  type: z.string().min(1).max(30),
+  content: z.string().min(1).max(500),
+});
+
+/** 编辑标记请求（PATCH /admin/users/:id/notes/:noteId） */
+export const UpdateCustomerNoteRequest = z.object({
+  type: z.string().min(1).max(30).optional(),
+  content: z.string().min(1).max(500).optional(),
+});
+
+/** 标记列表响应 data */
+export const CustomerNoteListData = z.object({
+  items: z.array(CustomerNoteItem),
+});

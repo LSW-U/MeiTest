@@ -262,6 +262,8 @@ model User {
   agreedTermsVersion      String?     @map("agreed_terms_version")
   // P17 B1（2026-08-17）：通知偏好 JSON {orderUpdates, promotions, system}，null=默认全 true（列表/未读数按此过滤）
   notificationPreferences Json?       @map("notification_preferences")
+  // G8（客户画像批1 2026-10-18）：生日，可空。C6 生日营销（批4）只消费不补表
+  birthDate               DateTime?   @map("birth_date")
   createdAt               DateTime    @default(now()) @map("created_at")
   updatedAt               DateTime    @updatedAt @map("updated_at")
 
@@ -283,6 +285,8 @@ model User {
   refunds           Refund[]
   // P22 F1（2026-08-19）：用户提交的反馈
   feedbacks         Feedback[]
+  // 客户画像批1（D6 2026-10-18）：admin 内部标记/备注
+  customerNotes     CustomerNote[]
 
   @@index([role, status])
   @@map("users")
@@ -755,6 +759,27 @@ model AuditLog {
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/// 客户内部标记/备注（D6，客户画像批1 2026-10-18）
+/// 与 RiderDeposit.adminNote（骑手保证金专用字段）无关——本表是通用 customer 维度，
+/// admin 在单客背调页维护；写操作入审计（@Audit interceptor 自动覆盖 POST/PATCH/DELETE）。
+/// type 设计为自由标签（VIP / 高风险 / 投诉客户等），P2 分层运营批按 type 过滤直接可用。
+model CustomerNote {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  /// 标记类型（自由标签，admin-web 下拉预置 + 允许自定义；如 VIP / RISK / COMPLAINT）
+  type      String   @db.VarChar(30)
+  /// 备注内容（单语言，admin 内部用，不进 i18n）
+  content   String   @db.VarChar(500)
+  /// 创建人（super_admin user id）
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("customer_notes")
 }
 
 // ============================================================================

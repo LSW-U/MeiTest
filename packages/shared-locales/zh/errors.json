@@ -82,6 +82,8 @@
   "E-PRODUCT-IMPORT-002": "仅支持 CSV 文件",
   "E-PRODUCT-IMPORT-003": "未收到文件（字段名必须为 \"file\"）",
   "E-PRODUCT-IMPORT-004": "导入模式无效（必须为 skip/overwrite/error）",
+  "E-PROFILE-001": "用户不存在",
+  "E-PROFILE-002": "标记不存在或不归属该客户",
   "E-PROMO-020": "优惠券个人使用次数已达上限",
   "E-RATE-001": "汇率必须为大于 0 且小于 10000 的数字",
   "E-RATE-002": "生效日期必须是有效日历日期（YYYY-MM-DD）",

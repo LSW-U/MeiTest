@@ -82,6 +82,8 @@
   "E-PRODUCT-IMPORT-002": "Only CSV files are supported",
   "E-PRODUCT-IMPORT-003": "No file received (field name must be \"file\")",
   "E-PRODUCT-IMPORT-004": "Invalid import mode (must be skip/overwrite/error)",
+  "E-PROFILE-001": "Utilizador la exists",
+  "E-PROFILE-002": "Nota la exists ka la pertense ba kliente ida-ne'e",
   "E-PROMO-020": "Promotion per-user usage limit reached",
   "E-RATE-001": "Taxa kambiu tenki numeru boot liu 0 no kiak liu 10000",
   "E-RATE-002": "Data vigência tenki data kalendáriu válidu (YYYY-MM-DD)",

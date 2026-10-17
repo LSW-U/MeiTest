@@ -10239,6 +10239,345 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 单客 360 画像（客户画像批1）。七维聚合：RFM / 生命周期阶段（阈值可配 G5）/ 品类偏好 / 价带 / 折扣敏感度 / 高峰时段+常用地址 / 订单史时间线（近 20 单含 CANCELLED）。口径同源 R-a：COMPLETED+CANCELLED、不过滤 deletedAt（与个性化推荐聚合一致）。G6 查看即审计：每次调用写 AuditLog(action=VIEW_CUSTOMER_PROFILE)。仅 SUPER_ADMIN（非 admin 403）。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 画像聚合 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rfm: {
+                                rDays: number | null;
+                                fCount: number;
+                                mTotal: number;
+                                /** Format: date-time */
+                                lastPurchaseAt: string | null;
+                                /** Format: date-time */
+                                firstPurchaseAt: string | null;
+                            };
+                            lifecycle: {
+                                /** @enum {string} */
+                                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+                            };
+                            categoryPreferences: {
+                                /** Format: uuid */
+                                categoryId: string | null;
+                                name: string;
+                                freq: number;
+                                share: number;
+                            }[];
+                            priceBand: {
+                                min: number;
+                                avg: number | null;
+                                max: number;
+                            };
+                            discountSensitivity: {
+                                discountOrderCount: number;
+                                totalOrderCount: number;
+                                ratio: number | null;
+                            };
+                            peakHours: {
+                                hour: number;
+                                freq: number;
+                            }[];
+                            frequentAddresses: {
+                                detail: string;
+                                region: string;
+                                freq: number;
+                            }[];
+                            timeline: {
+                                /** Format: uuid */
+                                id: string;
+                                orderNo: string;
+                                /** @enum {string} */
+                                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                                payableAmount: number;
+                                discountAmount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description E-PROFILE-001 用户不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 客户标记列表（D6，createdAt desc，最新在前）。仅 SUPER_ADMIN。 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 标记列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                userId: string;
+                                type: string;
+                                content: string;
+                                /** Format: uuid */
+                                createdBy: string;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 新增客户标记（D6）。写审计由 AuditInterceptor 自动覆盖（POST）。仅 SUPER_ADMIN。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        type: string;
+                        content: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 新建的标记 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            type: string;
+                            content: string;
+                            /** Format: uuid */
+                            createdBy: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-PROFILE-001 用户不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/notes/{noteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 删除客户标记（D6，须归属同用户 E-PROFILE-002）。写审计自动。仅 SUPER_ADMIN。 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    noteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 删除的标记 id */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                        };
+                    };
+                };
+                /** @description E-PROFILE-002 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 编辑客户标记（D6，须归属同用户 E-PROFILE-002）。写审计自动。仅 SUPER_ADMIN。 */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    noteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        type?: string;
+                        content?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新后的标记 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            userId: string;
+                            type: string;
+                            content: string;
+                            /** Format: uuid */
+                            createdBy: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description E-PROFILE-002 标记不存在或不归属 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/admin/orders": {
         parameters: {
             query?: never;
@@ -22846,6 +23185,92 @@ export interface components {
             temporaryPassword: string;
             /** Format: date-time */
             generatedAt: string;
+        };
+        CustomerProfile360Data: {
+            rfm: {
+                rDays: number | null;
+                fCount: number;
+                mTotal: number;
+                /** Format: date-time */
+                lastPurchaseAt: string | null;
+                /** Format: date-time */
+                firstPurchaseAt: string | null;
+            };
+            lifecycle: {
+                /** @enum {string} */
+                stage: "NEW" | "FIRST_PURCHASE" | "ACTIVE" | "SLEEPING" | "CHURNED";
+            };
+            categoryPreferences: {
+                /** Format: uuid */
+                categoryId: string | null;
+                name: string;
+                freq: number;
+                share: number;
+            }[];
+            priceBand: {
+                min: number;
+                avg: number | null;
+                max: number;
+            };
+            discountSensitivity: {
+                discountOrderCount: number;
+                totalOrderCount: number;
+                ratio: number | null;
+            };
+            peakHours: {
+                hour: number;
+                freq: number;
+            }[];
+            frequentAddresses: {
+                detail: string;
+                region: string;
+                freq: number;
+            }[];
+            timeline: {
+                /** Format: uuid */
+                id: string;
+                orderNo: string;
+                /** @enum {string} */
+                status: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
+                payableAmount: number;
+                discountAmount: number;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        CustomerNoteItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            userId: string;
+            type: string;
+            content: string;
+            /** Format: uuid */
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CustomerNoteListData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                userId: string;
+                type: string;
+                content: string;
+                /** Format: uuid */
+                createdBy: string;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        CreateCustomerNoteRequest: {
+            type: string;
+            content: string;
+        };
+        UpdateCustomerNoteRequest: {
+            type?: string;
+            content?: string;
         };
         OrderSummary: {
             /** Format: uuid */

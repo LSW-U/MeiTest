@@ -61,6 +61,12 @@ import {
   ActivateUserRequest,
   DeleteUserRequest,
   ResetPasswordResponseData,
+  // 客户画像批1（2026-10-18）
+  CustomerProfile360Data,
+  CustomerNoteItem,
+  CustomerNoteListData,
+  CreateCustomerNoteRequest,
+  UpdateCustomerNoteRequest,
   OrderSummary,
   // shop
   Shop,
@@ -409,6 +415,12 @@ registry.register('SuspendUserRequest', SuspendUserRequest);
 registry.register('ActivateUserRequest', ActivateUserRequest);
 registry.register('DeleteUserRequest', DeleteUserRequest);
 registry.register('ResetPasswordResponseData', ResetPasswordResponseData);
+// 客户画像批1（2026-10-18）
+registry.register('CustomerProfile360Data', CustomerProfile360Data);
+registry.register('CustomerNoteItem', CustomerNoteItem);
+registry.register('CustomerNoteListData', CustomerNoteListData);
+registry.register('CreateCustomerNoteRequest', CreateCustomerNoteRequest);
+registry.register('UpdateCustomerNoteRequest', UpdateCustomerNoteRequest);
 registry.register('OrderSummary', OrderSummary);
 
 registry.register('Shop', Shop);
@@ -2766,6 +2778,101 @@ registry.registerPath({
     },
     404: { description: 'E-ADMIN-USER-001', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'E-ADMIN-USER-003 status=DELETED', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ============================================================================
+// 客户画像批1（2026-10-18）：单客 360 画像 + D6 客户标记
+// ============================================================================
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/users/{id}/profile',
+  tags: ['user'],
+  description:
+    '单客 360 画像（客户画像批1）。七维聚合：RFM / 生命周期阶段（阈值可配 G5）/ 品类偏好 / 价带 / ' +
+    '折扣敏感度 / 高峰时段+常用地址 / 订单史时间线（近 20 单含 CANCELLED）。' +
+    '口径同源 R-a：COMPLETED+CANCELLED、不过滤 deletedAt（与个性化推荐聚合一致）。' +
+    'G6 查看即审计：每次调用写 AuditLog(action=VIEW_CUSTOMER_PROFILE)。仅 SUPER_ADMIN（非 admin 403）。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '画像聚合',
+      content: { 'application/json': { schema: CustomerProfile360Data } },
+    },
+    404: { description: 'E-PROFILE-001 用户不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/users/{id}/notes',
+  tags: ['user'],
+  description: '客户标记列表（D6，createdAt desc，最新在前）。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+  },
+  responses: {
+    200: {
+      description: '标记列表',
+      content: { 'application/json': { schema: CustomerNoteListData } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/users/{id}/notes',
+  tags: ['user'],
+  description:
+    '新增客户标记（D6）。写审计由 AuditInterceptor 自动覆盖（POST）。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: CreateCustomerNoteRequest } } },
+  },
+  responses: {
+    200: {
+      description: '新建的标记',
+      content: { 'application/json': { schema: CustomerNoteItem } },
+    },
+    404: { description: 'E-PROFILE-001 用户不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/admin/users/{id}/notes/{noteId}',
+  tags: ['user'],
+  description: '编辑客户标记（D6，须归属同用户 E-PROFILE-002）。写审计自动。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id, noteId: Id }),
+    body: { content: { 'application/json': { schema: UpdateCustomerNoteRequest } } },
+  },
+  responses: {
+    200: {
+      description: '更新后的标记',
+      content: { 'application/json': { schema: CustomerNoteItem } },
+    },
+    404: { description: 'E-PROFILE-002 标记不存在或不归属', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/admin/users/{id}/notes/{noteId}',
+  tags: ['user'],
+  description: '删除客户标记（D6，须归属同用户 E-PROFILE-002）。写审计自动。仅 SUPER_ADMIN。',
+  request: {
+    params: z.object({ id: Id, noteId: Id }),
+  },
+  responses: {
+    200: {
+      description: '删除的标记 id',
+      content: { 'application/json': { schema: z.object({ id: Id }) } },
+    },
+    404: { description: 'E-PROFILE-002', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

@@ -82,6 +82,8 @@
   "E-PRODUCT-IMPORT-002": "Apenas arquivos CSV são suportados",
   "E-PRODUCT-IMPORT-003": "Arquivo não recebido (o nome do campo deve ser \"file\")",
   "E-PRODUCT-IMPORT-004": "Modo de importação inválido (deve ser skip/overwrite/error)",
+  "E-PROFILE-001": "Utilizador não encontrado",
+  "E-PROFILE-002": "Nota não encontrada ou não pertence a este cliente",
   "E-PROMO-020": "Limite de uso do cupom por usuário atingido",
   "E-RATE-001": "A taxa de câmbio deve ser um número maior que 0 e menor que 10000",
   "E-RATE-002": "A data de vigência deve ser uma data de calendário válida (YYYY-MM-DD)",
