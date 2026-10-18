@@ -75,6 +75,7 @@ export class AdminReviewController {
       status: query.status as ReviewStatusValue | undefined,
       rating: query.rating,
       keyword: query.keyword,
+      orderId: query.orderId,
       cursor: query.cursor,
       limit: query.limit,
     });

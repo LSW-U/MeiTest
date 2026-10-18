@@ -75,6 +75,8 @@ export interface ReviewListQuery {
   status?: ReviewStatus;
   rating?: number;
   keyword?: string;
+  /** 订单维度反查（客服工作台 20261018；后端 AdminListReviewsQuery.orderId） */
+  orderId?: string;
 }
 
 export interface UpdateReviewInput {
@@ -90,17 +92,27 @@ function buildQuery(q: ReviewListQuery): string {
   if (q.status) params.set('status', q.status);
   if (q.rating) params.set('rating', String(q.rating));
   if (q.keyword) params.set('keyword', q.keyword);
+  if (q.orderId) params.set('orderId', q.orderId);
   return `?${params.toString()}`;
 }
 
-/** 列表（type + 多维筛选） */
-export function useAdminReviews(query: ReviewListQuery) {
+/** 列表（type + 多维筛选；opts.enabled=false 时不发请求，dependent query 用） */
+export function useAdminReviews(query: ReviewListQuery, opts?: { enabled?: boolean }) {
   return useQuery<ReviewListResult>({
-    queryKey: ['reviews', query.type, query.category, query.status, query.rating, query.keyword],
+    queryKey: [
+      'reviews',
+      query.type,
+      query.category,
+      query.status,
+      query.rating,
+      query.keyword,
+      query.orderId,
+    ],
     queryFn: () =>
       apiFetch<ApiSuccess<ReviewListResult>>(`/admin/reviews${buildQuery(query)}`).then(
         (res) => res.data,
       ),
+    enabled: opts?.enabled ?? true,
   });
 }
 

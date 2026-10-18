@@ -98,8 +98,8 @@ function buildTasksQuerySp(params: ListTasksParams): URLSearchParams {
   return sp;
 }
 
-/** 任务监控列表（游标分页 + 加载更多） */
-export function useDispatchTasks(params: ListTasksParams = {}) {
+/** 任务监控列表（游标分页 + 加载更多；opts.enabled=false 时不发请求，dependent query 用） */
+export function useDispatchTasks(params: ListTasksParams = {}, opts?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: ['dispatch-tasks', params],
     queryFn: async ({ pageParam }) => {
@@ -113,6 +113,7 @@ export function useDispatchTasks(params: ListTasksParams = {}) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: opts?.enabled ?? true,
   });
 }
 

@@ -73,9 +73,10 @@ const ReviewRefundRequest = z.object({
   reviewNote: z.string().max(500).optional(),
 });
 
-/** admin 退款列表查询（游标分页，批次 2.1） */
+/** admin 退款列表查询（游标分页，批次 2.1；orderId 客服工作台反查 20261018） */
 const ListRefundsQuery = z.object({
   status: z.string().optional(),
+  orderId: z.string().uuid().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
@@ -162,10 +163,11 @@ export class AdminRefundController {
   @Get()
   async list(
     @Query(new ZodValidationPipe(ListRefundsQuery))
-    query: { status?: string; cursor?: string; limit?: number },
+    query: { status?: string; orderId?: string; cursor?: string; limit?: number },
   ) {
     const result = await this.refundService.listAllRefunds({
       status: query.status,
+      orderId: query.orderId,
       cursor: query.cursor,
       limit: query.limit,
     });

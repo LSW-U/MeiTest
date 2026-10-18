@@ -1190,6 +1190,28 @@ describe('RefundService', () => {
     });
   });
 
+  // 客服工作台批 2（20261018）审查 P3-1：orderId 反查 where 传参锁定
+  describe('listAllRefunds - orderId 过滤（客服工作台反查）', () => {
+    it('传 orderId -> findMany where 含 orderId（objectContaining 锁定）', async () => {
+      mockDb.refund.findMany.mockResolvedValue([]);
+      await service.listAllRefunds({ orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14' });
+      expect(mockDb.refund.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14',
+          }),
+        }),
+      );
+    });
+
+    it('不传 orderId -> findMany where 不含 orderId 键（既有行为回归）', async () => {
+      mockDb.refund.findMany.mockResolvedValue([]);
+      await service.listAllRefunds({});
+      const call = mockDb.refund.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+      expect(call.where).not.toHaveProperty('orderId');
+    });
+  });
+
   describe('CreateRefundRequest zod schema（P14-defer 审查 P3-1 修复：refundType enum 拒绝）', () => {
     // 测 api-contract CreateRefundRequest schema（与 refund.controller 内联 CreateRefundRequest 一致，
     // 审查报告 §2.3 verify 两层一致）。e2e 也补了 HTTP 层用例（e2e-main-flows L429-454），

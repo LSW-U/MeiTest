@@ -75,6 +75,7 @@ export interface RefundListResult {
 
 export interface ListRefundsParams {
   status?: RefundStatus;
+  orderId?: string;
   limit?: number;
 }
 
@@ -82,6 +83,7 @@ export interface ListRefundsParams {
 function buildRefundQuerySp(params: ListRefundsParams): URLSearchParams {
   const sp = new URLSearchParams();
   if (params.status) sp.set('status', params.status);
+  if (params.orderId) sp.set('orderId', params.orderId);
   if (params.limit) sp.set('limit', String(params.limit));
   return sp;
 }
@@ -93,7 +95,7 @@ function buildRefundQuerySp(params: ListRefundsParams): URLSearchParams {
  * 前端用 useInfiniteQuery + fetchNextPage + data.pages.flatMap 累积 items，
  * 不再返回扁平 Refund[]（批次 2.1 改造，与 admin orders 一致）。
  */
-export function useRefunds(params: ListRefundsParams = {}) {
+export function useRefunds(params: ListRefundsParams = {}, opts?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: ['refunds', params],
     queryFn: async ({ pageParam }) => {
@@ -107,6 +109,7 @@ export function useRefunds(params: ListRefundsParams = {}) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: opts?.enabled ?? true,
   });
 }
 

@@ -47,7 +47,9 @@
     "groupMarketing": "Marketing",
     "groupFinance": "Finance",
     "groupSystem": "System",
-    "onboardingSlides": "Onboarding Slides"
+    "onboardingSlides": "Onboarding Slides",
+    "groupSupport": "Customer Service",
+    "support": "Support Workbench"
   },
   "dashboard": {
     "title": "Platform Dashboard",

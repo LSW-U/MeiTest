@@ -47,7 +47,9 @@
     "groupMarketing": "",
     "groupFinance": "",
     "groupSystem": "",
-    "onboardingSlides": "Slides de Onboarding"
+    "onboardingSlides": "Slides de Onboarding",
+    "groupSupport": "Atendimento ao Cliente",
+    "support": "Central de Atendimento"
   },
   "dashboard": {
     "title": "Painel da Plataforma",

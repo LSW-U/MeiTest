@@ -305,6 +305,7 @@ export class ReviewService {
     status?: ReviewStatusValue;
     rating?: number;
     keyword?: string;
+    orderId?: string;
     cursor?: string;
     limit?: number;
   }): Promise<{
@@ -321,6 +322,7 @@ export class ReviewService {
       if (query.category) where.category = query.category;
       if (query.status) where.status = query.status;
       if (query.rating) where.rating = query.rating;
+      if (query.orderId) where.orderId = query.orderId;
       if (keyword) {
         where.OR = [
           { userName: { contains: keyword, mode: 'insensitive' } },
@@ -350,6 +352,7 @@ export class ReviewService {
     const where: Prisma.RiderReviewWhereInput = {};
     if (query.status) where.status = query.status;
     if (query.rating) where.rating = query.rating;
+    if (query.orderId) where.orderId = query.orderId;
     if (keyword) {
       where.OR = [
         { userName: { contains: keyword, mode: 'insensitive' } },

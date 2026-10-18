@@ -20990,7 +20990,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / cursor / limit */
+        /** @description Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / cursor / limit */
         get: {
             parameters: {
                 query?: never;

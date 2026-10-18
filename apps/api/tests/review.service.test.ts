@@ -338,6 +338,39 @@ describe('ReviewService (reviews-2)', () => {
       expect(mockDb.riderReview.findMany).toHaveBeenCalled();
       expect(mockDb.review.findMany).not.toHaveBeenCalled();
     });
+
+    // 客服工作台批 2（20261018）审查 P3-1：orderId 反查 where 传参锁定（customer/rider 两分支）
+    it('customer + orderId -> db.review.findMany where 含 orderId', async () => {
+      mockDb.review.findMany.mockResolvedValue([]);
+      mockDb.review.count.mockResolvedValue(0);
+      await service.adminListReviews({
+        type: 'customer',
+        orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14',
+      });
+      expect(mockDb.review.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14',
+          }),
+        }),
+      );
+    });
+
+    it('rider + orderId -> db.riderReview.findMany where 含 orderId', async () => {
+      mockDb.riderReview.findMany.mockResolvedValue([]);
+      mockDb.riderReview.count.mockResolvedValue(0);
+      await service.adminListReviews({
+        type: 'rider',
+        orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14',
+      });
+      expect(mockDb.riderReview.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            orderId: '0d9e4c85-2b9f-45d0-973a-7c0b94367d14',
+          }),
+        }),
+      );
+    });
   });
 
   describe('adminDeleteReview - 删骑手评价后重算 rating', () => {

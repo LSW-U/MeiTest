@@ -47,7 +47,9 @@
     "groupMarketing": "营销",
     "groupFinance": "财务",
     "groupSystem": "系统",
-    "onboardingSlides": "引导页配置"
+    "onboardingSlides": "引导页配置",
+    "groupSupport": "客服",
+    "support": "客服工作台"
   },
   "dashboard": {
     "title": "平台数据看板",

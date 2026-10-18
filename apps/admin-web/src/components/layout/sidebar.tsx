@@ -55,6 +55,7 @@ import {
   Megaphone,
   Wallet as WalletIcon,
   Cog,
+  LifeBuoy,
 } from 'lucide-react';
 import { usePerspectiveStore } from '@/stores/perspective';
 import { cn } from '@/lib/utils';
@@ -201,6 +202,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: Bell,
     perspectives: ['platform'],
   },
+  // 客服工作台（20261018）：仅平台 + 客服视角可见
+  {
+    labelKey: 'menu.support',
+    href: '/support',
+    icon: LifeBuoy,
+    perspectives: ['platform', 'support'],
+  },
   {
     labelKey: 'menu.statistics',
     href: '/statistics',
@@ -260,6 +268,8 @@ const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions', '/segments'] },
   { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', icon: WalletIcon, hrefs: ['/settlements', '/withdrawals'] },
   { labelKey: 'menu.groupSystem', groupKey: 'groupSystem', icon: Cog, hrefs: ['/apps', '/feedback', '/notifications', '/settings', '/audit-logs'] },
+  // 客服（第 9 组，20261018）：聚合工作台独立职能入口
+  { labelKey: 'menu.groupSupport', groupKey: 'groupSupport', icon: LifeBuoy, hrefs: ['/support'] },
 ];
 
 /** 折叠状态记忆 key */

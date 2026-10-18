@@ -108,7 +108,7 @@ function buildOrderQuerySp(params: ListOrdersParams): URLSearchParams {
  * 前端用 useInfiniteQuery + fetchNextPage + data.pages.flatMap 累积 items，
  * 不再用单页 useQuery（W5 之前只取第一页 + hasMore 占位文案）。
  */
-export function useOrders(params: ListOrdersParams = {}) {
+export function useOrders(params: ListOrdersParams = {}, opts?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: ['orders', params],
     queryFn: async ({ pageParam }) => {
@@ -122,6 +122,7 @@ export function useOrders(params: ListOrdersParams = {}) {
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: opts?.enabled ?? true,
   });
 }
 

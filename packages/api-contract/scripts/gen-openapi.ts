@@ -5466,7 +5466,7 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/reviews',
   tags: ['review'],
-  description: 'Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / cursor / limit',
+  description: 'Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / cursor / limit',
   responses: {
     200: { description: '列表（items 按 type 是客户评论或骑手评价）', content: { 'application/json': { schema: Review } } },
   },

@@ -871,11 +871,13 @@ export class RefundService {
    */
   async listAllRefunds(options: {
     status?: string;
+    orderId?: string;
     cursor?: string;
     limit?: number;
   }): Promise<{ items: RefundView[]; nextCursor: string | null; hasMore: boolean }> {
     const limit = Math.min(options.limit ?? 50, 100);
     const where: Prisma.RefundWhereInput = options.status ? { status: options.status } : {};
+    if (options.orderId) where.orderId = options.orderId;
     const refunds = await db.refund.findMany({
       where,
       orderBy: { createdAt: 'desc' },
