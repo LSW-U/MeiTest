@@ -118,10 +118,12 @@ export const ReviewRefundRequest = z.object({
  * admin 退款列表查询（游标分页，批次 2.1 改造）
  * 与 admin orders 列表一致：cursor / limit + status 过滤
  * orderId：客服工作台订单维度反查（20261018，与 controller 内联 ListRefundsQuery 对齐）
+ * userId：客服平台扩展人级反查（批3 20261018）
  */
 export const ListRefundsQuery = z.object({
   status: RefundStatus.optional(),
   orderId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
   cursor: z.string().optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });

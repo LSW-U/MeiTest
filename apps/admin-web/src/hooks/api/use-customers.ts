@@ -54,8 +54,8 @@ export interface ActivateCustomerInput {
   reason?: string;
 }
 
-/** 列表 */
-export function useCustomers(params: ListCustomersParams = {}) {
+/** 列表（opts.enabled=false 时不发请求，dependent query 用——客服工作台批3 20261018） */
+export function useCustomers(params: ListCustomersParams = {}, opts?: { enabled?: boolean }) {
   const searchParams = new URLSearchParams();
   if (params.keyword) searchParams.set('keyword', params.keyword);
   if (params.role) searchParams.set('role', params.role);
@@ -69,6 +69,7 @@ export function useCustomers(params: ListCustomersParams = {}) {
       apiFetch<ApiSuccess<ListCustomersResult>>(
         `/admin/users${query ? `?${query}` : ''}`,
       ).then((res) => res.data),
+    enabled: opts?.enabled ?? true,
   });
 }
 

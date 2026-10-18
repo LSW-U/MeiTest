@@ -77,6 +77,8 @@ export interface ReviewListQuery {
   keyword?: string;
   /** 订单维度反查（客服工作台 20261018；后端 AdminListReviewsQuery.orderId） */
   orderId?: string;
+  /** 人级反查（客服平台扩展批3 20261018；后端 AdminListReviewsQuery.userId） */
+  userId?: string;
 }
 
 export interface UpdateReviewInput {
@@ -93,6 +95,7 @@ function buildQuery(q: ReviewListQuery): string {
   if (q.rating) params.set('rating', String(q.rating));
   if (q.keyword) params.set('keyword', q.keyword);
   if (q.orderId) params.set('orderId', q.orderId);
+  if (q.userId) params.set('userId', q.userId);
   return `?${params.toString()}`;
 }
 
@@ -107,6 +110,7 @@ export function useAdminReviews(query: ReviewListQuery, opts?: { enabled?: boole
       query.rating,
       query.keyword,
       query.orderId,
+      query.userId,
     ],
     queryFn: () =>
       apiFetch<ApiSuccess<ReviewListResult>>(`/admin/reviews${buildQuery(query)}`).then(

@@ -76,8 +76,15 @@ const DeleteUserRequest = z.object({
 export class AdminUserController {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 
-  /** 列表（keyword/role/status 筛选 + 分页 + orderCount/totalSpent 聚合） */
+  /**
+   * 列表（keyword/role/status 筛选 + 分页 + orderCount/totalSpent 聚合）
+   *
+   * RBAC 放宽（客服平台扩展批3 20261018，v2 决策7）：方法级 @Roles 覆盖类级 SUPER_ADMIN，
+   * 放宽 CUSTOMER_SERVICE 只读（客服工作台人级搜索）。Nest 装饰器方法级优先类级；
+   * 写端点不挂方法级装饰器即继承类级 SUPER_ADMIN 独占。
+   */
   @Get()
+  @Roles('SUPER_ADMIN', 'CUSTOMER_SERVICE')
   async list(@Query(new ZodValidationPipe(ListUsersQuery)) query: z.infer<typeof ListUsersQuery>) {
     const result = await this.users.listUsers({
       keyword: query.keyword,
@@ -89,8 +96,9 @@ export class AdminUserController {
     return { success: true as const, data: result };
   }
 
-  /** GET /:id - 客户详情（含最近 5 订单 + 全部地址） */
+  /** GET /:id - 客户详情（含最近 5 订单 + 全部地址）；只读放宽 CUSTOMER_SERVICE（同 list，批3 20261018） */
   @Get(':id')
+  @Roles('SUPER_ADMIN', 'CUSTOMER_SERVICE')
   async detail(@Param('id') id: string) {
     const data = await this.users.getUserDetail(id);
     return { success: true as const, data };

@@ -94,7 +94,7 @@ export const CreateRiderReviewRequest = z.object({
   comment: I18nText.optional(),
 });
 
-/** Admin 评论列表筛选（type 区分客户评论/骑手评价；orderId 客服工作台反查 20261018） */
+/** Admin 评论列表筛选（type 区分客户评论/骑手评价；orderId/userId 客服工作台反查 20261018） */
 export const AdminListReviewsQuery = z.object({
   type: z.enum(['customer', 'rider']),
   category: ReviewCategory.optional(),
@@ -102,6 +102,7 @@ export const AdminListReviewsQuery = z.object({
   rating: z.coerce.number().int().min(1).max(5).optional(),
   keyword: z.string().optional(),
   orderId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });

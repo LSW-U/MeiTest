@@ -76,6 +76,7 @@ export class AdminReviewController {
       rating: query.rating,
       keyword: query.keyword,
       orderId: query.orderId,
+      userId: query.userId,
       cursor: query.cursor,
       limit: query.limit,
     });

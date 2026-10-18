@@ -306,6 +306,7 @@ export class ReviewService {
     rating?: number;
     keyword?: string;
     orderId?: string;
+    userId?: string;
     cursor?: string;
     limit?: number;
   }): Promise<{
@@ -323,6 +324,7 @@ export class ReviewService {
       if (query.status) where.status = query.status;
       if (query.rating) where.rating = query.rating;
       if (query.orderId) where.orderId = query.orderId;
+      if (query.userId) where.userId = query.userId;
       if (keyword) {
         where.OR = [
           { userName: { contains: keyword, mode: 'insensitive' } },
@@ -353,6 +355,7 @@ export class ReviewService {
     if (query.status) where.status = query.status;
     if (query.rating) where.rating = query.rating;
     if (query.orderId) where.orderId = query.orderId;
+    if (query.userId) where.userId = query.userId;
     if (keyword) {
       where.OR = [
         { userName: { contains: keyword, mode: 'insensitive' } },

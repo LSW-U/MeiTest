@@ -76,6 +76,8 @@ export interface RefundListResult {
 export interface ListRefundsParams {
   status?: RefundStatus;
   orderId?: string;
+  /** 人级反查（客服平台扩展批3 20261018） */
+  userId?: string;
   limit?: number;
 }
 
@@ -84,6 +86,7 @@ function buildRefundQuerySp(params: ListRefundsParams): URLSearchParams {
   const sp = new URLSearchParams();
   if (params.status) sp.set('status', params.status);
   if (params.orderId) sp.set('orderId', params.orderId);
+  if (params.userId) sp.set('userId', params.userId);
   if (params.limit) sp.set('limit', String(params.limit));
   return sp;
 }
