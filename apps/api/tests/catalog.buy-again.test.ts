@@ -73,7 +73,7 @@ describe('CatalogService.getBuyAgain（per-user 化）', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch } as never);
+    service = new CatalogService({ recordSearch } as never, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as never);
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
     m.categoryFindMany.mockResolvedValue([]);
@@ -189,7 +189,7 @@ describe('热搜记录 userId（顺手修 id→sub）', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch } as never);
+    service = new CatalogService({ recordSearch } as never, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as never);
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
     m.categoryFindMany.mockResolvedValue([]);
@@ -277,7 +277,7 @@ describe('CatalogService.getRecommendations（类目偏好加权）', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch } as never);
+    service = new CatalogService({ recordSearch } as never, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as never);
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
     m.categoryFindMany.mockResolvedValue([]);
@@ -411,7 +411,7 @@ describe('offset 翻页（换一批按钮 批1）', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch } as never);
+    service = new CatalogService({ recordSearch } as never, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as never);
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);
     m.categoryFindMany.mockResolvedValue([]);

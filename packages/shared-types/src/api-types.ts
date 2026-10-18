@@ -3797,6 +3797,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/products/customers-also-bought": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 和你相似的顾客还买了（客户画像批6 A9 协同过滤：跨用户共现统计物化推荐——相似邻居高频买且你未买过的商品；匿名/无物化结果/候选全下架返回空数组 items=[]，前端整块隐藏，勿用销量兜底；响应 Cache-Control: no-store；只出商品不出人） */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 每批数量，默认 6，上限 20 */
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 推荐列表（空数组=前端整块隐藏） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                                isCategoryTop3: boolean;
+                                stock?: number;
+                                rating?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/client/products/frequent-bundle": {
         parameters: {
             query?: never;
@@ -17256,12 +17313,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）筛选） */
+        /** @description 退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）/ userId（客服平台扩展批3 人级反查 20261018）筛选） */
         get: {
             parameters: {
                 query?: {
                     status?: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
                     orderId?: string;
+                    userId?: string;
                     cursor?: string;
                     limit?: number;
                 };
@@ -20991,7 +21049,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / cursor / limit */
+        /** @description Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / userId(人级反查 批3 20261018) / cursor / limit */
         get: {
             parameters: {
                 query?: never;
@@ -24500,6 +24558,25 @@ export interface components {
                 rating?: number;
             }[];
             coOrderCount: number;
+        };
+        CustomersAlsoBoughtData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                name: {
+                    [key: string]: string;
+                };
+                mainImage: string;
+                priceMin: number;
+                /** Format: uuid */
+                defaultSkuId: string | null;
+                /** @enum {string} */
+                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                salesCount: number;
+                isCategoryTop3: boolean;
+                stock?: number;
+                rating?: number;
+            }[];
         };
         CreateSubscriptionRequest: {
             /** Format: uuid */

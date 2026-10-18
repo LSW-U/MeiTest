@@ -147,6 +147,27 @@ export class ClientProductController {
   }
 
   /**
+   * A9 和你相似的顾客还买了（批6 协同过滤 2026-10-18）
+   * 可选登录：带有效 token 读 similar_user_picks 物化推荐；匿名/无结果返回空数组（前端整块隐藏，
+   * 勿用销量兜底——B1 教训）。no-store：响应随用户身份变化（同 buy-again / recommendations 范式）。
+   */
+  @Get('customers-also-bought')
+  @OptionalAuth()
+  @Header('Cache-Control', 'no-store')
+  async customersAlsoBought(
+    @Query('limit') limit?: string,
+    @Req() req?: any,
+  ) {
+    // clamp 1~20 同 recommendations 范式：负值/NaN 兜底默认 6
+    const parsed = Number(limit);
+    const safeLimit = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(Math.floor(parsed), 20)
+      : undefined;
+    const data = await this.catalog.getCustomersAlsoBought(req?.user?.sub ?? null, safeLimit);
+    return { success: true, data };
+  }
+
+  /**
    * 常买组合一键购（B8，客户画像批3 2026-10-18）
    * 可选登录：带有效 token 返回「最常买 seed + 同单常共现伙伴」打包组合；匿名/无历史返回空组合。
    * no-store：响应随用户身份变化（同 buy-again / recommendations 范式）

@@ -28,3 +28,8 @@ export const ORPHAN_CLEANUP_QUEUE = 'orphan-cleanup';
  * 每 30min 扫描六流（C1 挽留/C2 首购/C3 感谢/C6 生日/B2 补货/B3 购物车召回）
  */
 export const ENGAGEMENT_QUEUE = 'engagement';
+/**
+ * 协同过滤重算队列（客户画像批6，2026-10-18）
+ * 每 6 小时全量重算相似用户推荐 → 物化 similar_user_picks（A9/B7 读路径数据源）
+ */
+export const COLLABORATIVE_QUEUE = 'collaborative';

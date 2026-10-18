@@ -110,7 +110,7 @@ describe('CatalogService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch: vi.fn().mockResolvedValue(undefined) } as any);
+    service = new CatalogService({ recordSearch: vi.fn().mockResolvedValue(undefined) } as any, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as any);
     // B1/B7/B11：stock/rating/categoryName 聚合默认返空（字段 undefined/null，不阻塞主流程断言）
     m.stockFindMany.mockResolvedValue([]);
     m.reviewGroupBy.mockResolvedValue([]);

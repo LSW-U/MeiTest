@@ -107,7 +107,7 @@ describe('CatalogService.getFrequentBundle — 共现口径（B8）', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    service = new CatalogService({ recordSearch } as never);
+    service = new CatalogService({ recordSearch } as never, { getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()) } as never);
     stubAssemble();
   });
 
@@ -322,7 +322,10 @@ describe('B7 预留总闸回归断言：OFF=ON 排序行为逐字节一致', () 
   beforeEach(() => {
     vi.resetAllMocks();
     resetRecommendationConfigCacheForTest();
-    service = new CatalogService({ recordSearch } as never);
+    // 批6：CatalogService 注入协同过滤依赖——默认关时不触融合路径（collab 永不被调用）
+    service = new CatalogService({ recordSearch } as never, {
+      getSimilarSignalMap: vi.fn().mockResolvedValue(new Map()),
+    } as never);
     stubAssemble();
     m.skuFindMany.mockResolvedValue([]);
     m.systemConfigFindUnique.mockResolvedValue(null);

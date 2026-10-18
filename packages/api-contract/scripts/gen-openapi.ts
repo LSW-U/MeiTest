@@ -85,6 +85,8 @@ import {
   UpdateSegmentCouponRuleRequest,
   // 客户画像批3（2026-10-18）
   FrequentBundleData,
+  // 客户画像批6（2026-10-18）：协同过滤 A9
+  CustomersAlsoBoughtData,
   // 客户画像批4（2026-10-18）：B2 补货订阅
   CreateSubscriptionRequest,
   SubscriptionItem,
@@ -461,6 +463,7 @@ registry.register('SegmentCouponRuleListData', SegmentCouponRuleListData);
 registry.register('CreateSegmentCouponRuleRequest', CreateSegmentCouponRuleRequest);
 registry.register('UpdateSegmentCouponRuleRequest', UpdateSegmentCouponRuleRequest);
 registry.register('FrequentBundleData', FrequentBundleData);
+registry.register('CustomersAlsoBoughtData', CustomersAlsoBoughtData);
 registry.register('CreateSubscriptionRequest', CreateSubscriptionRequest);
 registry.register('SubscriptionItem', SubscriptionItem);
 registry.register('SubscriptionListData', SubscriptionListData);
@@ -1469,6 +1472,29 @@ registry.registerPath({
   ],
   responses: {
     200: { description: '再买一次列表', content: { 'application/json': { schema: ProductSummary.array() } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/products/customers-also-bought',
+  tags: ['product'],
+  description:
+    '和你相似的顾客还买了（客户画像批6 A9 协同过滤：跨用户共现统计物化推荐——相似邻居高频买且你未买过的商品；匿名/无物化结果/候选全下架返回空数组 items=[]，前端整块隐藏，勿用销量兜底；响应 Cache-Control: no-store；只出商品不出人）',
+  parameters: [
+    {
+      name: 'limit',
+      in: 'query',
+      required: false,
+      schema: { type: 'integer', minimum: 1, maximum: 20, default: 6 },
+      description: '每批数量，默认 6，上限 20',
+    },
+  ],
+  responses: {
+    200: {
+      description: '推荐列表（空数组=前端整块隐藏）',
+      content: { 'application/json': { schema: CustomersAlsoBoughtData } },
+    },
   },
 });
 
@@ -4601,7 +4627,7 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/refunds',
   tags: ['refund'],
-  description: '退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）筛选）',
+  description: '退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）/ userId（客服平台扩展批3 人级反查 20261018）筛选）',
   request: { query: ListRefundsQuerySchema },
   responses: { 200: { description: '退款列表（游标分页 items + nextCursor + hasMore）', content: { 'application/json': { schema: RefundListResponseSchema } } } },
 });
@@ -5466,7 +5492,7 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/reviews',
   tags: ['review'],
-  description: 'Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / cursor / limit',
+  description: 'Admin 评论列表。query: type(customer|rider) / category(PRODUCT|DELIVERY) / status(PENDING|APPROVED|REJECTED) / rating(1-5) / keyword / orderId(客服工作台反查 20261018) / userId(人级反查 批3 20261018) / cursor / limit',
   responses: {
     200: { description: '列表（items 按 type 是客户评论或骑手评价）', content: { 'application/json': { schema: Review } } },
   },

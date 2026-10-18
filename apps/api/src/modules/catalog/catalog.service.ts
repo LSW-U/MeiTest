@@ -20,6 +20,8 @@ import { SearchService } from '../search/search.service';
 import { redis, setWithTTL } from '../../shared/cache/redis';
 import { ProductSortBy } from '@meimart/api-contract';
 import { getPersonalRankingEnabled } from './recommendation.config';
+import { CollaborativeFilterService } from './collaborative-filter.service';
+import { getCollaborativeConfig } from './collaborative.config';
 
 /**
  * 排序方式 → Prisma orderBy（P8 决策 2-B 后端排序）
@@ -35,9 +37,16 @@ const SORT_BY_ORDERBY: Record<
   newArrivals: [{ createdAt: 'desc' }],
 };
 
+/** 协同过滤服务 DI token（独立常量文件放 module 会循环 import——批5 TDZ 教训） */
+export const COLLABORATIVE_FILTER_TOKEN = 'CollaborativeFilterServiceToken';
+
 @Injectable()
 export class CatalogService {
-  constructor(@Inject(SearchService) private readonly search: SearchService) {}
+  constructor(
+    @Inject(SearchService) private readonly search: SearchService,
+    // 显式 @Inject（tsx 不 emit 装饰器元数据——本仓红线，批5 P1-B 教训）
+    @Inject(COLLABORATIVE_FILTER_TOKEN) private readonly collab: CollaborativeFilterService,
+  ) {}
 
   // ===== 客户端：商品浏览 =====
 
@@ -263,13 +272,19 @@ export class CatalogService {
    * （Prisma 多段查询+内存拼装）→ offset 落点为内存切片；回退路径 skip: offset。
    */
   async getRecommendations(userId: string | null, limit = 6, offset = 0) {
-    // B7 预留总闸（客户画像批3 2026-10-18，裁决：本批 OFF=ON=现状加权行为不变）：
-    // 目前读取但零分支——开关是批6「协同过滤 + B7 全量千人千面」的总闸预留位，
-    // 批6 接管时在此分支。读取本身不改变任何排序路径（P3-2 逐字节红线不受影响）。
-    await getPersonalRankingEnabled();
+    // B7 总闸（批6 2026-10-18 接管：协同过滤就绪）：
+    //   - false（默认）：现状加权行为逐字节不变（批3 回归断言保持全绿——读取仍零分支）
+    //   - true：类目加权序 + 相似用户信号融合排序（权重 collaborative.b7SimilarWeight 可配；
+    //     融合只影响 ON 路径，OFF 路径无任何额外查询）
+    const personalRanking = await getPersonalRankingEnabled();
     if (userId) {
       const items = await this.aggregateCategoryPreference(userId, limit, offset);
-      if (items.length > 0) return items;
+      if (items.length > 0) {
+        if (personalRanking) {
+          return this.fuseSimilarSignal(userId, items);
+        }
+        return items;
+      }
     }
     // 未登录 / 无历史：销量 top N，skip: offset（offset=0 与现状逐参数一致）
     return this.assembleProductCards(
@@ -280,6 +295,34 @@ export class CatalogService {
         skip: offset,
       }),
     );
+  }
+
+  /**
+   * B7 融合排序（批6）：类目加权序 + 相似用户信号（读物化表，P6-2 单查询）
+   *
+   * 融合分 = (1 - w) × 类目序位分 + w × 相似信号（w = b7SimilarWeight 可配）；
+   * 类目序位分 = 1 - index/(n)（第 1 名 1 分、末名趋 0，线性衰减可解释）；
+   * 无物化数据（新用户/重算未跑）→ 相似信号全 0，退化为纯类目加权序（安全降级）。
+   * 同融合分的保持原类目加权序（稳定排序，不引入额外抖动）。
+   */
+  private async fuseSimilarSignal(
+    userId: string,
+    items: Awaited<ReturnType<CatalogService['aggregateCategoryPreference']>>,
+  ) {
+    const cfg = await getCollaborativeConfig();
+    const w = cfg.b7SimilarWeight;
+    if (w <= 0 || items.length <= 1) return items; // 权重 0 / 单条不融合（逐字节等价现状）
+    // P3-1 per-user 口径：信号 = 当前用户自己的 picks 命中候选（个性化相似人群信号）
+    const signalMap = await this.collab.getSimilarSignalMap(userId, items.map((p) => p.id));
+    if (signalMap.size === 0) return items; // 无物化数据安全降级
+    const n = items.length;
+    const scored = items.map((item, index) => ({
+      item,
+      fused: (1 - w) * (1 - index / n) + w * (signalMap.get(item.id) ?? 0),
+      index,
+    }));
+    scored.sort((a, b) => b.fused - a.fused || a.index - b.index);
+    return scored.map((s) => s.item);
   }
 
   /**
@@ -478,6 +521,31 @@ export class CatalogService {
       // 共现口径：seed 订单里同时含伙伴商品的订单数（取 top1 伙伴的共现数，即最强组合强度）
       coOrderCount: Number(coRows[0]!.co_order_count),
     };
+  }
+
+  /**
+   * A9 和你相似的顾客还买了（批6 协同过滤 2026-10-18）
+   *
+   * 数据源：similar_user_picks 物化表（离线重算，读物化不现算 P6-2）。
+   * 语义：跨用户共现统计——「与你有相似购买画像的顾客」高频买且你未买过的商品。
+   * 隐私（P6-4）：只出商品不出人——物化行不含邻居身份，响应无任何用户信息。
+   *
+   * 回退语义（任务书红线，B1 教训）：匿名 / 无物化结果 / 候选全部下架 → 空数组不报错，
+   * 前端整块隐藏；勿用销量兜底（跨用户推荐出现销量榜等于功能失效）。
+   */
+  async getCustomersAlsoBought(userId: string | null, limit = 6) {
+    if (!userId) return [];
+    const picks = await this.collab.getMaterializedPicks(userId, limit);
+    if (picks.length === 0) return [];
+    const products = await db.product.findMany({
+      where: { id: { in: picks.map((p) => p.productId) }, status: 'ACTIVE' },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const ordered = picks
+      .map((p) => productMap.get(p.productId))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p));
+    if (ordered.length === 0) return [];
+    return this.assembleProductCards(ordered);
   }
 
   /** 销量切片回退（原 getBuyAgain 行为：skip limit, take limit；offset 游标叠加 → skip: limit + offset） */

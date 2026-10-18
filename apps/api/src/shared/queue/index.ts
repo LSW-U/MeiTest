@@ -6,4 +6,5 @@ export {
   NOTIFICATION_QUEUE,
   ORPHAN_CLEANUP_QUEUE,
   ENGAGEMENT_QUEUE,
+  COLLABORATIVE_QUEUE,
 } from './queue.constants';
