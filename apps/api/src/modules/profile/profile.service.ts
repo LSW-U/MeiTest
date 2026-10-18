@@ -20,13 +20,16 @@
  *   6. 折扣敏感度（用券/折扣订单占比）
  *   7. 高峰下单时段 + 常用地址（按配送快照聚合）
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db } from '../../shared/db';
+import { logger } from '../../shared/logger/logger';
 import { MARKET_TIMEZONE } from '../../shared/datetime';
 import { pickI18nField, type SupportedLanguage } from '@meimart/shared-utils';
 import { getProfileThresholds } from './profile.config';
 import { getLifecycleStage, type LifecycleStage } from './lifecycle';
+import { BEHAVIOR_INSIGHT_SERVICE_TOKEN } from './profile.tokens';
+import type { BehaviorInsightService } from '../engagement/behavior-insight.service';
 
 /** 聚合口径状态集（R-a 同源：与 catalog.service.ts:292-303 逐字一致） */
 const PROFILE_ORDER_STATUSES_SQL = "('COMPLETED', 'CANCELLED')";
@@ -81,6 +84,12 @@ export interface ProfileRfm {
 
 @Injectable()
 export class ProfileService {
+  constructor(
+    // 批5 A7/A8 并入：行为洞察服务（搜索明细 + 流失分）；可选注入（单测直接 new 可传 null）
+    @Inject(BEHAVIOR_INSIGHT_SERVICE_TOKEN)
+    private readonly behaviorInsight: BehaviorInsightService | null,
+  ) {}
+
   /**
    * 单客 360 聚合（admin 背调页数据源；批 2~6 共享入口）
    *
@@ -108,6 +117,20 @@ export class ProfileService {
       discountAmount: number;
       createdAt: string;
     }>;
+    /** 批5 A7 并入：近 20 条搜索明细（洞察降级 null） */
+    searchHistory: Array<{ id: string; word: string; lang: string; resultCount: number; createdAt: string }> | null;
+    /** 批5 A8 并入：流失分 0-100 + 信号构成（洞察降级 null） */
+    churn: {
+      score: number;
+      parts: {
+        stage: string;
+        stageWeight: number;
+        recentViews: number;
+        viewWeight: number;
+        recentSearches: number;
+        searchWeight: number;
+      };
+    } | null;
   }> {
     const user = await db.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) {
@@ -128,6 +151,27 @@ export class ProfileService {
     const thresholds = await getProfileThresholds();
     const stage = getLifecycleStage(rfm.fCount, rfm.rDays, thresholds);
 
+    // 批5 A7/A8 并入（P5-4）：搜索明细 + 流失分（洞察服务缺失时降级 null，不炸画像）
+    let searchHistory: Awaited<ReturnType<BehaviorInsightService['getUserSearchHistory']>> | null = null;
+    let churn: Awaited<ReturnType<BehaviorInsightService['getChurnSignal']>> | null = null;
+    if (this.behaviorInsight) {
+      try {
+        [searchHistory, churn] = await Promise.all([
+          this.behaviorInsight.getUserSearchHistory(userId, 20),
+          this.behaviorInsight.getChurnSignal(userId, rfm.fCount, rfm.rDays),
+        ]);
+      } catch (err) {
+        // 洞察失败降级：360 页其余维度照常返回
+        searchHistory = null;
+        churn = null;
+        logger.warn({
+          msg: 'PROFILE_INSIGHT_DEGRADE',
+          userId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     // 白名单输出：rfm 只透传契约五字段（P2-1 修复——_discountMeta 不得外带）
     return {
       rfm,
@@ -138,6 +182,9 @@ export class ProfileService {
       peakHours: hourRows,
       frequentAddresses: addressRows,
       timeline: timelineRows,
+      // 批5 A7/A8 并入（洞察降级时 null——admin-web 渲染「暂无」即可）
+      searchHistory: searchHistory?.items ?? null,
+      churn,
     };
   }
 

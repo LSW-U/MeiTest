@@ -3901,10 +3901,13 @@ export interface paths {
                                 id: string;
                                 /** Format: uuid */
                                 productId: string;
+                                /** @enum {string} */
+                                type: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
                                 cycleDays: number;
                                 enabled: boolean;
                                 /** Format: date-time */
                                 lastRemindedAt: string | null;
+                                priceAtSub?: number | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -3929,7 +3932,9 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         productId: string;
-                        cycleDays: number;
+                        /** @enum {string} */
+                        type?: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
+                        cycleDays?: number;
                     };
                 };
             };
@@ -3945,10 +3950,13 @@ export interface paths {
                             id: string;
                             /** Format: uuid */
                             productId: string;
+                            /** @enum {string} */
+                            type: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
                             cycleDays: number;
                             enabled: boolean;
                             /** Format: date-time */
                             lastRemindedAt: string | null;
+                            priceAtSub?: number | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -4031,10 +4039,13 @@ export interface paths {
                             id: string;
                             /** Format: uuid */
                             productId: string;
+                            /** @enum {string} */
+                            type: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
                             cycleDays: number;
                             enabled: boolean;
                             /** Format: date-time */
                             lastRemindedAt: string | null;
+                            priceAtSub?: number | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -4044,6 +4055,153 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/client/behavior-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 行为埋点批量接收（客户画像批5 G2；OptionalAuth 匿名可报，≤100 条/批，异步写入不阻塞、失败降级只丢埋点） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        events: {
+                            /** Format: uuid */
+                            productId: string;
+                            /** @enum {string} */
+                            type: "VIEW" | "SEARCH_CLICK";
+                            /** Format: date-time */
+                            at?: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description 已受理（异步写库，accepted=受理条数） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            accepted: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/behavior/search-funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description D5 搜索-成交漏斗（客户画像批5；SearchLog 曝光 + SEARCH_CLICK 点击 + 聚合基数订单三源对账，SUPER_ADMIN） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 漏斗行（top N 词） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            windowDays: number;
+                            rows: {
+                                word: string;
+                                searches: number;
+                                clicks: number;
+                                orders: number;
+                                ctr: number | null;
+                                conversion: number | null;
+                            }[];
+                            /** Format: date-time */
+                            generatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/marketing/behavior/users/{id}/searches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A7 per-user 搜索明细（客户画像批5；只读消费 SearchLog，SUPER_ADMIN） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 搜索明细列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                word: string;
+                                lang: string;
+                                resultCount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/client/products/search": {
@@ -10564,6 +10722,26 @@ export interface paths {
                                 /** Format: date-time */
                                 createdAt: string;
                             }[];
+                            searchHistory: {
+                                /** Format: uuid */
+                                id: string;
+                                word: string;
+                                lang: string;
+                                resultCount: number;
+                                /** Format: date-time */
+                                createdAt: string;
+                            }[] | null;
+                            churn: {
+                                score: number;
+                                parts: {
+                                    stage: string;
+                                    stageWeight: number;
+                                    recentViews: number;
+                                    viewWeight: number;
+                                    recentSearches: number;
+                                    searchWeight: number;
+                                };
+                            } | null;
                         };
                     };
                 };
@@ -24129,6 +24307,26 @@ export interface components {
                 /** Format: date-time */
                 createdAt: string;
             }[];
+            searchHistory: {
+                /** Format: uuid */
+                id: string;
+                word: string;
+                lang: string;
+                resultCount: number;
+                /** Format: date-time */
+                createdAt: string;
+            }[] | null;
+            churn: {
+                score: number;
+                parts: {
+                    stage: string;
+                    stageWeight: number;
+                    recentViews: number;
+                    viewWeight: number;
+                    recentSearches: number;
+                    searchWeight: number;
+                };
+            } | null;
         };
         SegmentBucketRow: {
             /** @enum {string} */
@@ -24305,17 +24503,22 @@ export interface components {
         CreateSubscriptionRequest: {
             /** Format: uuid */
             productId: string;
-            cycleDays: number;
+            /** @enum {string} */
+            type?: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
+            cycleDays?: number;
         };
         SubscriptionItem: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             productId: string;
+            /** @enum {string} */
+            type: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
             cycleDays: number;
             enabled: boolean;
             /** Format: date-time */
             lastRemindedAt: string | null;
+            priceAtSub?: number | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -24327,10 +24530,13 @@ export interface components {
                 id: string;
                 /** Format: uuid */
                 productId: string;
+                /** @enum {string} */
+                type: "REPLENISH" | "PRICE_ALERT" | "RESTOCK_ALERT";
                 cycleDays: number;
                 enabled: boolean;
                 /** Format: date-time */
                 lastRemindedAt: string | null;
+                priceAtSub?: number | null;
                 /** Format: date-time */
                 createdAt: string;
                 /** Format: date-time */
@@ -24340,6 +24546,43 @@ export interface components {
         UpdateSubscriptionRequest: {
             cycleDays?: number;
             enabled?: boolean;
+        };
+        BehaviorBatchRequest: {
+            events: {
+                /** Format: uuid */
+                productId: string;
+                /** @enum {string} */
+                type: "VIEW" | "SEARCH_CLICK";
+                /** Format: date-time */
+                at?: string;
+            }[];
+        };
+        BehaviorBatchResponseData: {
+            accepted: number;
+        };
+        SearchFunnelData: {
+            windowDays: number;
+            rows: {
+                word: string;
+                searches: number;
+                clicks: number;
+                orders: number;
+                ctr: number | null;
+                conversion: number | null;
+            }[];
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        UserSearchLogData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                word: string;
+                lang: string;
+                resultCount: number;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
         };
         CustomerNoteItem: {
             /** Format: uuid */

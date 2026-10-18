@@ -363,6 +363,27 @@ export const CustomerProfile360Data = z.object({
   peakHours: z.array(z.object({ hour: z.number().int().min(0).max(23), freq: z.number().int().nonnegative() })),
   frequentAddresses: z.array(ProfileFrequentAddressItem),
   timeline: z.array(ProfileTimelineItem),
+  /** 批5 A7 并入：近 20 条搜索明细（洞察降级 null）；形状同 UserSearchLogItem（inline 展开——
+   *  UserSearchLogItem 定义在本文件后部，此处内联避免引用未初始化常量的 TDZ 运行时错误） */
+  searchHistory: z.array(z.object({
+    id: Id,
+    word: z.string(),
+    lang: z.string(),
+    resultCount: z.number().int().nonnegative(),
+    createdAt: IsoTimestamp,
+  })).nullable(),
+  /** 批5 A8 并入：流失分 0-100 + 信号构成（洞察降级 null） */
+  churn: z.object({
+    score: z.number().min(0).max(100),
+    parts: z.object({
+      stage: z.string(),
+      stageWeight: z.number(),
+      recentViews: z.number().int().nonnegative(),
+      viewWeight: z.number(),
+      recentSearches: z.number().int().nonnegative(),
+      searchWeight: z.number(),
+    }),
+  }).nullable(),
 });
 
 /** 客户标记项（D6） */
@@ -536,16 +557,23 @@ export const FrequentBundleData = z.object({
 /** B2 补货提醒订阅请求（POST /client/subscriptions；cycleDays 1-365 天） */
 export const CreateSubscriptionRequest = z.object({
   productId: Id,
-  cycleDays: z.number().int().min(1).max(365),
+  /** 订阅类型（批5 扩展；缺省 REPLENISH 保持批4 语义） */
+  type: z.enum(['REPLENISH', 'PRICE_ALERT', 'RESTOCK_ALERT']).optional(),
+  /** 补货周期天数（REPLENISH 用；C7/C8 可省略） */
+  cycleDays: z.number().int().min(1).max(365).optional(),
 });
 
 /** B2 订阅项 */
 export const SubscriptionItem = z.object({
   id: Id,
   productId: Id,
+  /** 订阅类型（REPLENISH 补货 / PRICE_ALERT 降价 / RESTOCK_ALERT 到货） */
+  type: z.enum(['REPLENISH', 'PRICE_ALERT', 'RESTOCK_ALERT']),
   cycleDays: z.number().int().min(1).max(365),
   enabled: z.boolean(),
   lastRemindedAt: IsoTimestamp.nullable(),
+  /** 降价订阅价格快照（分；仅 PRICE_ALERT） */
+  priceAtSub: z.number().int().nonnegative().nullable().optional(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -559,4 +587,60 @@ export const SubscriptionListData = z.object({
 export const UpdateSubscriptionRequest = z.object({
   cycleDays: z.number().int().min(1).max(365).optional(),
   enabled: z.boolean().optional(),
+});
+
+// ============================================================================
+// 客户画像批5（2026-10-18）：行为埋点 + 洞察（方案v2 §三 批5）
+// ============================================================================
+
+/** 埋点事件项（POST /client/behavior-events 批内单条） */
+export const BehaviorEventItem = z.object({
+  productId: Id,
+  /** VIEW 商品详情浏览 | SEARCH_CLICK 搜索结果点击 */
+  type: z.enum(['VIEW', 'SEARCH_CLICK']),
+  /** 客户端事件时间（可选，ISO；当前服务端以接收时间为准） */
+  at: IsoTimestamp.optional(),
+});
+
+/** 埋点批量接收请求（≤100 条/批） */
+export const BehaviorBatchRequest = z.object({
+  events: z.array(BehaviorEventItem).min(1).max(100),
+});
+
+/** 埋点批量接收响应 data */
+export const BehaviorBatchResponseData = z.object({
+  accepted: z.number().int().nonnegative(),
+});
+
+/** D5 漏斗行（曝光=SearchLog / 点击=SEARCH_CLICK / 成交=聚合基数订单 三源对账） */
+export const SearchFunnelRow = z.object({
+  word: z.string(),
+  searches: z.number().int().nonnegative(),
+  clicks: z.number().int().nonnegative(),
+  orders: z.number().int().nonnegative(),
+  /** 点击率（无曝光 null） */
+  ctr: z.number().min(0).max(1).nullable(),
+  /** 点击→成交率（无点击 null） */
+  conversion: z.number().min(0).nullable(),
+});
+
+/** D5 漏斗响应 data（GET /admin/marketing/behavior/search-funnel） */
+export const SearchFunnelData = z.object({
+  windowDays: z.number().int().min(1).max(90),
+  rows: z.array(SearchFunnelRow),
+  generatedAt: IsoTimestamp,
+});
+
+/** A7 per-user 搜索明细项（GET /admin/marketing/behavior/users/:id/searches） */
+export const UserSearchLogItem = z.object({
+  id: Id,
+  word: z.string(),
+  lang: z.string(),
+  resultCount: z.number().int().nonnegative(),
+  createdAt: IsoTimestamp,
+});
+
+/** A7 搜索明细响应 data */
+export const UserSearchLogData = z.object({
+  items: z.array(UserSearchLogItem),
 });

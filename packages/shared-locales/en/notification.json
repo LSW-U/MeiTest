@@ -50,5 +50,21 @@
   "cartRecall": {
     "title": "Your cart is waiting",
     "content": "You left items in your cart. Come back and complete your order!"
+  },
+  "autoReplenishDue": {
+    "title": "Time to reorder",
+    "content": "The product you regularly buy is likely due. Reorder in one tap."
+  },
+  "priceDropAlert": {
+    "title": "Price dropped!",
+    "content": "A product on your price watch list has dropped. Check it out!"
+  },
+  "restockAlert": {
+    "title": "Back in stock",
+    "content": "A product on your restock watch list is available again."
+  },
+  "viewNudge": {
+    "title": "Still thinking it over?",
+    "content": "You viewed this product a few days ago. It might be just what you need."
   }
 }

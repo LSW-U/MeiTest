@@ -50,5 +50,21 @@
   "cartRecall": {
     "title": "Keranjang Anda menunggu",
     "content": "Ada item yang tertinggal di keranjang Anda. Selesaikan pesanan Anda!"
+  },
+  "autoReplenishDue": {
+    "title": "Saatnya pesan ulang",
+    "content": "Produk yang rutin Anda beli kemungkinan sudah waktunya. Pesan ulang sekali ketuk."
+  },
+  "priceDropAlert": {
+    "title": "Harga turun!",
+    "content": "Produk yang Anda pantau harganya turun. Lihat sekarang!"
+  },
+  "restockAlert": {
+    "title": "Stok kembali tersedia",
+    "content": "Produk yang Anda tunggu sudah tersedia kembali."
+  },
+  "viewNudge": {
+    "title": "Masih mempertimbangkan?",
+    "content": "Anda melihat produk ini beberapa hari lalu. Mungkin inilah yang Anda butuhkan."
   }
 }

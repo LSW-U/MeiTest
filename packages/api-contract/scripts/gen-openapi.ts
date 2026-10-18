@@ -90,6 +90,11 @@ import {
   SubscriptionItem,
   SubscriptionListData,
   UpdateSubscriptionRequest,
+  // 客户画像批5（2026-10-18）：行为埋点 + 洞察
+  BehaviorBatchRequest,
+  BehaviorBatchResponseData,
+  SearchFunnelData,
+  UserSearchLogData,
   OrderSummary,
   // shop
   Shop,
@@ -460,6 +465,10 @@ registry.register('CreateSubscriptionRequest', CreateSubscriptionRequest);
 registry.register('SubscriptionItem', SubscriptionItem);
 registry.register('SubscriptionListData', SubscriptionListData);
 registry.register('UpdateSubscriptionRequest', UpdateSubscriptionRequest);
+registry.register('BehaviorBatchRequest', BehaviorBatchRequest);
+registry.register('BehaviorBatchResponseData', BehaviorBatchResponseData);
+registry.register('SearchFunnelData', SearchFunnelData);
+registry.register('UserSearchLogData', UserSearchLogData);
 registry.register('CustomerNoteItem', CustomerNoteItem);
 registry.register('CustomerNoteListData', CustomerNoteListData);
 registry.register('CreateCustomerNoteRequest', CreateCustomerNoteRequest);
@@ -1518,6 +1527,44 @@ registry.registerPath({
   description: '取消补货提醒订阅（仅本人，客户画像批4 B2）',
   parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
   responses: { 200: { description: '已删除', content: { 'application/json': { schema: z.object({ success: z.boolean() }) } } } },
+});
+
+// ============================================================================
+// 客户画像批5（2026-10-18）：行为埋点 + 洞察端点
+// ============================================================================
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/behavior-events',
+  tags: ['product'],
+  description:
+    '行为埋点批量接收（客户画像批5 G2；OptionalAuth 匿名可报，≤100 条/批，异步写入不阻塞、失败降级只丢埋点）',
+  request: { body: { content: { 'application/json': { schema: BehaviorBatchRequest } } } },
+  responses: {
+    200: { description: '已受理（异步写库，accepted=受理条数）', content: { 'application/json': { schema: BehaviorBatchResponseData } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/behavior/search-funnel',
+  tags: ['user'],
+  description:
+    'D5 搜索-成交漏斗（客户画像批5；SearchLog 曝光 + SEARCH_CLICK 点击 + 聚合基数订单三源对账，SUPER_ADMIN）',
+  responses: {
+    200: { description: '漏斗行（top N 词）', content: { 'application/json': { schema: SearchFunnelData } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/marketing/behavior/users/{id}/searches',
+  tags: ['user'],
+  description: 'A7 per-user 搜索明细（客户画像批5；只读消费 SearchLog，SUPER_ADMIN）',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: {
+    200: { description: '搜索明细列表', content: { 'application/json': { schema: UserSearchLogData } } },
+  },
 });
 
 registry.registerPath({

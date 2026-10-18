@@ -175,12 +175,11 @@ describe('P4-1 可配阈值 + 时间冻结四流触发', () => {
     expect(r2.skipped).toBe(1);
     expect(r2.skipReasons.NO_COUPON_RULE).toBe(1);
     expect(m.notify).not.toHaveBeenCalled();
-    // skip 也留痕（SKIPPED + skipReason）
-    expect(m.triggerCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'SKIPPED', skipReason: 'NO_COUPON_RULE' }),
-      }),
+    // skip 留痕走日志（P2-2 裁决：SKIPPED 不落 outreach_triggers 行，不占幂等槽下轮可重试）
+    expect(m.loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'ENGAGEMENT_TRIGGER_SKIPPED', reason: 'NO_COUPON_RULE' }),
     );
+    expect(m.triggerCreate).not.toHaveBeenCalled();
   });
 
   it('C6 生日窗口：isInBirthdayWindow 边界（lead 内/外/当天/2/29 平年映射）', () => {
@@ -264,11 +263,11 @@ describe('P4-2 E3 频控', () => {
     expect(r.skipped).toBe(1);
     expect(r.skipReasons.RATE_LIMITED).toBe(1);
     expect(m.notify).not.toHaveBeenCalled();
-    expect(m.triggerCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'SKIPPED', skipReason: 'RATE_LIMITED' }),
-      }),
+    // skip 留痕走日志（P2-2 裁决：SKIPPED 不占幂等槽，同槽位下轮可重试）
+    expect(m.loggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'ENGAGEMENT_TRIGGER_SKIPPED', reason: 'RATE_LIMITED' }),
     );
+    expect(m.triggerCreate).not.toHaveBeenCalled();
   });
 });
 

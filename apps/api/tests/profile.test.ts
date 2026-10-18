@@ -177,7 +177,7 @@ describe('ProfileService.getCustomerProfile360 — 口径对账（P1-1）', () =
   beforeEach(() => {
     vi.resetAllMocks();
     resetProfileThresholdsCacheForTest();
-    service = new ProfileService();
+    service = new ProfileService(null);
     m.userFindUnique.mockResolvedValue({ id: 'u-1' });
     m.systemConfigFindUnique.mockResolvedValue(null); // 无配置 → 代码常量
   });

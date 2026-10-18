@@ -50,5 +50,21 @@
   "cartRecall": {
     "title": "购物车在等您",
     "content": "您购物车里还有商品未结算，回来完成订单吧！"
+  },
+  "autoReplenishDue": {
+    "title": "该补货了",
+    "content": "您常买的商品按周期该买了，一键复购。"
+  },
+  "priceDropAlert": {
+    "title": "降价啦！",
+    "content": "您关注的商品降价了，快来看看！"
+  },
+  "restockAlert": {
+    "title": "到货了",
+    "content": "您等待的商品已到货，库存有限先到先得。"
+  },
+  "viewNudge": {
+    "title": "还在犹豫吗？",
+    "content": "您几天前浏览过这件商品，也许正是您需要的。"
   }
 }

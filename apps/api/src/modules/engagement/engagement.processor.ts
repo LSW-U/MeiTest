@@ -16,7 +16,7 @@ import { EngagementService } from './engagement.service';
 import { isEngagementFlow } from './engagement.templates';
 
 export interface EngagementJobData {
-  /** 'run-flow' 用：目标流（C1/C2/C3/C6/B2/B3） */
+  /** 'run-flow' 用：目标流（C1/C2/C3/C6/B2/B3/C4/C7/C8/B4） */
   flow?: string;
 }
 
@@ -50,6 +50,11 @@ export class EngagementProcessor extends WorkerHost {
         C6: () => this.engagement.runBirthdayFlow(),
         B2: () => this.engagement.runReplenishFlow(),
         B3: () => this.engagement.runCartRecallFlow(),
+        // 批5 四流
+        C4: () => this.engagement.runAutoReplenishFlow(),
+        C7: () => this.engagement.runPriceAlertFlow(),
+        C8: () => this.engagement.runRestockAlertFlow(),
+        B4: () => this.engagement.runViewNudgeFlow(),
       };
       const r = await runners[flow]();
       return this.summarize([flow], [r as { sent: number; skipped: number }]);

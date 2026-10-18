@@ -28,6 +28,11 @@ export const NOTIFICATION_EVENT_KEYS = [
   'birthdayGreeting',
   'replenishReminder',
   'cartRecall',
+  // 批5（2026-10-18）：C4 自动补货 / C7 降价 / C8 到货 / B4 浏览未买
+  'autoReplenishDue',
+  'priceDropAlert',
+  'restockAlert',
+  'viewNudge',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -48,4 +53,9 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   birthdayGreeting: { titleKey: 'birthdayGreeting.title', contentKey: 'birthdayGreeting.content' },
   replenishReminder: { titleKey: 'replenishReminder.title', contentKey: 'replenishReminder.content' },
   cartRecall: { titleKey: 'cartRecall.title', contentKey: 'cartRecall.content' },
+  // 批5 四事件
+  autoReplenishDue: { titleKey: 'autoReplenishDue.title', contentKey: 'autoReplenishDue.content' },
+  priceDropAlert: { titleKey: 'priceDropAlert.title', contentKey: 'priceDropAlert.content' },
+  restockAlert: { titleKey: 'restockAlert.title', contentKey: 'restockAlert.content' },
+  viewNudge: { titleKey: 'viewNudge.title', contentKey: 'viewNudge.content' },
 };

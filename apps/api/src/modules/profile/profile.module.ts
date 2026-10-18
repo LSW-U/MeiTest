@@ -12,10 +12,17 @@ import { Module } from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { CustomerNoteService } from './customer-note.service';
 import { AdminProfileController } from './admin-profile.controller';
+import { BehaviorInsightService } from '../engagement/behavior-insight.service';
+import { BEHAVIOR_INSIGHT_SERVICE_TOKEN } from './profile.tokens';
 
 @Module({
   controllers: [AdminProfileController],
-  providers: [ProfileService, CustomerNoteService],
+  providers: [
+    ProfileService,
+    CustomerNoteService,
+    BehaviorInsightService,
+    { provide: BEHAVIOR_INSIGHT_SERVICE_TOKEN, useExisting: BehaviorInsightService },
+  ],
   exports: [ProfileService, CustomerNoteService],
 })
 export class ProfileModule {}

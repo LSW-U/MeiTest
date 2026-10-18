@@ -50,5 +50,21 @@
   "cartRecall": {
     "title": "[TET] Your cart is waiting",
     "content": "[TET] You left items in your cart. Come back and complete your order!"
+  },
+  "autoReplenishDue": {
+    "title": "[TET] Time to reorder",
+    "content": "[TET] The product you regularly buy is likely due. Reorder in one tap."
+  },
+  "priceDropAlert": {
+    "title": "[TET] Price dropped!",
+    "content": "[TET] A product on your price watch list has dropped. Check it out!"
+  },
+  "restockAlert": {
+    "title": "[TET] Back in stock",
+    "content": "[TET] A product on your restock watch list is available again."
+  },
+  "viewNudge": {
+    "title": "[TET] Still thinking it over?",
+    "content": "[TET] You viewed this product a few days ago. It might be just what you need."
   }
 }

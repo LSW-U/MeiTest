@@ -839,28 +839,51 @@ model OutreachTrigger {
 }
 
 // ============================================================================
-// 26. ClientSubscription（B2 补货提醒·手工订阅版，批4 2026-10-18）
-//     用户对商品设补货周期；批5 升级自动预测（A5）时本表保留为订阅源。
+// 26. ClientSubscription（批4 B2 补货提醒·手工订阅；批5 2026-10-18 扩展订阅类型）
+//     type: REPLENISH 补货提醒（cycleDays 周期） | PRICE_ALERT 降价提醒（C7） |
+//           RESTOCK_ALERT 到货提醒（C8）。同商品同类型一人一条（一人可同时三种订阅）。
 // ============================================================================
 model ClientSubscription {
   id             String    @id @default(uuid())
   userId         String    @map("user_id")
   productId      String    @map("product_id")
-  /// 补货周期（天，1-365）
+  /// 订阅类型（批5 扩展；存量行默认 REPLENISH 保持批4 语义）
+  type           String    @default("REPLENISH") @db.VarChar(20)
+  /// 补货周期（天，1-365；仅 REPLENISH 用）
   cycleDays      Int       @map("cycle_days")
   enabled        Boolean   @default(true)
-  /// 上次提醒时间（null=从未提醒；B2 周期判定基准）
+  /// 上次提醒时间（null=从未提醒；B2/C4 周期判定基准）
   lastRemindedAt DateTime? @map("last_reminded_at")
+  /// 订阅时商品最低价快照（分；仅 PRICE_ALERT 用，价格 < 该值触发）
+  priceAtSub     Int?      @map("price_at_sub")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // 同商品一人一条订阅（重复订阅=改周期）
-  @@unique([userId, productId])
+  // 同商品同类型一人一条订阅（重复订阅=改参数；不同类型并存）
+  @@unique([userId, productId, type])
   @@index([enabled, updatedAt])
+  @@index([type, enabled])
   @@map("client_subscriptions")
+}
+
+model BehaviorEvent {
+  id        String   @id @default(uuid())
+  /// 登录用户（可空，匿名也记；纯字符串不加 FK 避免 User 删除阻塞，同 SearchLog.userId 范式）
+  userId    String?  @map("user_id")
+  /// 商品 id（纯字符串不加 FK：埋点先于商品生命周期，商品删除不阻塞写入）
+  productId String   @map("product_id")
+  /// VIEW 商品详情浏览 | SEARCH_CLICK 搜索结果点击（搜索→点击→成交漏斗的点击侧，SearchLog 只记搜索）
+  type      String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // B4 浏览未买（按用户+类型扫） / D5 漏斗（按类型+时间聚合） / 商品侧（浏览热度）
+  @@index([userId, type, createdAt])
+  @@index([type, createdAt])
+  @@index([productId, type, createdAt])
+  @@map("behavior_events")
 }
 
 // ============================================================================

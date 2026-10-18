@@ -50,5 +50,21 @@
   "cartRecall": {
     "title": "O seu carrinho espera",
     "content": "Deixou artigos no carrinho. Regresse e conclua a encomenda!"
+  },
+  "autoReplenishDue": {
+    "title": "Hora de encomendar de novo",
+    "content": "O produto que compra regularmente provavelmente está a acabar. Encomende com um toque."
+  },
+  "priceDropAlert": {
+    "title": "Preço baixou!",
+    "content": "Um produto que vigia baixou de preço. Veja agora!"
+  },
+  "restockAlert": {
+    "title": "De volta ao stock",
+    "content": "O produto que aguarda já está disponível novamente."
+  },
+  "viewNudge": {
+    "title": "Ainda a pensar?",
+    "content": "Viu este produto há alguns dias. Talvez seja mesmo o que precisa."
   }
 }
