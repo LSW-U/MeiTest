@@ -1687,6 +1687,101 @@ components:
         - seed
         - items
         - coOrderCount
+    CreateSubscriptionRequest:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        cycleDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+      required:
+        - productId
+        - cycleDays
+    SubscriptionItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        cycleDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+        enabled:
+          type: boolean
+        lastRemindedAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productId
+        - cycleDays
+        - enabled
+        - lastRemindedAt
+        - createdAt
+        - updatedAt
+    SubscriptionListData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              productId:
+                type: string
+                format: uuid
+              cycleDays:
+                type: integer
+                minimum: 1
+                maximum: 365
+              enabled:
+                type: boolean
+              lastRemindedAt:
+                type: string
+                nullable: true
+                format: date-time
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - productId
+              - cycleDays
+              - enabled
+              - lastRemindedAt
+              - createdAt
+              - updatedAt
+      required:
+        - items
+    UpdateSubscriptionRequest:
+      type: object
+      properties:
+        cycleDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+        enabled:
+          type: boolean
     CustomerNoteItem:
       type: object
       properties:
@@ -14456,6 +14551,198 @@ paths:
                   - seed
                   - items
                   - coOrderCount
+  /api/v1/client/subscriptions:
+    post:
+      tags:
+        - product
+      description: 创建/更新补货提醒订阅（客户画像批4 B2 手工订阅版：同 productId upsert，cycleDays 为提醒周期天数；批5
+        升级自动预测）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                  format: uuid
+                cycleDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+              required:
+                - productId
+                - cycleDays
+      responses:
+        "200":
+          description: 订阅项
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  productId:
+                    type: string
+                    format: uuid
+                  cycleDays:
+                    type: integer
+                    minimum: 1
+                    maximum: 365
+                  enabled:
+                    type: boolean
+                  lastRemindedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - productId
+                  - cycleDays
+                  - enabled
+                  - lastRemindedAt
+                  - createdAt
+                  - updatedAt
+    get:
+      tags:
+        - product
+      description: 我的补货提醒订阅列表（客户画像批4 B2）
+      responses:
+        "200":
+          description: 订阅列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        productId:
+                          type: string
+                          format: uuid
+                        cycleDays:
+                          type: integer
+                          minimum: 1
+                          maximum: 365
+                        enabled:
+                          type: boolean
+                        lastRemindedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - productId
+                        - cycleDays
+                        - enabled
+                        - lastRemindedAt
+                        - createdAt
+                        - updatedAt
+                required:
+                  - items
+  /api/v1/client/subscriptions/{id}:
+    patch:
+      tags:
+        - product
+      description: 修改补货提醒订阅（启停 / 改周期；仅本人，客户画像批4 B2）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cycleDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+                enabled:
+                  type: boolean
+      responses:
+        "200":
+          description: 订阅项
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  productId:
+                    type: string
+                    format: uuid
+                  cycleDays:
+                    type: integer
+                    minimum: 1
+                    maximum: 365
+                  enabled:
+                    type: boolean
+                  lastRemindedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - productId
+                  - cycleDays
+                  - enabled
+                  - lastRemindedAt
+                  - createdAt
+                  - updatedAt
+    delete:
+      tags:
+        - product
+      description: 取消补货提醒订阅（仅本人，客户画像批4 B2）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 已删除
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
   /api/v1/client/products/search:
     get:
       tags:

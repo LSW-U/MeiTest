@@ -287,6 +287,9 @@ model User {
   feedbacks         Feedback[]
   // 客户画像批1（D6 2026-10-18）：admin 内部标记/备注
   customerNotes     CustomerNote[]
+  // 触达自动化批4（2026-10-18）：流触发记录 + 补货订阅
+  outreachTriggers  OutreachTrigger[]
+  subscriptions     ClientSubscription[]
 
   @@index([role, status])
   @@map("users")
@@ -432,6 +435,7 @@ model Product {
   skus      Sku[]
   favorites Favorite[]
   reviews   Review[] // reviews-1：商品评论反向
+  subscriptions ClientSubscription[] // B2 补货提醒订阅（批4）
 
   @@index([shopId, status])
   @@index([categoryId, status])
@@ -805,6 +809,58 @@ model SegmentCouponRule {
   @@unique([stage, promotionId])
   @@index([stage])
   @@map("segment_coupon_rules")
+}
+
+// ============================================================================
+// 25. OutreachTrigger（触达自动化批4 2026-10-18）
+//     每流每用户触发记录：幂等防重发（@@unique 撞约束=已触发）+ 超限/离线 skip 留痕。
+//     triggerKey 语义由各流自定（C1=月周期 / C3=orderId / C6=年份 …），见 engagement.service.ts。
+// ============================================================================
+model OutreachTrigger {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  /// 流标识（C1 挽留 / C2 首购转化 / C3 复购感谢 / C6 生日 / B2 补货 / B3 购物车召回）
+  flow       String   @db.VarChar(4)
+  /// 触发周期键（同 flow+user+key 只发一次；幂等锚点）
+  triggerKey String   @map("trigger_key") @db.VarChar(120)
+  /// SENT 已触达 | SKIPPED 跳过（skipReason 说明）
+  status     String   @db.VarChar(10)
+  /// 跳过原因：RATE_LIMITED / NO_DEVICE_TOKEN / NO_COUPON_RULE；SENT 时 null
+  skipReason String?  @map("skip_reason") @db.VarChar(30)
+  detail     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([flow, triggerKey, userId])
+  @@index([userId, createdAt])
+  @@index([flow, createdAt])
+  @@map("outreach_triggers")
+}
+
+// ============================================================================
+// 26. ClientSubscription（B2 补货提醒·手工订阅版，批4 2026-10-18）
+//     用户对商品设补货周期；批5 升级自动预测（A5）时本表保留为订阅源。
+// ============================================================================
+model ClientSubscription {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  productId      String    @map("product_id")
+  /// 补货周期（天，1-365）
+  cycleDays      Int       @map("cycle_days")
+  enabled        Boolean   @default(true)
+  /// 上次提醒时间（null=从未提醒；B2 周期判定基准）
+  lastRemindedAt DateTime? @map("last_reminded_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // 同商品一人一条订阅（重复订阅=改周期）
+  @@unique([userId, productId])
+  @@index([enabled, updatedAt])
+  @@map("client_subscriptions")
 }
 
 // ============================================================================

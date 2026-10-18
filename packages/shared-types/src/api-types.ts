@@ -3872,6 +3872,180 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的补货提醒订阅列表（客户画像批4 B2） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 订阅列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                productId: string;
+                                cycleDays: number;
+                                enabled: boolean;
+                                /** Format: date-time */
+                                lastRemindedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description 创建/更新补货提醒订阅（客户画像批4 B2 手工订阅版：同 productId upsert，cycleDays 为提醒周期天数；批5 升级自动预测） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        productId: string;
+                        cycleDays: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 订阅项 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            cycleDays: number;
+                            enabled: boolean;
+                            /** Format: date-time */
+                            lastRemindedAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description 取消补货提醒订阅（仅本人，客户画像批4 B2） */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 已删除 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description 修改补货提醒订阅（启停 / 改周期；仅本人，客户画像批4 B2） */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        cycleDays?: number;
+                        enabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description 订阅项 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            productId: string;
+                            cycleDays: number;
+                            enabled: boolean;
+                            /** Format: date-time */
+                            lastRemindedAt: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            updatedAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/client/products/search": {
         parameters: {
             query?: never;
@@ -24127,6 +24301,45 @@ export interface components {
                 rating?: number;
             }[];
             coOrderCount: number;
+        };
+        CreateSubscriptionRequest: {
+            /** Format: uuid */
+            productId: string;
+            cycleDays: number;
+        };
+        SubscriptionItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            cycleDays: number;
+            enabled: boolean;
+            /** Format: date-time */
+            lastRemindedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SubscriptionListData: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                productId: string;
+                cycleDays: number;
+                enabled: boolean;
+                /** Format: date-time */
+                lastRemindedAt: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            }[];
+        };
+        UpdateSubscriptionRequest: {
+            cycleDays?: number;
+            enabled?: boolean;
         };
         CustomerNoteItem: {
             /** Format: uuid */

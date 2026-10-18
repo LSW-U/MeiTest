@@ -5,4 +5,5 @@ export {
   COUPON_EXPIRE_QUEUE,
   NOTIFICATION_QUEUE,
   ORPHAN_CLEANUP_QUEUE,
+  ENGAGEMENT_QUEUE,
 } from './queue.constants';

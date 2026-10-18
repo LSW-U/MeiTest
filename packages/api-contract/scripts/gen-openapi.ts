@@ -85,6 +85,11 @@ import {
   UpdateSegmentCouponRuleRequest,
   // 客户画像批3（2026-10-18）
   FrequentBundleData,
+  // 客户画像批4（2026-10-18）：B2 补货订阅
+  CreateSubscriptionRequest,
+  SubscriptionItem,
+  SubscriptionListData,
+  UpdateSubscriptionRequest,
   OrderSummary,
   // shop
   Shop,
@@ -451,6 +456,10 @@ registry.register('SegmentCouponRuleListData', SegmentCouponRuleListData);
 registry.register('CreateSegmentCouponRuleRequest', CreateSegmentCouponRuleRequest);
 registry.register('UpdateSegmentCouponRuleRequest', UpdateSegmentCouponRuleRequest);
 registry.register('FrequentBundleData', FrequentBundleData);
+registry.register('CreateSubscriptionRequest', CreateSubscriptionRequest);
+registry.register('SubscriptionItem', SubscriptionItem);
+registry.register('SubscriptionListData', SubscriptionListData);
+registry.register('UpdateSubscriptionRequest', UpdateSubscriptionRequest);
 registry.register('CustomerNoteItem', CustomerNoteItem);
 registry.register('CustomerNoteListData', CustomerNoteListData);
 registry.register('CreateCustomerNoteRequest', CreateCustomerNoteRequest);
@@ -1472,6 +1481,43 @@ registry.registerPath({
   responses: {
     200: { description: '常买组合（空组合=前端整块隐藏）', content: { 'application/json': { schema: FrequentBundleData } } },
   },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/subscriptions',
+  tags: ['product'],
+  description:
+    '创建/更新补货提醒订阅（客户画像批4 B2 手工订阅版：同 productId upsert，cycleDays 为提醒周期天数；批5 升级自动预测）',
+  request: { body: { content: { 'application/json': { schema: CreateSubscriptionRequest } } } },
+  responses: { 200: { description: '订阅项', content: { 'application/json': { schema: SubscriptionItem } } } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/subscriptions',
+  tags: ['product'],
+  description: '我的补货提醒订阅列表（客户画像批4 B2）',
+  responses: { 200: { description: '订阅列表', content: { 'application/json': { schema: SubscriptionListData } } } },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/api/v1/client/subscriptions/{id}',
+  tags: ['product'],
+  description: '修改补货提醒订阅（启停 / 改周期；仅本人，客户画像批4 B2）',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  request: { body: { content: { 'application/json': { schema: UpdateSubscriptionRequest } } } },
+  responses: { 200: { description: '订阅项', content: { 'application/json': { schema: SubscriptionItem } } } },
+});
+
+registry.registerPath({
+  method: 'delete',
+  path: '/api/v1/client/subscriptions/{id}',
+  tags: ['product'],
+  description: '取消补货提醒订阅（仅本人，客户画像批4 B2）',
+  parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+  responses: { 200: { description: '已删除', content: { 'application/json': { schema: z.object({ success: z.boolean() }) } } } },
 });
 
 registry.registerPath({

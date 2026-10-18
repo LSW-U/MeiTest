@@ -26,5 +26,29 @@
   "withdrawReviewed": {
     "title": "提现结果通知",
     "content": "您的提现申请 {withdrawId} 已{status}。"
+  },
+  "retentionWinback": {
+    "title": "好久不见",
+    "content": "距离您上次下单已有一段时间，专享优惠券已为您准备好！"
+  },
+  "firstPurchaseNudge": {
+    "title": "完成首单",
+    "content": "欢迎加入！新用户首单专享优惠券等你领取。"
+  },
+  "repurchaseThanks": {
+    "title": "感谢回购",
+    "content": "感谢您的订单 {orderNo}——又完成一单，欢迎评价！"
+  },
+  "birthdayGreeting": {
+    "title": "生日快乐",
+    "content": "祝您生日快乐！一份生日礼券已放入您的账户。"
+  },
+  "replenishReminder": {
+    "title": "该补货啦",
+    "content": "您订阅的商品可能快用完了，一键即可复购。"
+  },
+  "cartRecall": {
+    "title": "购物车在等您",
+    "content": "您购物车里还有商品未结算，回来完成订单吧！"
   }
 }

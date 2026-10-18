@@ -26,5 +26,29 @@
   "withdrawReviewed": {
     "title": "Pembaruan Penarikan",
     "content": "Permintaan penarikan {withdrawId} Anda telah {status}."
+  },
+  "retentionWinback": {
+    "title": "Kami merindukan Anda",
+    "content": "Sudah lama sejak pesanan terakhir Anda. Ini kupon khusus untuk kunjungan berikutnya!"
+  },
+  "firstPurchaseNudge": {
+    "title": "Pesanan pertama Anda",
+    "content": "Selamat datang! Pelanggan baru mendapat kupon spesial untuk pesanan pertama."
+  },
+  "repurchaseThanks": {
+    "title": "Terima kasih atas kesetiaan Anda",
+    "content": "Terima kasih untuk pesanan {orderNo} — satu pesanan lagi selesai. Kami menantikan ulasan Anda!"
+  },
+  "birthdayGreeting": {
+    "title": "Selamat Ulang Tahun!",
+    "content": "Semoga hari bahagia. Kupon hadiah ulang tahun menanti Anda!"
+  },
+  "replenishReminder": {
+    "title": "Waktunya mengisi ulang",
+    "content": "Produk langganan Anda mungkin hampir habis. Pesan ulang dengan sekali ketuk."
+  },
+  "cartRecall": {
+    "title": "Keranjang Anda menunggu",
+    "content": "Ada item yang tertinggal di keranjang Anda. Selesaikan pesanan Anda!"
   }
 }

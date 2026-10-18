@@ -21,6 +21,13 @@ export const NOTIFICATION_EVENT_KEYS = [
   'taskFailed',
   'settlementConfirmed',
   'withdrawReviewed',
+  // 批4 触达自动化（2026-10-18）：C1/C2/C3/C6 + B2/B3 六事件
+  'retentionWinback',
+  'firstPurchaseNudge',
+  'repurchaseThanks',
+  'birthdayGreeting',
+  'replenishReminder',
+  'cartRecall',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -34,4 +41,11 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   taskFailed: { titleKey: 'taskFailed.title', contentKey: 'taskFailed.content' },
   settlementConfirmed: { titleKey: 'settlementConfirmed.title', contentKey: 'settlementConfirmed.content' },
   withdrawReviewed: { titleKey: 'withdrawReviewed.title', contentKey: 'withdrawReviewed.content' },
+  // 批4 触达自动化六事件
+  retentionWinback: { titleKey: 'retentionWinback.title', contentKey: 'retentionWinback.content' },
+  firstPurchaseNudge: { titleKey: 'firstPurchaseNudge.title', contentKey: 'firstPurchaseNudge.content' },
+  repurchaseThanks: { titleKey: 'repurchaseThanks.title', contentKey: 'repurchaseThanks.content' },
+  birthdayGreeting: { titleKey: 'birthdayGreeting.title', contentKey: 'birthdayGreeting.content' },
+  replenishReminder: { titleKey: 'replenishReminder.title', contentKey: 'replenishReminder.content' },
+  cartRecall: { titleKey: 'cartRecall.title', contentKey: 'cartRecall.content' },
 };

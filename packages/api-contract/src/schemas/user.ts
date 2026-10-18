@@ -528,3 +528,35 @@ export const FrequentBundleData = z.object({
   /** 最强组合的共现订单数（seed 订单里同时含 top1 伙伴的订单数）；无组合 0 */
   coOrderCount: z.number().int().nonnegative(),
 });
+
+// ============================================================================
+// 客户画像批4（2026-10-18）：B2 补货提醒手工订阅（方案v2 §三 批4）
+// ============================================================================
+
+/** B2 补货提醒订阅请求（POST /client/subscriptions；cycleDays 1-365 天） */
+export const CreateSubscriptionRequest = z.object({
+  productId: Id,
+  cycleDays: z.number().int().min(1).max(365),
+});
+
+/** B2 订阅项 */
+export const SubscriptionItem = z.object({
+  id: Id,
+  productId: Id,
+  cycleDays: z.number().int().min(1).max(365),
+  enabled: z.boolean(),
+  lastRemindedAt: IsoTimestamp.nullable(),
+  createdAt: IsoTimestamp,
+  updatedAt: IsoTimestamp,
+});
+
+/** B2 订阅列表响应 data（GET /client/subscriptions） */
+export const SubscriptionListData = z.object({
+  items: z.array(SubscriptionItem),
+});
+
+/** B2 修改订阅请求（PATCH /client/subscriptions/:id；启停或改周期） */
+export const UpdateSubscriptionRequest = z.object({
+  cycleDays: z.number().int().min(1).max(365).optional(),
+  enabled: z.boolean().optional(),
+});

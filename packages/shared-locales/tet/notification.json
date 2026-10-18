@@ -26,5 +26,29 @@
   "withdrawReviewed": {
     "title": "[TET] Withdrawal Update",
     "content": "[TET] Your withdrawal request {withdrawId} has been {status}."
+  },
+  "retentionWinback": {
+    "title": "[TET] We miss you!",
+    "content": "[TET] It has been a while since your last order. Here is a coupon for your next visit!"
+  },
+  "firstPurchaseNudge": {
+    "title": "[TET] Place your first order",
+    "content": "[TET] Welcome! New customers get a special coupon on their first order."
+  },
+  "repurchaseThanks": {
+    "title": "[TET] Thank you for your loyalty",
+    "content": "[TET] Thanks for your {orderNo} — another order completed. We would love your review!"
+  },
+  "birthdayGreeting": {
+    "title": "[TET] Happy Birthday!",
+    "content": "[TET] Wishing you a wonderful birthday. A gift coupon is waiting for you!"
+  },
+  "replenishReminder": {
+    "title": "[TET] Time to restock",
+    "content": "[TET] Your subscribed product may be running low. Reorder in one tap."
+  },
+  "cartRecall": {
+    "title": "[TET] Your cart is waiting",
+    "content": "[TET] You left items in your cart. Come back and complete your order!"
   }
 }

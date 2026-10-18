@@ -23,3 +23,8 @@ export const NOTIFICATION_QUEUE = 'notification';
  * 每日一次扫描 MinIO 全量 key vs DB 引用集合（13 字段），仅删「无引用且超宽限期 7 天」对象
  */
 export const ORPHAN_CLEANUP_QUEUE = 'orphan-cleanup';
+/**
+ * 触达自动化队列（客户画像批4，2026-10-18）
+ * 每 30min 扫描六流（C1 挽留/C2 首购/C3 感谢/C6 生日/B2 补货/B3 购物车召回）
+ */
+export const ENGAGEMENT_QUEUE = 'engagement';

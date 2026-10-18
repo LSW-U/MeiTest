@@ -19,6 +19,8 @@ import { CartModule } from './modules/cart/cart.module';
 import { CommonModule } from './modules/common/common.module';
 import { DispatchModule } from './modules/dispatch/dispatch.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+// 客户画像批4（2026-10-18）：触达自动化 + 频控
+import { EngagementModule } from './modules/engagement/engagement.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { HomeModule } from './modules/home/home.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
@@ -67,6 +69,8 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     CommonModule,
     DispatchModule,
     FeedbackModule,
+    // 客户画像批4（2026-10-18）：触达自动化 + 频控
+    EngagementModule,
     HomeModule,
     OnboardingModule,
     ImModule,

@@ -26,5 +26,29 @@
   "withdrawReviewed": {
     "title": "Atualização de Levantamento",
     "content": "O seu pedido de levantamento {withdrawId} foi {status}."
+  },
+  "retentionWinback": {
+    "title": "Sentimos a sua falta",
+    "content": "Já faz tempo desde a sua última encomenda. Temos um cupão especial para a próxima visita!"
+  },
+  "firstPurchaseNudge": {
+    "title": "Faça a sua primeira encomenda",
+    "content": "Bem-vindo! Clientes novos recebem um cupão especial na primeira encomenda."
+  },
+  "repurchaseThanks": {
+    "title": "Obrigado pela fidelidade",
+    "content": "Obrigado pela encomenda {orderNo} — mais uma concluída. Adoraríamos a sua avaliação!"
+  },
+  "birthdayGreeting": {
+    "title": "Feliz Aniversário!",
+    "content": "Um feliz aniversário. Um cupão-presente está à sua espera!"
+  },
+  "replenishReminder": {
+    "title": "Hora de reabastecer",
+    "content": "O produto subscrito pode estar a acabar. Encomende novamente com um toque."
+  },
+  "cartRecall": {
+    "title": "O seu carrinho espera",
+    "content": "Deixou artigos no carrinho. Regresse e conclua a encomenda!"
   }
 }
