@@ -4601,7 +4601,7 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/admin/refunds',
   tags: ['refund'],
-  description: '退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造）',
+  description: '退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）筛选）',
   request: { query: ListRefundsQuerySchema },
   responses: { 200: { description: '退款列表（游标分页 items + nextCursor + hasMore）', content: { 'application/json': { schema: RefundListResponseSchema } } } },
 });

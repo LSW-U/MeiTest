@@ -17256,11 +17256,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造） */
+        /** @description 退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）筛选） */
         get: {
             parameters: {
                 query?: {
                     status?: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                    orderId?: string;
                     cursor?: string;
                     limit?: number;
                 };

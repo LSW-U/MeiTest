@@ -33739,13 +33739,19 @@ paths:
     get:
       tags:
         - refund
-      description: 退款列表（admin，游标分页，可按 status 筛选；批次 2.1 改造）
+      description: 退款列表（admin，游标分页，可按 status / orderId（客服工作台反查 20261018）筛选）
       parameters:
         - schema:
             type: string
             enum: *a87
           required: false
           name: status
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: orderId
           in: query
         - schema:
             type: string
