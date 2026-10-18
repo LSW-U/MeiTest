@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ErrorState } from '@/components/common/error-state';
+import { EvidenceImageGroup } from '@/components/common/evidence-image-group';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -126,19 +127,9 @@ function ReviewDetailContent() {
         {/* 评论内容 */}
         {content && <p className="text-sm">{content}</p>}
 
-        {/* 客户评论图片 */}
+        {/* 客户评论图片（批1 可选增强：升级为 EvidenceImageGroup，补放大+失败占位；仅替换 img 行，tags/anonymous 逻辑勿动） */}
         {isCustomer && review.images.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {review.images.map((img) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={img}
-                src={img}
-                alt="review"
-                className="h-20 w-20 rounded border object-cover"
-              />
-            ))}
-          </div>
+          <EvidenceImageGroup urls={review.images} label={t('admin.reviews.imagesLabel')} />
         )}
 
         <div className="flex gap-6 text-xs text-muted-foreground">

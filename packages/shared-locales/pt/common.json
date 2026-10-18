@@ -632,7 +632,10 @@
       "toastDeleted": "Rider eliminado",
       "toastUpdated": "Rider atualizado",
       "toastFailed": "Ação falhou",
-      "commonCancel": "Cancelar"
+      "commonCancel": "Cancelar",
+      "idCardImage": "Foto do BI",
+      "licenseImage": "Foto da Carta de Condução",
+      "kycImagesEmpty": "Nenhuma foto KYC enviada"
     },
     "inventory": {
       "title": "Estoque",
@@ -746,7 +749,9 @@
       "toastCancelSuccess": "Tarefa cancelada",
       "toastRecreateSuccess": "Tarefa recriada",
       "toastFailed": "Operação falhou",
-      "monitorTitle": "Task Monitor"
+      "monitorTitle": "Task Monitor",
+      "evidencePhotos": "Fotos de Evidência",
+      "hasEvidence": "Tem fotos de evidência ({count})"
     },
     "payments": {
       "title": "Pagamentos",
@@ -837,6 +842,14 @@
       "batchStatusImported": "Importado",
       "batchStatusPartial": "Parcial",
       "batchStatusFailed": "Falhou"
+    },
+    "evidence": {
+      "loadFailed": "Falha ao carregar imagem",
+      "sensitiveHint": "Conteúdo sensível — toque na miniatura para revelar",
+      "prevImage": "Imagem anterior",
+      "nextImage": "Próxima imagem",
+      "photoAction": "Foto {number} - clique para ampliar",
+      "photoUnlockAction": "Foto {number} - toque para revelar"
     },
     "refunds": {
       "title": "Reembolsos",
@@ -1456,7 +1469,8 @@
       "repliedAt": "Replied at {time}",
       "saveButton": "Save",
       "savingButton": "Saving...",
-      "backButton": "Back"
+      "backButton": "Back",
+      "imagesLabel": "Fotos da Avaliação"
     },
     "hotSearch": {
       "title": "Buscas Populares",

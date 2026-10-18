@@ -632,7 +632,10 @@
       "toastDeleted": "骑手已删除",
       "toastUpdated": "骑手已更新",
       "toastFailed": "操作失败",
-      "commonCancel": "取消"
+      "commonCancel": "取消",
+      "idCardImage": "身份证照片",
+      "licenseImage": "驾驶证照片",
+      "kycImagesEmpty": "未上传证件照"
     },
     "inventory": {
       "title": "库存管理",
@@ -746,7 +749,9 @@
       "toastCancelSuccess": "任务已取消",
       "toastRecreateSuccess": "任务已补建",
       "toastFailed": "操作失败",
-      "monitorTitle": "任务监控"
+      "monitorTitle": "任务监控",
+      "evidencePhotos": "取证照片",
+      "hasEvidence": "有取证照片 {count} 张"
     },
     "payments": {
       "title": "支付管理",
@@ -837,6 +842,14 @@
       "batchStatusImported": "已导入",
       "batchStatusPartial": "部分成功",
       "batchStatusFailed": "失败"
+    },
+    "evidence": {
+      "loadFailed": "图片加载失败",
+      "sensitiveHint": "敏感内容 — 点击缩略图解锁查看",
+      "prevImage": "上一张",
+      "nextImage": "下一张",
+      "photoAction": "第 {number} 张照片 - 点击放大",
+      "photoUnlockAction": "第 {number} 张照片 - 点击解锁查看"
     },
     "refunds": {
       "title": "退款管理",
@@ -1456,7 +1469,8 @@
       "repliedAt": "回复于 {time}",
       "saveButton": "保存",
       "savingButton": "保存中...",
-      "backButton": "返回"
+      "backButton": "返回",
+      "imagesLabel": "评价晒图"
     },
     "hotSearch": {
       "title": "热搜",

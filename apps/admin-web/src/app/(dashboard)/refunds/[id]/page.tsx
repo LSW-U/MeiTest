@@ -9,7 +9,6 @@
  */
 'use client';
 
-import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -17,19 +16,11 @@ import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import {
-  useRefundDetail,
-  useRetriggerReturnTask,
-  type RefundItem,
-} from '@/hooks/api/use-refunds';
+import { useRefundDetail, useRetriggerReturnTask, type RefundItem } from '@/hooks/api/use-refunds';
 import { useToast } from '@/hooks/use-toast';
+import { EvidenceImageGroup } from '@/components/common/evidence-image-group';
 
 /** reason → i18n key 映射（含 P13 EXPIRED/SHORTAGE） */
 const REASON_LABEL_KEY: Record<string, string> = {
@@ -76,8 +67,7 @@ export default function RefundDetailPage() {
     });
   };
 
-  // lightbox 状态（点击缩略图放大）
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  // lightbox 状态已收口到 EvidenceImageGroup 组件内部（批1 抽取，渲染等价）
 
   if (isLoading) {
     return (
@@ -186,26 +176,13 @@ export default function RefundDetailPage() {
         )}
       </section>
 
-      {/* 凭证照片 gallery（决策点 3：缩略图 + lightbox） */}
+      {/* 凭证照片 gallery（批1 重构：消费 EvidenceImageGroup，渲染等价——空态文案保留 refunds 页特有决策） */}
       <section className="rounded-lg border p-6 space-y-4">
         <h2 className="text-lg font-semibold">{t('admin.refunds.fieldPhotos')}</h2>
         {refund.photos.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('admin.refunds.photosEmpty')}</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            {refund.photos.map((url, idx) => (
-              <button
-                key={url + idx}
-                type="button"
-                onClick={() => setLightboxSrc(url)}
-                className="h-24 w-24 overflow-hidden rounded-md border hover:opacity-80"
-                aria-label={t('admin.refunds.photoClickToEnlarge', { number: idx + 1 })}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`evidence-${idx + 1}`} className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
+          <EvidenceImageGroup urls={refund.photos} />
         )}
       </section>
 
@@ -250,22 +227,7 @@ export default function RefundDetailPage() {
         </section>
       )}
 
-      {/* lightbox Dialog（点击缩略图放大） */}
-      <Dialog open={!!lightboxSrc} onOpenChange={(open) => !open && setLightboxSrc(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogTitle className="sr-only">
-            {t('admin.refunds.photoLightboxTitle')}
-          </DialogTitle>
-          {lightboxSrc && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={lightboxSrc}
-              alt="evidence-large"
-              className="h-auto max-h-[80vh] w-full object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* lightbox Dialog 已收口到 EvidenceImageGroup 内部（批1 抽取） */}
     </div>
   );
 }

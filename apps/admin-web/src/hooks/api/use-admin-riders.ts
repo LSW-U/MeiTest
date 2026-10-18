@@ -37,6 +37,9 @@ export interface AdminRiderListItem {
 export interface AdminRiderDetail extends AdminRiderListItem {
   userStatus: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
   idCardNumber: string | null;
+  /** 批1 取证照片展示接入：KYC 证件照（toView 直出，可能 null） */
+  idCardImageUrl: string | null;
+  licenseImageUrl: string | null;
   reviewedById: string | null;
   reviewedAt: string | null;
   rejectReason: string | null;

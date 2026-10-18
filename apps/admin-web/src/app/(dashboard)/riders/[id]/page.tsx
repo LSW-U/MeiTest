@@ -50,6 +50,7 @@ import {
 } from '@/hooks/api/use-admin-riders';
 import { useRiderDepositDetail } from '@/hooks/api/use-deposit';
 import { useWarehouses } from '@/hooks/api/use-warehouses';
+import { EvidenceImageGroup } from '@/components/common/evidence-image-group';
 import { formatCurrency } from '@/lib/utils';
 
 const VEHICLE_TYPES = ['MOTORCYCLE', 'BICYCLE', 'CAR'] as const;
@@ -314,6 +315,35 @@ export default function RiderDetailPage({ params }: { params: { id: string } }) 
           </CardContent>
         </Card>
       </div>
+
+      {/* ===== 批1 接入：KYC 证件照（sensitive 模糊态 + 点击解锁；null 按「未上传」占位） ===== */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.riders.idCardImage')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rider.idCardImageUrl || rider.licenseImageUrl ? (
+            <div className="space-y-3">
+              {rider.idCardImageUrl && (
+                <EvidenceImageGroup
+                  urls={[rider.idCardImageUrl]}
+                  label={t('admin.riders.idCardImage')}
+                  sensitive
+                />
+              )}
+              {rider.licenseImageUrl && (
+                <EvidenceImageGroup
+                  urls={[rider.licenseImageUrl]}
+                  label={t('admin.riders.licenseImage')}
+                  sensitive
+                />
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t('admin.riders.kycImagesEmpty')}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ===== 批 E（2026-09-03）：保证金聚合视图（批 C GET /admin/riders/:id/detail ①-⑤） ===== */}
       {depositDetail && (

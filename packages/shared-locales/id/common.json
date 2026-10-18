@@ -632,7 +632,10 @@
       "toastDeleted": "Rider dihapus",
       "toastUpdated": "Rider diperbarui",
       "toastFailed": "Aksi gagal",
-      "commonCancel": "Batal"
+      "commonCancel": "Batal",
+      "idCardImage": "Foto KTP",
+      "licenseImage": "Foto SIM",
+      "kycImagesEmpty": "Belum ada foto KYC diunggah"
     },
     "inventory": {
       "title": "Inventaris",
@@ -746,7 +749,9 @@
       "toastCancelSuccess": "Tugas dibatalkan",
       "toastRecreateSuccess": "Tugas dibuat ulang",
       "toastFailed": "Operasi gagal",
-      "monitorTitle": "Task Monitor"
+      "monitorTitle": "Task Monitor",
+      "evidencePhotos": "Foto Bukti",
+      "hasEvidence": "Ada foto bukti ({count})"
     },
     "payments": {
       "title": "Pembayaran",
@@ -837,6 +842,14 @@
       "batchStatusImported": "Terimpor",
       "batchStatusPartial": "Sebagian berhasil",
       "batchStatusFailed": "Gagal"
+    },
+    "evidence": {
+      "loadFailed": "Gambar gagal dimuat",
+      "sensitiveHint": "Konten sensitif — ketuk thumbnail untuk membuka",
+      "prevImage": "Gambar sebelumnya",
+      "nextImage": "Gambar berikutnya",
+      "photoAction": "Foto {number} - klik untuk perbesar",
+      "photoUnlockAction": "Foto {number} - ketuk untuk membuka"
     },
     "refunds": {
       "title": "Pengembalian dana",
@@ -1456,7 +1469,8 @@
       "repliedAt": "Replied at {time}",
       "saveButton": "Save",
       "savingButton": "Saving...",
-      "backButton": "Back"
+      "backButton": "Back",
+      "imagesLabel": "Foto Ulasan"
     },
     "hotSearch": {
       "title": "Pencarian Populer",

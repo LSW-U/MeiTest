@@ -47,7 +47,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Loader2 } from 'lucide-react';
+import { Camera, Loader2 } from 'lucide-react';
+import { EvidenceImageGroup } from '@/components/common/evidence-image-group';
 import {
   useDispatchTasks,
   useDispatchTaskDetail,
@@ -142,7 +143,26 @@ function DispatchTasksContent() {
     {
       key: 'status',
       header: t('admin.dispatch.columnStatus'),
-      render: (row) => <StatusBadge status={row.status} label={row.status} />,
+      render: (row) => {
+        // 批3 P3-1：窄化取值替代非空断言（守卫与插值同源，后续改守卫不漏类型检查）
+        const evidenceCount = row.evidenceUrls?.length ?? 0;
+        return (
+          <span className="inline-flex items-center gap-1">
+            <StatusBadge status={row.status} label={row.status} />
+            {/* 批3：有取证照片角标（形态A 拍板；无图不渲染，不加列） */}
+            {evidenceCount > 0 && (
+              <span
+                className="inline-flex items-center text-muted-foreground"
+                title={t('admin.dispatch.hasEvidence', { count: evidenceCount })}
+                aria-label={t('admin.dispatch.hasEvidence', { count: evidenceCount })}
+                data-testid="dispatch-evidence-badge"
+              >
+                <Camera className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: 'rider',
@@ -415,6 +435,8 @@ function TaskDetailDialog({
                 </pre>
               </div>
             )}
+            {/* 批1 接入：取证照片（空数组不渲染，方案v2 决策表） */}
+            <EvidenceImageGroup urls={detail.evidenceUrls} label={t('admin.dispatch.evidencePhotos')} />
           </div>
         ) : null}
       </DialogContent>

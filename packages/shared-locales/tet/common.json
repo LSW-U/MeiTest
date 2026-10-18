@@ -632,7 +632,10 @@
       "toastDeleted": "Rider hapars tiha",
       "toastUpdated": "Rider atualiza tiha",
       "toastFailed": "Aksaun sala",
-      "commonCancel": "Kansa"
+      "commonCancel": "Kansa",
+      "idCardImage": "Foto BI",
+      "licenseImage": "Foto Lisensa Konduzir",
+      "kycImagesEmpty": "Seidauk iha foto KYC"
     },
     "inventory": {
       "title": "Inventory",
@@ -746,7 +749,9 @@
       "toastCancelSuccess": "Task cancelled",
       "toastRecreateSuccess": "Task recreated",
       "toastFailed": "Operation failed",
-      "monitorTitle": "Task Monitor"
+      "monitorTitle": "Task Monitor",
+      "evidencePhotos": "Foto Bukti",
+      "hasEvidence": "Iha foto bukti ({count})"
     },
     "payments": {
       "title": "Payments",
@@ -837,6 +842,14 @@
       "batchStatusImported": "Importa ona",
       "batchStatusPartial": "Balun success",
       "batchStatusFailed": "Falha"
+    },
+    "evidence": {
+      "loadFailed": "Falha karga imajen",
+      "sensitiveHint": "Kontese sensível — klik miniatura atu haree",
+      "prevImage": "Imajen antes",
+      "nextImage": "Imajen tuir mai",
+      "photoAction": "Foto {number} - klik atu aumenta",
+      "photoUnlockAction": "Foto {number} - klik atu haree"
     },
     "refunds": {
       "title": "Refund",
@@ -1456,7 +1469,8 @@
       "repliedAt": "Replied at {time}",
       "saveButton": "Save",
       "savingButton": "Saving...",
-      "backButton": "Back"
+      "backButton": "Back",
+      "imagesLabel": "Foto Avaliasaun"
     },
     "hotSearch": {
       "title": "Buka Popular",

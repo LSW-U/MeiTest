@@ -54,6 +54,8 @@ export interface AdminDeliveryTask {
   deliveredAt: string | null;
   estimatedArrival: string | null;
   note: string | null;
+  /** 骑手端上报的取证照片 URL（schema default []，恒为数组） */
+  evidenceUrls: string[];
   createdAt: string;
   updatedAt: string;
   warehouseCode: string;

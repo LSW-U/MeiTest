@@ -635,7 +635,10 @@
       "toastDeleted": "Rider deleted",
       "toastUpdated": "Rider updated",
       "toastFailed": "Action failed",
-      "commonCancel": "Cancel"
+      "commonCancel": "Cancel",
+      "idCardImage": "ID Card Photo",
+      "licenseImage": "Driver License Photo",
+      "kycImagesEmpty": "No KYC images submitted"
     },
     "inventory": {
       "title": "Inventory",
@@ -749,7 +752,9 @@
       "toastCancelSuccess": "Task cancelled",
       "toastRecreateSuccess": "Task recreated",
       "toastFailed": "Operation failed",
-      "monitorTitle": "Task Monitor"
+      "monitorTitle": "Task Monitor",
+      "evidencePhotos": "Evidence Photos",
+      "hasEvidence": "Has evidence photos ({count})"
     },
     "payments": {
       "title": "Payments",
@@ -840,6 +845,14 @@
       "batchStatusImported": "Imported",
       "batchStatusPartial": "Partial",
       "batchStatusFailed": "Failed"
+    },
+    "evidence": {
+      "loadFailed": "Image failed to load",
+      "sensitiveHint": "Sensitive content — tap thumbnail to reveal",
+      "prevImage": "Previous image",
+      "nextImage": "Next image",
+      "photoAction": "Photo {number} - click to enlarge",
+      "photoUnlockAction": "Photo {number} - tap to reveal"
     },
     "refunds": {
       "title": "Refunds",
@@ -1459,7 +1472,8 @@
       "repliedAt": "Replied at {time}",
       "saveButton": "Save",
       "savingButton": "Saving...",
-      "backButton": "Back"
+      "backButton": "Back",
+      "imagesLabel": "Review Photos"
     },
     "hotSearch": {
       "title": "Hot Search",
