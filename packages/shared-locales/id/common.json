@@ -1870,7 +1870,34 @@
       "orderDetailToggle": "Detail (lini waktu / buku alamat)",
       "orderEventsSection": "Linimasa peristiwa",
       "orderAddressBookSection": "Buku alamat",
-      "addressDefault": "Bawaan"
+      "addressDefault": "Bawaan",
+      "cards": {
+        "sectionTitle": "Kartu ruang kerja",
+        "viewAll": "Lihat semua",
+        "empty": "Tidak ada data",
+        "none": "Tidak ada",
+        "c1Title": "Bisnis hari ini",
+        "c1Gmv": "GMV hari ini",
+        "c1Orders": "Pesanan hari ini",
+        "c1Growth": "{pct}% vs kemarin",
+        "c1TrendAria": "Tren GMV hari ini",
+        "c2Title": "Pekerjaan menunggu",
+        "c2PendingRefunds": "Pengembalian menunggu tinjauan",
+        "c2PendingAssign": "Pengiriman menunggu penugasan",
+        "c2TodayFeedback": "Umpan balik baru hari ini",
+        "c3Title": "Ulasan 1-2 bintang terbaru",
+        "c3Empty": "Tidak ada ulasan rendah",
+        "c4Title": "Kata pencarian teratas",
+        "c4Empty": "Tidak ada data pencarian",
+        "c5Title": "Kinerja kurir (minggu ini)",
+        "c5Top": "3 teratas (pesanan)",
+        "c5Bottom": "3 terbawah (peringkat)",
+        "c5Orders": "{count} pesanan",
+        "c5Empty": "Tidak ada data kurir",
+        "c6Title": "Tautan cepat",
+        "c6Empty": "Belum ada tautan disematkan",
+        "c6Unpin": "Lepas sematan"
+      }
     }
   },
   "theme": {

@@ -1873,7 +1873,34 @@
       "orderDetailToggle": "Details (timeline / address book)",
       "orderEventsSection": "Event Timeline",
       "orderAddressBookSection": "Address Book",
-      "addressDefault": "Default"
+      "addressDefault": "Default",
+      "cards": {
+        "sectionTitle": "Workbench cards",
+        "viewAll": "View all",
+        "empty": "No data",
+        "none": "None",
+        "c1Title": "Today's business",
+        "c1Gmv": "GMV (today)",
+        "c1Orders": "Orders (today)",
+        "c1Growth": "{pct}% vs yesterday",
+        "c1TrendAria": "GMV trend of the day",
+        "c2Title": "Pending work",
+        "c2PendingRefunds": "Refunds awaiting review",
+        "c2PendingAssign": "Deliveries awaiting assignment",
+        "c2TodayFeedback": "New feedback today",
+        "c3Title": "Recent 1-2 star reviews",
+        "c3Empty": "No low-star reviews",
+        "c4Title": "Top searches",
+        "c4Empty": "No search data",
+        "c5Title": "Rider performance (this week)",
+        "c5Top": "Top 3 (by orders)",
+        "c5Bottom": "Bottom 3 (by rating)",
+        "c5Orders": "{count} orders",
+        "c5Empty": "No rider data",
+        "c6Title": "Quick links",
+        "c6Empty": "No quick links pinned",
+        "c6Unpin": "Unpin"
+      }
     }
   },
   "common": {

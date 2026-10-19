@@ -53,6 +53,7 @@ import {
   type SupportView,
 } from '@/lib/support-page';
 import { formatCurrency } from '@/lib/utils';
+import { SupportCardsGrid } from './support-cards-grid';
 
 /** deliveryAddress 快照形状（order.service.ts :397；unknown 透传，收窄使用） */
 interface DeliveryAddressSnapshot {
@@ -540,6 +541,9 @@ export default function SupportWorkbenchPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader title={t('admin.support.title')} description={t('admin.support.description')} />
+
+      {/* 六卡网格（批1 20261018）：search 视图全展示；user/order 视图收起为单行入口 */}
+      <SupportCardsGrid view={view} />
 
       {/* 搜索区（单框智能分派：MM→订单；其余→用户） */}
       <Card>

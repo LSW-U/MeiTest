@@ -1870,7 +1870,34 @@
       "orderDetailToggle": "Detalhes (linha do tempo / livro de endereços)",
       "orderEventsSection": "Linha do tempo de eventos",
       "orderAddressBookSection": "Livro de endereços",
-      "addressDefault": "Predefinido"
+      "addressDefault": "Predefinido",
+      "cards": {
+        "sectionTitle": "Cartões da área de trabalho",
+        "viewAll": "Ver tudo",
+        "empty": "Sem dados",
+        "none": "Nenhum",
+        "c1Title": "Negócios de hoje",
+        "c1Gmv": "GMV de hoje",
+        "c1Orders": "Pedidos de hoje",
+        "c1Growth": "{pct}% vs ontem",
+        "c1TrendAria": "Tendência de GMV do dia",
+        "c2Title": "Trabalho pendente",
+        "c2PendingRefunds": "Reembolsos aguardando análise",
+        "c2PendingAssign": "Entregas aguardando atribuição",
+        "c2TodayFeedback": "Novos feedbacks hoje",
+        "c3Title": "Avaliações recentes de 1-2 estrelas",
+        "c3Empty": "Sem avaliações baixas",
+        "c4Title": "Pesquisas principais",
+        "c4Empty": "Sem dados de pesquisa",
+        "c5Title": "Desempenho de entregadores (semana)",
+        "c5Top": "Top 3 (por pedidos)",
+        "c5Bottom": "3 últimos (por avaliação)",
+        "c5Orders": "{count} pedidos",
+        "c5Empty": "Sem dados de entregadores",
+        "c6Title": "Atalhos",
+        "c6Empty": "Nenhum atalho fixado",
+        "c6Unpin": "Desafixar"
+      }
     }
   },
   "theme": {

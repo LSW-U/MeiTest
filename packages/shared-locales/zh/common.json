@@ -1870,7 +1870,34 @@
       "orderDetailToggle": "详情（时间线 / 地址簿）",
       "orderEventsSection": "事件时间线",
       "orderAddressBookSection": "下单地址簿",
-      "addressDefault": "默认"
+      "addressDefault": "默认",
+      "cards": {
+        "sectionTitle": "工作台卡片",
+        "viewAll": "查看全部",
+        "empty": "暂无数据",
+        "none": "无",
+        "c1Title": "今日经营",
+        "c1Gmv": "今日 GMV",
+        "c1Orders": "今日单量",
+        "c1Growth": "较昨日 {pct}%",
+        "c1TrendAria": "当日 GMV 走势",
+        "c2Title": "待处理事项",
+        "c2PendingRefunds": "待审退款",
+        "c2PendingAssign": "待派送任务",
+        "c2TodayFeedback": "今日新反馈",
+        "c3Title": "最近 1~2 星差评",
+        "c3Empty": "暂无差评",
+        "c4Title": "热搜词 TOP",
+        "c4Empty": "暂无搜索数据",
+        "c5Title": "骑手绩效（本周）",
+        "c5Top": "单量 TOP 3",
+        "c5Bottom": "评分 BOTTOM 3",
+        "c5Orders": "{count} 单",
+        "c5Empty": "暂无骑手数据",
+        "c6Title": "常用跳转",
+        "c6Empty": "暂无钉选入口",
+        "c6Unpin": "取消钉选"
+      }
     }
   },
   "theme": {

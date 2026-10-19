@@ -1870,7 +1870,34 @@
       "orderDetailToggle": "Detalie (linha tempu / livru enderesu)",
       "orderEventsSection": "Linha tempu eventu",
       "orderAddressBookSection": "Livru enderesu",
-      "addressDefault": "Padraun"
+      "addressDefault": "Padraun",
+      "cards": {
+        "sectionTitle": "Kartu serbisu",
+        "viewAll": "See hotu",
+        "empty": "La iha dadus",
+        "none": "Laiha",
+        "c1Title": "Negósiu ohin",
+        "c1Gmv": "GMV ohin",
+        "c1Orders": "Pedidu ohin",
+        "c1Growth": "{pct}% kompara horiseik",
+        "c1TrendAria": "Tendénsia GMV ohin",
+        "c2Title": "Serbisu hein",
+        "c2PendingRefunds": "Foli fali hein Stocks",
+        "c2PendingAssign": "Entrega hein asignasaun",
+        "c2TodayFeedback": "Feedback foun ohin",
+        "c3Title": "Komentariu 1-2 estrela foun",
+        "c3Empty": "La iha komentariu a'at",
+        "c4Title": "Liafuan peskiza oin",
+        "c4Empty": "La iha dadus peskiza",
+        "c5Title": "Desempenhu entregador (semana)",
+        "c5Top": "Top 3 (pedidu)",
+        "c5Bottom": "3 ikun (nota)",
+        "c5Orders": "{count} pedidu",
+        "c5Empty": "La iha dadus entregador",
+        "c6Title": "Ligañ kaixo",
+        "c6Empty": "Seidauk iha ligañ",
+        "c6Unpin": "Desafixa"
+      }
     }
   },
   "theme": {
