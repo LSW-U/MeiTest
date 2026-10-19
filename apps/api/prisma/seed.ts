@@ -93,15 +93,9 @@ const seedData = seedDataRaw as any[];
  * DummyJSON 品类 -> 分类 icon 映射
  *
  * W7-ext-A 修复：原值是 emoji（🛒/💄），前端 <img src={emoji}> 会 404。
- * 改为空字符串，前端检测到非 URL 时 fallback 到 🗂 占位。
- * 后端 schema 也加了 z.string().url() 校验，禁止 emoji 当 iconUrl 写库。
+ * 2026-10-16：分类 iconUrl 全部改为 TOP/SUB_CATEGORIES_DEF 内联 URL（MinIO categories/*.webp），
+ * 本映射不再有消费方，删除。
  */
-const CATEGORY_ICONS: Record<string, string> = {
-  groceries: '',
-  beauty: '',
-  'skin-care': '',
-  fragrances: '',
-};
 
 async function main() {
   console.log('🌱 Seeding MeiMart dev database...');
@@ -212,58 +206,112 @@ async function main() {
   // ===== 4. products + skus + stock（基于 seed-data.json，含真实图片 URL） =====
   const warehouses = await prisma.warehouse.findMany();
 
-  // 4a. 创建分类：4 顶级大类 + 每大类下子分类（§6.1，演示两层；商品挂叶子子分类）
+  // 4a. 创建分类：10 顶级大类（方案A 超市部门制，2026-10-16 用户拍板）+ 子分类挂叶子
   await prisma.category.deleteMany();
   const TOP_CATEGORIES = [
-    { slug: 'groceries', name: { en: 'Food & Grocery', zh: '食品杂货', id: 'Bahan Makanan', pt: 'Mercearia', tet: 'Aihan no Merkaria' }, sortOrder: 1 },
-    { slug: 'beauty', name: { en: 'Beauty', zh: '美妆', id: 'Kecantikan', pt: 'Beleza', tet: 'Beleza' }, sortOrder: 2 },
-    { slug: 'skin-care', name: { en: 'Skin Care', zh: '护肤', id: 'Perawatan Kulit', pt: 'Cuidados de Pele', tet: 'Kuidadu Kulit' }, sortOrder: 3 },
-    { slug: 'fragrances', name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes', tet: 'Parfum' }, sortOrder: 4 },
+    // iconUrl：MinIO categories/ 类目图（480x480 1:1 webp，DummyJSON 代表商品图，2026-10-16）
+    { slug: 'fresh-produce', iconUrl: 'http://localhost:9000/meimart/categories/fresh-produce.webp', name: { en: 'Fresh Produce', zh: '生鲜果蔬', id: 'Produk Segar', pt: 'Produtos Frescos', tet: 'Produtu Fresu' }, sortOrder: 1 },
+    { slug: 'pantry-staples', iconUrl: 'http://localhost:9000/meimart/categories/pantry-staples.webp', name: { en: 'Pantry & Staples', zh: '粮油干货', id: 'Bahan Pokok', pt: 'Despensa', tet: 'Aihan Kunsei' }, sortOrder: 2 },
+    { slug: 'dairy-eggs', iconUrl: 'http://localhost:9000/meimart/categories/dairy-eggs.webp', name: { en: 'Dairy & Eggs', zh: '乳品蛋类', id: 'Susu & Telur', pt: 'Laticínios e Ovos', tet: 'Susu no Tolun' }, sortOrder: 3 },
+    { slug: 'beverages', iconUrl: 'http://localhost:9000/meimart/categories/beverages.webp', name: { en: 'Beverages', zh: '饮料酒水', id: 'Minuman', pt: 'Bebidas', tet: 'Bedik' }, sortOrder: 4 },
+    { slug: 'snacks-sweets', iconUrl: 'http://localhost:9000/meimart/categories/snacks-sweets.webp', name: { en: 'Snacks & Sweets', zh: '零食糖果', id: 'Camilan', pt: 'Lanches', tet: 'Hahan Kiak' }, sortOrder: 5 },
+    { slug: 'kitchen-dining', iconUrl: 'http://localhost:9000/meimart/categories/kitchen-dining.webp', name: { en: 'Kitchen & Dining', zh: '厨房餐饮用品', id: 'Peralatan Dapur', pt: 'Cozinha e Sala de Jantar', tet: 'Meus Kozinha' }, sortOrder: 6 },
+    { slug: 'beauty', iconUrl: 'http://localhost:9000/meimart/categories/beauty.webp', name: { en: 'Beauty', zh: '美妆彩妆', id: 'Kecantikan', pt: 'Beleza', tet: 'Beleza' }, sortOrder: 7 },
+    { slug: 'personal-care', iconUrl: 'http://localhost:9000/meimart/categories/personal-care.webp', name: { en: 'Personal Care', zh: '个人护理', id: 'Perawatan Diri', pt: 'Cuidados Pessoais', tet: 'Kuidadu Isin' }, sortOrder: 8 },
+    { slug: 'fragrances', iconUrl: 'http://localhost:9000/meimart/categories/fragrances.webp', name: { en: 'Fragrances', zh: '香水', id: 'Parfum', pt: 'Perfumes', tet: 'Parfum' }, sortOrder: 9 },
+    { slug: 'household', iconUrl: 'http://localhost:9000/meimart/categories/household.webp', name: { en: 'Household', zh: '家居清洁', id: 'Rumah Tangga', pt: 'Limpeza da Casa', tet: 'Uma Kain' }, sortOrder: 10 },
   ];
   const topIdBySlug = new Map<string, string>();
   for (const t of TOP_CATEGORIES) {
-    const cat = await prisma.category.create({ data: { name: t.name, iconUrl: '', sortOrder: t.sortOrder } });
+    const cat = await prisma.category.create({ data: { name: t.name, iconUrl: t.iconUrl, sortOrder: t.sortOrder } });
     topIdBySlug.set(t.slug, cat.id);
   }
-  // 子分类（§6.1：每大类下 3-4 个，name 用多语言而非顶级名重复）
+  // 子分类（§6.1：每大类下 1-3 个，name 用多语言；10 大类全有落货；iconUrl 同 480x480 类目图）
   const SUB_CATEGORIES_DEF = [
-    { parentSlug: 'groceries', slug: 'fresh-produce', name: { en: 'Fresh Produce', zh: '生鲜果蔬', id: 'Produk Segar', pt: 'Produtos Frescos', tet: 'Produtu Fresu' }, sortOrder: 1 },
-    { parentSlug: 'groceries', slug: 'pantry', name: { en: 'Pantry Staples', zh: '粮油干货', id: 'Bahan Pokok', pt: 'Despensa', tet: 'Aihan Kunsei' }, sortOrder: 2 },
-    { parentSlug: 'groceries', slug: 'snacks', name: { en: 'Snacks', zh: '零食', id: 'Camilan', pt: 'Lanches', tet: 'Hahan Kiak' }, sortOrder: 3 },
-    { parentSlug: 'groceries', slug: 'beverages', name: { en: 'Beverages', zh: '饮料', id: 'Minuman', pt: 'Bebidas', tet: 'Bedik' }, sortOrder: 4 },
-    { parentSlug: 'beauty', slug: 'skincare', name: { en: 'Skincare', zh: '护肤', id: 'Perawatan Wajah', pt: 'Cuidados Rosto', tet: 'Kuidadu Kulit' }, sortOrder: 1 },
-    { parentSlug: 'beauty', slug: 'makeup', name: { en: 'Makeup', zh: '彩妆', id: 'Makeup', pt: 'Maquiagem', tet: 'Dekorasaun' }, sortOrder: 2 },
-    { parentSlug: 'beauty', slug: 'body-care', name: { en: 'Body Care', zh: '身体护理', id: 'Perawatan Tubuh', pt: 'Cuidados Corpo', tet: 'Kuidadu Isin' }, sortOrder: 3 },
-    { parentSlug: 'skin-care', slug: 'face-care', name: { en: 'Face Care', zh: '面部护理', id: 'Perawatan Wajah', pt: 'Cuidados Rosto', tet: 'Kuidadu Oan' }, sortOrder: 1 },
-    { parentSlug: 'skin-care', slug: 'sun-care', name: { en: 'Sun Care', zh: '防晒', id: 'Tabir Surya', pt: 'Proteção Solar', tet: 'Protesaun Kuak' }, sortOrder: 2 },
-    { parentSlug: 'fragrances', slug: 'women', name: { en: 'Women', zh: '女士', id: 'Wanita', pt: 'Mulher', tet: 'Feto' }, sortOrder: 1 },
-    { parentSlug: 'fragrances', slug: 'men', name: { en: 'Men', zh: '男士', id: 'Pria', pt: 'Homem', tet: 'Mane' }, sortOrder: 2 },
-    { parentSlug: 'fragrances', slug: 'unisex', name: { en: 'Unisex', zh: '中性', id: 'Unisex', pt: 'Unisex', tet: 'Unisex' }, sortOrder: 3 },
+    { parentSlug: 'fresh-produce', slug: 'fruits', iconUrl: 'http://localhost:9000/meimart/categories/fruits.webp', name: { en: 'Fruits', zh: '水果', id: 'Buah', pt: 'Frutas', tet: 'Aihan Isin' }, sortOrder: 1 },
+    { parentSlug: 'fresh-produce', slug: 'vegetables', iconUrl: 'http://localhost:9000/meimart/categories/vegetables.webp', name: { en: 'Vegetables', zh: '蔬菜', id: 'Sayuran', pt: 'Legumes', tet: 'Tudik' }, sortOrder: 2 },
+    { parentSlug: 'fresh-produce', slug: 'meat-seafood', iconUrl: 'http://localhost:9000/meimart/categories/meat-seafood.webp', name: { en: 'Meat & Seafood', zh: '肉禽海鲜', id: 'Daging & Laut', pt: 'Carne e Mar', tet: 'Sisi no Meti' }, sortOrder: 3 },
+    { parentSlug: 'pantry-staples', slug: 'grains-oils', iconUrl: 'http://localhost:9000/meimart/categories/grains-oils.webp', name: { en: 'Grains & Oils', zh: '粮油', id: 'Biji & Minyak', pt: 'Cereais e Óleos', tet: 'Fahe no Minyu' }, sortOrder: 1 },
+    { parentSlug: 'pantry-staples', slug: 'dry-goods', iconUrl: 'http://localhost:9000/meimart/categories/dry-goods.webp', name: { en: 'Dry Goods', zh: '干货', id: 'Bahan Kering', pt: 'Produtos Secos', tet: 'Aihan Kunsei' }, sortOrder: 2 },
+    { parentSlug: 'dairy-eggs', slug: 'dairy', iconUrl: 'http://localhost:9000/meimart/categories/dairy.webp', name: { en: 'Dairy', zh: '乳制品', id: 'Produk Susu', pt: 'Laticínios', tet: 'Susu' }, sortOrder: 1 },
+    { parentSlug: 'dairy-eggs', slug: 'eggs', iconUrl: 'http://localhost:9000/meimart/categories/eggs.webp', name: { en: 'Eggs', zh: '蛋类', id: 'Telur', pt: 'Ovos', tet: 'Tolun' }, sortOrder: 2 },
+    { parentSlug: 'beverages', slug: 'water-drinks', iconUrl: 'http://localhost:9000/meimart/categories/water-drinks.webp', name: { en: 'Water & Drinks', zh: '水与饮品', id: 'Air & Minuman', pt: 'Água e Bebidas', tet: 'Bee no Bedik' }, sortOrder: 1 },
+    { parentSlug: 'beverages', slug: 'juices', iconUrl: 'http://localhost:9000/meimart/categories/juices.webp', name: { en: 'Juices', zh: '果汁', id: 'Jus', pt: 'Sumos', tet: 'Susu Fruta' }, sortOrder: 2 },
+    { parentSlug: 'snacks-sweets', slug: 'snacks', iconUrl: 'http://localhost:9000/meimart/categories/snacks.webp', name: { en: 'Snacks', zh: '零食', id: 'Camilan', pt: 'Lanches', tet: 'Hahan Kiak' }, sortOrder: 1 },
+    { parentSlug: 'snacks-sweets', slug: 'sweets-frozen', iconUrl: 'http://localhost:9000/meimart/categories/sweets-frozen.webp', name: { en: 'Sweets & Frozen', zh: '甜品冷冻', id: 'Manis & Beku', pt: 'Doces e Congelados', tet: 'Maman no Malirin' }, sortOrder: 2 },
+    { parentSlug: 'kitchen-dining', slug: 'cookware', iconUrl: 'http://localhost:9000/meimart/categories/cookware.webp', name: { en: 'Cookware', zh: '锅具', id: 'Peralatan Masak', pt: 'Panelas', tet: 'Meus Nani' }, sortOrder: 1 },
+    { parentSlug: 'kitchen-dining', slug: 'utensils', iconUrl: 'http://localhost:9000/meimart/categories/utensils.webp', name: { en: 'Utensils', zh: '厨具工具', id: 'Peralatan', pt: 'Utensílios', tet: 'Meus Kiak' }, sortOrder: 2 },
+    { parentSlug: 'kitchen-dining', slug: 'appliances', iconUrl: 'http://localhost:9000/meimart/categories/appliances.webp', name: { en: 'Small Appliances', zh: '小家电', id: 'Alat Listrik', pt: 'Eletrodomésticos', tet: 'Meus Elétriku' }, sortOrder: 3 },
+    { parentSlug: 'beauty', slug: 'makeup', iconUrl: 'http://localhost:9000/meimart/categories/makeup.webp', name: { en: 'Makeup', zh: '彩妆', id: 'Makeup', pt: 'Maquiagem', tet: 'Dekorasaun' }, sortOrder: 1 },
+    { parentSlug: 'beauty', slug: 'nails', iconUrl: 'http://localhost:9000/meimart/categories/nails.webp', name: { en: 'Nails', zh: '美甲', id: 'Kuku', pt: 'Unhas', tet: 'Kuku Isin' }, sortOrder: 2 },
+    { parentSlug: 'personal-care', slug: 'face-care', iconUrl: 'http://localhost:9000/meimart/categories/face-care.webp', name: { en: 'Face Care', zh: '面部护理', id: 'Perawatan Wajah', pt: 'Cuidados Rosto', tet: 'Kuidadu Oan' }, sortOrder: 1 },
+    { parentSlug: 'personal-care', slug: 'body-care', iconUrl: 'http://localhost:9000/meimart/categories/body-care.webp', name: { en: 'Body Care', zh: '身体护理', id: 'Perawatan Tubuh', pt: 'Cuidados Corpo', tet: 'Kuidadu Isin' }, sortOrder: 2 },
+    { parentSlug: 'personal-care', slug: 'sun-care', iconUrl: 'http://localhost:9000/meimart/categories/sun-care.webp', name: { en: 'Sun Care', zh: '防晒', id: 'Tabir Surya', pt: 'Proteção Solar', tet: 'Protesaun Kuak' }, sortOrder: 3 },
+    { parentSlug: 'fragrances', slug: 'women', iconUrl: 'http://localhost:9000/meimart/categories/women.webp', name: { en: 'Women', zh: '女士', id: 'Wanita', pt: 'Mulher', tet: 'Feto' }, sortOrder: 1 },
+    { parentSlug: 'fragrances', slug: 'men', iconUrl: 'http://localhost:9000/meimart/categories/men.webp', name: { en: 'Men', zh: '男士', id: 'Pria', pt: 'Homem', tet: 'Mane' }, sortOrder: 2 },
+    { parentSlug: 'fragrances', slug: 'unisex', iconUrl: 'http://localhost:9000/meimart/categories/unisex.webp', name: { en: 'Unisex', zh: '中性', id: 'Unisex', pt: 'Unisex', tet: 'Unisex' }, sortOrder: 3 },
+    { parentSlug: 'household', slug: 'paper-tissues', iconUrl: 'http://localhost:9000/meimart/categories/paper-tissues.webp', name: { en: 'Paper & Tissues', zh: '纸品', id: 'Tisu', pt: 'Papéis', tet: 'Kertas' }, sortOrder: 1 },
+    { parentSlug: 'household', slug: 'cleaning', iconUrl: 'http://localhost:9000/meimart/categories/cleaning.webp', name: { en: 'Cleaning', zh: '清洁用品', id: 'Pembersih', pt: 'Limpeza', tet: 'Fatumetan' }, sortOrder: 2 },
   ];
-  // 每大类的子分类 id 列表（商品按 index 轮流分配，演示子分类有商品）
-  const subIdsByParent = new Map<string, string[]>();
   for (const s of SUB_CATEGORIES_DEF) {
     const parentTopId = topIdBySlug.get(s.parentSlug)!;
-    const cat = await prisma.category.create({
-      data: { name: s.name, iconUrl: CATEGORY_ICONS[s.slug] ?? '', sortOrder: s.sortOrder, parentId: parentTopId },
+    await prisma.category.create({
+      data: { name: s.name, iconUrl: s.iconUrl, sortOrder: s.sortOrder, parentId: parentTopId },
     });
-    if (!subIdsByParent.has(s.parentSlug)) subIdsByParent.set(s.parentSlug, []);
-    subIdsByParent.get(s.parentSlug)!.push(cat.id);
   }
   console.log(`  ✅ ${TOP_CATEGORIES.length} 顶级 + ${SUB_CATEGORIES_DEF.length} 子分类`);
 
-  // 4b. 创建商品 + SKU + stock（💭-4: 用大类内 index 分配子分类，不依赖 seedData 按 category 分组连续）
-  const __categoryCounter = new Map<string, number>();
+  // 4b. 商品 → 子分类指派（方案A：按商品名精确归类，替代旧 round-robin；旧 source category → 新 10 大类映射）
+  const SUB_ID_BY_SLUG = new Map<string, string>();
+  for (const s of SUB_CATEGORIES_DEF) {
+    const created = await prisma.category.findFirst({ where: { name: { path: ['en'], equals: s.name.en } } });
+    if (created) SUB_ID_BY_SLUG.set(s.slug, created.id);
+  }
+  // 逐商品精确子分类（key = seed-data title，value = SUB_CATEGORIES_DEF slug）
+  const PRODUCT_SUB_MAP: Record<string, string> = {
+    // 生鲜果蔬
+    Apple: 'fruits', Kiwi: 'fruits', Lemon: 'fruits', Mulberry: 'fruits', Strawberry: 'fruits',
+    Cucumber: 'vegetables', 'Green Bell Pepper': 'vegetables', 'Green Chili Pepper': 'vegetables',
+    Potatoes: 'vegetables', 'Red Onions': 'vegetables',
+    'Beef Steak': 'meat-seafood', 'Chicken Meat': 'meat-seafood', 'Fish Steak': 'meat-seafood',
+    // 粮油干货
+    Rice: 'grains-oils', 'Cooking Oil': 'grains-oils', 'Nescafe Coffee': 'grains-oils', Honey: 'dry-goods',
+    'Honey Jar': 'dry-goods', 'Protein Powder': 'dry-goods',
+    // 乳品蛋类
+    Milk: 'dairy', Eggs: 'eggs',
+    // 饮料酒水
+    Water: 'water-drinks', 'Soft Drinks': 'water-drinks', Juice: 'juices',
+    // 零食糖果
+    'Ice Cream': 'sweets-frozen', 'Dog Food': 'snacks', 'Cat Food': 'snacks',
+    // 家居清洁
+    'Tissue Paper Box': 'paper-tissues',
+  };
+  // 旧 source category（无逐名映射时）→ 默认子分类
+  const LEGACY_DEFAULT_SUB: Record<string, string> = {
+    groceries: 'dry-goods',
+    beauty: 'makeup',
+    'skin-care': 'face-care',
+    fragrances: 'unisex',
+    'kitchen-accessories': 'utensils',
+  };
+  // kitchen 30 逐名归类
+  const KITCHEN_SUB_MAP: Record<string, string> = {
+    'Carbon Steel Wok': 'cookware', Pan: 'cookware', 'Silver Pot With Glass Cap': 'cookware',
+    'Electric Stove': 'appliances', 'Microwave Oven': 'appliances', 'Boxed Blender': 'appliances',
+    'Hand Blender': 'appliances',
+  };
+
+  // 4c. 创建商品 + SKU + stock（子分类取 PRODUCT_SUB_MAP 精确归类，缺省走 LEGACY_DEFAULT_SUB）
   for (const p of seedData) {
-    const __withinCat = __categoryCounter.get(p.category) ?? 0;
-    __categoryCounter.set(p.category, __withinCat + 1);
+    const subSlug =
+      (p.category === 'kitchen-accessories' && KITCHEN_SUB_MAP[p.title]) ||
+      PRODUCT_SUB_MAP[p.title] ||
+      LEGACY_DEFAULT_SUB[p.category];
+    const categoryId = subSlug ? SUB_ID_BY_SLUG.get(subSlug) : null;
     const product = await prisma.product.create({
       data: {
         shopId: shop.id,
-        categoryId: (() => {
-          const subs = subIdsByParent.get(p.category);
-          return subs && subs.length ? subs[__withinCat % subs.length] : null;
-        })(),
+        categoryId,
         name: p.name, // 5 语言简短商品名（apply-translations.mjs 填充，含 tet）
         description: p.description,
         mainImage: p.mainImage,

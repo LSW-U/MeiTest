@@ -12,10 +12,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
-      "zh": "新鲜脆甜的苹果，适合零食或各种烹饪。",
-      "id": "Apel segar dan renyah, cocok untuk camilan atau memasak.",
-      "pt": "Maçãs frescas e crocantes, perfeitas para lanches ou culinária.",
-      "tet": "Maçã fresu no meten, diak ba hahan sira ka farkude iha kozina."
+      "zh": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+      "id": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes.",
+      "pt": "Fresh and crisp apples, perfect for snacking or incorporating into various recipes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/apple-thumb.webp",
     "images": [
@@ -25,9 +24,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 8,
     "name": {
@@ -51,10 +49,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
-      "zh": "优质牛排，适合煎烤至您喜欢的熟度。",
-      "id": "Bistik berkualitas, cocok untuk dipanggang atau dimasak sesuai selera.",
-      "pt": "Bife de qualidade, ótimo para grelhar ou cozinhar no ponto desejado.",
-      "tet": "Bisti baka kualidade diak, diak ba suli ka nanoi tuir ita hakarak."
+      "zh": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+      "id": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness.",
+      "pt": "High-quality beef steak, great for grilling or cooking to your preferred level of doneness."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/beef-steak-thumb.webp",
     "images": [
@@ -64,9 +61,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 86,
     "name": {
@@ -90,10 +86,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
-      "zh": "营养猫粮，满足猫咪日常饮食需求。",
-      "id": "Makanan kucing bergizi untuk memenuhi kebutuhan gizi harian kucing.",
-      "pt": "Comida para gato nutritiva, formulada para necessidades dietéticas diárias.",
-      "tet": "Hahan busa nutrisaun diak, atu preenxe presiza hahan busa lor-loron."
+      "zh": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+      "id": "Nutritious cat food formulated to meet the dietary needs of your feline friend.",
+      "pt": "Nutritious cat food formulated to meet the dietary needs of your feline friend."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cat-food-thumb.webp",
     "images": [
@@ -103,9 +98,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 46,
     "name": {
@@ -129,10 +123,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and tender chicken meat, suitable for various culinary preparations.",
-      "zh": "新鲜嫩鸡肉，适合各种烹饪方式。",
-      "id": "Daging ayam segar dan empuk, cocok untuk berbagai masakan.",
-      "pt": "Frango fresco e macio, adequado para várias receitas culinárias.",
-      "tet": "Naan manu fresu no mamuk, diak ba kozina oioin."
+      "zh": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+      "id": "Fresh and tender chicken meat, suitable for various culinary preparations.",
+      "pt": "Fresh and tender chicken meat, suitable for various culinary preparations."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/chicken-meat-thumb.webp",
     "images": [
@@ -143,9 +136,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 97,
     "name": {
@@ -169,10 +161,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
-      "zh": "通用食用油，适合煎炒各种料理。",
-      "id": "Minyak goreng serbaguna untuk menggoreng, menumis, dan memasak.",
-      "pt": "Óleo de cozinha versátil, adequado para fritar, refogar e cozinhar.",
-      "tet": "Minan tahan serbaguna, diak ba nana'i ka kozina hahan oioin."
+      "zh": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+      "id": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications.",
+      "pt": "Versatile cooking oil suitable for frying, sautéing, and various culinary applications."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cooking-oil-thumb.webp",
     "images": [
@@ -181,10 +172,9 @@
     "priceMin": 499,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 10,
     "name": {
@@ -208,10 +198,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
-      "zh": "清脆多汁的黄瓜，适合沙拉、零食或料理。",
-      "id": "Mentimun segar dan renyah, ideal untuk salad atau camilan.",
-      "pt": "Pepinos crocantes e hidratantes, ideais para saladas ou lanches.",
-      "tet": "Pepinu fresu no besik, diak ba salada ka hahan."
+      "zh": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+      "id": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side.",
+      "pt": "Crisp and hydrating cucumbers, ideal for salads, snacks, or as a refreshing side."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/cucumber-thumb.webp",
     "images": [
@@ -221,9 +210,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 84,
     "name": {
@@ -247,10 +235,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
-      "zh": "专为狗狗设计的营养狗粮，提供必需营养。",
-      "id": "Makanan anjing khusus untuk memberikan nutrisi penting.",
-      "pt": "Comida para cão formulada para fornecer nutrição essencial.",
-      "tet": "Hahan asu espesial ho nutrisaun importante ba asu."
+      "zh": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+      "id": "Specially formulated dog food designed to provide essential nutrients for your canine companion.",
+      "pt": "Specially formulated dog food designed to provide essential nutrients for your canine companion."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/dog-food-thumb.webp",
     "images": [
@@ -260,9 +247,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 71,
     "name": {
@@ -286,10 +272,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
-      "zh": "新鲜鸡蛋，烘焙、烹饪或早餐的百搭食材。",
-      "id": "Telur segar, bahan serbaguna untuk memanggang dan memasak.",
-      "pt": "Ovos frescos, ingrediente versátil para culinária e padaria.",
-      "tet": "Manu tolun fresu, diak ba nanoi, kozina ka kafe daan."
+      "zh": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+      "id": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast.",
+      "pt": "Fresh eggs, a versatile ingredient for baking, cooking, or breakfast."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/eggs-thumb.webp",
     "images": [
@@ -298,10 +283,9 @@
     "priceMin": 299,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 9,
     "name": {
@@ -325,10 +309,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
-      "zh": "优质鱼排，适合煎、烤或烘烤。",
-      "id": "Ikan fillet berkualitas, cocok untuk dipanggang atau digoreng.",
-      "pt": "Bife de peixe de qualidade, ideal para grelhar ou assar.",
-      "tet": "Bisti ikan kualidade diak, diak ba suli ka nanoi."
+      "zh": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+      "id": "Quality fish steak, suitable for grilling, baking, or pan-searing.",
+      "pt": "Quality fish steak, suitable for grilling, baking, or pan-searing."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/fish-steak-thumb.webp",
     "images": [
@@ -338,9 +321,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 74,
     "name": {
@@ -364,10 +346,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
-      "zh": "新鲜青椒，为菜肴增色增味。",
-      "id": "Paprika hijau segar, sempurna untuk menambah warna dan rasa.",
-      "pt": "Pimentão verde fresco, perfeito para adicionar cor e sabor.",
-      "tet": "Pimenton mean fresu, hamosu kor no rasa iha hahan."
+      "zh": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+      "id": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes.",
+      "pt": "Fresh and vibrant green bell pepper, perfect for adding color and flavor to your dishes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/green-bell-pepper-thumb.webp",
     "images": [
@@ -377,9 +358,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 33,
     "name": {
@@ -403,10 +383,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
-      "zh": "辛辣青辣椒，为菜肴加热度。",
-      "id": "Cabai hijau pedas, ideal untuk menambah rasa pedas.",
-      "pt": "Pimenta verde picante, ideal para dar calor aos pratos.",
-      "tet": "Aé mean mak hera, diak ba hamosu rasa hera iha hahan."
+      "zh": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+      "id": "Spicy green chili pepper, ideal for adding heat to your favorite recipes.",
+      "pt": "Spicy green chili pepper, ideal for adding heat to your favorite recipes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/green-chili-pepper-thumb.webp",
     "images": [
@@ -416,9 +395,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 3,
     "name": {
@@ -442,10 +420,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
-      "zh": "纯天然蜂蜜，方便罐装，适合甜味或烹饪。",
-      "id": "Madu murni alami dalam toples, cocok untuk pemanis.",
-      "pt": "Mel puro e natural em pote prático, perfeito para adoçar.",
-      "tet": "Fuan-fuan naturál diak iha kaxa, diak ba hamosu rasa midar."
+      "zh": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+      "id": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food.",
+      "pt": "Pure and natural honey in a convenient jar, perfect for sweetening beverages or drizzling over food."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/honey-jar-thumb.webp",
     "images": [
@@ -454,10 +431,9 @@
     "priceMin": 699,
     "unit": {
       "en": "pack",
-      "zh": "罐",
-      "id": "toples",
-      "pt": "pote",
-      "tet": "toples"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 34,
     "name": {
@@ -481,10 +457,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
-      "zh": "香滑可口的冰淇淋，多种口味可选。",
-      "id": "Es krim lembut dan lezat dengan berbagai rasa.",
-      "pt": "Gelado cremoso e delicioso, disponível em vários sabores.",
-      "tet": "Ais krim mamar no gosta, iha rasa oioin atu hili."
+      "zh": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+      "id": "Creamy and delicious ice cream, available in various flavors for a delightful treat.",
+      "pt": "Creamy and delicious ice cream, available in various flavors for a delightful treat."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/ice-cream-thumb.webp",
     "images": [
@@ -496,10 +471,9 @@
     "priceMin": 549,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 27,
     "name": {
@@ -523,10 +497,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
-      "zh": "清爽果汁，富含维生素，适合随时饮用。",
-      "id": "Jus buah segar, kaya vitamin, cocok untuk segarkan dahaga.",
-      "pt": "Sumo de fruta refrescante, rico em vitaminas.",
-      "tet": "Sumu ai-han fresu, ho vitamina barak, diak bedik."
+      "zh": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+      "id": "Refreshing fruit juice, packed with vitamins and great for staying hydrated.",
+      "pt": "Refreshing fruit juice, packed with vitamins and great for staying hydrated."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/juice-thumb.webp",
     "images": [
@@ -535,10 +508,9 @@
     "priceMin": 399,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 50,
     "name": {
@@ -562,10 +534,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
-      "zh": "营养丰富的猕猴桃，适合零食或热带风味。",
-      "id": "Kiwi kaya nutrisi, cocok untuk camilan atau tambahan rasa tropis.",
-      "pt": "Kiwi rico em nutrientes, perfeito para lanches.",
-      "tet": "Kiwi ho nutrisaun barak, diak ba hahan ka kozina tropikal."
+      "zh": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+      "id": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes.",
+      "pt": "Nutrient-rich kiwi, perfect for snacking or adding a tropical twist to your dishes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/kiwi-thumb.webp",
     "images": [
@@ -575,9 +546,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 99,
     "name": {
@@ -601,10 +571,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
-      "zh": "酸爽柠檬，适合烹饪、烘焙或制作饮品。",
-      "id": "Lemon segar dan asam, serbaguna untuk memasak atau minuman.",
-      "pt": "Limões zestosos, versáteis para culinária ou bebidas.",
-      "tet": "Lemu fresu no asam, diak ba kozina ka hamosu bedik."
+      "zh": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+      "id": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages.",
+      "pt": "Zesty and tangy lemons, versatile for cooking, baking, or making refreshing beverages."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/lemon-thumb.webp",
     "images": [
@@ -614,9 +583,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 31,
     "name": {
@@ -640,10 +608,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
-      "zh": "新鲜营养牛奶，多种食谱的常备食材。",
-      "id": "Susu segar dan bergizi, bahan utama untuk berbagai resep.",
-      "pt": "Leite fresco e nutritivo, essencial para várias receitas.",
-      "tet": "Susu fresu ho nutrisaun, hahan importante ba kozina oioin."
+      "zh": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+      "id": "Fresh and nutritious milk, a staple for various recipes and daily consumption.",
+      "pt": "Fresh and nutritious milk, a staple for various recipes and daily consumption."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/milk-thumb.webp",
     "images": [
@@ -652,10 +619,9 @@
     "priceMin": 349,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 27,
     "name": {
@@ -679,10 +645,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
-      "zh": "甜美多汁的桑葚，适合零食或烘焙。",
-      "id": "Murbai manis dan segar, cocok untuk camilan atau tambahan hidangan.",
-      "pt": "Amoras doces e suculentas, ótimas para lanches.",
-      "tet": "Amora midar no fresu, diak ba hahan ka sobremesa."
+      "zh": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+      "id": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals.",
+      "pt": "Sweet and juicy mulberries, perfect for snacking or adding to desserts and cereals."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/mulberry-thumb.webp",
     "images": [
@@ -692,9 +657,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 99,
     "name": {
@@ -718,10 +682,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
-      "zh": "雀巢优质咖啡，多种烘焙度可选。",
-      "id": "Kopi Nescafe berkualitas dengan berbagai varian roasting.",
-      "pt": "Café Nescafe de qualidade, disponível em várias misturas.",
-      "tet": "Kafe Neskafe kualidade diak, iha roasting oioin atu hili."
+      "zh": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+      "id": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup.",
+      "pt": "Quality coffee from Nescafe, available in various blends for a rich and satisfying cup."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/nescafe-coffee-thumb.webp",
     "images": [
@@ -730,10 +693,9 @@
     "priceMin": 799,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 57,
     "name": {
@@ -757,10 +719,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
-      "zh": "多用途土豆，适合烤、煮、捣泥等多种烹饪。",
-      "id": "Kentang serbaguna, cocok untuk dipanggang, direbus, atau dihaluskan.",
-      "pt": "Batatas versáteis, ótimas para assar, cozer ou puré.",
-      "tet": "Batata serbaguna, diak ba suli, tee ka halo puré."
+      "zh": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+      "id": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish.",
+      "pt": "Versatile and starchy potatoes, great for roasting, mashing, or as a side dish."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/potatoes-thumb.webp",
     "images": [
@@ -770,9 +731,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 13,
     "name": {
@@ -796,10 +756,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
-      "zh": "富含营养的蛋白粉，适合补充日常蛋白质需求。",
-      "id": "Bubuk protein bergizi, ideal untuk melengkapi kebutuhan protein harian.",
-      "pt": "Pó de proteína nutritivo, ideal para suplementação.",
-      "tet": "Fuin proteina ho nutrisaun barak, diak ba proteina lor-loron."
+      "zh": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+      "id": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins.",
+      "pt": "Nutrient-packed protein powder, ideal for supplementing your diet with essential proteins."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/protein-powder-thumb.webp",
     "images": [
@@ -808,10 +767,9 @@
     "priceMin": 1999,
     "unit": {
       "en": "pack",
-      "zh": "罐",
-      "id": "toples",
-      "pt": "pote",
-      "tet": "toples"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 80,
     "name": {
@@ -835,10 +793,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
-      "zh": "风味红葱头，为料理增添层次与香气。",
-      "id": "Bawang merah beraroma, menambah kedalaman rasa pada masakan.",
-      "pt": "Cebolas vermelhas aromáticas, perfeitas para dar sabor.",
-      "tet": "Luan mean ho aroma diak, hamosu rasa manas iha kozina."
+      "zh": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+      "id": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes.",
+      "pt": "Flavorful and aromatic red onions, perfect for adding depth to your savory dishes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/red-onions-thumb.webp",
     "images": [
@@ -848,9 +805,8 @@
     "unit": {
       "en": "pack",
       "zh": "包",
-      "id": "pak",
-      "pt": "pacote",
-      "tet": "pakote"
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 82,
     "name": {
@@ -874,10 +830,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
-      "zh": "优质大米，多种料理的主食之选。",
-      "id": "Beras berkualitas, makanan pokok untuk berbagai masakan.",
-      "pt": "Arroz de qualidade, alimento básico para várias cozinhas.",
-      "tet": "Holas kualidade diak, hahan boot ba kozina oioin."
+      "zh": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+      "id": "High-quality rice, a staple for various cuisines and a versatile base for many dishes.",
+      "pt": "High-quality rice, a staple for various cuisines and a versatile base for many dishes."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/rice-thumb.webp",
     "images": [
@@ -886,10 +841,9 @@
     "priceMin": 599,
     "unit": {
       "en": "pack",
-      "zh": "袋",
-      "id": "karung",
-      "pt": "saco",
-      "tet": "saku"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 59,
     "name": {
@@ -913,10 +867,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
-      "zh": "各种口味软饮料，适合清凉解渴。",
-      "id": "Minuman ringan dengan berbagai rasa, cocok untuk menyegarkan.",
-      "pt": "Refrigerantes em vários sabores, perfeitos para refrescar.",
-      "tet": "Bedik faris ho rasa oioin, diak ba hasa'e luan."
+      "zh": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+      "id": "Assorted soft drinks in various flavors, perfect for refreshing beverages.",
+      "pt": "Assorted soft drinks in various flavors, perfect for refreshing beverages."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/soft-drinks-thumb.webp",
     "images": [
@@ -925,10 +878,9 @@
     "priceMin": 199,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 53,
     "name": {
@@ -952,10 +904,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
-      "zh": "甜美多汁的草莓，适合零食、甜点或烘焙。",
-      "id": "Stroberi manis dan segar, cocok untuk camilan atau hidangan penutup.",
-      "pt": "Morangos doces e suculentos, ótimos para sobremesas.",
-      "tet": "Mora midar no fresu, diak ba hahan ka sobremesa."
+      "zh": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+      "id": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies.",
+      "pt": "Sweet and succulent strawberries, great for snacking, desserts, or blending into smoothies."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/strawberry-thumb.webp",
     "images": [
@@ -964,10 +915,9 @@
     "priceMin": 399,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 46,
     "name": {
@@ -991,10 +941,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
-      "zh": "方便纸巾盒，柔软纸巾，日常使用。",
-      "id": "Kotak tisu praktis dengan tisu lembut untuk penggunaan harian.",
-      "pt": "Caixa de lenços prática, com lenços suaves para uso diário.",
-      "tet": "Surat tisu prakatiku, tisu mamuk ba uza lor-loron."
+      "zh": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+      "id": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues.",
+      "pt": "Convenient tissue paper box for everyday use, providing soft and absorbent tissues."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/tissue-paper-box-thumb.webp",
     "images": [
@@ -1004,10 +953,9 @@
     "priceMin": 249,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 86,
     "name": {
@@ -1031,10 +979,9 @@
     "categorySortOrder": 1,
     "description": {
       "en": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
-      "zh": "纯净矿泉水，保持水分补充的必需品。",
-      "id": "Air mineral murni, penting untuk menjaga hidrasi tubuh.",
-      "pt": "Água mineral pura, essencial para manter-se hidratado.",
-      "tet": "Bee móin moos, importante atu horon naran lor-loron."
+      "zh": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+      "id": "Pure and refreshing bottled water, essential for staying hydrated throughout the day.",
+      "pt": "Pure and refreshing bottled water, essential for staying hydrated throughout the day."
     },
     "mainImage": "http://localhost:9000/meimart/products/groceries/water-thumb.webp",
     "images": [
@@ -1043,10 +990,9 @@
     "priceMin": 99,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 53,
     "name": {
@@ -1070,10 +1016,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
-      "zh": "Essence 睫毛膏，能打造浓密纤长的睫毛效果。",
-      "id": "Maskara Essence yang populer untuk bulu mata tebal dan panjang.",
-      "pt": "Máscara Essence popular para cílios volumosos e alongados.",
-      "tet": "Maskara Essence populár ba bulu mata boot no naruk."
+      "zh": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+      "id": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+      "pt": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/essence-mascara-lash-princess-thumb.webp",
     "images": [
@@ -1082,10 +1027,9 @@
     "priceMin": 999,
     "unit": {
       "en": "pack",
-      "zh": "支",
-      "id": "batang",
-      "pt": "tubo",
-      "tet": "tubo"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 99,
     "name": {
@@ -1109,10 +1053,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
-      "zh": "带镜眼影盘，多种颜色可选，适合日常或精致妆容。",
-      "id": "Palette bayangan dengan cermin, beragam warna untuk makeup harian.",
-      "pt": "Paleta de sombras com espelho, variadas cores para looks diários.",
-      "tet": "Paleta ain-matin ho kor oioin, diak ba dekorasaun lor-loron."
+      "zh": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+      "id": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application.",
+      "pt": "The Eyeshadow Palette with Mirror offers a versatile range of eyeshadow shades for creating stunning eye looks. With a built-in mirror, it's convenient for on-the-go makeup application."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/eyeshadow-palette-with-mirror-thumb.webp",
     "images": [
@@ -1121,10 +1064,9 @@
     "priceMin": 1999,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 34,
     "name": {
@@ -1148,10 +1090,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
-      "zh": "细腻定妆粉饼，控油持久，便携装。",
-      "id": "Pact halus untuk menahan minyak dan tahan lama, ukuran travel.",
-      "pt": "Pó compacto fino, controla oleosidade e dura muito tempo.",
-      "tet": "Fuin powdér fino atu tama dekorasaun no taka ramen."
+      "zh": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+      "id": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish.",
+      "pt": "The Powder Canister is a finely milled setting powder designed to set makeup and control shine. With a lightweight and translucent formula, it provides a smooth and matte finish."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/powder-canister-thumb.webp",
     "images": [
@@ -1160,10 +1101,9 @@
     "priceMin": 1499,
     "unit": {
       "en": "pack",
-      "zh": "盒",
-      "id": "kotak",
-      "pt": "caixa",
-      "tet": "kaxa"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 89,
     "name": {
@@ -1187,10 +1127,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
-      "zh": "经典红色口红，为唇部增添亮丽色彩。",
-      "id": "Lipstik merah klasik untuk tampilan bibir yang menonjol.",
-      "pt": "Batom vermelho clássico e ousado para lábios vibrantes.",
-      "tet": "Lipstik mean klásiku, hamosu kor nakar ba bibin."
+      "zh": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+      "id": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish.",
+      "pt": "The Red Lipstick is a classic and bold choice for adding a pop of color to your lips. With a creamy and pigmented formula, it provides a vibrant and long-lasting finish."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/red-lipstick-thumb.webp",
     "images": [
@@ -1199,10 +1138,9 @@
     "priceMin": 1299,
     "unit": {
       "en": "pack",
-      "zh": "支",
-      "id": "batang",
-      "pt": "tubo",
-      "tet": "tubo"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 91,
     "name": {
@@ -1226,10 +1164,9 @@
     "categorySortOrder": 2,
     "description": {
       "en": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
-      "zh": "浓郁光泽的红色指甲油，色彩持久鲜艳。",
-      "id": "Cat kuku merah dengan kilau kaya dan warna tahan lama.",
-      "pt": "Esmalte vermelho com brilho rico e cor duradoura.",
-      "tet": "Farós mean ho kilat boot, kor toma lorak."
+      "zh": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+      "id": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home.",
+      "pt": "The Red Nail Polish offers a rich and glossy red hue for vibrant and polished nails. With a quick-drying formula, it provides a salon-quality finish at home."
     },
     "mainImage": "http://localhost:9000/meimart/products/beauty/red-nail-polish-thumb.webp",
     "images": [
@@ -1238,10 +1175,9 @@
     "priceMin": 899,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 79,
     "name": {
@@ -1265,10 +1201,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
-      "zh": "Attitude 天然温和洗手液，滋养不干燥。",
-      "id": "Sabun tangan Attitude yang alami dan melembutkan tangan.",
-      "pt": "Sabão de mãos Attitude natural e nutritivo.",
-      "tet": "Sabun fon naturál Attitude, mamar no nutre liman."
+      "zh": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+      "id": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft.",
+      "pt": "Attitude Super Leaves Hand Soap is a natural and nourishing hand soap enriched with the goodness of super leaves. It cleanses and moisturizes your hands, leaving them feeling fresh and soft."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/attitude-super-leaves-hand-soap-thumb.webp",
     "images": [
@@ -1279,10 +1214,9 @@
     "priceMin": 899,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 94,
     "name": {
@@ -1306,10 +1240,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
-      "zh": "Olay 含乳木果油的奢华滋润沐浴露，深层保湿。",
-      "id": "Sabun mandi Olay dengan shea butter untuk melembapkan kulit.",
-      "pt": "Gel de banho Olay com manteiga de karité para hidratação profunda.",
-      "tet": "Sabun-fon Olay ho manteiga karité, mamar kulit kleur."
+      "zh": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+      "id": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin.",
+      "pt": "Olay Ultra Moisture Shea Butter Body Wash is a luxurious body wash that hydrates and nourishes your skin with the moisturizing power of shea butter. Enjoy a rich lather and silky-smooth skin."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/olay-ultra-moisture-shea-butter-body-wash-thumb.webp",
     "images": [
@@ -1320,10 +1253,9 @@
     "priceMin": 1299,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 34,
     "name": {
@@ -1347,10 +1279,9 @@
     "categorySortOrder": 3,
     "description": {
       "en": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
-      "zh": "凡士林男士专用面身乳，专为男性肌肤调配。",
-      "id": "Losion Vaseline Men khusus untuk wajah dan tubuh pria.",
-      "pt": "Loção Vaseline Men formulada para pelefa do rosto e corpo masculino.",
-      "tet": "Losion Vaseline ba mane, ba ain no oan mane nian."
+      "zh": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+      "id": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy.",
+      "pt": "Vaseline Men Body and Face Lotion is a specially formulated lotion designed to provide long-lasting moisture to men's skin. It absorbs quickly and helps keep the skin hydrated and healthy."
     },
     "mainImage": "http://localhost:9000/meimart/products/skin-care/vaseline-men-body-and-face-lotion-thumb.webp",
     "images": [
@@ -1361,10 +1292,9 @@
     "priceMin": 999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "garrafa",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 95,
     "name": {
@@ -1388,10 +1318,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
-      "zh": "Calvin Klein CK One 经典中性香水，清新柑橘调。",
-      "id": "Parfum unisex klasik CK One dengan aroma segar citrus.",
-      "pt": "Perfume unisex clássico CK One, aroma cítrico fresco.",
-      "tet": "Parfum CK One klásiku unisex, aroma sítirus fresu."
+      "zh": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+      "id": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear.",
+      "pt": "CK One by Calvin Klein is a classic unisex fragrance, known for its fresh and clean scent. It's a versatile fragrance suitable for everyday wear."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/calvin-klein-ck-one-thumb.webp",
     "images": [
@@ -1402,10 +1331,9 @@
     "priceMin": 4999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 29,
     "name": {
@@ -1429,10 +1357,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
-      "zh": "Chanel Coco Noir 优雅神秘香水，深邃东方调。",
-      "id": "Parfum Coco Noir Chanel yang elegan dan misterius.",
-      "pt": "Perfume Coco Noir Chanel, elegante e misterioso.",
-      "tet": "Parfum Coco Noir Chanel, eleganti no mistériozu."
+      "zh": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+      "id": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+      "pt": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/chanel-coco-noir-eau-de-thumb.webp",
     "images": [
@@ -1443,10 +1370,9 @@
     "priceMin": 12999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 58,
     "name": {
@@ -1470,10 +1396,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
-      "zh": "Dior J'adore 奢华花香调香水，优雅女性气质。",
-      "id": "Parfum J'adore Dior dengan aroma floral mewah.",
-      "pt": "Perfume J'adore Dior, floral luxuoso e elegante.",
-      "tet": "Parfum J'adore Dior, floral luxuozu no eleganti."
+      "zh": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+      "id": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication.",
+      "pt": "J'adore by Dior is a luxurious and floral fragrance, known for its blend of ylang-ylang, rose, and jasmine. It embodies femininity and sophistication."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/dior-jadore-thumb.webp",
     "images": [
@@ -1484,10 +1409,9 @@
     "priceMin": 8999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 98,
     "name": {
@@ -1511,10 +1435,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
-      "zh": "D&G Dolce Shine 鲜活果香调香水，明亮活泼。",
-      "id": "Parfum Dolce Shine D&G dengan aroma buah segar dan cerah.",
-      "pt": "Perfume Dolce Shine D&G, aroma frutado vibrante.",
-      "tet": "Parfum Dolce Shine D&G, aroma fruta mateus no naruk."
+      "zh": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+      "id": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent.",
+      "pt": "Dolce Shine by Dolce & Gabbana is a vibrant and fruity fragrance, featuring notes of mango, jasmine, and blonde woods. It's a joyful and youthful scent."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/dolce-shine-eau-de-thumb.webp",
     "images": [
@@ -1525,10 +1448,9 @@
     "priceMin": 6999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 4,
     "name": {
@@ -1552,10 +1474,9 @@
     "categorySortOrder": 4,
     "description": {
       "en": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
-      "zh": "Gucci Bloom 花香调香水，捕捉绽放之美。",
-      "id": "Parfum Gucci Bloom dengan aroma floral yang memikat.",
-      "pt": "Perfume Gucci Bloom, floral e cativante.",
-      "tet": "Parfum Gucci Bloom, floral no faín, aroma modernu."
+      "zh": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+      "id": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent.",
+      "pt": "Gucci Bloom by Gucci is a floral and captivating fragrance, with notes of tuberose, jasmine, and Rangoon creeper. It's a modern and romantic scent."
     },
     "mainImage": "http://localhost:9000/meimart/products/fragrances/gucci-bloom-eau-de-thumb.webp",
     "images": [
@@ -1566,10 +1487,9 @@
     "priceMin": 7999,
     "unit": {
       "en": "pack",
-      "zh": "瓶",
-      "id": "botol",
-      "pt": "frasco",
-      "tet": "fasu"
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
     },
     "stock": 91,
     "name": {
@@ -1578,6 +1498,1116 @@
       "id": "Gucci Bloom",
       "pt": "Gucci Bloom",
       "tet": "Parfum Gucci Bloom"
+    }
+  },
+  {
+    "title": "Bamboo Spatula",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes.",
+      "zh": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes.",
+      "id": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes.",
+      "pt": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/bamboo-spatula-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/bamboo-spatula-1.webp"
+    ],
+    "priceMin": 799,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 37,
+    "name": {
+      "en": "Bamboo Spatula",
+      "zh": "竹铲",
+      "id": "Sutil Bambu",
+      "pt": "Espátula de Bambu",
+      "tet": "Spatula Bambu"
+    }
+  },
+  {
+    "title": "Black Aluminium Cup",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection.",
+      "zh": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection.",
+      "id": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection.",
+      "pt": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/black-aluminium-cup-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/black-aluminium-cup-1.webp"
+    ],
+    "priceMin": 599,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 75,
+    "name": {
+      "en": "Black Aluminium Cup",
+      "zh": "黑铝杯",
+      "id": "Kopu Aluminiu",
+      "pt": "Copo de Alumínio Preto",
+      "tet": "Cawan Aluminiu Hitam"
+    }
+  },
+  {
+    "title": "Black Whisk",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool.",
+      "zh": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool.",
+      "id": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool.",
+      "pt": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/black-whisk-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/black-whisk-1.webp"
+    ],
+    "priceMin": 999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 73,
+    "name": {
+      "en": "Black Whisk",
+      "zh": "黑打蛋器",
+      "id": "Batedor Meti",
+      "pt": "Batedor Preto",
+      "tet": "Pengocok Hitam"
+    }
+  },
+  {
+    "title": "Boxed Blender",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance.",
+      "zh": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance.",
+      "id": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance.",
+      "pt": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/boxed-blender-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/boxed-blender-1.webp"
+    ],
+    "priceMin": 3999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 9,
+    "name": {
+      "en": "Boxed Blender",
+      "zh": "盒装搅拌机",
+      "id": "Liquidificador Kai Box",
+      "pt": "Liquidificador em Caixa",
+      "tet": "Blender Kotak"
+    }
+  },
+  {
+    "title": "Carbon Steel Wok",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals.",
+      "zh": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals.",
+      "id": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals.",
+      "pt": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/carbon-steel-wok-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/carbon-steel-wok-1.webp"
+    ],
+    "priceMin": 2999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 40,
+    "name": {
+      "en": "Carbon Steel Wok",
+      "zh": "碳钢炒锅",
+      "id": "Wus Aihan Asu",
+      "pt": "Panela de Aço Carbono",
+      "tet": "Wok Baja Karbon"
+    }
+  },
+  {
+    "title": "Chopping Board",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Chopping Board is an essential kitchen accessory for food preparation. Made from durable material, it provides a safe and hygienic surface for cutting and chopping.",
+      "zh": "The Chopping Board is an essential kitchen accessory for food preparation. Made from durable material, it provides a safe and hygienic surface for cutting and chopping.",
+      "id": "The Chopping Board is an essential kitchen accessory for food preparation. Made from durable material, it provides a safe and hygienic surface for cutting and chopping.",
+      "pt": "The Chopping Board is an essential kitchen accessory for food preparation. Made from durable material, it provides a safe and hygienic surface for cutting and chopping."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/chopping-board-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/chopping-board-1.webp"
+    ],
+    "priceMin": 1299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 14,
+    "name": {
+      "en": "Chopping Board",
+      "zh": "砧板",
+      "id": "Tábua Tata",
+      "pt": "Tábua de Corte",
+      "tet": "Talenan"
+    }
+  },
+  {
+    "title": "Citrus Squeezer Yellow",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Citrus Squeezer in Yellow is a handy tool for extracting juice from citrus fruits. Its vibrant color adds a cheerful touch to your kitchen gadgets.",
+      "zh": "The Citrus Squeezer in Yellow is a handy tool for extracting juice from citrus fruits. Its vibrant color adds a cheerful touch to your kitchen gadgets.",
+      "id": "The Citrus Squeezer in Yellow is a handy tool for extracting juice from citrus fruits. Its vibrant color adds a cheerful touch to your kitchen gadgets.",
+      "pt": "The Citrus Squeezer in Yellow is a handy tool for extracting juice from citrus fruits. Its vibrant color adds a cheerful touch to your kitchen gadgets."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/citrus-squeezer-yellow-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/citrus-squeezer-yellow-1.webp"
+    ],
+    "priceMin": 899,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 22,
+    "name": {
+      "en": "Citrus Squeezer Yellow",
+      "zh": "黄色柑橘榨汁器",
+      "id": "Peres Naran Amarelu",
+      "pt": "Espremedor de Citrinos Amarelo",
+      "tet": "Peras Jeruk Kuning"
+    }
+  },
+  {
+    "title": "Egg Slicer",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Egg Slicer is a convenient tool for slicing boiled eggs evenly. It's perfect for salads, sandwiches, and other dishes where sliced eggs are desired.",
+      "zh": "The Egg Slicer is a convenient tool for slicing boiled eggs evenly. It's perfect for salads, sandwiches, and other dishes where sliced eggs are desired.",
+      "id": "The Egg Slicer is a convenient tool for slicing boiled eggs evenly. It's perfect for salads, sandwiches, and other dishes where sliced eggs are desired.",
+      "pt": "The Egg Slicer is a convenient tool for slicing boiled eggs evenly. It's perfect for salads, sandwiches, and other dishes where sliced eggs are desired."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/egg-slicer-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/egg-slicer-1.webp"
+    ],
+    "priceMin": 699,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 40,
+    "name": {
+      "en": "Egg Slicer",
+      "zh": "切蛋器",
+      "id": "Tudik Fatintin",
+      "pt": "Cortador de Ovos",
+      "tet": "Pemotong Telur"
+    }
+  },
+  {
+    "title": "Electric Stove",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Electric Stove provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs.",
+      "zh": "The Electric Stove provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs.",
+      "id": "The Electric Stove provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs.",
+      "pt": "The Electric Stove provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/electric-stove-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/electric-stove-1.webp"
+    ],
+    "priceMin": 4999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 21,
+    "name": {
+      "en": "Electric Stove",
+      "zh": "电炉",
+      "id": "Fogão Matenek",
+      "pt": "Fogão Elétrico",
+      "tet": "Kompor Listrik"
+    }
+  },
+  {
+    "title": "Fine Mesh Strainer",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Fine Mesh Strainer is a versatile tool for straining liquids and sifting dry ingredients. Its fine mesh ensures efficient filtering for smooth cooking and baking.",
+      "zh": "The Fine Mesh Strainer is a versatile tool for straining liquids and sifting dry ingredients. Its fine mesh ensures efficient filtering for smooth cooking and baking.",
+      "id": "The Fine Mesh Strainer is a versatile tool for straining liquids and sifting dry ingredients. Its fine mesh ensures efficient filtering for smooth cooking and baking.",
+      "pt": "The Fine Mesh Strainer is a versatile tool for straining liquids and sifting dry ingredients. Its fine mesh ensures efficient filtering for smooth cooking and baking."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/fine-mesh-strainer-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/fine-mesh-strainer-1.webp"
+    ],
+    "priceMin": 999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 85,
+    "name": {
+      "en": "Fine Mesh Strainer",
+      "zh": "细网滤网",
+      "id": "Filtro Rejinha Malu",
+      "pt": "Coador de Malha Fina",
+      "tet": "Saringan Halus"
+    }
+  },
+  {
+    "title": "Fork",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Fork is a classic utensil for various dining and serving purposes. Its durable and ergonomic design makes it a reliable choice for everyday use.",
+      "zh": "The Fork is a classic utensil for various dining and serving purposes. Its durable and ergonomic design makes it a reliable choice for everyday use.",
+      "id": "The Fork is a classic utensil for various dining and serving purposes. Its durable and ergonomic design makes it a reliable choice for everyday use.",
+      "pt": "The Fork is a classic utensil for various dining and serving purposes. Its durable and ergonomic design makes it a reliable choice for everyday use."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/fork-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/fork-1.webp"
+    ],
+    "priceMin": 399,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 7,
+    "name": {
+      "en": "Fork",
+      "zh": "叉子",
+      "id": "Garfo",
+      "pt": "Garfo",
+      "tet": "Garpu"
+    }
+  },
+  {
+    "title": "Glass",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Glass is a versatile and elegant drinking vessel suitable for a variety of beverages. Its clear design allows you to enjoy the colors and textures of your drinks.",
+      "zh": "The Glass is a versatile and elegant drinking vessel suitable for a variety of beverages. Its clear design allows you to enjoy the colors and textures of your drinks.",
+      "id": "The Glass is a versatile and elegant drinking vessel suitable for a variety of beverages. Its clear design allows you to enjoy the colors and textures of your drinks.",
+      "pt": "The Glass is a versatile and elegant drinking vessel suitable for a variety of beverages. Its clear design allows you to enjoy the colors and textures of your drinks."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/glass-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/glass-1.webp"
+    ],
+    "priceMin": 499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 46,
+    "name": {
+      "en": "Glass",
+      "zh": "玻璃杯",
+      "id": "Kopu Vidru",
+      "pt": "Copo de Vidro",
+      "tet": "Gelas"
+    }
+  },
+  {
+    "title": "Grater Black",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Grater in Black is a handy kitchen tool for grating cheese, vegetables, and more. Its sleek design and sharp blades make food preparation efficient and easy.",
+      "zh": "The Grater in Black is a handy kitchen tool for grating cheese, vegetables, and more. Its sleek design and sharp blades make food preparation efficient and easy.",
+      "id": "The Grater in Black is a handy kitchen tool for grating cheese, vegetables, and more. Its sleek design and sharp blades make food preparation efficient and easy.",
+      "pt": "The Grater in Black is a handy kitchen tool for grating cheese, vegetables, and more. Its sleek design and sharp blades make food preparation efficient and easy."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/grater-black-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/grater-black-1.webp"
+    ],
+    "priceMin": 1099,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 84,
+    "name": {
+      "en": "Grater Black",
+      "zh": "黑色刨丝器",
+      "id": "Ralador Meti",
+      "pt": "Ralador Preto",
+      "tet": "Parutan Hitam"
+    }
+  },
+  {
+    "title": "Hand Blender",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Hand Blender is a versatile kitchen appliance for blending, pureeing, and mixing. Its compact design and powerful motor make it a convenient tool for various recipes.",
+      "zh": "The Hand Blender is a versatile kitchen appliance for blending, pureeing, and mixing. Its compact design and powerful motor make it a convenient tool for various recipes.",
+      "id": "The Hand Blender is a versatile kitchen appliance for blending, pureeing, and mixing. Its compact design and powerful motor make it a convenient tool for various recipes.",
+      "pt": "The Hand Blender is a versatile kitchen appliance for blending, pureeing, and mixing. Its compact design and powerful motor make it a convenient tool for various recipes."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/hand-blender-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/hand-blender-1.webp"
+    ],
+    "priceMin": 3499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 84,
+    "name": {
+      "en": "Hand Blender",
+      "zh": "手持搅拌机",
+      "id": "Misturador Liman",
+      "pt": "Misturador de Mão",
+      "tet": "Blender Tangan"
+    }
+  },
+  {
+    "title": "Ice Cube Tray",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Ice Cube Tray is a practical accessory for making ice cubes in various shapes. Perfect for keeping your drinks cool and adding a fun element to your beverages.",
+      "zh": "The Ice Cube Tray is a practical accessory for making ice cubes in various shapes. Perfect for keeping your drinks cool and adding a fun element to your beverages.",
+      "id": "The Ice Cube Tray is a practical accessory for making ice cubes in various shapes. Perfect for keeping your drinks cool and adding a fun element to your beverages.",
+      "pt": "The Ice Cube Tray is a practical accessory for making ice cubes in various shapes. Perfect for keeping your drinks cool and adding a fun element to your beverages."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/ice-cube-tray-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/ice-cube-tray-1.webp"
+    ],
+    "priceMin": 599,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 13,
+    "name": {
+      "en": "Ice Cube Tray",
+      "zh": "冰块模具",
+      "id": "Forma Gelu",
+      "pt": "Forma de Gelo",
+      "tet": "Cetokan Es"
+    }
+  },
+  {
+    "title": "Kitchen Sieve",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Kitchen Sieve is a versatile tool for sifting and straining dry and wet ingredients. Its fine mesh design ensures smooth results in your cooking and baking.",
+      "zh": "The Kitchen Sieve is a versatile tool for sifting and straining dry and wet ingredients. Its fine mesh design ensures smooth results in your cooking and baking.",
+      "id": "The Kitchen Sieve is a versatile tool for sifting and straining dry and wet ingredients. Its fine mesh design ensures smooth results in your cooking and baking.",
+      "pt": "The Kitchen Sieve is a versatile tool for sifting and straining dry and wet ingredients. Its fine mesh design ensures smooth results in your cooking and baking."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/kitchen-sieve-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/kitchen-sieve-1.webp"
+    ],
+    "priceMin": 799,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 68,
+    "name": {
+      "en": "Kitchen Sieve",
+      "zh": "厨房筛",
+      "id": "Peneira Kuzinha",
+      "pt": "Peneira de Cozinha",
+      "tet": "Ayak Dapur"
+    }
+  },
+  {
+    "title": "Knife",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Knife is an essential kitchen tool for chopping, slicing, and dicing. Its sharp blade and ergonomic handle make it a reliable choice for food preparation.",
+      "zh": "The Knife is an essential kitchen tool for chopping, slicing, and dicing. Its sharp blade and ergonomic handle make it a reliable choice for food preparation.",
+      "id": "The Knife is an essential kitchen tool for chopping, slicing, and dicing. Its sharp blade and ergonomic handle make it a reliable choice for food preparation.",
+      "pt": "The Knife is an essential kitchen tool for chopping, slicing, and dicing. Its sharp blade and ergonomic handle make it a reliable choice for food preparation."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/knife-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/knife-1.webp"
+    ],
+    "priceMin": 1499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 7,
+    "name": {
+      "en": "Knife",
+      "zh": "刀",
+      "id": "Naan",
+      "pt": "Faca",
+      "tet": "Pisau"
+    }
+  },
+  {
+    "title": "Lunch Box",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Lunch Box is a convenient and portable container for packing and carrying your meals. With compartments for different foods, it's perfect for on-the-go dining.",
+      "zh": "The Lunch Box is a convenient and portable container for packing and carrying your meals. With compartments for different foods, it's perfect for on-the-go dining.",
+      "id": "The Lunch Box is a convenient and portable container for packing and carrying your meals. With compartments for different foods, it's perfect for on-the-go dining.",
+      "pt": "The Lunch Box is a convenient and portable container for packing and carrying your meals. With compartments for different foods, it's perfect for on-the-go dining."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/lunch-box-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/lunch-box-1.webp"
+    ],
+    "priceMin": 1299,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 94,
+    "name": {
+      "en": "Lunch Box",
+      "zh": "午餐盒",
+      "id": "Kaixa Almoxu",
+      "pt": "Caixa de Almoço",
+      "tet": "Kotak Makan"
+    }
+  },
+  {
+    "title": "Microwave Oven",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Microwave Oven is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups.",
+      "zh": "The Microwave Oven is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups.",
+      "id": "The Microwave Oven is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups.",
+      "pt": "The Microwave Oven is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/microwave-oven-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/microwave-oven-1.webp"
+    ],
+    "priceMin": 8999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 59,
+    "name": {
+      "en": "Microwave Oven",
+      "zh": "微波炉",
+      "id": "Fornu Mikro-ondas",
+      "pt": "Forno Micro-ondas",
+      "tet": "Microwave"
+    }
+  },
+  {
+    "title": "Mug Tree Stand",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Mug Tree Stand is a stylish and space-saving solution for organizing your mugs. Keep your favorite mugs easily accessible and neatly displayed in your kitchen.",
+      "zh": "The Mug Tree Stand is a stylish and space-saving solution for organizing your mugs. Keep your favorite mugs easily accessible and neatly displayed in your kitchen.",
+      "id": "The Mug Tree Stand is a stylish and space-saving solution for organizing your mugs. Keep your favorite mugs easily accessible and neatly displayed in your kitchen.",
+      "pt": "The Mug Tree Stand is a stylish and space-saving solution for organizing your mugs. Keep your favorite mugs easily accessible and neatly displayed in your kitchen."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/mug-tree-stand-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/mug-tree-stand-1.webp"
+    ],
+    "priceMin": 1599,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 88,
+    "name": {
+      "en": "Mug Tree Stand",
+      "zh": "马克杯架",
+      "id": "Suporte Kopu",
+      "pt": "Suporte de Canecas",
+      "tet": "Rak Gelas"
+    }
+  },
+  {
+    "title": "Pan",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Pan is a versatile and essential cookware item for frying, sautéing, and cooking various dishes. Its non-stick coating ensures easy food release and cleanup.",
+      "zh": "The Pan is a versatile and essential cookware item for frying, sautéing, and cooking various dishes. Its non-stick coating ensures easy food release and cleanup.",
+      "id": "The Pan is a versatile and essential cookware item for frying, sautéing, and cooking various dishes. Its non-stick coating ensures easy food release and cleanup.",
+      "pt": "The Pan is a versatile and essential cookware item for frying, sautéing, and cooking various dishes. Its non-stick coating ensures easy food release and cleanup."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/pan-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/pan-1.webp"
+    ],
+    "priceMin": 2499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 90,
+    "name": {
+      "en": "Pan",
+      "zh": "平底锅",
+      "id": "Panela",
+      "pt": "Panela",
+      "tet": "Panci"
+    }
+  },
+  {
+    "title": "Plate",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Plate is a classic and essential dishware item for serving meals. Its durable and stylish design makes it suitable for everyday use or special occasions.",
+      "zh": "The Plate is a classic and essential dishware item for serving meals. Its durable and stylish design makes it suitable for everyday use or special occasions.",
+      "id": "The Plate is a classic and essential dishware item for serving meals. Its durable and stylish design makes it suitable for everyday use or special occasions.",
+      "pt": "The Plate is a classic and essential dishware item for serving meals. Its durable and stylish design makes it suitable for everyday use or special occasions."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/plate-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/plate-1.webp"
+    ],
+    "priceMin": 399,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 66,
+    "name": {
+      "en": "Plate",
+      "zh": "盘子",
+      "id": "Pratu",
+      "pt": "Prato",
+      "tet": "Piring"
+    }
+  },
+  {
+    "title": "Red Tongs",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Red Tongs are versatile kitchen tongs suitable for various cooking and serving tasks. Their vibrant color adds a pop of excitement to your kitchen utensils.",
+      "zh": "The Red Tongs are versatile kitchen tongs suitable for various cooking and serving tasks. Their vibrant color adds a pop of excitement to your kitchen utensils.",
+      "id": "The Red Tongs are versatile kitchen tongs suitable for various cooking and serving tasks. Their vibrant color adds a pop of excitement to your kitchen utensils.",
+      "pt": "The Red Tongs are versatile kitchen tongs suitable for various cooking and serving tasks. Their vibrant color adds a pop of excitement to your kitchen utensils."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/red-tongs-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/red-tongs-1.webp"
+    ],
+    "priceMin": 699,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 82,
+    "name": {
+      "en": "Red Tongs",
+      "zh": "红色夹子",
+      "id": "Pinças Amarelu",
+      "pt": "Pinças Vermelhas",
+      "tet": "Penjepit Merah"
+    }
+  },
+  {
+    "title": "Silver Pot With Glass Cap",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress.",
+      "zh": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress.",
+      "id": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress.",
+      "pt": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/silver-pot-with-glass-cap-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/silver-pot-with-glass-cap-1.webp"
+    ],
+    "priceMin": 3999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 40,
+    "name": {
+      "en": "Silver Pot With Glass Cap",
+      "zh": "玻璃盖银锅",
+      "id": "Panela Prata Kap Vidru",
+      "pt": "Panela Prata com Tampa de Vidro",
+      "tet": "Panci Perak Tutup Kaca"
+    }
+  },
+  {
+    "title": "Slotted Turner",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Slotted Turner is a kitchen utensil designed for flipping and turning food items. Its slotted design allows excess liquid to drain, making it ideal for frying and sautéing.",
+      "zh": "The Slotted Turner is a kitchen utensil designed for flipping and turning food items. Its slotted design allows excess liquid to drain, making it ideal for frying and sautéing.",
+      "id": "The Slotted Turner is a kitchen utensil designed for flipping and turning food items. Its slotted design allows excess liquid to drain, making it ideal for frying and sautéing.",
+      "pt": "The Slotted Turner is a kitchen utensil designed for flipping and turning food items. Its slotted design allows excess liquid to drain, making it ideal for frying and sautéing."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/slotted-turner-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/slotted-turner-1.webp"
+    ],
+    "priceMin": 899,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 88,
+    "name": {
+      "en": "Slotted Turner",
+      "zh": "漏铲",
+      "id": "Espátula Fendiu",
+      "pt": "Espátula Fendida",
+      "tet": "Sutil Berlubang"
+    }
+  },
+  {
+    "title": "Spice Rack",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Spice Rack is a convenient organizer for your spices and seasonings. Keep your kitchen essentials within reach and neatly arranged with this stylish spice rack.",
+      "zh": "The Spice Rack is a convenient organizer for your spices and seasonings. Keep your kitchen essentials within reach and neatly arranged with this stylish spice rack.",
+      "id": "The Spice Rack is a convenient organizer for your spices and seasonings. Keep your kitchen essentials within reach and neatly arranged with this stylish spice rack.",
+      "pt": "The Spice Rack is a convenient organizer for your spices and seasonings. Keep your kitchen essentials within reach and neatly arranged with this stylish spice rack."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/spice-rack-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/spice-rack-1.webp"
+    ],
+    "priceMin": 1999,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 79,
+    "name": {
+      "en": "Spice Rack",
+      "zh": "调料架",
+      "id": "Raka Especiaria",
+      "pt": "Suporte de Especiarias",
+      "tet": "Rak Bumbu"
+    }
+  },
+  {
+    "title": "Spoon",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Spoon is a versatile kitchen utensil for stirring, serving, and tasting. Its ergonomic design and durable construction make it an essential tool for every kitchen.",
+      "zh": "The Spoon is a versatile kitchen utensil for stirring, serving, and tasting. Its ergonomic design and durable construction make it an essential tool for every kitchen.",
+      "id": "The Spoon is a versatile kitchen utensil for stirring, serving, and tasting. Its ergonomic design and durable construction make it an essential tool for every kitchen.",
+      "pt": "The Spoon is a versatile kitchen utensil for stirring, serving, and tasting. Its ergonomic design and durable construction make it an essential tool for every kitchen."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/spoon-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/spoon-1.webp"
+    ],
+    "priceMin": 499,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 59,
+    "name": {
+      "en": "Spoon",
+      "zh": "勺子",
+      "id": "Kolher",
+      "pt": "Colher",
+      "tet": "Sendok"
+    }
+  },
+  {
+    "title": "Tray",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Tray is a functional and decorative item for serving snacks, appetizers, or drinks. Its stylish design makes it a versatile accessory for entertaining guests.",
+      "zh": "The Tray is a functional and decorative item for serving snacks, appetizers, or drinks. Its stylish design makes it a versatile accessory for entertaining guests.",
+      "id": "The Tray is a functional and decorative item for serving snacks, appetizers, or drinks. Its stylish design makes it a versatile accessory for entertaining guests.",
+      "pt": "The Tray is a functional and decorative item for serving snacks, appetizers, or drinks. Its stylish design makes it a versatile accessory for entertaining guests."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/tray-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/tray-1.webp"
+    ],
+    "priceMin": 1699,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 71,
+    "name": {
+      "en": "Tray",
+      "zh": "托盘",
+      "id": "Bandeja",
+      "pt": "Bandeja",
+      "tet": "Nampan"
+    }
+  },
+  {
+    "title": "Wooden Rolling Pin",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Wooden Rolling Pin is a classic kitchen tool for rolling out dough for baking. Its smooth surface and sturdy handles make it easy to achieve uniform thickness.",
+      "zh": "The Wooden Rolling Pin is a classic kitchen tool for rolling out dough for baking. Its smooth surface and sturdy handles make it easy to achieve uniform thickness.",
+      "id": "The Wooden Rolling Pin is a classic kitchen tool for rolling out dough for baking. Its smooth surface and sturdy handles make it easy to achieve uniform thickness.",
+      "pt": "The Wooden Rolling Pin is a classic kitchen tool for rolling out dough for baking. Its smooth surface and sturdy handles make it easy to achieve uniform thickness."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/wooden-rolling-pin-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/wooden-rolling-pin-1.webp"
+    ],
+    "priceMin": 1199,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 80,
+    "name": {
+      "en": "Wooden Rolling Pin",
+      "zh": "木擀面杖",
+      "id": "Rolo de Ai",
+      "pt": "Rolo de Madeira",
+      "tet": "Penggulung Kayu"
+    }
+  },
+  {
+    "title": "Yellow Peeler",
+    "category": "kitchen-accessories",
+    "categoryName": {
+      "en": "Kitchen & Dining",
+      "zh": "厨房餐饮用品",
+      "id": "Kitchen & Dining",
+      "pt": "Kitchen & Dining"
+    },
+    "categoryIcon": "🍳",
+    "categorySortOrder": 5,
+    "description": {
+      "en": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
+      "zh": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
+      "id": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
+      "pt": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets."
+    },
+    "mainImage": "http://localhost:9000/meimart/products/kitchen-accessories/yellow-peeler-thumb.webp",
+    "images": [
+      "http://localhost:9000/meimart/products/kitchen-accessories/yellow-peeler-1.webp"
+    ],
+    "priceMin": 599,
+    "unit": {
+      "en": "pack",
+      "zh": "包",
+      "id": "pack",
+      "pt": "pack"
+    },
+    "stock": 35,
+    "name": {
+      "en": "Yellow Peeler",
+      "zh": "黄色削皮器",
+      "id": "Descascador Amarelu",
+      "pt": "Descascador Amarelo",
+      "tet": "Pengupas Kuning"
     }
   }
 ]

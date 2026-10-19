@@ -579,5 +579,425 @@
       "fragrances/gucci-bloom-eau-de-3.webp"
     ],
     "slug": "gucci-bloom-eau-de"
+  },
+  {
+    "id": 48,
+    "title": "Bamboo Spatula",
+    "category": "kitchen-accessories",
+    "price": 7.99,
+    "description": "The Bamboo Spatula is a versatile kitchen tool made from eco-friendly bamboo. Ideal for flipping, stirring, and serving various dishes.",
+    "brand": "",
+    "stock": 37,
+    "thumbnail": "kitchen-accessories/bamboo-spatula-thumb.webp",
+    "images": [
+      "kitchen-accessories/bamboo-spatula-1.webp"
+    ],
+    "slug": "bamboo-spatula"
+  },
+  {
+    "id": 49,
+    "title": "Black Aluminium Cup",
+    "category": "kitchen-accessories",
+    "price": 5.99,
+    "description": "The Black Aluminium Cup is a stylish and durable cup suitable for both hot and cold beverages. Its sleek black design adds a modern touch to your drinkware collection.",
+    "brand": "",
+    "stock": 75,
+    "thumbnail": "kitchen-accessories/black-aluminium-cup-thumb.webp",
+    "images": [
+      "kitchen-accessories/black-aluminium-cup-1.webp"
+    ],
+    "slug": "black-aluminium-cup"
+  },
+  {
+    "id": 50,
+    "title": "Black Whisk",
+    "category": "kitchen-accessories",
+    "price": 9.99,
+    "description": "The Black Whisk is a kitchen essential for whisking and beating ingredients. Its ergonomic handle and sleek design make it a practical and stylish tool.",
+    "brand": "",
+    "stock": 73,
+    "thumbnail": "kitchen-accessories/black-whisk-thumb.webp",
+    "images": [
+      "kitchen-accessories/black-whisk-1.webp"
+    ],
+    "slug": "black-whisk"
+  },
+  {
+    "id": 51,
+    "title": "Boxed Blender",
+    "category": "kitchen-accessories",
+    "price": 39.99,
+    "description": "The Boxed Blender is a powerful and compact blender perfect for smoothies, shakes, and more. Its convenient design and multiple functions make it a versatile kitchen appliance.",
+    "brand": "",
+    "stock": 9,
+    "thumbnail": "kitchen-accessories/boxed-blender-thumb.webp",
+    "images": [
+      "kitchen-accessories/boxed-blender-1.webp"
+    ],
+    "slug": "boxed-blender"
+  },
+  {
+    "id": 52,
+    "title": "Carbon Steel Wok",
+    "category": "kitchen-accessories",
+    "price": 29.99,
+    "description": "The Carbon Steel Wok is a versatile cooking pan suitable for stir-frying, sautéing, and deep frying. Its sturdy construction ensures even heat distribution for delicious meals.",
+    "brand": "",
+    "stock": 40,
+    "thumbnail": "kitchen-accessories/carbon-steel-wok-thumb.webp",
+    "images": [
+      "kitchen-accessories/carbon-steel-wok-1.webp"
+    ],
+    "slug": "carbon-steel-wok"
+  },
+  {
+    "id": 53,
+    "title": "Chopping Board",
+    "category": "kitchen-accessories",
+    "price": 12.99,
+    "description": "The Chopping Board is an essential kitchen accessory for food preparation. Made from durable material, it provides a safe and hygienic surface for cutting and chopping.",
+    "brand": "",
+    "stock": 14,
+    "thumbnail": "kitchen-accessories/chopping-board-thumb.webp",
+    "images": [
+      "kitchen-accessories/chopping-board-1.webp"
+    ],
+    "slug": "chopping-board"
+  },
+  {
+    "id": 54,
+    "title": "Citrus Squeezer Yellow",
+    "category": "kitchen-accessories",
+    "price": 8.99,
+    "description": "The Citrus Squeezer in Yellow is a handy tool for extracting juice from citrus fruits. Its vibrant color adds a cheerful touch to your kitchen gadgets.",
+    "brand": "",
+    "stock": 22,
+    "thumbnail": "kitchen-accessories/citrus-squeezer-yellow-thumb.webp",
+    "images": [
+      "kitchen-accessories/citrus-squeezer-yellow-1.webp"
+    ],
+    "slug": "citrus-squeezer-yellow"
+  },
+  {
+    "id": 55,
+    "title": "Egg Slicer",
+    "category": "kitchen-accessories",
+    "price": 6.99,
+    "description": "The Egg Slicer is a convenient tool for slicing boiled eggs evenly. It's perfect for salads, sandwiches, and other dishes where sliced eggs are desired.",
+    "brand": "",
+    "stock": 40,
+    "thumbnail": "kitchen-accessories/egg-slicer-thumb.webp",
+    "images": [
+      "kitchen-accessories/egg-slicer-1.webp"
+    ],
+    "slug": "egg-slicer"
+  },
+  {
+    "id": 56,
+    "title": "Electric Stove",
+    "category": "kitchen-accessories",
+    "price": 49.99,
+    "description": "The Electric Stove provides a portable and efficient cooking solution. Ideal for small kitchens or as an additional cooking surface for various culinary needs.",
+    "brand": "",
+    "stock": 21,
+    "thumbnail": "kitchen-accessories/electric-stove-thumb.webp",
+    "images": [
+      "kitchen-accessories/electric-stove-1.webp"
+    ],
+    "slug": "electric-stove"
+  },
+  {
+    "id": 57,
+    "title": "Fine Mesh Strainer",
+    "category": "kitchen-accessories",
+    "price": 9.99,
+    "description": "The Fine Mesh Strainer is a versatile tool for straining liquids and sifting dry ingredients. Its fine mesh ensures efficient filtering for smooth cooking and baking.",
+    "brand": "",
+    "stock": 85,
+    "thumbnail": "kitchen-accessories/fine-mesh-strainer-thumb.webp",
+    "images": [
+      "kitchen-accessories/fine-mesh-strainer-1.webp"
+    ],
+    "slug": "fine-mesh-strainer"
+  },
+  {
+    "id": 58,
+    "title": "Fork",
+    "category": "kitchen-accessories",
+    "price": 3.99,
+    "description": "The Fork is a classic utensil for various dining and serving purposes. Its durable and ergonomic design makes it a reliable choice for everyday use.",
+    "brand": "",
+    "stock": 7,
+    "thumbnail": "kitchen-accessories/fork-thumb.webp",
+    "images": [
+      "kitchen-accessories/fork-1.webp"
+    ],
+    "slug": "fork"
+  },
+  {
+    "id": 59,
+    "title": "Glass",
+    "category": "kitchen-accessories",
+    "price": 4.99,
+    "description": "The Glass is a versatile and elegant drinking vessel suitable for a variety of beverages. Its clear design allows you to enjoy the colors and textures of your drinks.",
+    "brand": "",
+    "stock": 46,
+    "thumbnail": "kitchen-accessories/glass-thumb.webp",
+    "images": [
+      "kitchen-accessories/glass-1.webp"
+    ],
+    "slug": "glass"
+  },
+  {
+    "id": 60,
+    "title": "Grater Black",
+    "category": "kitchen-accessories",
+    "price": 10.99,
+    "description": "The Grater in Black is a handy kitchen tool for grating cheese, vegetables, and more. Its sleek design and sharp blades make food preparation efficient and easy.",
+    "brand": "",
+    "stock": 84,
+    "thumbnail": "kitchen-accessories/grater-black-thumb.webp",
+    "images": [
+      "kitchen-accessories/grater-black-1.webp"
+    ],
+    "slug": "grater-black"
+  },
+  {
+    "id": 61,
+    "title": "Hand Blender",
+    "category": "kitchen-accessories",
+    "price": 34.99,
+    "description": "The Hand Blender is a versatile kitchen appliance for blending, pureeing, and mixing. Its compact design and powerful motor make it a convenient tool for various recipes.",
+    "brand": "",
+    "stock": 84,
+    "thumbnail": "kitchen-accessories/hand-blender-thumb.webp",
+    "images": [
+      "kitchen-accessories/hand-blender-1.webp"
+    ],
+    "slug": "hand-blender"
+  },
+  {
+    "id": 62,
+    "title": "Ice Cube Tray",
+    "category": "kitchen-accessories",
+    "price": 5.99,
+    "description": "The Ice Cube Tray is a practical accessory for making ice cubes in various shapes. Perfect for keeping your drinks cool and adding a fun element to your beverages.",
+    "brand": "",
+    "stock": 13,
+    "thumbnail": "kitchen-accessories/ice-cube-tray-thumb.webp",
+    "images": [
+      "kitchen-accessories/ice-cube-tray-1.webp"
+    ],
+    "slug": "ice-cube-tray"
+  },
+  {
+    "id": 63,
+    "title": "Kitchen Sieve",
+    "category": "kitchen-accessories",
+    "price": 7.99,
+    "description": "The Kitchen Sieve is a versatile tool for sifting and straining dry and wet ingredients. Its fine mesh design ensures smooth results in your cooking and baking.",
+    "brand": "",
+    "stock": 68,
+    "thumbnail": "kitchen-accessories/kitchen-sieve-thumb.webp",
+    "images": [
+      "kitchen-accessories/kitchen-sieve-1.webp"
+    ],
+    "slug": "kitchen-sieve"
+  },
+  {
+    "id": 64,
+    "title": "Knife",
+    "category": "kitchen-accessories",
+    "price": 14.99,
+    "description": "The Knife is an essential kitchen tool for chopping, slicing, and dicing. Its sharp blade and ergonomic handle make it a reliable choice for food preparation.",
+    "brand": "",
+    "stock": 7,
+    "thumbnail": "kitchen-accessories/knife-thumb.webp",
+    "images": [
+      "kitchen-accessories/knife-1.webp"
+    ],
+    "slug": "knife"
+  },
+  {
+    "id": 65,
+    "title": "Lunch Box",
+    "category": "kitchen-accessories",
+    "price": 12.99,
+    "description": "The Lunch Box is a convenient and portable container for packing and carrying your meals. With compartments for different foods, it's perfect for on-the-go dining.",
+    "brand": "",
+    "stock": 94,
+    "thumbnail": "kitchen-accessories/lunch-box-thumb.webp",
+    "images": [
+      "kitchen-accessories/lunch-box-1.webp"
+    ],
+    "slug": "lunch-box"
+  },
+  {
+    "id": 66,
+    "title": "Microwave Oven",
+    "category": "kitchen-accessories",
+    "price": 89.99,
+    "description": "The Microwave Oven is a versatile kitchen appliance for quick and efficient cooking, reheating, and defrosting. Its compact size makes it suitable for various kitchen setups.",
+    "brand": "",
+    "stock": 59,
+    "thumbnail": "kitchen-accessories/microwave-oven-thumb.webp",
+    "images": [
+      "kitchen-accessories/microwave-oven-1.webp"
+    ],
+    "slug": "microwave-oven"
+  },
+  {
+    "id": 67,
+    "title": "Mug Tree Stand",
+    "category": "kitchen-accessories",
+    "price": 15.99,
+    "description": "The Mug Tree Stand is a stylish and space-saving solution for organizing your mugs. Keep your favorite mugs easily accessible and neatly displayed in your kitchen.",
+    "brand": "",
+    "stock": 88,
+    "thumbnail": "kitchen-accessories/mug-tree-stand-thumb.webp",
+    "images": [
+      "kitchen-accessories/mug-tree-stand-1.webp"
+    ],
+    "slug": "mug-tree-stand"
+  },
+  {
+    "id": 68,
+    "title": "Pan",
+    "category": "kitchen-accessories",
+    "price": 24.99,
+    "description": "The Pan is a versatile and essential cookware item for frying, sautéing, and cooking various dishes. Its non-stick coating ensures easy food release and cleanup.",
+    "brand": "",
+    "stock": 90,
+    "thumbnail": "kitchen-accessories/pan-thumb.webp",
+    "images": [
+      "kitchen-accessories/pan-1.webp"
+    ],
+    "slug": "pan"
+  },
+  {
+    "id": 69,
+    "title": "Plate",
+    "category": "kitchen-accessories",
+    "price": 3.99,
+    "description": "The Plate is a classic and essential dishware item for serving meals. Its durable and stylish design makes it suitable for everyday use or special occasions.",
+    "brand": "",
+    "stock": 66,
+    "thumbnail": "kitchen-accessories/plate-thumb.webp",
+    "images": [
+      "kitchen-accessories/plate-1.webp"
+    ],
+    "slug": "plate"
+  },
+  {
+    "id": 70,
+    "title": "Red Tongs",
+    "category": "kitchen-accessories",
+    "price": 6.99,
+    "description": "The Red Tongs are versatile kitchen tongs suitable for various cooking and serving tasks. Their vibrant color adds a pop of excitement to your kitchen utensils.",
+    "brand": "",
+    "stock": 82,
+    "thumbnail": "kitchen-accessories/red-tongs-thumb.webp",
+    "images": [
+      "kitchen-accessories/red-tongs-1.webp"
+    ],
+    "slug": "red-tongs"
+  },
+  {
+    "id": 71,
+    "title": "Silver Pot With Glass Cap",
+    "category": "kitchen-accessories",
+    "price": 39.99,
+    "description": "The Silver Pot with Glass Cap is a stylish and functional cookware item for boiling, simmering, and preparing delicious meals. Its glass cap allows you to monitor cooking progress.",
+    "brand": "",
+    "stock": 40,
+    "thumbnail": "kitchen-accessories/silver-pot-with-glass-cap-thumb.webp",
+    "images": [
+      "kitchen-accessories/silver-pot-with-glass-cap-1.webp"
+    ],
+    "slug": "silver-pot-with-glass-cap"
+  },
+  {
+    "id": 72,
+    "title": "Slotted Turner",
+    "category": "kitchen-accessories",
+    "price": 8.99,
+    "description": "The Slotted Turner is a kitchen utensil designed for flipping and turning food items. Its slotted design allows excess liquid to drain, making it ideal for frying and sautéing.",
+    "brand": "",
+    "stock": 88,
+    "thumbnail": "kitchen-accessories/slotted-turner-thumb.webp",
+    "images": [
+      "kitchen-accessories/slotted-turner-1.webp"
+    ],
+    "slug": "slotted-turner"
+  },
+  {
+    "id": 73,
+    "title": "Spice Rack",
+    "category": "kitchen-accessories",
+    "price": 19.99,
+    "description": "The Spice Rack is a convenient organizer for your spices and seasonings. Keep your kitchen essentials within reach and neatly arranged with this stylish spice rack.",
+    "brand": "",
+    "stock": 79,
+    "thumbnail": "kitchen-accessories/spice-rack-thumb.webp",
+    "images": [
+      "kitchen-accessories/spice-rack-1.webp"
+    ],
+    "slug": "spice-rack"
+  },
+  {
+    "id": 74,
+    "title": "Spoon",
+    "category": "kitchen-accessories",
+    "price": 4.99,
+    "description": "The Spoon is a versatile kitchen utensil for stirring, serving, and tasting. Its ergonomic design and durable construction make it an essential tool for every kitchen.",
+    "brand": "",
+    "stock": 59,
+    "thumbnail": "kitchen-accessories/spoon-thumb.webp",
+    "images": [
+      "kitchen-accessories/spoon-1.webp"
+    ],
+    "slug": "spoon"
+  },
+  {
+    "id": 75,
+    "title": "Tray",
+    "category": "kitchen-accessories",
+    "price": 16.99,
+    "description": "The Tray is a functional and decorative item for serving snacks, appetizers, or drinks. Its stylish design makes it a versatile accessory for entertaining guests.",
+    "brand": "",
+    "stock": 71,
+    "thumbnail": "kitchen-accessories/tray-thumb.webp",
+    "images": [
+      "kitchen-accessories/tray-1.webp"
+    ],
+    "slug": "tray"
+  },
+  {
+    "id": 76,
+    "title": "Wooden Rolling Pin",
+    "category": "kitchen-accessories",
+    "price": 11.99,
+    "description": "The Wooden Rolling Pin is a classic kitchen tool for rolling out dough for baking. Its smooth surface and sturdy handles make it easy to achieve uniform thickness.",
+    "brand": "",
+    "stock": 80,
+    "thumbnail": "kitchen-accessories/wooden-rolling-pin-thumb.webp",
+    "images": [
+      "kitchen-accessories/wooden-rolling-pin-1.webp"
+    ],
+    "slug": "wooden-rolling-pin"
+  },
+  {
+    "id": 77,
+    "title": "Yellow Peeler",
+    "category": "kitchen-accessories",
+    "price": 5.99,
+    "description": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
+    "brand": "",
+    "stock": 35,
+    "thumbnail": "kitchen-accessories/yellow-peeler-thumb.webp",
+    "images": [
+      "kitchen-accessories/yellow-peeler-1.webp"
+    ],
+    "slug": "yellow-peeler"
   }
 ]

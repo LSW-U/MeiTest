@@ -62,3 +62,7 @@ docs/meimart-architecture.visual-check.json
 # SIM 实测脚本产物（批A2-3 P3-3：临时发送明细/报告，不进版本库）
 apps/api/scripts/tmp/
 apps/api/scripts/sim-numbers.txt
+
+# seed 临时备份与会话产物（不进版本库）
+apps/api/prisma/seed-images/seed-data.backup-*.json
+.workbuddy/

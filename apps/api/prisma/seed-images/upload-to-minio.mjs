@@ -42,6 +42,7 @@ const CATEGORY_MAP = {
   beauty: { name: makeI18n('Beauty', '美妆'), icon: '💄', sortOrder: 2 },
   'skin-care': { name: makeI18n('Skin Care', '护肤'), icon: '🧴', sortOrder: 3 },
   fragrances: { name: makeI18n('Fragrances', '香水'), icon: '🌸', sortOrder: 4 },
+  'kitchen-accessories': { name: makeI18n('Kitchen & Dining', '厨房餐饮用品'), icon: '🍳', sortOrder: 5 },
 };
 
 async function ensureBucket() {
