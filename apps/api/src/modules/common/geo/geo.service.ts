@@ -19,6 +19,18 @@
  *   - 结构化日志 { msg, ... } 而非字符串拼接
  */
 import { Injectable, Logger } from '@nestjs/common';
+import { ProxyAgent, setGlobalDispatcher } from 'undici';
+
+/**
+ * 出站代理（2026-10-19 dev 联调）：Nominatim/Overpass（openstreetmap 系）在部分地区网络
+ * 不可直连（DNS 污染 + 握手超时实测），dev 走本地代理。Node fetch 不读系统代理，
+ * 显式经 undici 全局 dispatcher 注入（fetch 全局生效，本文件 4 处调用点零改动）。
+ * - 未设 env → 不设 dispatcher，原生直连，行为零变化（prod 部署网络通就不设）
+ */
+const PROXY_URL = process.env.GEO_HTTP_PROXY ?? process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+if (PROXY_URL) {
+  setGlobalDispatcher(new ProxyAgent(PROXY_URL));
+}
 
 /** Nominatim 返回单条结果（仅取我们关心的字段） */
 interface NominatimResult {

@@ -48,9 +48,13 @@ class RateLimiter {
   }
 }
 
-/** 单实例：1 req/s + 10 req/min/IP */
-const perSecondLimiter = new RateLimiter(1000, 1);
-const perMinuteLimiter = new RateLimiter(60_000, 10);
+/** 单实例：1 req/s + 10 req/min/IP
+ *  dev 放宽（2026-10-19 开发联调）：Nominatim ≤1 req/s 硬约束只约束上游真实调用，
+ *  本地 dev 拖地图+文本解析很快耗光 10/min，且与前端 C-P2-15 选点守卫互卡
+ *  （限流→自动定位失败→坐标空→保存被拦）。prod 维持原值不变。 */
+const GEO_RATE_DEV = process.env.NODE_ENV !== 'production';
+const perSecondLimiter = new RateLimiter(1000, GEO_RATE_DEV ? 20 : 1);
+const perMinuteLimiter = new RateLimiter(60_000, GEO_RATE_DEV ? 200 : 10);
 
 /** 从 Express Request 拿客户端 IP（处理 nginx 反代 X-Forwarded-For） */
 function getClientIp(req: Request): string {
