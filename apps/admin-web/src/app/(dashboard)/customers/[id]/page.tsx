@@ -14,7 +14,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useFormatter } from 'next-intl';
-import { Copy, Check, AlertTriangle } from 'lucide-react';
+import { Copy, Check, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { visibleAddresses } from '@/lib/support-page';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ErrorState } from '@/components/common/error-state';
@@ -100,6 +101,8 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
   const [copied, setCopied] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
+  // 地址簿折叠（微任务 20261019：默认前 3 条，其余收进「显示更多」，范式照抄 support 页）
+  const [addressExpanded, setAddressExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<{
     name: string;
@@ -435,7 +438,7 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
             <p className="text-sm text-muted-foreground">{t('admin.customers.emptyAddresses')}</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {customer.addresses.map((addr) => (
+              {visibleAddresses(customer.addresses, addressExpanded).items.map((addr) => (
                 <div
                   key={addr.id}
                   className={`rounded border p-3 ${addr.isDefault ? 'border-primary' : ''}`}
@@ -459,6 +462,26 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                   )}
                 </div>
               ))}
+              {(() => {
+                const { hasMore, hiddenCount } = visibleAddresses(customer.addresses, addressExpanded);
+                return hasMore ? (
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <Button variant="outline" size="sm" onClick={() => setAddressExpanded((v) => !v)}>
+                      {addressExpanded ? (
+                        <>
+                          <ChevronDown className="h-4 w-4" aria-hidden />
+                          {t('admin.support.addressShowLess')}
+                        </>
+                      ) : (
+                        <>
+                          <ChevronRight className="h-4 w-4" aria-hidden />
+                          {t('admin.support.addressShowMore', { count: hiddenCount })}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
         </CardContent>
