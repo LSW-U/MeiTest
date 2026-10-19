@@ -711,6 +711,11 @@ export default function SupportWorkbenchPage() {
                         {t('admin.support.addressDefault')}
                       </span>
                     )}
+                    {a.lastUsedAt && (
+                      <span className="ml-2 rounded bg-muted px-1 text-[10px]">
+                        {t('admin.support.addressRecentlyUsed')}
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {a.region.province} {a.region.city} {a.region.district ?? ''} {a.detail}

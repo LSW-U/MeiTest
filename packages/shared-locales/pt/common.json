@@ -1833,6 +1833,7 @@
       "addressBookEmpty": "Este utilizador não tem endereços",
       "addressShowMore": "Mostrar mais ({count})",
       "addressShowLess": "Mostrar menos",
+      "addressRecentlyUsed": "Usado recentemente",
       "userOrdersSection": "Pedidos recentes",
       "userOrdersEmpty": "Este utilizador não tem pedidos",
       "userOrdersHint": "10 pedidos mais recentes, é possível carregar mais",

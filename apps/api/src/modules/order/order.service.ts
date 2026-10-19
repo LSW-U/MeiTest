@@ -479,6 +479,15 @@ export class OrderService {
           },
         });
 
+        // 6.4.1 地址使用追踪（20261018）：下单成功即无条件回写地址最近使用时间
+        //       单分支——后端下单仅支持 addressId，无「手动输入」信号可区分；
+        //       事务内简单 update，失败即整体回滚（可接受语义，任务书口径）；
+        //       幂等无害：同一地址连下多单，lastUsedAt 取最后值
+        await tx.address.update({
+          where: { id: address.id },
+          data: { lastUsedAt: new Date() },
+        });
+
         return order;
       });
 

@@ -1095,6 +1095,8 @@ model Address {
   lng       Decimal?  @db.Decimal(10, 7)
   isDefault Boolean   @default(false) @map("is_default")
   tag       String?
+  /// 最近一次被下单使用时间（地址使用追踪 20261018：下单成功回写，历史数据不回填，null=从未使用）
+  lastUsedAt DateTime? @map("last_used_at")
   /// 软删除标记（null = 未删除；非 null = 删除时间）。订单等历史引用需要保留地址。
   deletedAt DateTime? @map("deleted_at")
   createdAt DateTime  @default(now()) @map("created_at")

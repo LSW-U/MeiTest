@@ -319,6 +319,7 @@ describe('UserService.getUserDetail', () => {
       lng: null,
       isDefault: true,
       tag: 'home',
+      lastUsedAt: null,
       createdAt: new Date('2026-06-01T00:00:00.000Z'),
       updatedAt: new Date('2026-06-01T00:00:00.000Z'),
       deletedAt: null,
@@ -370,6 +371,49 @@ describe('UserService.getUserDetail', () => {
     expect(mockDb.order.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 5, orderBy: { createdAt: 'desc' } }),
     );
+  });
+
+  it('地址使用追踪（20261018）：admin 详情 addresses 三键排序 + lastUsedAt 透出', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce(mockUser);
+    mockDb.order.findMany.mockResolvedValueOnce(mockOrders);
+    mockDb.address.findMany.mockResolvedValueOnce([
+      { ...mockAddresses[0], lastUsedAt: new Date('2026-10-18T02:00:00.000Z') },
+    ]);
+    mockDb.order.aggregate.mockResolvedValueOnce({
+      _count: { _all: 3 },
+      _sum: { payableAmount: 12000 },
+    });
+
+    const result = await service.getUserDetail('u-1');
+
+    // 三键排序：lastUsedAt(desc, nulls last) → isDefault → createdAt（方案v2🔴2：裸 desc 会 NULLS FIRST）
+    expect(mockDb.address.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          { lastUsedAt: { sort: 'desc', nulls: 'last' } },
+          { isDefault: 'desc' },
+          { createdAt: 'desc' },
+        ],
+      }),
+    );
+    // DTO 透出 lastUsedAt
+    expect(result.addresses[0]).toMatchObject({
+      id: 'addr-1',
+      lastUsedAt: '2026-10-18T02:00:00.000Z',
+    });
+  });
+
+  it('地址使用追踪（20261018）：lastUsedAt null → DTO 输出 null（非 ISO 字符串）', async () => {
+    mockDb.user.findUnique.mockResolvedValueOnce(mockUser);
+    mockDb.order.findMany.mockResolvedValueOnce(mockOrders);
+    mockDb.address.findMany.mockResolvedValueOnce(mockAddresses);
+    mockDb.order.aggregate.mockResolvedValueOnce({
+      _count: { _all: 3 },
+      _sum: { payableAmount: 12000 },
+    });
+
+    const result = await service.getUserDetail('u-1');
+    expect(result.addresses[0].lastUsedAt).toBeNull();
   });
 });
 

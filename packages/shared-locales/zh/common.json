@@ -1833,6 +1833,7 @@
       "addressBookEmpty": "该用户暂无收货地址",
       "addressShowMore": "显示更多（{count}）",
       "addressShowLess": "收起",
+      "addressRecentlyUsed": "近期使用",
       "userOrdersSection": "最近订单",
       "userOrdersEmpty": "该用户暂无订单",
       "userOrdersHint": "最近 10 单，可继续加载",

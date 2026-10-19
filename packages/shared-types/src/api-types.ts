@@ -975,6 +975,8 @@ export interface paths {
                             isDefault: boolean;
                             tag: string | null;
                             /** Format: date-time */
+                            lastUsedAt: string | null;
+                            /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
@@ -1033,6 +1035,8 @@ export interface paths {
                             lng: number | null;
                             isDefault: boolean;
                             tag: string | null;
+                            /** Format: date-time */
+                            lastUsedAt: string | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -1146,6 +1150,8 @@ export interface paths {
                             lng: number | null;
                             isDefault: boolean;
                             tag: string | null;
+                            /** Format: date-time */
+                            lastUsedAt: string | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -9993,6 +9999,8 @@ export interface paths {
                                 isDefault: boolean;
                                 tag: string | null;
                                 /** Format: date-time */
+                                lastUsedAt: string | null;
+                                /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
@@ -10108,6 +10116,8 @@ export interface paths {
                                 lng: number | null;
                                 isDefault: boolean;
                                 tag: string | null;
+                                /** Format: date-time */
+                                lastUsedAt: string | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10259,6 +10269,8 @@ export interface paths {
                                 lng: number | null;
                                 isDefault: boolean;
                                 tag: string | null;
+                                /** Format: date-time */
+                                lastUsedAt: string | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -10415,6 +10427,8 @@ export interface paths {
                                 isDefault: boolean;
                                 tag: string | null;
                                 /** Format: date-time */
+                                lastUsedAt: string | null;
+                                /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
                                 updatedAt: string;
@@ -10550,6 +10564,8 @@ export interface paths {
                                 lng: number | null;
                                 isDefault: boolean;
                                 tag: string | null;
+                                /** Format: date-time */
+                                lastUsedAt: string | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -24084,6 +24100,8 @@ export interface components {
             isDefault: boolean;
             tag: string | null;
             /** Format: date-time */
+            lastUsedAt: string | null;
+            /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
@@ -24283,6 +24301,8 @@ export interface components {
                 lng: number | null;
                 isDefault: boolean;
                 tag: string | null;
+                /** Format: date-time */
+                lastUsedAt: string | null;
                 /** Format: date-time */
                 createdAt: string;
                 /** Format: date-time */

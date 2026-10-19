@@ -73,6 +73,8 @@ export const Address = z.object({
   lng: z.number().nullable(),
   isDefault: z.boolean(),
   tag: z.string().nullable(),
+  /** 最近一次被下单使用时间（null = 从未使用，历史数据不回填） */
+  lastUsedAt: IsoTimestamp.nullable(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -260,7 +262,7 @@ export const AdminUserDetail = AdminUserListItem.extend({
   updatedAt: IsoTimestamp,
   /** 最近 5 笔已成交订单（按 createdAt desc） */
   recentOrders: z.array(OrderSummary).max(5),
-  /** 全部收货地址（按 isDefault desc + createdAt desc） */
+  /** 全部收货地址（按 lastUsedAt desc nulls last → isDefault desc → createdAt desc） */
   addresses: z.array(Address),
 });
 

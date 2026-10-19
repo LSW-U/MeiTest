@@ -1833,6 +1833,7 @@
       "addressBookEmpty": "Pengguna ini belum punya alamat",
       "addressShowMore": "Tampilkan lebih banyak ({count})",
       "addressShowLess": "Tutup",
+      "addressRecentlyUsed": "Baru dipakai",
       "userOrdersSection": "Pesanan terbaru",
       "userOrdersEmpty": "Pengguna ini belum punya pesanan",
       "userOrdersHint": "10 pesanan terbaru, bisa dimuat lagi",

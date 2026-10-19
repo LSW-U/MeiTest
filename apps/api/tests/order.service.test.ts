@@ -281,6 +281,7 @@ describe('OrderService.createOrder', () => {
         },
         orderItem: { createMany },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -326,6 +327,104 @@ describe('OrderService.createOrder', () => {
     expect(mockHelpers.deductStock).toHaveBeenCalledWith(
       expect.anything(), 'wh-1', 'sku-1', 3, expect.anything(),
     );
+  });
+
+  it('地址使用追踪（20261018）：下单成功 → tx.address.update 回写 lastUsedAt（无条件单分支）', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      name: 'Alice',
+      phone: '+670123',
+      detail: 'Home',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      {
+        id: 'sku-1',
+        price: 100,
+        status: 'ACTIVE',
+        productId: 'p-1',
+        name: { en: '1L' },
+        product: { id: 'p-1', name: { en: 'Milk' }, mainImage: 'img', status: 'ACTIVE' },
+      },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20261018010000001');
+    const txAddressUpdate = vi.fn().mockResolvedValue({});
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: txAddressUpdate },
+      };
+      return fn(tx);
+    });
+    mockHelpers.deductStock.mockResolvedValue(true);
+    mockPayment.createIntentForOrder.mockResolvedValue({
+      intentId: 'pi-1',
+      status: 'PENDING',
+      clientSecret: undefined,
+      mockFlag: false,
+    });
+
+    await service.createOrder({
+      userId: 'user-1',
+      addressId: 'a1',
+      items: [{ skuId: 'sku-1', quantity: 1 }],
+      paymentMethod: 'COD',
+      deviceType: 'client_app',
+    });
+
+    // 回写断言：按地址 id 更新 lastUsedAt 为时间值
+    expect(txAddressUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'a1' },
+        data: { lastUsedAt: expect.any(Date) },
+      }),
+    );
+  });
+
+  it('地址使用追踪（20261018）：库存不足事务回滚 → 不产生半截回写语义（update 抛错随事务整体回滚，无补偿）', async () => {
+    mockDb.address.findUnique.mockResolvedValue({
+      id: 'a1',
+      userId: 'user-1',
+      lat: -8.5,
+      lng: 125.5,
+    });
+    mockHelpers.findWarehouseByPoint.mockResolvedValue({ id: 'wh-1', code: 'W01', deliveryFee: 0 });
+    mockDb.sku.findMany.mockResolvedValue([
+      { id: 'sku-1', price: 100, status: 'ACTIVE', product: { status: 'ACTIVE' } },
+    ]);
+    mockOrderNo.nextOrderNo.mockResolvedValue('MM20261018010000002');
+    const txAddressUpdate = vi.fn().mockResolvedValue({});
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
+        orderItem: { createMany: vi.fn().mockResolvedValue({}) },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: txAddressUpdate },
+      };
+      try {
+        return await fn(tx);
+      } catch (e) {
+        throw e;
+      }
+    });
+    // update 在扣库存之前执行（6.4.1 在 6.3 之后的代码序无关紧要——mock 层只验证「库存失败路径下 service 抛错、
+    // address.update 同属事务回调，真实 DB 随事务回滚」的语义即可）
+    mockHelpers.deductStock.mockResolvedValue(false);
+
+    await expect(
+      service.createOrder({
+        userId: 'user-1',
+        addressId: 'a1',
+        items: [{ skuId: 'sku-1', quantity: 100 }],
+        paymentMethod: 'COD',
+        deviceType: 'client_app',
+      }),
+    ).rejects.toThrow(/out of stock|STOCK_NOT_ENOUGH/);
   });
 
   it('product 已下架 → 抛 E-ORDER-005', async () => {
@@ -380,6 +479,7 @@ describe('OrderService.createOrder', () => {
         order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       try {
         return await fn(tx);
@@ -427,6 +527,7 @@ describe('OrderService.createOrder', () => {
         order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -548,6 +649,7 @@ describe('OrderService.createOrder', () => {
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
         orderPromotion: { create: txOrderPromotionCreate },
         userCoupon: { update: txUserCouponUpdate },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -635,6 +737,7 @@ describe('OrderService.createOrder', () => {
         order: { create: vi.fn().mockResolvedValue(mockCreatedOrder()) },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -714,6 +817,7 @@ describe('OrderService.createOrder', () => {
         order: { create: txOrderCreate },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -771,6 +875,7 @@ describe('OrderService.createOrder', () => {
         order: { create: txOrderCreate },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });
@@ -945,6 +1050,7 @@ describe('OrderService.createOrder', () => {
         order: { create: vi.fn().mockResolvedValue(mockCreatedOrder(createdOverrides)) },
         orderItem: { createMany: vi.fn().mockResolvedValue({}) },
         orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        address: { update: vi.fn().mockResolvedValue({}) },
       };
       return fn(tx);
     });

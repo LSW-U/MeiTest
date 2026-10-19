@@ -438,6 +438,10 @@ components:
         tag:
           type: string
           nullable: true
+        lastUsedAt:
+          type: string
+          nullable: true
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -455,6 +459,7 @@ components:
         - lng
         - isDefault
         - tag
+        - lastUsedAt
         - createdAt
         - updatedAt
     CreateAddressRequest:
@@ -956,6 +961,10 @@ components:
               tag:
                 type: string
                 nullable: true
+              lastUsedAt:
+                type: string
+                nullable: true
+                format: date-time
               createdAt:
                 type: string
                 format: date-time
@@ -973,6 +982,7 @@ components:
               - lng
               - isDefault
               - tag
+              - lastUsedAt
               - createdAt
               - updatedAt
       required:
@@ -11159,6 +11169,10 @@ paths:
                     tag:
                       type: string
                       nullable: true
+                    lastUsedAt:
+                      type: string
+                      nullable: true
+                      format: date-time
                     createdAt:
                       type: string
                       format: date-time
@@ -11176,6 +11190,7 @@ paths:
                     - lng
                     - isDefault
                     - tag
+                    - lastUsedAt
                     - createdAt
                     - updatedAt
     post:
@@ -11267,6 +11282,10 @@ paths:
                   tag:
                     type: string
                     nullable: true
+                  lastUsedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
                   createdAt:
                     type: string
                     format: date-time
@@ -11284,6 +11303,7 @@ paths:
                   - lng
                   - isDefault
                   - tag
+                  - lastUsedAt
                   - createdAt
                   - updatedAt
   /api/v1/client/addresses/{id}:
@@ -11371,6 +11391,10 @@ paths:
                   tag:
                     type: string
                     nullable: true
+                  lastUsedAt:
+                    type: string
+                    nullable: true
+                    format: date-time
                   createdAt:
                     type: string
                     format: date-time
@@ -11388,6 +11412,7 @@ paths:
                   - lng
                   - isDefault
                   - tag
+                  - lastUsedAt
                   - createdAt
                   - updatedAt
         "404":
@@ -22845,6 +22870,10 @@ paths:
                         tag:
                           type: string
                           nullable: true
+                        lastUsedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                         createdAt:
                           type: string
                           format: date-time
@@ -22862,6 +22891,7 @@ paths:
                         - lng
                         - isDefault
                         - tag
+                        - lastUsedAt
                         - createdAt
                         - updatedAt
                 required:
@@ -23068,6 +23098,10 @@ paths:
                         tag:
                           type: string
                           nullable: true
+                        lastUsedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                         createdAt:
                           type: string
                           format: date-time
@@ -23085,6 +23119,7 @@ paths:
                         - lng
                         - isDefault
                         - tag
+                        - lastUsedAt
                         - createdAt
                         - updatedAt
                 required:
@@ -23333,6 +23368,10 @@ paths:
                         tag:
                           type: string
                           nullable: true
+                        lastUsedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                         createdAt:
                           type: string
                           format: date-time
@@ -23350,6 +23389,7 @@ paths:
                         - lng
                         - isDefault
                         - tag
+                        - lastUsedAt
                         - createdAt
                         - updatedAt
                 required:
@@ -23596,6 +23636,10 @@ paths:
                         tag:
                           type: string
                           nullable: true
+                        lastUsedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                         createdAt:
                           type: string
                           format: date-time
@@ -23613,6 +23657,7 @@ paths:
                         - lng
                         - isDefault
                         - tag
+                        - lastUsedAt
                         - createdAt
                         - updatedAt
                 required:
@@ -23831,6 +23876,10 @@ paths:
                         tag:
                           type: string
                           nullable: true
+                        lastUsedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
                         createdAt:
                           type: string
                           format: date-time
@@ -23848,6 +23897,7 @@ paths:
                         - lng
                         - isDefault
                         - tag
+                        - lastUsedAt
                         - createdAt
                         - updatedAt
                 required:

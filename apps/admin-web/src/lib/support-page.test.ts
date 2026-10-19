@@ -109,6 +109,20 @@ describe('visibleAddresses（地址簿折叠：默认前 3，其余收进显示�
     expect(r.hasMore).toBe(true);
     expect(r.hiddenCount).toBe(0);
   });
+  it('⑤ 地址使用追踪（20261018）：排序由后端决定，切片不改顺序（回归锁定——徽章判 lastUsedAt 非空渲染，不参与分节）', () => {
+    // 后端新排序（lastUsedAt desc nulls last → isDefault → createdAt）产出此顺序：
+    // 有 lastUsedAt 的在前（即使 isDefault=false），从未使用的旧地址排后
+    const sortedFromBackend = [
+      { id: 'a3', lastUsedAt: '2026-10-18T02:00:00Z', isDefault: false },
+      { id: 'a1', lastUsedAt: null, isDefault: true },
+      { id: 'a2', lastUsedAt: null, isDefault: false },
+    ];
+    const r = visibleAddresses(sortedFromBackend, false);
+    expect(r.items.map((a) => a.id)).toEqual(['a3', 'a1', 'a2']);
+    // 徽章判定口径：lastUsedAt 非空即「近期使用」，与 isDefault 无关
+    const badgeTargets = r.items.filter((a) => a.lastUsedAt !== null);
+    expect(badgeTargets.map((a) => a.id)).toEqual(['a3']);
+  });
 });
 
 describe('批1 纯函数回归', () => {

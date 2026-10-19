@@ -244,6 +244,7 @@ export class UserService {
     lng: { toNumber(): number } | null;
     isDefault: boolean;
     tag: string | null;
+    lastUsedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }): AddressDTO {
@@ -258,6 +259,7 @@ export class UserService {
       lng: decimalToNumber(a.lng),
       isDefault: a.isDefault,
       tag: a.tag,
+      lastUsedAt: a.lastUsedAt ? a.lastUsedAt.toISOString() : null,
       createdAt: a.createdAt.toISOString(),
       updatedAt: a.updatedAt.toISOString(),
     };
@@ -669,7 +671,13 @@ export class UserService {
       }),
       db.address.findMany({
         where: { userId: user.id, deletedAt: null },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+        // 地址使用追踪（20261018）：近期使用优先；显式 nulls:'last'——
+        // Postgres DESC 默认 NULLS FIRST，裸 desc 会把从未使用的旧地址排最前（方案v2🔴2）
+        orderBy: [
+          { lastUsedAt: { sort: 'desc', nulls: 'last' } },
+          { isDefault: 'desc' },
+          { createdAt: 'desc' },
+        ],
       }),
       db.order.aggregate({
         where: {
@@ -714,6 +722,7 @@ export class UserService {
         lng: decimalToNumber(a.lng),
         isDefault: a.isDefault,
         tag: a.tag,
+        lastUsedAt: a.lastUsedAt ? a.lastUsedAt.toISOString() : null,
         createdAt: a.createdAt.toISOString(),
         updatedAt: a.updatedAt.toISOString(),
       })),

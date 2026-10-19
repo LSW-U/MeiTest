@@ -28,7 +28,7 @@ const { mockDb, mockHelpers, mockQueue, mockOrderNo, mockPayment, mockCart, mock
   };
   return {
     mockDb: {
-      address: { findUnique: vi.fn() },
+      address: { findUnique: vi.fn(), update: vi.fn() },
       // 批A 汇率体系：createOrder 汇率快照钩子查询（返回 null → 兜底 FALLBACK，不阻断主流程断言）
       exchangeRate: { findUnique: vi.fn(() => null) },
       sku: { findMany: vi.fn() },

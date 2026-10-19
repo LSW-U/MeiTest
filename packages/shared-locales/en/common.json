@@ -1836,6 +1836,7 @@
       "addressBookEmpty": "No addresses for this user",
       "addressShowMore": "Show more ({count})",
       "addressShowLess": "Show less",
+      "addressRecentlyUsed": "Recently used",
       "userOrdersSection": "Recent Orders",
       "userOrdersEmpty": "No orders for this user",
       "userOrdersHint": "Latest 10 orders, more loadable",
