@@ -20,6 +20,7 @@ import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { WarehouseLoadPanel } from '@/components/warehouse/warehouse-load-panel';
 import { DispatchCenter } from './dispatch-center';
 import { DispatchWeightsCard } from './dispatch-weights-card';
@@ -61,6 +62,7 @@ import {
 } from '@/hooks/api/use-dispatch';
 import { ApiError } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { pickStatusParam } from '@/lib/support-return';
 import { useToast } from '@/hooks/use-toast';
 
 const STATUS_FILTERS: { value: DeliveryTaskStatus | 'ALL'; labelKey: string }[] = [
@@ -79,7 +81,18 @@ function DispatchTasksContent() {
   // 批 C2 修复 P2-1（2026-09-04）：仓库列表/详情「跨仓支援」跳 /dispatch?warehouseId=xxx#dispatch-center，
   // 此处读取 query 初始化仓筛选，把预留上下文接真（仅首挂载读一次，之后仍可手动改）
   const searchParams = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState<DeliveryTaskStatus | 'ALL'>('ALL');
+  // 导航优化批1（20261018）：C2 直达 ?status=PENDING_ASSIGN 初始化筛选（仅首挂载默认值，用户手改不锁死）
+  const fromQueryStatus = pickStatusParam(searchParams.get('status'), [
+    'PENDING_ASSIGN',
+    'ASSIGNED',
+    'PICKED_UP',
+    'DELIVERING',
+    'DELIVERED',
+    'FAILED',
+  ] as const satisfies readonly DeliveryTaskStatus[]);
+  const [statusFilter, setStatusFilter] = useState<DeliveryTaskStatus | 'ALL'>(
+    fromQueryStatus ?? 'ALL',
+  );
   const [orderNoSearch, setOrderNoSearch] = useState('');
   const [warehouseIdSearch, setWarehouseIdSearch] = useState(
     () => searchParams.get('warehouseId') ?? '',
@@ -224,6 +237,7 @@ function DispatchTasksContent() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader
         title={t('admin.dispatch.title')}
         description={t('admin.dispatch.description')}

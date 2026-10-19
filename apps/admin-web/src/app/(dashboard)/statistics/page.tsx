@@ -37,6 +37,7 @@ import {
 } from 'recharts';
 import { TrendingUp, TrendingDown, Users, AlertTriangle, ShoppingCart } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { ErrorState } from '@/components/common/error-state';
 import { EmptyState } from '@/components/common/empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,6 +103,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader title={t('admin.statistics.title')} description={t('admin.statistics.description')} />
 
       {/* 页头公共件：报表 tab + 时间范围选择器（预设三值 + 自定义起止） */}

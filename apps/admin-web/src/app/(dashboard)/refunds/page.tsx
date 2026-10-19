@@ -6,10 +6,12 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
@@ -34,6 +36,7 @@ import {
   type RefundStatus,
 } from '@/hooks/api/use-refunds';
 import { formatCurrency } from '@/lib/utils';
+import { pickStatusParam } from '@/lib/support-return';
 
 type RefundReason =
   | 'OUT_OF_STOCK'
@@ -62,7 +65,33 @@ const REASON_LABEL_KEY: Record<RefundReason, string> = {
 
 export default function RefundsListPage() {
   const t = useTranslations('common');
-  const [statusFilter, setStatusFilter] = useState<RefundStatus | 'ALL'>('PENDING');
+  // 导航优化批1：useSearchParams 必须包 Suspense（Next 14.2 build 要求，同 reviews/[id] P1-7 范式）
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
+      }
+    >
+      <RefundsListContent />
+    </Suspense>
+  );
+}
+
+function RefundsListContent() {
+  const t = useTranslations('common');
+  // 导航优化批1（20261018）：C2 直达 ?status=PENDING 初始化筛选（仅首挂载默认值，用户手改不锁死）
+  const searchParams = useSearchParams();
+  const fromQueryStatus = pickStatusParam(searchParams.get('status'), [
+    'PENDING',
+    'COMPLETED',
+    'REJECTED',
+    'CANCELLED',
+  ]);
+  const [statusFilter, setStatusFilter] = useState<RefundStatus | 'ALL'>(
+    fromQueryStatus ?? 'PENDING',
+  );
   const [rejectTarget, setRejectTarget] = useState<Refund | null>(null);
   const [rejectNote, setRejectNote] = useState('');
   const [approveTarget, setApproveTarget] = useState<Refund | null>(null);
@@ -189,6 +218,7 @@ export default function RefundsListPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader
         title={t('admin.refunds.title')}
         description={t('admin.refunds.description')}

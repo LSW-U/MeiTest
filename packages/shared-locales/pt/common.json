@@ -1871,6 +1871,7 @@
       "orderEventsSection": "Linha do tempo de eventos",
       "orderAddressBookSection": "Livro de endereços",
       "addressDefault": "Predefinido",
+      "returnToWorkbench": "Voltar à Central de Atendimento",
       "cards": {
         "sectionTitle": "Cartões da área de trabalho",
         "viewAll": "Ver tudo",
@@ -1896,7 +1897,8 @@
         "c5Empty": "Sem dados de entregadores",
         "c6Title": "Atalhos",
         "c6Empty": "Nenhum atalho fixado",
-        "c6Unpin": "Desafixar"
+        "c6Unpin": "Desafixar",
+        "c6OpenNewTab": "Abrir em novo separador"
       }
     }
   },

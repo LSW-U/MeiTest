@@ -1871,6 +1871,7 @@
       "orderEventsSection": "Linimasa peristiwa",
       "orderAddressBookSection": "Buku alamat",
       "addressDefault": "Bawaan",
+      "returnToWorkbench": "Kembali ke Pusat Layanan",
       "cards": {
         "sectionTitle": "Kartu ruang kerja",
         "viewAll": "Lihat semua",
@@ -1896,7 +1897,8 @@
         "c5Empty": "Tidak ada data kurir",
         "c6Title": "Tautan cepat",
         "c6Empty": "Belum ada tautan disematkan",
-        "c6Unpin": "Lepas sematan"
+        "c6Unpin": "Lepas sematan",
+        "c6OpenNewTab": "Buka di tab baru"
       }
     }
   },

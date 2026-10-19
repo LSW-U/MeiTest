@@ -7,10 +7,12 @@
  */
 'use client';
 
-import { useState, useDeferredValue } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useDeferredValue, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
+import { pickStatusParam } from '@/lib/support-return';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/common/status-badge';
 import { EmptyState } from '@/components/common/empty-state';
@@ -55,8 +57,30 @@ const RATING_FILTERS = ['ALL', '5', '4', '3', '2', '1'] as const;
 
 export default function ReviewsListPage() {
   const t = useTranslations('common');
+  // 导航优化批1：useSearchParams 必须包 Suspense（Next 14.2 build 要求，同 reviews/[id] P1-7 范式）
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-md border p-8 text-center text-muted-foreground">
+          {t('loading')}
+        </div>
+      }
+    >
+      <ReviewsListContent />
+    </Suspense>
+  );
+}
+
+function ReviewsListContent() {
+  const t = useTranslations('common');
   const router = useRouter();
-  const [tab, setTab] = useState<ReviewType>('customer');
+  // 导航优化批1（20261018）：C3 直达 ?type=customer 初始化 tab（对齐 reviews/[id] ?type= 先例，仅首挂载默认值）
+  const searchParams = useSearchParams();
+  const fromQueryType = pickStatusParam(searchParams.get('type'), [
+    'customer',
+    'rider',
+  ] as const satisfies readonly ReviewType[]);
+  const [tab, setTab] = useState<ReviewType>(fromQueryType ?? 'customer');
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'ALL'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<ReviewCategory | 'ALL'>('ALL');
   const [ratingFilter, setRatingFilter] = useState<(typeof RATING_FILTERS)[number]>('ALL');
@@ -170,6 +194,7 @@ export default function ReviewsListPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader title={t('admin.reviews.title')} description={t('admin.reviews.description')} />
 
       {/* 客户评论 / 骑手评价 两 tab */}

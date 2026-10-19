@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,6 +124,7 @@ export default function HotSearchPage() {
 
   return (
     <>
+      <SupportReturnBar />
       <PageHeader
         title={t('admin.hotSearch.title') as string}
         description={t('admin.hotSearch.listDesc')}

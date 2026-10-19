@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, AlertCircle, ShoppingCart, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -164,6 +165,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader
         title={t('dashboard.title')}
         description={t('dashboard.description')}

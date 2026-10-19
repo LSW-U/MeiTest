@@ -1871,6 +1871,7 @@
       "orderEventsSection": "Linha tempu eventu",
       "orderAddressBookSection": "Livru enderesu",
       "addressDefault": "Padraun",
+      "returnToWorkbench": "Fila ba Atendimentu Kliente",
       "cards": {
         "sectionTitle": "Kartu serbisu",
         "viewAll": "See hotu",
@@ -1896,7 +1897,8 @@
         "c5Empty": "La iha dadus entregador",
         "c6Title": "Ligañ kaixo",
         "c6Empty": "Seidauk iha ligañ",
-        "c6Unpin": "Desafixa"
+        "c6Unpin": "Desafixa",
+        "c6OpenNewTab": "Loke tab foun"
       }
     }
   },

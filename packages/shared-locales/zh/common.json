@@ -1871,6 +1871,7 @@
       "orderEventsSection": "事件时间线",
       "orderAddressBookSection": "下单地址簿",
       "addressDefault": "默认",
+      "returnToWorkbench": "返回客服工作台",
       "cards": {
         "sectionTitle": "工作台卡片",
         "viewAll": "查看全部",
@@ -1896,7 +1897,8 @@
         "c5Empty": "暂无骑手数据",
         "c6Title": "常用跳转",
         "c6Empty": "暂无钉选入口",
-        "c6Unpin": "取消钉选"
+        "c6Unpin": "取消钉选",
+        "c6OpenNewTab": "新标签页打开"
       }
     }
   },

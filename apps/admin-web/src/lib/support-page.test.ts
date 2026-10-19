@@ -147,7 +147,56 @@ describe('批1 纯函数回归', () => {
   });
 });
 
-// ===== 批1（工作台卡片增强 20261018）：support-cards 纯函数 =====
+// ===== 导航优化批1（20261018）：support-return 纯函数 =====
+import {
+  SUPPORT_FROM_VALUE,
+  withFromSupport,
+  isFromSupport,
+  pickStatusParam,
+} from './support-return';
+
+describe('withFromSupport（导航批1 六卡直达统一追加 ?from=support）', () => {
+  it('无 query → 追加 ?from=support', () => {
+    expect(withFromSupport('/refunds')).toBe('/refunds?from=support');
+  });
+  it('已有 query → & 连接（C2 ?status=PENDING 保序）', () => {
+    expect(withFromSupport('/refunds?status=PENDING')).toBe(
+      '/refunds?status=PENDING&from=support',
+    );
+  });
+  it('已带 from=support → 幂等不重复', () => {
+    expect(withFromSupport('/reviews?from=support')).toBe('/reviews?from=support');
+  });
+  it('来源常量 = support', () => {
+    expect(SUPPORT_FROM_VALUE).toBe('support');
+  });
+});
+
+describe('isFromSupport（导航批1 返回条判定）', () => {
+  it("from=support → true；其它值/缺失 → false（N3 非直达入口零渲染）", () => {
+    expect(isFromSupport('support')).toBe(true);
+    expect(isFromSupport('other')).toBe(false);
+    expect(isFromSupport(null)).toBe(false);
+  });
+});
+
+describe('pickStatusParam（导航批1 过滤参数 → 筛选器初始值，仅默认值不锁死）', () => {
+  it('合法枚举 → 原值', () => {
+    expect(pickStatusParam('PENDING', ['PENDING', 'COMPLETED'] as const)).toBe('PENDING');
+  });
+  it('非法值 → null（调用方回退自身默认）', () => {
+    expect(pickStatusParam('HACK', ['PENDING', 'COMPLETED'] as const)).toBeNull();
+  });
+  it('缺失 → null', () => {
+    expect(pickStatusParam(null, ['PENDING'] as const)).toBeNull();
+  });
+  it('reviews type 映射（C3 ?type=customer 对齐 reviews/[id] 先例）', () => {
+    expect(pickStatusParam('customer', ['customer', 'rider'] as const)).toBe('customer');
+    expect(pickStatusParam('rider', ['customer', 'rider'] as const)).toBe('rider');
+    expect(pickStatusParam('product', ['customer', 'rider'] as const)).toBeNull();
+  });
+});
+
 import {
   ALL_CARD_KEYS,
   visibleCardKeys,

@@ -1874,6 +1874,7 @@
       "orderEventsSection": "Event Timeline",
       "orderAddressBookSection": "Address Book",
       "addressDefault": "Default",
+      "returnToWorkbench": "Back to Support Workbench",
       "cards": {
         "sectionTitle": "Workbench cards",
         "viewAll": "View all",
@@ -1899,7 +1900,8 @@
         "c5Empty": "No rider data",
         "c6Title": "Quick links",
         "c6Empty": "No quick links pinned",
-        "c6Unpin": "Unpin"
+        "c6Unpin": "Unpin",
+        "c6OpenNewTab": "Open in new tab"
       }
     }
   },

@@ -12,7 +12,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
-import { Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { useDashboardSummary } from '@/hooks/api/use-dashboard';
 import { useRefunds } from '@/hooks/api/use-refunds';
 import { useDispatchTasks } from '@/hooks/api/use-dispatch';
@@ -33,7 +33,14 @@ import {
   sparklinePoints,
   SUPPORT_PIN_LABEL_KEY,
 } from '@/lib/support-cards';
+import { withFromSupport } from '@/lib/support-return';
 import type { ZsetItem } from '@/hooks/api/use-hot-search';
+
+/** 卡片直达链接统一入口（导航优化批1）：先做视角过滤，再统一追加 ?from=support */
+function cardLink(href: string, perspective: string): string | null {
+  const target = linkTargetForPerspective(href, perspective);
+  return target ? withFromSupport(target) : null;
+}
 
 /** 卡片通用骨架（标题 + 直达链接；链接不可达时降级纯文本，不留死链） */
 function CardShell({
@@ -48,7 +55,7 @@ function CardShell({
   children: React.ReactNode;
 }) {
   const t = useTranslations('common');
-  const target = href ? linkTargetForPerspective(href, perspective) : null;
+  const target = href ? cardLink(href, perspective) : null;
   return (
     <Card>
       <CardHeader>
@@ -169,7 +176,7 @@ export function PendingCountsCard({ perspective }: { perspective: string }) {
           label={t('admin.support.cards.c2PendingRefunds')}
           count={refundsCount}
           zeroText={t('admin.support.cards.none')}
-          href={linkTargetForPerspective('/refunds?status=PENDING', perspective)}
+          href={cardLink('/refunds?status=PENDING', perspective)}
         />
       )}
       {!tasksQ.isPending && !tasksQ.error && (
@@ -177,7 +184,7 @@ export function PendingCountsCard({ perspective }: { perspective: string }) {
           label={t('admin.support.cards.c2PendingAssign')}
           count={tasksCount}
           zeroText={t('admin.support.cards.none')}
-          href={linkTargetForPerspective('/dispatch?status=PENDING_ASSIGN', perspective)}
+          href={cardLink('/dispatch?status=PENDING_ASSIGN', perspective)}
         />
       )}
       {!feedbackQ.isPending && !feedbackQ.error && (
@@ -185,7 +192,7 @@ export function PendingCountsCard({ perspective }: { perspective: string }) {
           label={t('admin.support.cards.c2TodayFeedback')}
           count={{ mode: 'exact', count: feedbackQ.data?.total ?? 0 }}
           zeroText={t('admin.support.cards.none')}
-          href={linkTargetForPerspective('/feedback', perspective)}
+          href={cardLink('/feedback', perspective)}
         />
       )}
     </CardShell>
@@ -257,7 +264,7 @@ export function BadReviewsCard({ perspective }: { perspective: string }) {
       {merged.map((r) => (
         <Link
           key={r.id}
-          href={`/reviews/${r.id}?type=customer`}
+          href={withFromSupport(`/reviews/${r.id}?type=customer`)}
           className="block rounded-md border p-2 hover:bg-muted"
         >
           <div className="flex items-center justify-between">
@@ -364,10 +371,21 @@ export function QuickLinksCard({
         {pins.map((path) => (
           <span
             key={path}
-            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs"
+            className="group/pin inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs"
           >
             <Link href={path} className="hover:text-foreground">
               {t(SUPPORT_PIN_LABEL_KEY[path] ?? 'menu.dashboard')}
+            </Link>
+            {/* 导航优化批1：钉选「开新工作面」语义 → hover 出现新标签打开小图标（方案v1 §二4 取简形态） */}
+            <Link
+              href={path}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('admin.support.cards.c6OpenNewTab')}
+              title={t('admin.support.cards.c6OpenNewTab')}
+              className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover/pin:opacity-100 hover:text-foreground"
+            >
+              <ExternalLink className="h-3 w-3" aria-hidden />
             </Link>
             <button
               type="button"

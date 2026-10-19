@@ -11,9 +11,10 @@
  */
 'use client';
 
-import { useState, useDeferredValue } from 'react';
+import { useState, useDeferredValue, Suspense } from 'react';
 import { useTranslations, useFormatter } from 'next-intl';
 import { PageHeader } from '@/components/layout/page-header';
+import { SupportReturnBar } from '@/components/common/support-return-bar';
 import { DataTable, type Column } from '@/components/data-table/data-table';
 import { EmptyState } from '@/components/common/empty-state';
 import { ErrorState } from '@/components/common/error-state';
@@ -50,6 +51,20 @@ const CATEGORY_FILTERS: { value: FeedbackCategory | 'ALL'; labelKey: string }[] 
 ];
 
 export default function FeedbackPage() {
+  const t = useTranslations('common');
+  // 导航优化批1：useSearchParams 必须包 Suspense（Next 14.2 build 要求，同 reviews/[id] P1-7 范式）
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-md border p-8 text-center text-muted-foreground">{t('loading')}</div>
+      }
+    >
+      <FeedbackContent />
+    </Suspense>
+  );
+}
+
+function FeedbackContent() {
   const t = useTranslations('common');
   const format = useFormatter();
   const [category, setCategory] = useState<FeedbackCategory | 'ALL'>('ALL');
@@ -151,6 +166,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SupportReturnBar />
       <PageHeader title={t('admin.feedback.title')} description={t('admin.feedback.description')} />
 
       {/* 筛选条：分类 + 时间范围 + 关键词 */}
