@@ -1,5 +1,5 @@
 {
-  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 88 条存量（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。",
+  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 95 条存量（2026-10-19 新披露 7 条 vite/vitest/tinypool/esbuild 全构建测试期工具链，B 路线 patch/minor 升级零消减——修复版本均跨主版本，admin-web vitest2 链挂账另行立项）（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。",
   "entries": [
     {
       "key": "glob@1109842::GHSA-5j98-mcp5-4vw2",
@@ -352,6 +352,34 @@
     {
       "key": "stream-json@1241263::GHSA-mjw6-4jj6-33hc",
       "reason": "moderate: minio 传递依赖，仅上传流处理，无受影响调用路径"
+    },
+    {
+      "key": "esbuild@1102341::GHSA-67mh-4wv8-2f99",
+      "reason": "moderate: vite@5 构建链传递依赖（admin-web vitest@2 链），仅 dev 构建期。修复 >=0.24.3 随 vite 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "vite@1116229::GHSA-4w7w-66w2-5vf9",
+      "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期。修复 6.4.2+ 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "vite@1120784::GHSA-v6wh-96g9-6wx3",
+      "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期（launch-editor UNC/Windows）。修复 6.4.3+ 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "vite@1123525::GHSA-fx2h-pf6j-xcff",
+      "reason": "high: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），server.fs.deny bypass 仅 dev server 场景可达，生产不装 dev 依赖。修复 6.4.3+ 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "vitest@1139528::GHSA-5xrq-8626-4rwp",
+      "reason": "critical: admin-web vitest@2.1.9 测试期工具链——UI server 监听时任意文件读写执行，仅本地 dev 测试 --ui 场景可达，生产不装 dev 依赖。修复 3.2.6+ 跨主版本（2→3/4），挂账另行立项"
+    },
+    {
+      "key": "tinypool@1241260::GHSA-5gmw-xhrv-c9v3",
+      "reason": "critical: tinypool@1.1.1（admin-web vitest@2 传递依赖）worker options 原型污染→RCE，仅测试期 worker 进程场景可达，生产不装 dev 依赖。修复 2.1.1+ 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "tinypool@1241261::GHSA-85c8-ppgw-ccpr",
+      "reason": "critical: tinypool@1.1.1（admin-web vitest@2 传递依赖）run() options 原型污染→RCE，仅测试期 worker 进程场景可达，生产不装 dev 依赖。修复 2.1.2+ 跨主版本，挂账 vitest 2→4 立项"
     }
   ]
 }
