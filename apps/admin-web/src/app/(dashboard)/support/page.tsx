@@ -96,12 +96,14 @@ export default function SupportWorkbenchPage() {
     setSelectedUser(null);
     setSelectedOrderId(null);
     setOrderDetailExpanded(false);
+    setAddressExpanded(false); // 地址簿折叠随视图切换重置（P2-1：防跨用户泄漏）
     setView(kind === 'order' ? 'order' : 'search'); // order 链路直进；user 链路先看命中数
   }
 
   function backToUser() {
     setSelectedOrderId(null);
     setOrderDetailExpanded(false);
+    setAddressExpanded(false); // 对齐 orderDetailExpanded 重置纪律（报告标可选，用户未变保留展开无害，取一致性）
     setView('user');
   }
 
@@ -177,6 +179,7 @@ export default function SupportWorkbenchPage() {
   useEffect(() => {
     if (view === 'search' && pickIntent === 'direct' && matchedCustomers[0]) {
       setSelectedUser(matchedCustomers[0]);
+      setAddressExpanded(false); // 唯一命中直接进人视图，同样折叠默认（对齐 P2-1 纪律）
       setView('user');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -614,6 +617,7 @@ export default function SupportWorkbenchPage() {
                         type="button"
                         onClick={() => {
                           setSelectedUser(u);
+                          setAddressExpanded(false); // 换人进人视图，地址簿回到默认折叠
                           setView('user');
                         }}
                         className="flex w-full items-center justify-between rounded-md border p-3 text-left text-sm hover:bg-muted"
@@ -647,6 +651,7 @@ export default function SupportWorkbenchPage() {
                 setSelectedUser(null);
                 setSubmittedKeyword('');
                 setSearchKind(null);
+                setAddressExpanded(false); // 回搜索视图即重置（P2-1 对齐）
                 setView('search');
               }}
             >
