@@ -134,6 +134,8 @@ const NAV_ITEMS: NavItem[] = [
     href: '/riders',
     icon: Bike,
     perspectives: ['platform', 'rider-mgmt'],
+    // 双高亮修复（20261021）：/riders/deposit-* 子页激活时本项不再跟着亮
+    exact: true,
   },
   // 保证金体系（批 E，2026-09-03）：骑手管理下三个子页入口
   {
