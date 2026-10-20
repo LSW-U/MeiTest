@@ -65,6 +65,12 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   perspectives: readonly string[];
+  /**
+   * 精确匹配标记（20261020 双高亮修复）：true 时仅 pathname 全等才算激活。
+   * 用于「前缀撞车的兄弟路由」：/dispatch 与 /dispatch/tasks 是兄弟独立页而非父子，
+   * startsWith 会使两者同亮；/riders 与 /riders/deposit-* 是真父子（父子共亮是期望行为）不受影响。
+   */
+  exact?: boolean;
 }
 
 /** 单个菜单项（perspectives 数组保持原样，分组层不参与权限） */
@@ -152,6 +158,15 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'menu.dispatch',
     href: '/dispatch',
     icon: Truck,
+    perspectives: ['platform'],
+    // 双高亮修复（20261020）：/dispatch/tasks 是兄弟独立页，前缀匹配会误亮本项
+    exact: true,
+  },
+  // 任务监控独立页（批1 20261019）：履约组与「配送调度」同级；写端点仅 SUPER_ADMIN → platform-only
+  {
+    labelKey: 'menu.dispatchTasks',
+    href: '/dispatch/tasks',
+    icon: ScrollText,
     perspectives: ['platform'],
   },
   {
@@ -255,15 +270,32 @@ interface NavGroup {
   groupKey: string;
   /** 组标题左侧图标 */
   icon: React.ComponentType<{ className?: string }>;
-  /** 组内菜单项的 href 集合，按 href 匹配 NAV_ITEMS */
-  hrefs: readonly string[];
+  /**
+   * 组内二级小节（可选，20261020 履约组先行）。
+   * 有 sections：按小节分段渲染（组内小节标题 + 各自菜单项，仍按 href 匹配 NAV_ITEMS 过滤视角）；
+   * 无 sections：走 hrefs 平铺现行为，其余 8 组零改动。
+   * 折叠粒度仍是组一级（admin_sidebar_groups 记忆键零改动）。
+   */
+  sections?: readonly { labelKey: string; hrefs: readonly string[] }[];
+  /** 无 sections 时的平铺 hrefs（向后兼容字段） */
+  hrefs?: readonly string[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', icon: LayoutGrid, hrefs: ['/dashboard', '/statistics'] },
   { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/onboarding-slides', '/hot-search'] },
   { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
-  { labelKey: 'menu.groupFulfillment', groupKey: 'groupFulfillment', icon: Truck, hrefs: ['/dispatch', '/riders', '/riders/deposit-tiers', '/riders/deposit-locations', '/riders/deposit-requests', '/warehouses', '/inventory'] },
+  // 履约组（20261020 二级分栏）：仓储 / 骑手 / 配送 三小节
+  {
+    labelKey: 'menu.groupFulfillment',
+    groupKey: 'groupFulfillment',
+    icon: Truck,
+    sections: [
+      { labelKey: 'menu.subWarehouse', hrefs: ['/warehouses', '/inventory'] },
+      { labelKey: 'menu.subRider', hrefs: ['/riders', '/riders/deposit-tiers', '/riders/deposit-locations', '/riders/deposit-requests'] },
+      { labelKey: 'menu.subDispatch', hrefs: ['/dispatch', '/dispatch/tasks'] },
+    ],
+  },
   { labelKey: 'menu.groupUsers', groupKey: 'groupUsers', icon: Users, hrefs: ['/customers'] },
   { labelKey: 'menu.groupMarketing', groupKey: 'groupMarketing', icon: Megaphone, hrefs: ['/promotions', '/segments'] },
   { labelKey: 'menu.groupFinance', groupKey: 'groupFinance', icon: WalletIcon, hrefs: ['/settlements', '/withdrawals'] },
@@ -324,13 +356,24 @@ export function Sidebar() {
     <aside className="flex w-56 shrink-0 flex-col border-r bg-white dark:bg-background">
       <nav className="flex-1 space-y-3 overflow-y-auto p-3">
         {NAV_GROUPS.map((group) => {
-          const groupItems = visibleItems.filter((item) => group.hrefs.includes(item.href));
+          // 有 sections → 二级小节渲染；无 → 平铺现行为（group.hrefs）
+          const sectionHrefs: readonly string[] = group.sections
+            ? group.sections.flatMap((s) => s.hrefs)
+            : (group.hrefs ?? []);
+          const groupItems = visibleItems.filter((item) => sectionHrefs.includes(item.href));
           // 组内无可见项 → 不渲染组标题（空组不出现）
           if (groupItems.length === 0) return null;
           // hydrated 前 / 无记录 → 默认展开；记录存在且为 false → 收起
           const isExpanded = !hydrated || collapsed[group.groupKey] !== false;
           const GroupChevron = isExpanded ? ChevronDown : ChevronRight;
           const GroupIcon = group.icon;
+          // 二级小节渲染数据：仅当前视角下有可见项的小节（空小节标题不出现）
+          const renderedSections = group.sections
+            ?.map((section) => ({
+              labelKey: section.labelKey,
+              items: visibleItems.filter((item) => section.hrefs.includes(item.href)),
+            }))
+            .filter((s) => s.items.length > 0);
           return (
             <div key={group.groupKey} className="space-y-1">
               <button
@@ -344,27 +387,62 @@ export function Sidebar() {
                 <GroupChevron className="h-3 w-3 shrink-0 text-muted-foreground" />
               </button>
               {isExpanded &&
-                groupItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href !== '/' && pathname.startsWith(item.href));
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
-                        isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span>{t(item.labelKey)}</span>
-                    </Link>
-                  );
-                })}
+                (renderedSections
+                  ? // 二级小节（20261020 履约组）：小节标题 + 组内项
+                    renderedSections.map((section) => (
+                      <div key={section.labelKey} className="space-y-1">
+                        <div className="px-3 pt-1.5 text-xs font-medium text-muted-foreground/70">
+                          {t(section.labelKey)}
+                        </div>
+                        {section.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive =
+                            item.exact
+                              ? pathname === item.href
+                              : pathname === item.href ||
+                                (item.href !== '/' && pathname.startsWith(item.href));
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className={cn(
+                                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
+                                isActive
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                              )}
+                            >
+                              <Icon className="h-4 w-4" />
+                              <span>{t(item.labelKey)}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ))
+                  : // 平铺（其余 8 组，现行为）
+                    groupItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive =
+                        item.exact
+                          ? pathname === item.href
+                          : pathname === item.href ||
+                            (item.href !== '/' && pathname.startsWith(item.href));
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
+                            isActive
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span>{t(item.labelKey)}</span>
+                        </Link>
+                      );
+                    }))}
             </div>
           );
         })}
