@@ -184,7 +184,7 @@ export function PendingCountsCard({ perspective }: { perspective: string }) {
           label={t('admin.support.cards.c2PendingAssign')}
           count={tasksCount}
           zeroText={t('admin.support.cards.none')}
-          href={cardLink('/dispatch?status=PENDING_ASSIGN', perspective)}
+          href={cardLink('/dispatch/tasks?status=PENDING_ASSIGN', perspective)}
         />
       )}
       {!feedbackQ.isPending && !feedbackQ.error && (

@@ -750,8 +750,13 @@
       "toastRecreateSuccess": "Tarefa recriada",
       "toastFailed": "Operação falhou",
       "monitorTitle": "Task Monitor",
+      "monitorLink": "View task monitoring",
       "evidencePhotos": "Fotos de Evidência",
       "hasEvidence": "Tem fotos de evidência ({count})"
+    },
+    "dispatchTasks": {
+      "title": "Monitoramento de Tarefas",
+      "description": "Lista, detalhes, redesignação e cancelamento de tarefas de entrega"
     },
     "payments": {
       "title": "Pagamentos",

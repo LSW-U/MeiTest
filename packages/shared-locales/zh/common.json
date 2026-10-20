@@ -750,8 +750,13 @@
       "toastRecreateSuccess": "任务已补建",
       "toastFailed": "操作失败",
       "monitorTitle": "任务监控",
+      "monitorLink": "查看任务监控",
       "evidencePhotos": "取证照片",
       "hasEvidence": "有取证照片 {count} 张"
+    },
+    "dispatchTasks": {
+      "title": "任务监控",
+      "description": "配送任务列表 + 详情 + 改派 + 取消"
     },
     "payments": {
       "title": "支付管理",

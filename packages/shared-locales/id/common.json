@@ -750,8 +750,13 @@
       "toastRecreateSuccess": "Tugas dibuat ulang",
       "toastFailed": "Operasi gagal",
       "monitorTitle": "Task Monitor",
+      "monitorLink": "View task monitoring",
       "evidencePhotos": "Foto Bukti",
       "hasEvidence": "Ada foto bukti ({count})"
+    },
+    "dispatchTasks": {
+      "title": "Monitor Tarefa",
+      "description": "Lista, detalla, reafeta no kansela tarefa entrega"
     },
     "payments": {
       "title": "Pembayaran",

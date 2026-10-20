@@ -753,8 +753,13 @@
       "toastRecreateSuccess": "Task recreated",
       "toastFailed": "Operation failed",
       "monitorTitle": "Task Monitor",
+      "monitorLink": "View task monitoring",
       "evidencePhotos": "Evidence Photos",
       "hasEvidence": "Has evidence photos ({count})"
+    },
+    "dispatchTasks": {
+      "title": "Task Monitoring",
+      "description": "Delivery task list, details, reassignment and cancellation"
     },
     "payments": {
       "title": "Payments",
