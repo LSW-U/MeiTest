@@ -362,6 +362,9 @@ components:
         points:
           type: integer
           minimum: 0
+        defaultPaymentMethod:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -376,6 +379,7 @@ components:
         - avatarUrl
         - role
         - status
+        - defaultPaymentMethod
         - createdAt
         - updatedAt
     UpdateProfileRequest:
@@ -387,6 +391,9 @@ components:
         avatarUrl:
           type: string
           format: uri
+        defaultPaymentMethod:
+          type: string
+          nullable: true
     ChangePasswordRequest:
       type: object
       properties:
@@ -10889,6 +10896,9 @@ paths:
                   points:
                     type: integer
                     minimum: 0
+                  defaultPaymentMethod:
+                    type: string
+                    nullable: true
                   createdAt:
                     type: string
                     format: date-time
@@ -10903,6 +10913,7 @@ paths:
                   - avatarUrl
                   - role
                   - status
+                  - defaultPaymentMethod
                   - createdAt
                   - updatedAt
     patch:
@@ -10920,6 +10931,9 @@ paths:
                 avatarUrl:
                   type: string
                   format: uri
+                defaultPaymentMethod:
+                  type: string
+                  nullable: true
       responses:
         "200":
           description: 更新成功
@@ -10956,6 +10970,9 @@ paths:
                   points:
                     type: integer
                     minimum: 0
+                  defaultPaymentMethod:
+                    type: string
+                    nullable: true
                   createdAt:
                     type: string
                     format: date-time
@@ -10970,8 +10987,38 @@ paths:
                   - avatarUrl
                   - role
                   - status
+                  - defaultPaymentMethod
                   - createdAt
                   - updatedAt
+        "400":
+          description: E-USER-010 支付方式无效或暂不可用（枚举外/enabled=false/available=false）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/client/user/notification-preferences:
     get:
       tags:

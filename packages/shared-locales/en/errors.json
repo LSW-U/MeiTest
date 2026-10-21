@@ -189,6 +189,7 @@
   "E-USER-007": "Resource not found",
   "E-USER-008": "Invalid delete request (ids required, 1-100 items)",
   "E-USER-009": "Too many items to delete (max 100)",
+  "E-USER-010": "Invalid or unavailable payment method",
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
   "E-WAREHOUSE-003": "Warehouse not found",

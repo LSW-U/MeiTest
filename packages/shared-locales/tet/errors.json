@@ -189,6 +189,7 @@
   "E-USER-007": "Rekursu lahetan",
   "E-USER-008": "Solan hamoos invalid (ids presiza, 1-100 item)",
   "E-USER-009": "Item barak liu atu hamoos (maksimu 100)",
+  "E-USER-010": "Forma pagamentu invalidu ka la disponivel",
   "E-WAREHOUSE-001": "Warehouse code already exists",
   "E-WAREHOUSE-002": "Out of delivery range",
   "E-WAREHOUSE-003": "Armazén laha iha",

@@ -695,6 +695,7 @@ export interface paths {
                             /** @enum {string} */
                             memberLevel?: "gold" | "silver" | "bronze";
                             points?: number;
+                            defaultPaymentMethod: string | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -722,6 +723,7 @@ export interface paths {
                         name?: string;
                         /** Format: uri */
                         avatarUrl?: string;
+                        defaultPaymentMethod?: string | null;
                     };
                 };
             };
@@ -747,10 +749,30 @@ export interface paths {
                             /** @enum {string} */
                             memberLevel?: "gold" | "silver" | "bronze";
                             points?: number;
+                            defaultPaymentMethod: string | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
                             updatedAt: string;
+                        };
+                    };
+                };
+                /** @description E-USER-010 支付方式无效或暂不可用（枚举外/enabled=false/available=false） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -24068,6 +24090,7 @@ export interface components {
             /** @enum {string} */
             memberLevel?: "gold" | "silver" | "bronze";
             points?: number;
+            defaultPaymentMethod: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -24077,6 +24100,7 @@ export interface components {
             name?: string;
             /** Format: uri */
             avatarUrl?: string;
+            defaultPaymentMethod?: string | null;
         };
         ChangePasswordRequest: {
             oldPassword: string;

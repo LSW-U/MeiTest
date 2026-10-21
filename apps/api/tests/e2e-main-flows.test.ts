@@ -537,3 +537,58 @@ describeWhenApiUp('e2e: 路由顺序 + 新端点 happy path', () => {
     expect(Array.isArray(res.data)).toBe(true);
   });
 });
+
+// 默认支付方式（方案乙批1 v3 2026-10-22）：PATCH /client/user/profile 四断言。
+// 真实调用路径（HTTP→pipe→service），mock 单测不经过 ZodValidationPipe 且 D4b 判定在
+// service（isPaymentMethodOrderable），断言 400 必须走真端点防假绿
+describeWhenApiUp('e2e: 默认支付方式偏好（profile PATCH/GET）', () => {
+  let customerToken: string;
+
+  it('准备：登录', async () => {
+    customerToken = await mockLogin('CUSTOMER', 'client_app');
+  });
+
+  async function patchProfile(defaultPaymentMethod: unknown) {
+    const res = await fetch(`${API}/client/user/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${customerToken}`,
+      },
+      body: JSON.stringify({ defaultPaymentMethod }),
+    });
+    return { status: res.status, body: await res.json() };
+  }
+
+  it('1. 合法可下单渠道（COD）保存成功，GET 回读一致', async () => {
+    const { status, body } = await patchProfile('COD');
+    expect(status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.defaultPaymentMethod).toBe('COD');
+
+    const getRes = await apiCall('/client/user/profile', customerToken);
+    expect(getRes.data.defaultPaymentMethod).toBe('COD');
+  });
+
+  it('2. 枚举内占位渠道（LOCAL_PSP，available:false）→ 400 E-USER-010', async () => {
+    const { status, body } = await patchProfile('LOCAL_PSP');
+    expect(status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('E-USER-010');
+  });
+
+  it('3. 枚举外任意串（BITCOIN）→ 400 E-USER-010（D4b service 单点判定）', async () => {
+    const { status, body } = await patchProfile('BITCOIN');
+    expect(status).toBe(400);
+    expect(body.error.code).toBe('E-USER-010');
+  });
+
+  it('4. 传 null 清除成功，GET 回读 null', async () => {
+    const { status, body } = await patchProfile(null);
+    expect(status).toBe(200);
+    expect(body.data.defaultPaymentMethod).toBeNull();
+
+    const getRes = await apiCall('/client/user/profile', customerToken);
+    expect(getRes.data.defaultPaymentMethod).toBeNull();
+  });
+});

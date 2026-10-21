@@ -60,7 +60,8 @@ export class UserController {
   @Audit({ resource: 'User' })
   async updateProfile(
     @Request() req: { user: RequestUser },
-    @Body(new ZodValidationPipe(UpdateProfileRequest)) body: { name?: string; avatarUrl?: string },
+    @Body(new ZodValidationPipe(UpdateProfileRequest))
+    body: { name?: string; avatarUrl?: string; defaultPaymentMethod?: string | null },
   ) {
     const data = await this.users.updateProfile(req.user.sub, body);
     return { success: true, data };

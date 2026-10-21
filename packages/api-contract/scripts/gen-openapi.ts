@@ -857,6 +857,8 @@ registry.registerPath({
       description: '更新成功',
       content: { 'application/json': { schema: User } },
     },
+    // 默认支付方式（方案乙批1 v3 D4/D7）：值非 null 时须可下单渠道（isPaymentMethodOrderable）
+    400: { description: 'E-USER-010 支付方式无效或暂不可用（枚举外/enabled=false/available=false）', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

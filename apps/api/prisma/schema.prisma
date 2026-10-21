@@ -264,6 +264,9 @@ model User {
   notificationPreferences Json?       @map("notification_preferences")
   // G8（客户画像批1 2026-10-18）：生日，可空。C6 生日营销（批4）只消费不补表
   birthDate               DateTime?   @map("birth_date")
+  // 默认支付方式（方案乙批1 v3 2026-10-22）：null=未设置，前端回退链后端偏好>本地缓存>默认COD。
+  // D1/D1b：String 列不加 DB enum，应用层 isPaymentMethodOrderable 校验（D4b/D6）
+  defaultPaymentMethod    String?     @map("default_payment_method")
   createdAt               DateTime    @default(now()) @map("created_at")
   updatedAt               DateTime    @updatedAt @map("updated_at")
 

@@ -189,6 +189,7 @@
   "E-USER-007": "Recurso não encontrado",
   "E-USER-008": "Pedido de exclusão inválido (ids obrigatório, 1-100 itens)",
   "E-USER-009": "Itens demais para excluir (máx. 100)",
+  "E-USER-010": "Método de pagamento inválido ou indisponível",
   "E-WAREHOUSE-001": "Código de armazém já existe",
   "E-WAREHOUSE-002": "Fora da área de entrega",
   "E-WAREHOUSE-003": "Armazém não encontrado",

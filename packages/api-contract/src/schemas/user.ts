@@ -30,6 +30,8 @@ export const User = z.object({
   memberLevel: MemberLevel.optional(),
   /** 会员积分（B8，$1=1pt，聚合已成交订单 payableAmount/100） */
   points: z.number().int().nonnegative().optional(),
+  // 默认支付方式（方案乙批1 v3 20261022）：null=未设置；值域在 service 层 isPaymentMethodOrderable 校验
+  defaultPaymentMethod: z.string().nullable(),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
 });
@@ -38,6 +40,10 @@ export const User = z.object({
 export const UpdateProfileRequest = z.object({
   name: z.string().min(1).optional(),
   avatarUrl: z.string().url().optional(),
+  // 默认支付方式（D4b）：zod 只放宽为 string（不挡枚举）——枚举内/enabled/available
+  // 统一由 service 层 isPaymentMethodOrderable 判定并拒绝 400 E-USER-010（zod enum 会被
+  // 共享 ZodValidationPipe 回成 E-COMMON-001）。null=清除偏好
+  defaultPaymentMethod: z.string().nullable().optional(),
 });
 
 /** 修改密码请求 */

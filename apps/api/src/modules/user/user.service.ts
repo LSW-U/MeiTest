@@ -9,7 +9,7 @@
  * - 收藏 toggle 用 upsert（避免重复抛错）
  * - 通知 type 必须是 NotificationType enum（DB 校验）
  */
-import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { db } from '../../shared/db';
@@ -19,6 +19,7 @@ import { AuthService } from '../auth/auth.service';
 import { NotificationService } from '../notification/notification.service';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import { Address, NotificationItem } from '@meimart/api-contract';
+import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
 import { decimalToNumber } from '@meimart/shared-utils';
 
 type AddressDTO = z.infer<typeof Address>;
@@ -77,6 +78,8 @@ export class UserService {
       emailVerified: user.emailVerified,
       points,
       memberLevel,
+      // 契约 User View（D2）：默认支付方式，null=未设置
+      defaultPaymentMethod: user.defaultPaymentMethod ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -106,13 +109,30 @@ export class UserService {
     return { points, memberLevel };
   }
 
-  async updateProfile(userId: string, input: { name?: string; avatarUrl?: string; email?: string }) {
+  async updateProfile(
+    userId: string,
+    input: { name?: string; avatarUrl?: string; email?: string; defaultPaymentMethod?: string | null },
+  ) {
+    // 默认支付方式校验（方案乙批1 v3 D4/D4b/D6/D7）：null=清除；非 null 必须
+    // isPaymentMethodOrderable（覆盖枚举外/enabled=false/available=false 三类）→ 400 E-USER-010。
+    // 与 order.service 下单判定同源（isPaymentMethodOrderable），zod 放宽不做枚举挡板
+    if (input.defaultPaymentMethod !== undefined && input.defaultPaymentMethod !== null) {
+      if (!isPaymentMethodOrderable(input.defaultPaymentMethod)) {
+        throw new BadRequestException({
+          code: 'E-USER-010',
+          message: 'Invalid or unavailable payment method',
+        });
+      }
+    }
     const user = await db.user.update({
       where: { id: userId },
       data: {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.avatarUrl !== undefined && { avatarUrl: input.avatarUrl }),
         ...(input.email !== undefined && { email: input.email, emailVerified: false }),
+        ...(input.defaultPaymentMethod !== undefined && {
+          defaultPaymentMethod: input.defaultPaymentMethod,
+        }),
       },
     });
     return {
@@ -123,6 +143,8 @@ export class UserService {
       avatarUrl: user.avatarUrl,
       role: this.auth.toContractRole(user.role),
       status: user.status,
+      // 契约 User View（D2）：默认支付方式，null=未设置
+      defaultPaymentMethod: user.defaultPaymentMethod ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
