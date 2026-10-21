@@ -15,3 +15,6 @@ overrides:
   'socket.io-parser@<4.2.7': '>=4.2.7 <5'
   'multer@<2.2.0': '>=2.2.0 <3'
   'multer@2.2.0': '>=2.3.0 <3'
+  # vite@8.0.x launch-editor 3 advisory（2026-10-21 披露，audit:gate 6 条 fail）：vite@8 钉 8.1.6
+  # （vitest@4/sentry server-utils 传递依赖，仅 dev 测试期；上游 8.1.6 修复。vitest@5.4.21 链另行挂账）
+  'vite@8': 8.1.6

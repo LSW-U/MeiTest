@@ -380,6 +380,18 @@
     {
       "key": "tinypool@1241261::GHSA-85c8-ppgw-ccpr",
       "reason": "critical: tinypool@1.1.1（admin-web vitest@2 传递依赖）run() options 原型污染→RCE，仅测试期 worker 进程场景可达，生产不装 dev 依赖。修复 2.1.2+ 跨主版本，挂账 vitest 2→4 立项"
+    },
+    {
+      "key": "vite@1242622::GHSA-698v-4r3x-3vcv",
+      "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期（launch-editor % 转义/Windows）。修复 6.4.4+ 跨主版本，挂账 vitest 2→4 立项（2026-10-21 新披露）"
+    },
+    {
+      "key": "vite@1242651::GHSA-r825-w8mm-5pxw",
+      "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期（launch-editor CLI flag 误解析）。修复 6.4.4+ 跨主版本，挂账 vitest 2→4 立项（2026-10-21 新披露）"
+    },
+    {
+      "key": "vite@1242658::GHSA-587h-7wmj-h5pm",
+      "reason": "high: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期 Windows 场景（launch-editor existsSync bypass）。修复 6.4.4+ 跨主版本，挂账 vitest 2→4 立项（2026-10-21 新披露）"
     }
   ]
 }
