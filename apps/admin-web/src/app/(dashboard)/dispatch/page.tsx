@@ -42,8 +42,13 @@ export default function DispatchTasksPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">{t('admin.dispatchCenter.title')}</h3>
           {/* 任务监控独立页批1（20261019）：老用户过渡兜底链接（监控区已抽迁 /dispatch/tasks） */}
+          {/* P3-2（20261022）：透传跨仓支援带入的 warehouseId，监控页免手输（新页 ?warehouseId= 消费） */}
           <Link
-            href="/dispatch/tasks"
+            href={
+              crossSupportTarget
+                ? `/dispatch/tasks?warehouseId=${crossSupportTarget.warehouseId}`
+                : '/dispatch/tasks'
+            }
             className="inline-flex items-center gap-0.5 text-sm text-primary hover:underline"
           >
             {t('admin.dispatch.monitorLink')}

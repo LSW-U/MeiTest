@@ -82,7 +82,10 @@ function TaskMonitorPageContent() {
         }
       />
 
-      <TasksMonitor initialStatus={fromQueryStatus ?? 'ALL'} />
+      <TasksMonitor
+        initialStatus={fromQueryStatus ?? 'ALL'}
+        initialWarehouseId={searchParams.get('warehouseId') ?? ''}
+      />
 
       {/* 补建任务 Dialog（v2 拍板随迁新页） */}
       <Dialog open={recreateOpen} onOpenChange={(open) => !open && setRecreateOpen(false)}>

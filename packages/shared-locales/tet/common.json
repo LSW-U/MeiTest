@@ -755,8 +755,8 @@
       "hasEvidence": "Iha foto bukti ({count})"
     },
     "dispatchTasks": {
-      "title": "Task Monitoring",
-      "description": "Delivery task list, details, reassignment and cancellation"
+      "title": "",
+      "description": ""
     },
     "payments": {
       "title": "Payments",

@@ -75,14 +75,17 @@ export function canCancel(status: DeliveryTaskStatus): boolean {
 
 export function TasksMonitor({
   initialStatus = 'ALL',
+  initialWarehouseId = '',
 }: {
   /** ?status= 直达初始筛选（仅首挂载默认值，用户手改不锁死） */
   initialStatus?: DeliveryTaskStatus | 'ALL';
+  /** ?warehouseId= 初始仓筛选（批1 P3-2：兜底链接透传，仅首挂载默认值） */
+  initialWarehouseId?: string;
 }) {
   const t = useTranslations('common');
   const [statusFilter, setStatusFilter] = useState<DeliveryTaskStatus | 'ALL'>(initialStatus);
   const [orderNoSearch, setOrderNoSearch] = useState('');
-  const [warehouseIdSearch, setWarehouseIdSearch] = useState('');
+  const [warehouseIdSearch, setWarehouseIdSearch] = useState(initialWarehouseId);
   const [detailTarget, setDetailTarget] = useState<AdminDeliveryTask | null>(null);
   const [reassignTarget, setReassignTarget] = useState<AdminDeliveryTask | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AdminDeliveryTask | null>(null);
