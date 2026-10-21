@@ -16,6 +16,7 @@ interface MakeCtxOpts {
   adminCookie?: string;
   csrfCookie?: string;
   csrfHeader?: string;
+  url?: string;
 }
 
 /** 造一个 mock ExecutionContext（只含 switchToHttp.getRequest） */
@@ -25,7 +26,7 @@ function makeContext(opts: MakeCtxOpts) {
   if (opts.csrfCookie !== undefined) cookies.admin_csrf = opts.csrfCookie;
   const headers: Record<string, string> = {};
   if (opts.csrfHeader !== undefined) headers['x-csrf-token'] = opts.csrfHeader;
-  const req = { method: opts.method ?? 'GET', cookies, headers };
+  const req = { method: opts.method ?? 'GET', cookies, headers, url: opts.url ?? '/api/v1/whatever' };
   return { switchToHttp: () => ({ getRequest: () => req }) } as any;
 }
 
@@ -62,6 +63,32 @@ describe('CsrfGuard', () => {
           ),
         ).toBe(true);
       }
+    });
+
+    it('登录端点豁免：残留 admin cookie + 无 CSRF header → 放行（2026-10-20 修复：旧 cookie 阻断重新登录）', () => {
+      for (const p of [
+        '/api/v1/common/auth/login-password',
+        '/api/v1/common/auth/login-sms',
+        '/api/v1/common/auth/register',
+        '/api/v1/common/auth/refresh',
+        '/api/v1/common/auth/logout',
+      ]) {
+        expect(
+          guard.canActivate(makeContext({ method: 'POST', adminCookie: 'at', url: p })),
+        ).toBe(true);
+      }
+    });
+
+    it('豁免路径带 query string 也放行（按 ? 前截断匹配）', () => {
+      expect(
+        guard.canActivate(
+          makeContext({
+            method: 'POST',
+            adminCookie: 'at',
+            url: '/api/v1/common/auth/login-password?foo=1',
+          }),
+        ),
+      ).toBe(true);
     });
   });
 
