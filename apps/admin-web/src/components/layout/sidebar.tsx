@@ -354,6 +354,32 @@ export function Sidebar() {
 
   const visibleItems = NAV_ITEMS.filter((item) => item.perspectives.includes(perspective));
 
+  /** 菜单项渲染（P3-4 抽公共：sections/平铺两分支共用，消 ~30 行重复） */
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive =
+      item.exact
+        ? pathname === item.href
+        : pathname === item.href ||
+          (item.href !== '/' && pathname.startsWith(item.href));
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
+          isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span>{t(item.labelKey)}</span>
+      </Link>
+    );
+  };
+
+
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r bg-white dark:bg-background">
       <nav className="flex-1 space-y-3 overflow-y-auto p-3">
@@ -396,55 +422,11 @@ export function Sidebar() {
                         <div className="px-3 pt-1.5 text-xs font-medium text-muted-foreground/70">
                           {t(section.labelKey)}
                         </div>
-                        {section.items.map((item) => {
-                          const Icon = item.icon;
-                          const isActive =
-                            item.exact
-                              ? pathname === item.href
-                              : pathname === item.href ||
-                                (item.href !== '/' && pathname.startsWith(item.href));
-                          return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className={cn(
-                                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
-                                isActive
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                              )}
-                            >
-                              <Icon className="h-4 w-4" />
-                              <span>{t(item.labelKey)}</span>
-                            </Link>
-                          );
-                        })}
+                        {section.items.map(renderNavItem)}
                       </div>
                     ))
                   : // 平铺（其余 8 组，现行为）
-                    groupItems.map((item) => {
-                      const Icon = item.icon;
-                      const isActive =
-                        item.exact
-                          ? pathname === item.href
-                          : pathname === item.href ||
-                            (item.href !== '/' && pathname.startsWith(item.href));
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={cn(
-                            'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
-                            isActive
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                          )}
-                        >
-                          <Icon className="h-4 w-4" />
-                          <span>{t(item.labelKey)}</span>
-                        </Link>
-                      );
-                    }))}
+                    groupItems.map(renderNavItem))}
             </div>
           );
         })}
