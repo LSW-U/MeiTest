@@ -639,11 +639,15 @@ async function main() {
 
   // 7.4 分类已在 4a 步骤创建，跳过旧的手动分类逻辑
 
-  // 7.5 Banner（2 个 ACTIVE，使用真实商品图）
+  // 7.5 Banner（3 个 ACTIVE，2:1 宽幅广告图，适配前端轮播卡 342×180 cover 裁切）
+  // 20261023：原用商品缩略图（正方形）被 cover 拉横幅只露中间一条，换 Unsplash 2:1 专图。
+  // 图片文案（alt）与图内容对齐：货架杂货→大促 / 生鲜→免配送费 / 厨房→新品。
+  // 注：Unsplash 外链仅 dev 种子；生产运营图应上传自有 MinIO 后替换 imageUrl。
   await prisma.banner.deleteMany();
   await prisma.banner.create({
     data: {
-      imageUrl: allProducts[0]?.mainImage ?? 'https://example.com/banner-promo-1.png',
+      imageUrl:
+        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=600&fit=crop&q=80',
       alt: { en: 'Summer Sale', zh: '夏季大促' },
       linkType: 'PRODUCT',
       linkValue: allProducts[0]?.id ?? null,
@@ -653,14 +657,25 @@ async function main() {
   });
   await prisma.banner.create({
     data: {
-      imageUrl: allProducts[1]?.mainImage ?? 'https://example.com/banner-free-delivery.png',
+      imageUrl:
+        'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=600&fit=crop&q=80',
       alt: { en: 'Free Delivery', zh: '免配送费' },
       linkType: 'NONE',
       sortOrder: 2,
       status: 'ACTIVE',
     },
   });
-  console.log('  ✅ 2 banners');
+  await prisma.banner.create({
+    data: {
+      imageUrl:
+        'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=600&fit=crop&q=80',
+      alt: { en: 'New Arrivals', zh: '新品上架' },
+      linkType: 'NONE',
+      sortOrder: 3,
+      status: 'ACTIVE',
+    },
+  });
+  console.log('  ✅ 3 banners');
   // === END FLOW W ===
 
   // === HotSearchTerm seed（运营种子词，热搜榜 PINNED 前置 + MANUAL 兜底）===
