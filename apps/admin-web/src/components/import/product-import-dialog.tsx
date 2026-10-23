@@ -103,6 +103,21 @@ function extractFailedRows(err: unknown): Array<{ line: number; field: string; r
   return [];
 }
 
+/** 导入渠道：csv 已上线；sku/sync 为预留占位（#4 方案A，仅前端 UI，后端契约不动） */
+export type ImportChannel = 'csv' | 'sku' | 'sync';
+
+/** 渠道选项表：sku/sync 标记 comingSoon（渲染「即将上线」标记） */
+const IMPORT_CHANNELS: Array<{ key: ImportChannel; soon?: boolean }> = [
+  { key: 'csv' },
+  { key: 'sku', soon: true },
+  { key: 'sync', soon: true },
+];
+
+/** 渠道未上线时 body/交互的统一判定（导出供测试与未来接入点复用） */
+export function isChannelAvailable(channel: ImportChannel): boolean {
+  return channel === 'csv';
+}
+
 export function ProductImportDialog({
   open,
   onOpenChange,
@@ -113,6 +128,7 @@ export function ProductImportDialog({
   const t = useTranslations('common');
   const { toast } = useToast();
   const [mode, setMode] = useState<ImportMode>('skip');
+  const [channel, setChannel] = useState<ImportChannel>('csv');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [result, setResult] = useState<ProductImportResultData | null>(null);
@@ -177,6 +193,36 @@ export function ProductImportDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          {/* 导入方式（#4 方案A 预留 UI）：仅 csv 可用，sku/sync 置灰标「即将上线」 */}
+          <div className="space-y-1">
+            <Label className="text-xs">{t('w.products.importChannelLabel')}</Label>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('w.products.importChannelLabel')}>
+              {IMPORT_CHANNELS.map(({ key, soon }) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  variant={channel === key ? 'default' : 'outline'}
+                  disabled={soon}
+                  aria-disabled={soon}
+                  onClick={() => !soon && setChannel(key)}
+                >
+                  {t(`w.products.importChannel_${key}`)}
+                  {soon && (
+                    <span className="ml-1 text-[10px] text-muted-foreground">
+                      {t('w.products.importChannelComingSoon')}
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
+            {channel !== 'csv' && (
+              <p className="text-xs text-muted-foreground">{t('w.products.importChannelComingSoonHint')}</p>
+            )}
+          </div>
+
+          {channel === 'csv' && (
+          <>
           {/* 模板下载 + 文件选择 */}
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={downloadTemplateCsv}>
@@ -328,6 +374,8 @@ export function ProductImportDialog({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
         <DialogFooter>
@@ -336,7 +384,7 @@ export function ProductImportDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!file || (preview?.totalDataRows ?? 0) > MAX_ROWS || importMutation.isPending}
+            disabled={channel !== 'csv' || !file || (preview?.totalDataRows ?? 0) > MAX_ROWS || importMutation.isPending}
           >
             {importMutation.isPending ? (
               <><Loader2 className="h-4 w-4 animate-spin" />{t('loading')}</>
