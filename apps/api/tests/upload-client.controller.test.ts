@@ -254,13 +254,15 @@ describe('ClientUploadController.uploadReviewImage', () => {
     expect(key).toMatch(/^reviews\/image-\d{13}-[a-f0-9]{8}\.jpg$/);
   });
 
-  it('正常上传 png/webp -> ext 对', async () => {
-    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+  it('正常上传 png/webp -> ext 对（原图 calls[0]/calls[2]，calls[1] 为缩略图写入）', async () => {
+    mockStorage.uploadFile.mockResolvedValue({ url: 'u', key: 'k', bucket: 'b', size: 1 });
     await controller.uploadReviewImage(fakeFile('image/png', PNG_600));
     expect(mockStorage.uploadFile.mock.calls[0][0].key).toMatch(/\.png$/);
-    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+    // 轻量化省流 批1：同步生成 -thumb（第二次 uploadFile）
+    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/-thumb\.png$/);
     await controller.uploadReviewImage(fakeFile('image/webp', WEBP_300));
-    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/\.webp$/);
+    expect(mockStorage.uploadFile.mock.calls[2][0].key).toMatch(/\.webp$/);
+    expect(mockStorage.uploadFile.mock.calls[3][0].key).toMatch(/-thumb\.webp$/);
   });
 
   it('非正方形（800x600）-> 通过（同 refund-evidence：评价图任意比例）', async () => {

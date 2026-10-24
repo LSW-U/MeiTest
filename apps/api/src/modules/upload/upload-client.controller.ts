@@ -55,6 +55,7 @@ import {
   ALLOWED_MIME,
   detectImageFormat,
 } from './upload.helpers';
+import { uploadWithThumbnail } from './thumbnail.helper';
 
 /** 售后凭证/评价图最小尺寸（100×100 防空图/图标滥用，宽于商品图 200） */
 const MIN_DIMENSION = 100;
@@ -283,7 +284,7 @@ export class ClientUploadController {
     // MinIO 故障转 InternalServerErrorException + 日志
     let result;
     try {
-      result = await this.storage.uploadFile({
+      result = await uploadWithThumbnail(this.storage, {
         key,
         buffer: file.buffer,
         contentType: file.mimetype,

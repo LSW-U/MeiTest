@@ -256,7 +256,8 @@ describe('OrphanCleanupService.runCleanup — 宽限期/dry-run/execute', () => 
 
     expect(summary.executed).toBe(true);
     expect(summary.totalObjects).toBe(3);
-    expect(summary.referencedKeys).toBe(1);
+    // 轻量化省流 批1：引用原图会连带保护其 -thumb（1 原图 + 1 缩略图 = 2）
+    expect(summary.referencedKeys).toBe(2);
     expect(summary.orphans).toBe(2);
     expect(summary.orphanBytes).toBe(3000);
     expect(storage.deleteObjects).toHaveBeenCalledTimes(1);

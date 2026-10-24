@@ -46,6 +46,7 @@ import {
   ALLOWED_MIME,
   detectImageFormat,
 } from './upload.helpers';
+import { uploadWithThumbnail } from './thumbnail.helper';
 
 /** 头像最小尺寸（与 admin 商品图同标准，防客户端卡片变形） */
 const AVATAR_MIN_DIMENSION = 200;
@@ -252,7 +253,7 @@ export class RiderUploadController {
     const key = `${options.keyPrefix}${Date.now()}-${rand}.${ext}`;
     let result;
     try {
-      result = await this.storage.uploadFile({
+      result = await uploadWithThumbnail(this.storage, {
         key,
         buffer: file.buffer,
         contentType: file.mimetype,

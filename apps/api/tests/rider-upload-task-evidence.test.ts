@@ -78,10 +78,11 @@ describe('RiderUploadController.uploadTaskEvidence（批2 POST /common/rider/upl
     );
   });
 
-  it('成功：png → ext=png', async () => {
+  it('成功：png → ext=png + -thumb 缩略图写入（批1 P3-2）', async () => {
     mockStorage.uploadFile.mockResolvedValue({ url: 'u', key: 'tasks/evidence-2.png', bucket: 'b', size: 1 });
     await controller.uploadTaskEvidence(fakeFile('image/png', PNG_600));
     expect(mockStorage.uploadFile.mock.calls[0][0].key).toMatch(/\.png$/);
+    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/-thumb\.png$/);
   });
 
   it('非 magic bytes（伪装 txt）→ E-UPLOAD-013，不触 storage', async () => {

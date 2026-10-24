@@ -16,6 +16,7 @@ import { Inject } from '@nestjs/common';
 import { logger } from '../../shared/logger/logger';
 import { db } from '../../shared/db';
 import { ORPHAN_CLEANUP_GRACE_PERIOD_DAYS } from './orphan-cleanup.config';
+import { thumbKeyFor } from './thumbnail.helper';
 
 /**
  * 引用集合来源表清单（恰 13 张——新增图片字段必须同步此清单 + 单测，
@@ -183,6 +184,13 @@ export class OrphanCleanupService {
     }
 
     const referenced = await this.collectReferencedKeys(endpoint, bucket);
+    // 缩略图保护（轻量化省流 批1 2026-10-24）：-thumb 对象不落库（不进引用集合），
+    // 但原图被引用时缩略图必须同受保护，否则 7 天宽限期后会被误删。
+    // 原图成孤儿时缩略图不在此集合 → 随原图一起判孤儿删除（语义对称）。
+    // ⚠️ 迭代中 add 同一 Set 会死循环，先快照再扩
+    for (const key of [...referenced]) {
+      referenced.add(thumbKeyFor(key));
+    }
     const objects = await this.storage.listAllObjects();
 
     const graceCutoff = Date.now() - ORPHAN_CLEANUP_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;

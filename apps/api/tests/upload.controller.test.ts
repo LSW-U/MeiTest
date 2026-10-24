@@ -91,16 +91,18 @@ describe('UploadController.uploadProductImage', () => {
     expect(actualKey).toMatch(/^products\/main-\d{13}-[a-f0-9]{8}\.jpg$/);
   });
 
-  it('正常上传 png（600x600）-> ext=png', async () => {
-    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+  it('正常上传 png（600x600）-> ext=png + -thumb 缩略图写入（批1 P3-2）', async () => {
+    mockStorage.uploadFile.mockResolvedValue({ url: 'u', key: 'k', bucket: 'b', size: 1 });
     await controller.uploadProductImage(fakeFile('image/png', PNG_600));
     expect(mockStorage.uploadFile.mock.calls[0][0].key).toMatch(/\.png$/);
+    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/-thumb\.png$/);
   });
 
-  it('正常上传 webp（300x300）-> ext=webp', async () => {
-    mockStorage.uploadFile.mockResolvedValueOnce({ url: 'u', key: 'k', bucket: 'b', size: 1 });
+  it('正常上传 webp（300x300）-> ext=webp + -thumb 缩略图写入（批1 P3-2）', async () => {
+    mockStorage.uploadFile.mockResolvedValue({ url: 'u', key: 'k', bucket: 'b', size: 1 });
     await controller.uploadProductImage(fakeFile('image/webp', WEBP_300));
     expect(mockStorage.uploadFile.mock.calls[0][0].key).toMatch(/\.webp$/);
+    expect(mockStorage.uploadFile.mock.calls[1][0].key).toMatch(/-thumb\.webp$/);
   });
 
   it('不支持的 mime header -> 抛 BadRequest（fileFilter 层）', async () => {
