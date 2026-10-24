@@ -1,5 +1,5 @@
 {
-  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 95 条存量（2026-10-19 新披露 7 条 vite/vitest/tinypool/esbuild 全构建测试期工具链，B 路线 patch/minor 升级零消减——修复版本均跨主版本，admin-web vitest2 链挂账另行立项）（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。",
+  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 95 条存量（2026-10-19 新披露 7 条 vite/vitest/tinypool/esbuild 全构建测试期工具链，B 路线 patch/minor 升级零消减——修复版本均跨主版本，admin-web vitest2 链挂账另行立项）（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。2026-10-24 补录 10 条新披露（next×2 / zod / body-parser / multer / nodemailer×3 / fast-uri / @vitest/mocker，均生态新披露非依赖变更；next critical SVG RCE 为 admin-web self-host Image Optimization，dev/staging 无生产 SVG 用户上传面，跨主版本升级另行立项）。",
   "entries": [
     {
       "key": "glob@1109842::GHSA-5j98-mcp5-4vw2",
@@ -400,6 +400,46 @@
     {
       "key": "vite@1242730::GHSA-rq7h-c2jc-7f22",
       "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），server.fs.allow bypass 仅 dev server 场景可达，生产不装 dev 依赖。修复 6.4.4+ 跨主版本，挂账 vitest 2→4 立项（2026-10-22 新披露）"
+    },
+    {
+      "key": "@vitest/mocker@1242767::GHSA-qxg6-89mg-rqv8",
+      "reason": "moderate：Vitest UI server 未鉴权 manual mock 注册可代码注入。vitest 工具链仅测试期，不进产物；vitest2 链升级另行立项"
+    },
+    {
+      "key": "next@1242817::GHSA-2464-fhr4-w9xw",
+      "reason": "critical：Next.js Image Optimization API 处理 SVG 时未鉴权 RCE。admin-web self-host，dev/staging 无生产 SVG 攻击面；next 14→15/16 跨主版本另行立项"
+    },
+    {
+      "key": "next@1242819::GHSA-p3m5-59mp-jv5r",
+      "reason": "high：App Router Server Actions DoS。admin-web Next.js 14，同上另行立项"
+    },
+    {
+      "key": "zod@1243066::GHSA-mrhx-c7xc-m3w5",
+      "reason": "high：超大 constrained collections 校验内存耗尽。zod 3/4 均命中（api 契约层 + admin-web），升级需跨 minor 回归另行立项"
+    },
+    {
+      "key": "body-parser@1243074::GHSA-27r3-jxmh-p828",
+      "reason": "high：压缩请求体尾随字节 DoS。@nestjs/platform-express 传递依赖，运行期但需内网可达；等 nest 上游 express 对齐消减"
+    },
+    {
+      "key": "multer@1243083::GHSA-q7qp-rjg7-q26m",
+      "reason": "high：请求 teardown 后异步 fileFilter 挂起 DoS。@nestjs/platform-express 传递依赖（multer 此前已修过一轮，本条为新披露 ID），等上游消减"
+    },
+    {
+      "key": "nodemailer@1243091::GHSA-8c8m-p3m8-cjg8",
+      "reason": "moderate：addressparser 嵌套注释提前结束。nodemailer（邮件通知链）传递依赖，新披露 ID；等上游消减"
+    },
+    {
+      "key": "nodemailer@1243092::GHSA-m943-m63m-w62w",
+      "reason": "moderate：引号串内分号提前结束地址组。同上"
+    },
+    {
+      "key": "nodemailer@1243093::GHSA-85x2-q946-cp5h",
+      "reason": "moderate：尖括号本地部分致 domain 错配。同上"
+    },
+    {
+      "key": "fast-uri@1243098::GHSA-w74x-v6f9-j3xg",
+      "reason": "moderate：URI scheme 伪装。ajv/mock server 工具链开发期依赖，不进产物"
     }
   ]
 }
