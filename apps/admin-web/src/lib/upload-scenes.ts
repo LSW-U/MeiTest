@@ -11,6 +11,7 @@
  *   - category-icon：分类图标（product-image，1:1 约束一致——U7 拍板不开新口子）
  *   - banner：banner 宽幅图（banner-image，宽 600-2000px 宽幅 + 1.5:1~3:1 横幅约束——U7/U8/U9 拍板）
  *   - onboarding-slide：引导页轮播图（slide-image，竖向 1:1~3:4 + 宽 600-2000px——引导页内容可配置批1 端点/批2 接线）
+ *   - oos-evidence：缺货取证图（oos-evidence，最小 300×200 任意比例——缺货履约闭环批1 P2-3）
  * 非图片场景（CSV 导入）：inventory-import / products-import 两调用点
  * 仍直调 apiUploadFile（须带各自 mode/query 参数，YAGNI 不进注册表——批A 审查 P3-4）。
  *
@@ -45,6 +46,8 @@ export const UPLOAD_SCENES = {
   banner: '/api/v1/admin/uploads/banner-image',
   /** 引导页轮播图（引导页内容可配置批2：竖向 1:1~3:4 + 宽 600-2000px，批1 新增端点） */
   'onboarding-slide': '/api/v1/admin/uploads/slide-image',
+  /** 缺货取证图（缺货履约闭环批1 P2-3：最小 300×200 任意比例，批1 新增端点） */
+  'oos-evidence': '/api/v1/admin/uploads/oos-evidence',
 } as const;
 
 export type UploadScene = keyof typeof UPLOAD_SCENES;

@@ -28,6 +28,10 @@ import { RefundModule } from '../refund/refund.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrategy, WhatsAppNotifyStrategy } from '../../infrastructure';
+import { OutOfStockService } from './out-of-stock.service';
+import { RiderOutOfStockController } from './rider-out-of-stock.controller';
+// 批1：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义，同 dispatch.module 先例）
+import { StorageModule } from '../../shared/storage/storage.module';
 
 @Module({
   imports: [
@@ -40,13 +44,16 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
     PromotionModule,
     PricingModule,
     RealtimeModule,
+    StorageModule,
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
   ],
-  controllers: [OrderController, AdminOrderController],
+  controllers: [OrderController, AdminOrderController, RiderOutOfStockController],
   providers: [
     OrderService,
     OrderNoService,
     OrderTimeoutProcessor,
+    // 缺货履约闭环批1（2026-10-24）：缺货登记服务（admin 拣货段 + 骑手 DELIVERING 兜底）
+    OutOfStockService,
     // Notify 策略（W4-REVIEW P0-3）
     EmailNotifyStrategy,
     SmsNotifyStrategy,

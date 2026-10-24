@@ -114,6 +114,7 @@ enum OrderEventType {
   REFUND_REQUESTED // 申请退款
   REFUNDED // 已退款
   ISSUE_REPORTED // W3-C S5:骑手异常上报（CUSTOMER_UNREACHABLE / REJECTED 等）
+  OUT_OF_STOCK_REPORTED // 缺货履约闭环批1 2026-10-24:缺货登记（拣货段/骑手段兜底）
 }
 
 /// 支付方式(v0.3 决策 D 全预留 + 批B 补位 3 渠道,2 真实 + 6 mock/stub)
@@ -382,6 +383,8 @@ model Warehouse {
   deliveryTasks DeliveryTask[]
   carts         Cart[]
   staff         WarehouseStaff[]
+  // 缺货履约闭环批1（2026-10-24）：规则表 scope 反向关系（D15 可空 warehouseId）
+  outOfStockRules OutOfStockRule[]
 
   // ⚠️ GIST 索引必须走 raw SQL migration(prisma schema 不支持空间索引语法)
   // 在 W1-D2-T4 第一次迁移时,用以下流程:
@@ -651,6 +654,19 @@ model OrderItem {
   quantity     Int
   subtotal     Int // = unitPrice * quantity(分)
 
+  // 缺货登记 5 字段（缺货履约闭环批1 2026-10-24，D18：永久保留不清空，两账分离——
+  // RefundItem=打款事实 / 本字段=登记事实；全部可空向后兼容）
+  /// 缺货数量（≤ quantity；null=未登记缺货）
+  outOfStockQty          Int?     @map("out_of_stock_qty")
+  /// 缺货原因（整项缺 FULL / 部分缺 PARTIAL 语义由 reason 值表达，自由文本快照）
+  outOfStockReason       String?  @map("out_of_stock_reason")
+  /// 登记备注（可空）
+  outOfStockNote         String?  @map("out_of_stock_note")
+  /// 取证照片 URL（≤3，dispatch validateEvidenceUrls 同套语义：isOwnUrl 防外链）
+  outOfStockEvidenceUrls String[] @map("out_of_stock_evidence_urls")
+  /// 替代建议商品项（可空；D18 service 层校验必须属于本单，防跨单脏引用）
+  suggestionItemId       String?  @map("suggestion_item_id")
+
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   sku   Sku   @relation(fields: [skuId], references: [id])
 
@@ -682,6 +698,36 @@ model OrderEvent {
 
   @@index([orderId, createdAt])
   @@map("order_events")
+}
+
+/// 缺货自动退款规则配置（缺货履约闭环批1 2026-10-24，D15 独立规则表）
+/// 三开关 + 免审上限 + 可空 warehouseId scope（预留按仓库差异化，不预设计类目维度 D15 收窄）
+/// 规则表为源、SystemConfig 镜像读写（D17，批3 接线）；读规则优先匹配 warehouseId 精确行，无则回退全局行（warehouseId=null）
+model OutOfStockRule {
+  id          String  @id @default(uuid())
+  /// 仓库 scope（null=全局兜底规则）；同一 warehouseId 至多一行，全局行至多一行（应用层保证）
+  warehouseId String? @map("warehouse_id")
+  /// 开关1：整单全缺自动直退（默认开，保守默认 D 风险表）
+  autoRefundFullShortage Boolean @default(true) @map("auto_refund_full_shortage")
+  /// 开关2：部分缺金额占比阈值直退（默认关）
+  partialShortageThresholdEnabled Boolean @default(false) @map("partial_shortage_threshold_enabled")
+  /// 部分缺占比阈值（万分位整数，3000=30%；thresholdEnabled=false 时忽略）
+  partialShortageThresholdBp Int? @map("partial_shortage_threshold_bp")
+  /// 开关3：登记超时判定（默认关）
+  reportTimeoutEnabled Boolean @default(false) @map("report_timeout_enabled")
+  /// 登记超时分钟数（reportTimeoutEnabled=true 时生效）
+  reportTimeoutMinutes Int? @map("report_timeout_minutes")
+  /// 免审上限：单笔退款单金额上限（分，默认 $50=5000，D17）；超限转 PENDING 人工
+  autoRefundMaxAmount Int @default(5000) @map("auto_refund_max_amount")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  /// 全局兜底行唯一（warehouseId=null）；PostgreSQL 部分唯一索引见 migration raw SQL
+  @@index([warehouseId])
+  @@map("out_of_stock_rule")
 }
 
 // ============================================================================

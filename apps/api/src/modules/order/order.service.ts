@@ -1654,6 +1654,12 @@ export class OrderService {
         quantity: i.quantity as number,
         subtotal: i.subtotal as number,
         stock: stockMap.get(i.skuId as string),
+        // 缺货履约闭环批1（2026-10-24）：实送一致性（A2）——缺货标记可空新增，向后兼容。
+        // 缺货项永不参与「已送达」口径；部分缺 → 订单照常 DELIVERED* 但项显缺货标记（D18 字段永久保留）。
+        outOfStockQty: (i.outOfStockQty as number | null) ?? null,
+        outOfStockReason: (i.outOfStockReason as string | null) ?? null,
+        outOfStockEvidenceUrls: (i.outOfStockEvidenceUrls as string[] | null) ?? [],
+        suggestionItemId: (i.suggestionItemId as string | null) ?? null,
       })),
       events: o.events.map((e) => ({
         id: e.id as string,

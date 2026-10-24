@@ -42,6 +42,7 @@ import {
   ALLOWED_MIME,
   detectImageFormat,
 } from './upload.helpers';
+import { uploadWithThumbnail } from './thumbnail.helper';
 
 /** 图片尺寸约束（防客户端卡片变形 + 防超大图拖慢渲染）— admin 商品图端点专用 */
 const MIN_DIMENSION = 200; // 最小 200x200，低于此说明图被强行压缩过，质量差
@@ -60,6 +61,10 @@ const SLIDE_MIN_WIDTH = 600; // 宽下限（与 banner/product 同基线）
 const SLIDE_MAX_WIDTH = 2000; // 宽上限
 const SLIDE_MIN_RATIO = 0.75; // 宽高比下限 3:4（竖向偏方，引导屏主流 9:16~3:4 取带内）
 const SLIDE_MAX_RATIO = 1.0; // 宽高比上限 1:1（方案v2 拍板：竖向 1:1~3:4）
+
+/** 缺货取证图尺寸约束（缺货履约闭环批1 P2-3，审查 20261024）— admin oos-evidence 端点专用 */
+const OOS_MIN_WIDTH = 300; // 最小 300×200 任意比例（照 rider task-evidence doc 模式口径，取证图不强制比例）
+const OOS_MIN_HEIGHT = 200;
 
 @Controller('api/v1/admin/uploads')
 @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
@@ -155,7 +160,7 @@ export class UploadController {
     // #4 try/catch MinIO 故障，转 InternalServerErrorException + 日志
     let result;
     try {
-      result = await this.storage.uploadFile({
+      result = await uploadWithThumbnail(this.storage, {
         key,
         buffer: file.buffer,
         contentType: file.mimetype,
@@ -276,7 +281,7 @@ export class UploadController {
     const key = `banners/banner-${Date.now()}-${rand}.${ext}`;
     let result;
     try {
-      result = await this.storage.uploadFile({
+      result = await uploadWithThumbnail(this.storage, {
         key,
         buffer: file.buffer,
         contentType: file.mimetype,
@@ -404,7 +409,7 @@ export class UploadController {
     const key = `onboarding/slide-${Date.now()}-${rand}.${ext}`;
     let result;
     try {
-      result = await this.storage.uploadFile({
+      result = await uploadWithThumbnail(this.storage, {
         key,
         buffer: file.buffer,
         contentType: file.mimetype,
@@ -430,6 +435,119 @@ export class UploadController {
     }
     this.logger.log({
       msg: 'slide_image_uploaded',
+      key: result.key,
+      size: result.size,
+      mime: file.mimetype,
+    });
+    return {
+      success: true,
+      data: { url: result.url, key: result.key, size: result.size },
+    };
+  }
+
+  /**
+   * 缺货取证照片上传（缺货履约闭环批1 P2-3，审查 20261024）
+   *
+   * 用途：admin 缺货登记弹窗先传证据拿 URL，随 evidenceUrls（≤3）提交 out-of-stock 端点。
+   * 口径照 rider task-evidence（doc 模式：最小 300×200 任意比例），P2-3 拍板「放宽比例约束、
+   * 保留 magic bytes 校验」——借道 product-image-wall 会误触 1:1 校验导致取证图上传失败。
+   * MinIO 前缀 oos/evidence-（语义隔离，便于审计/孤儿清理）。
+   */
+  @Post('oos-evidence')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        // 错误码化对齐既有样板：E-UPLOAD-010 不支持的图片类型
+        if (!ALLOWED_MIME[file.mimetype]) {
+          cb(
+            new BadRequestException({
+              code: 'E-UPLOAD-010',
+              message: `Unsupported image type: ${file.mimetype}, only jpg/png/webp allowed`,
+              details: { mime: file.mimetype },
+            }),
+            false,
+          );
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @Audit({ resource: 'Upload' })
+  async uploadOosEvidence(
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<{ success: true; data: { url: string; key: string; size: number } }> {
+    if (!file) {
+      throw new BadRequestException('未收到文件（field name 必须为 "file"）');
+    }
+    // 空文件校验
+    if (!file.buffer || file.buffer.length < MIN_FILE_SIZE) {
+      throw new BadRequestException('文件为空');
+    }
+    // magic bytes 校验（防 mime 欺骗）+ 与 header 一致性（P2-3 拍板保留）
+    const detected = detectImageFormat(file.buffer);
+    if (!detected) {
+      throw new BadRequestException(
+        `文件内容不是有效的图片（jpg/png/webp），可能 mime 类型被伪造`,
+      );
+    }
+    if (detected !== ALLOWED_MIME[file.mimetype]) {
+      throw new BadRequestException(
+        `文件内容（${detected}）与声明的 mime（${file.mimetype}）不一致`,
+      );
+    }
+    // 尺寸校验（最小 300×200 任意比例，不查宽高比区间带）
+    let dims: { width: number; height: number };
+    try {
+      const r = imageSize(file.buffer);
+      if (!r.width || !r.height) {
+        throw new BadRequestException('无法读取图片尺寸（文件可能损坏）');
+      }
+      dims = { width: r.width, height: r.height };
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new BadRequestException(`读取图片尺寸失败: ${(err as Error).message}`);
+    }
+    if (dims.width < OOS_MIN_WIDTH || dims.height < OOS_MIN_HEIGHT) {
+      throw new BadRequestException({
+        code: 'E-UPLOAD-021',
+        message: `图片尺寸 ${dims.width}x${dims.height} 过小，取证图最小 ${OOS_MIN_WIDTH}x${OOS_MIN_HEIGHT}（任意比例）`,
+        details: { width: dims.width, height: dims.height, minWidth: OOS_MIN_WIDTH, minHeight: OOS_MIN_HEIGHT },
+      });
+    }
+    const ext = detected;
+    const rand = randomBytes(4).toString('hex');
+    const key = `oos/evidence-${Date.now()}-${rand}.${ext}`;
+    let result;
+    try {
+      result = await uploadWithThumbnail(this.storage, {
+        key,
+        buffer: file.buffer,
+        contentType: file.mimetype,
+      });
+    } catch (err) {
+      this.logger.error({
+        msg: 'oos_evidence_upload_failed',
+        key,
+        size: file.buffer.length,
+        mime: file.mimetype,
+        error: (err as Error).message,
+      });
+      if (err instanceof StorageError) {
+        throw new InternalServerErrorException({
+          code: 'E-UPLOAD-001',
+          message: `上传失败: ${err.message}`,
+        });
+      }
+      throw new InternalServerErrorException({
+        code: 'E-UPLOAD-002',
+        message: '上传失败，请稍后重试',
+      });
+    }
+    this.logger.log({
+      msg: 'oos_evidence_uploaded',
       key: result.key,
       size: result.size,
       mime: file.mimetype,

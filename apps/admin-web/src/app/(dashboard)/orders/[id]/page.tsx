@@ -39,6 +39,7 @@ import {
   usePickOrder,
   useUpdateOrder,
 } from '@/hooks/api/use-orders';
+import { OutOfStockDialog } from './out-of-stock-dialog';
 import { formatCurrency } from '@/lib/utils';
 import type { I18nText } from '@/hooks/api/use-products';
 
@@ -68,6 +69,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [cancelReason, setCancelReason] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [remarkInput, setRemarkInput] = useState('');
+  const [oosOpen, setOosOpen] = useState(false);
 
   function formatDateTime(date: string): string {
     return format.dateTime(new Date(date), {
@@ -163,6 +165,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const canConfirm = order.status === 'PENDING_CONFIRM';
   const canPick = order.status === 'CONFIRMED';
   const canEdit = order.status !== 'CANCELLED' && order.status !== 'COMPLETED';
+  // 缺货登记窗口（D7 拣货段）：CONFIRMED/PICKED
+  const canReportOos = order.status === 'CONFIRMED' || order.status === 'PICKED';
 
   return (
     <div className="space-y-6 p-6">
@@ -172,6 +176,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         action={
           canCancel || canConfirm || canPick || canEdit ? (
             <div className="flex flex-wrap gap-2">
+              {canReportOos && (
+                <Button variant="outline" onClick={() => setOosOpen(true)}>
+                  {t('admin.orders.oosDialogTitle')}
+                </Button>
+              )}
               {canConfirm && (
                 <Button onClick={handleConfirm} disabled={confirmMutation.isPending}>
                   {confirmMutation.isPending ? t('admin.orders.processing') : t('admin.orders.confirm')}
@@ -263,7 +272,14 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                   className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
                 >
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{displayName(item.productName)}</p>
+                    <p className="text-sm font-medium">
+                      {displayName(item.productName)}
+                      {item.outOfStockQty != null && (
+                        <span className="ml-2 inline-flex items-center rounded bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+                          {t('admin.orders.oosReportedTag')} × {item.outOfStockQty}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {displayName(item.skuName)} × {item.quantity}
                     </p>
@@ -272,6 +288,13 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     <p className="font-mono text-xs text-muted-foreground">
                       {formatCurrency(item.unitPrice)} × {item.quantity}
                     </p>
+                    {/* P3-6（审查 20261024）：金额差展示——unitPrice × outOfStockQty，退款/取消时对账口径 */}
+                    {item.outOfStockQty != null && (
+                      <p className="font-mono text-xs font-medium text-destructive">
+                        {t('admin.orders.oosAmountDelta')}{' '}
+                        -{formatCurrency(item.unitPrice * item.outOfStockQty)}
+                      </p>
+                    )}
                     <p className="font-mono text-sm font-bold">{formatCurrency(item.subtotal)}</p>
                   </div>
                 </div>
@@ -397,6 +420,17 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Out of Stock Dialog（缺货履约闭环批1，窗口 CONFIRMED/PICKED） */}
+      {canReportOos && (
+        <OutOfStockDialog
+          open={oosOpen}
+          onOpenChange={setOosOpen}
+          orderId={id}
+          items={order.items}
+          onReported={() => refetch()}
+        />
+      )}
     </div>
   );
 }

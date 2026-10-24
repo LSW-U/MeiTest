@@ -5440,6 +5440,11 @@ export interface paths {
                                 quantity: number;
                                 subtotal: number;
                                 stock?: number;
+                                outOfStockQty?: number | null;
+                                outOfStockReason?: string | null;
+                                outOfStockEvidenceUrls?: string[] | null;
+                                /** Format: uuid */
+                                suggestionItemId?: string | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -5555,6 +5560,11 @@ export interface paths {
                                 quantity: number;
                                 subtotal: number;
                                 stock?: number;
+                                outOfStockQty?: number | null;
+                                outOfStockReason?: string | null;
+                                outOfStockEvidenceUrls?: string[] | null;
+                                /** Format: uuid */
+                                suggestionItemId?: string | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -6864,6 +6874,11 @@ export interface paths {
                                 quantity: number;
                                 subtotal: number;
                                 stock?: number;
+                                outOfStockQty?: number | null;
+                                outOfStockReason?: string | null;
+                                outOfStockEvidenceUrls?: string[] | null;
+                                /** Format: uuid */
+                                suggestionItemId?: string | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -11805,6 +11820,11 @@ export interface paths {
                                         quantity: number;
                                         subtotal: number;
                                         stock?: number;
+                                        outOfStockQty?: number | null;
+                                        outOfStockReason?: string | null;
+                                        outOfStockEvidenceUrls?: string[] | null;
+                                        /** Format: uuid */
+                                        suggestionItemId?: string | null;
                                     }[];
                                     totalAmount: number;
                                     deliveryFee: number;
@@ -11965,6 +11985,11 @@ export interface paths {
                                     quantity: number;
                                     subtotal: number;
                                     stock?: number;
+                                    outOfStockQty?: number | null;
+                                    outOfStockReason?: string | null;
+                                    outOfStockEvidenceUrls?: string[] | null;
+                                    /** Format: uuid */
+                                    suggestionItemId?: string | null;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -12098,6 +12123,11 @@ export interface paths {
                                     quantity: number;
                                     subtotal: number;
                                     stock?: number;
+                                    outOfStockQty?: number | null;
+                                    outOfStockReason?: string | null;
+                                    outOfStockEvidenceUrls?: string[] | null;
+                                    /** Format: uuid */
+                                    suggestionItemId?: string | null;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -17860,6 +17890,224 @@ export interface paths {
                     };
                 };
                 /** @description ORDER_STATUS_INVALID */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/{id}/items/{itemId}/out-of-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 项级缺货登记（仓库侧，窗口 CONFIRMED/PICKED）。整项缺或部分缺（outOfStockQty ≤ quantity）。全缺判定：登记后整单全部项缺 → 订单 CANCELLED(reason=OUT_OF_STOCK)（D11）。错误码 E-OOS 段：001 窗口非法 / 002 数量或建议项非法 / 003 重复登记 / 005 证据 URL 非法。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        outOfStockQty: number;
+                        /** @enum {string} */
+                        reason: "DAMAGED" | "EXPIRED" | "MISSING" | "MISLABELED" | "OTHER";
+                        note?: string;
+                        evidenceUrls?: string[];
+                        /** Format: uuid */
+                        suggestionItemId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 登记成功（orderCancelled=true 表示整单全缺已取消） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                itemId: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                outOfStockQty: number;
+                                orderCancelled: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description E-OOS-002 数量非法 / E-OOS-005 证据非法 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description 订单或订单项不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-OOS-001 窗口非法 / E-OOS-003 重复登记 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rider/orders/{id}/out-of-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 骑手兜底部分缺登记（窗口 OUT_FOR_DELIVERY，仅部分缺——全缺请求拒 E-OOS-004，D12）。骑手段永不触发全缺取消。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        outOfStockQty: number;
+                        /** @enum {string} */
+                        reason: "DAMAGED" | "EXPIRED" | "MISSING" | "MISLABELED" | "OTHER";
+                        note?: string;
+                        evidenceUrls?: string[];
+                        /** Format: uuid */
+                        suggestionItemId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 登记成功（orderCancelled 恒 false） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                itemId: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                outOfStockQty: number;
+                                orderCancelled: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description E-OOS-002 数量非法 / E-OOS-005 证据非法 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-OOS-001 窗口非法 / E-OOS-003 重复登记 / E-OOS-004 骑手段禁全缺 */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -25408,6 +25656,11 @@ export interface components {
                 quantity: number;
                 subtotal: number;
                 stock?: number;
+                outOfStockQty?: number | null;
+                outOfStockReason?: string | null;
+                outOfStockEvidenceUrls?: string[] | null;
+                /** Format: uuid */
+                suggestionItemId?: string | null;
             }[];
             totalAmount: number;
             deliveryFee: number;
@@ -25475,6 +25728,11 @@ export interface components {
             quantity: number;
             subtotal: number;
             stock?: number;
+            outOfStockQty?: number | null;
+            outOfStockReason?: string | null;
+            outOfStockEvidenceUrls?: string[] | null;
+            /** Format: uuid */
+            suggestionItemId?: string | null;
         };
         CreateOrderRequest: {
             /** Format: uuid */
@@ -25492,6 +25750,23 @@ export interface components {
         };
         CancelOrderRequest: {
             reason: string;
+        };
+        AdminOutOfStockRequest: {
+            outOfStockQty: number;
+            /** @enum {string} */
+            reason: "DAMAGED" | "EXPIRED" | "MISSING" | "MISLABELED" | "OTHER";
+            note?: string;
+            evidenceUrls?: string[];
+            /** Format: uuid */
+            suggestionItemId?: string;
+        };
+        OutOfStockReportResponse: {
+            /** Format: uuid */
+            itemId: string;
+            /** Format: uuid */
+            orderId: string;
+            outOfStockQty: number;
+            orderCancelled: boolean;
         };
         UpdateOrderRequest: {
             remark?: string | null;

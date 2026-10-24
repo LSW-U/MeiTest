@@ -3504,6 +3504,23 @@ components:
                 maximum: 999999
               stock:
                 type: integer
+              outOfStockQty:
+                type: integer
+                nullable: true
+                minimum: 0
+              outOfStockReason:
+                type: string
+                nullable: true
+              outOfStockEvidenceUrls:
+                type: array
+                nullable: true
+                items:
+                  type: string
+                  format: uri
+              suggestionItemId:
+                type: string
+                nullable: true
+                format: uuid
             required:
               - id
               - productId
@@ -3702,6 +3719,23 @@ components:
           maximum: 999999
         stock:
           type: integer
+        outOfStockQty:
+          type: integer
+          nullable: true
+          minimum: 0
+        outOfStockReason:
+          type: string
+          nullable: true
+        outOfStockEvidenceUrls:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uri
+        suggestionItemId:
+          type: string
+          nullable: true
+          format: uuid
       required:
         - id
         - productId
@@ -3756,6 +3790,56 @@ components:
           maxLength: 200
       required:
         - reason
+    AdminOutOfStockRequest:
+      type: object
+      properties:
+        outOfStockQty:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        reason:
+          type: string
+          enum: &a89
+            - DAMAGED
+            - EXPIRED
+            - MISSING
+            - MISLABELED
+            - OTHER
+        note:
+          type: string
+          maxLength: 200
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+          maxItems: 3
+        suggestionItemId:
+          type: string
+          format: uuid
+      required:
+        - outOfStockQty
+        - reason
+    OutOfStockReportResponse:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        outOfStockQty:
+          type: integer
+          minimum: 0
+          exclusiveMinimum: true
+        orderCancelled:
+          type: boolean
+      required:
+        - itemId
+        - orderId
+        - outOfStockQty
+        - orderCancelled
     UpdateOrderRequest:
       type: object
       properties:
@@ -8551,7 +8635,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a91 []
+          default: &a92 []
         anonymous:
           type: boolean
           default: false
@@ -8561,7 +8645,7 @@ components:
             type: string
             enum: *a41
           maxItems: 6
-          default: &a92 []
+          default: &a93 []
         category:
           type: string
           enum: *a42
@@ -8585,7 +8669,7 @@ components:
             type: string
             enum: *a43
           maxItems: 4
-          default: &a93 []
+          default: &a94 []
         comment:
           type: object
           additionalProperties:
@@ -8603,7 +8687,7 @@ components:
           type: string
         theme:
           type: string
-          enum: &a89
+          enum: &a90
             - deals
             - coupons
             - delivery
@@ -8614,7 +8698,7 @@ components:
           type: integer
         status:
           type: string
-          enum: &a90
+          enum: &a91
             - ACTIVE
             - INACTIVE
       required:
@@ -8872,7 +8956,7 @@ components:
             type: string
             format: uri
           maxItems: 9
-          default: &a94 []
+          default: &a95 []
       required:
         - category
         - content
@@ -9613,7 +9697,7 @@ components:
           properties:
             channel:
               type: string
-              enum: &a95
+              enum: &a96
                 - BANK_TRANSFER
                 - WECHAT
                 - ALIPAY
@@ -10046,7 +10130,7 @@ components:
       properties:
         to:
           type: string
-          enum: &a100
+          enum: &a101
             - CNY
           default: CNY
     ClientExchangeRateResponseData:
@@ -16569,6 +16653,23 @@ paths:
                           maximum: 999999
                         stock:
                           type: integer
+                        outOfStockQty:
+                          type: integer
+                          nullable: true
+                          minimum: 0
+                        outOfStockReason:
+                          type: string
+                          nullable: true
+                        outOfStockEvidenceUrls:
+                          type: array
+                          nullable: true
+                          items:
+                            type: string
+                            format: uri
+                        suggestionItemId:
+                          type: string
+                          nullable: true
+                          format: uuid
                       required:
                         - id
                         - productId
@@ -16816,6 +16917,23 @@ paths:
                             maximum: 999999
                           stock:
                             type: integer
+                          outOfStockQty:
+                            type: integer
+                            nullable: true
+                            minimum: 0
+                          outOfStockReason:
+                            type: string
+                            nullable: true
+                          outOfStockEvidenceUrls:
+                            type: array
+                            nullable: true
+                            items:
+                              type: string
+                              format: uri
+                          suggestionItemId:
+                            type: string
+                            nullable: true
+                            format: uuid
                         required:
                           - id
                           - productId
@@ -18609,6 +18727,23 @@ paths:
                           maximum: 999999
                         stock:
                           type: integer
+                        outOfStockQty:
+                          type: integer
+                          nullable: true
+                          minimum: 0
+                        outOfStockReason:
+                          type: string
+                          nullable: true
+                        outOfStockEvidenceUrls:
+                          type: array
+                          nullable: true
+                          items:
+                            type: string
+                            format: uri
+                        suggestionItemId:
+                          type: string
+                          nullable: true
+                          format: uuid
                       required:
                         - id
                         - productId
@@ -25582,6 +25717,23 @@ paths:
                                     maximum: 999999
                                   stock:
                                     type: integer
+                                  outOfStockQty:
+                                    type: integer
+                                    nullable: true
+                                    minimum: 0
+                                  outOfStockReason:
+                                    type: string
+                                    nullable: true
+                                  outOfStockEvidenceUrls:
+                                    type: array
+                                    nullable: true
+                                    items:
+                                      type: string
+                                      format: uri
+                                  suggestionItemId:
+                                    type: string
+                                    nullable: true
+                                    format: uuid
                                 required:
                                   - id
                                   - productId
@@ -25884,6 +26036,23 @@ paths:
                               maximum: 999999
                             stock:
                               type: integer
+                            outOfStockQty:
+                              type: integer
+                              nullable: true
+                              minimum: 0
+                            outOfStockReason:
+                              type: string
+                              nullable: true
+                            outOfStockEvidenceUrls:
+                              type: array
+                              nullable: true
+                              items:
+                                type: string
+                                format: uri
+                            suggestionItemId:
+                              type: string
+                              nullable: true
+                              format: uuid
                           required:
                             - id
                             - productId
@@ -26157,6 +26326,23 @@ paths:
                               maximum: 999999
                             stock:
                               type: integer
+                            outOfStockQty:
+                              type: integer
+                              nullable: true
+                              minimum: 0
+                            outOfStockReason:
+                              type: string
+                              nullable: true
+                            outOfStockEvidenceUrls:
+                              type: array
+                              nullable: true
+                              items:
+                                type: string
+                                format: uri
+                            suggestionItemId:
+                              type: string
+                              nullable: true
+                              format: uuid
                           required:
                             - id
                             - productId
@@ -34765,6 +34951,309 @@ paths:
                 required:
                   - success
                   - error
+  /api/v1/admin/orders/{id}/items/{itemId}/out-of-stock:
+    post:
+      tags:
+        - order
+      description: 项级缺货登记（仓库侧，窗口 CONFIRMED/PICKED）。整项缺或部分缺（outOfStockQty ≤
+        quantity）。全缺判定：登记后整单全部项缺 → 订单 CANCELLED(reason=OUT_OF_STOCK)（D11）。错误码
+        E-OOS 段：001 窗口非法 / 002 数量或建议项非法 / 003 重复登记 / 005 证据 URL 非法。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: itemId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outOfStockQty:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                reason:
+                  type: string
+                  enum: *a89
+                note:
+                  type: string
+                  maxLength: 200
+                evidenceUrls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  maxItems: 3
+                suggestionItemId:
+                  type: string
+                  format: uuid
+              required:
+                - outOfStockQty
+                - reason
+      responses:
+        "200":
+          description: 登记成功（orderCancelled=true 表示整单全缺已取消）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      itemId:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      outOfStockQty:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                      orderCancelled:
+                        type: boolean
+                    required:
+                      - itemId
+                      - orderId
+                      - outOfStockQty
+                      - orderCancelled
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-OOS-002 数量非法 / E-OOS-005 证据非法
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: 订单或订单项不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-OOS-001 窗口非法 / E-OOS-003 重复登记
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/rider/orders/{id}/out-of-stock:
+    post:
+      tags:
+        - order
+      description: 骑手兜底部分缺登记（窗口 OUT_FOR_DELIVERY，仅部分缺——全缺请求拒 E-OOS-004，D12）。骑手段永不触发全缺取消。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outOfStockQty:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                reason:
+                  type: string
+                  enum: *a89
+                note:
+                  type: string
+                  maxLength: 200
+                evidenceUrls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  maxItems: 3
+                suggestionItemId:
+                  type: string
+                  format: uuid
+              required:
+                - outOfStockQty
+                - reason
+      responses:
+        "200":
+          description: 登记成功（orderCancelled 恒 false）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      itemId:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      outOfStockQty:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                      orderCancelled:
+                        type: boolean
+                    required:
+                      - itemId
+                      - orderId
+                      - outOfStockQty
+                      - orderCancelled
+                required:
+                  - success
+                  - data
+        "400":
+          description: E-OOS-002 数量非法 / E-OOS-005 证据非法
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-OOS-001 窗口非法 / E-OOS-003 重复登记 / E-OOS-004 骑手段禁全缺
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/common/geo/geocode:
     get:
       tags:
@@ -36957,14 +37446,14 @@ paths:
                       type: string
                     theme:
                       type: string
-                      enum: *a89
+                      enum: *a90
                     link:
                       type: string
                     sortOrder:
                       type: integer
                     status:
                       type: string
-                      enum: *a90
+                      enum: *a91
                   required:
                     - id
                     - titleKey
@@ -38311,7 +38800,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a91
+                  default: *a92
                 anonymous:
                   type: boolean
                   default: false
@@ -38321,7 +38810,7 @@ paths:
                     type: string
                     enum: *a41
                   maxItems: 6
-                  default: *a92
+                  default: *a93
                 category:
                   type: string
                   enum: *a42
@@ -38491,7 +38980,7 @@ paths:
                     type: string
                     enum: *a43
                   maxItems: 4
-                  default: *a93
+                  default: *a94
                 comment:
                   type: object
                   additionalProperties:
@@ -39270,7 +39759,7 @@ paths:
                     type: string
                     format: uri
                   maxItems: 9
-                  default: *a94
+                  default: *a95
               required:
                 - category
                 - content
@@ -41066,7 +41555,7 @@ paths:
                   properties:
                     channel:
                       type: string
-                      enum: *a95
+                      enum: *a96
                     account:
                       type: string
                     holderName:
@@ -41101,7 +41590,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: &a96
+                        enum: &a97
                           - MERCHANT
                           - RIDER
                       requesterId:
@@ -41112,7 +41601,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: &a97
+                        enum: &a98
                           - PENDING
                           - APPROVED
                           - REJECTED
@@ -41123,7 +41612,7 @@ paths:
                         properties:
                           channel:
                             type: string
-                            enum: *a95
+                            enum: *a96
                           account:
                             type: string
                           holderName:
@@ -41313,7 +41802,7 @@ paths:
                               format: uuid
                             requesterType:
                               type: string
-                              enum: *a96
+                              enum: *a97
                             requesterId:
                               type: string
                             amount:
@@ -41322,13 +41811,13 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a97
+                              enum: *a98
                             payoutAccount:
                               type: object
                               properties:
                                 channel:
                                   type: string
-                                  enum: *a95
+                                  enum: *a96
                                 account:
                                   type: string
                                 holderName:
@@ -41457,7 +41946,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: &a98
+            enum: &a99
               - MERCHANT
               - RIDER
           required: false
@@ -41480,7 +41969,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: &a99
+            enum: &a100
               - PENDING
               - CONFIRMED
               - PAID
@@ -41532,7 +42021,7 @@ paths:
                               type: string
                             subjectType:
                               type: string
-                              enum: *a98
+                              enum: *a99
                             subjectId:
                               type: string
                             warehouseId:
@@ -41559,7 +42048,7 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a99
+                              enum: *a100
                             confirmedAt:
                               type: string
                               nullable: true
@@ -41696,7 +42185,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a98
+                        enum: *a99
                       subjectId:
                         type: string
                       warehouseId:
@@ -41723,7 +42212,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a99
+                        enum: *a100
                       confirmedAt:
                         type: string
                         nullable: true
@@ -41822,7 +42311,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a98
+                        enum: *a99
                       subjectId:
                         type: string
                       warehouseId:
@@ -41849,7 +42338,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a99
+                        enum: *a100
                       confirmedAt:
                         type: string
                         nullable: true
@@ -41958,7 +42447,7 @@ paths:
                   type: string
                 subjectType:
                   type: string
-                  enum: *a98
+                  enum: *a99
                 subjectId:
                   type: string
               required:
@@ -41986,7 +42475,7 @@ paths:
                         type: string
                       subjectType:
                         type: string
-                        enum: *a98
+                        enum: *a99
                       subjectId:
                         type: string
                       warehouseId:
@@ -42013,7 +42502,7 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a99
+                        enum: *a100
                       confirmedAt:
                         type: string
                         nullable: true
@@ -42091,7 +42580,7 @@ paths:
               properties:
                 requesterType:
                   type: string
-                  enum: *a96
+                  enum: *a97
                 requesterId:
                   type: string
                 amount:
@@ -42103,7 +42592,7 @@ paths:
                   properties:
                     channel:
                       type: string
-                      enum: *a95
+                      enum: *a96
                     account:
                       type: string
                     holderName:
@@ -42140,7 +42629,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a96
+                        enum: *a97
                       requesterId:
                         type: string
                       amount:
@@ -42149,13 +42638,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a97
+                        enum: *a98
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a95
+                            enum: *a96
                           account:
                             type: string
                           holderName:
@@ -42245,7 +42734,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a96
+            enum: *a97
           required: false
           name: requesterType
           in: query
@@ -42256,7 +42745,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a97
+            enum: *a98
           required: false
           name: status
           in: query
@@ -42302,7 +42791,7 @@ paths:
                               format: uuid
                             requesterType:
                               type: string
-                              enum: *a96
+                              enum: *a97
                             requesterId:
                               type: string
                             amount:
@@ -42311,13 +42800,13 @@ paths:
                               maximum: 999999
                             status:
                               type: string
-                              enum: *a97
+                              enum: *a98
                             payoutAccount:
                               type: object
                               properties:
                                 channel:
                                   type: string
-                                  enum: *a95
+                                  enum: *a96
                                 account:
                                   type: string
                                 holderName:
@@ -42470,7 +42959,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a96
+                        enum: *a97
                       requesterId:
                         type: string
                       amount:
@@ -42479,13 +42968,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a97
+                        enum: *a98
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a95
+                            enum: *a96
                           account:
                             type: string
                           holderName:
@@ -42615,7 +43104,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a96
+                        enum: *a97
                       requesterId:
                         type: string
                       amount:
@@ -42624,13 +43113,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a97
+                        enum: *a98
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a95
+                            enum: *a96
                           account:
                             type: string
                           holderName:
@@ -42785,7 +43274,7 @@ paths:
                         format: uuid
                       requesterType:
                         type: string
-                        enum: *a96
+                        enum: *a97
                       requesterId:
                         type: string
                       amount:
@@ -42794,13 +43283,13 @@ paths:
                         maximum: 999999
                       status:
                         type: string
-                        enum: *a97
+                        enum: *a98
                       payoutAccount:
                         type: object
                         properties:
                           channel:
                             type: string
-                            enum: *a95
+                            enum: *a96
                           account:
                             type: string
                           holderName:
@@ -43229,7 +43718,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a100
+            enum: *a101
             default: CNY
           required: false
           name: to

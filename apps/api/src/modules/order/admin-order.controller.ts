@@ -32,11 +32,21 @@ import type { DeviceType } from '@meimart/api-contract';
 import type { OrderStatusValue } from './order.types';
 
 import { RefundService } from '../refund/refund.service';
+import { OutOfStockService, OUT_OF_STOCK_REASONS } from './out-of-stock.service';
 
 interface RequestWithUser {
   user?: RequestUser;
   headers: Record<string, string | string[] | undefined>;
 }
+
+/** 项级缺货登记请求（缺货履约闭环批1，evidenceUrls DTO max3 + 服务端再校验） */
+const AdminOutOfStockRequest = z.object({
+  outOfStockQty: z.coerce.number().int().positive().max(9999),
+  reason: z.enum(OUT_OF_STOCK_REASONS),
+  note: z.string().max(200).optional(),
+  evidenceUrls: z.array(z.string().url()).max(3).optional(),
+  suggestionItemId: z.string().uuid().optional(),
+});
 
 const ListOrdersQuery = z.object({
   status: z
@@ -74,6 +84,7 @@ export class AdminOrderController {
   constructor(
     @Inject(OrderService) private readonly orderService: OrderService,
     @Inject(RefundService) private readonly refundService: RefundService,
+    @Inject(OutOfStockService) private readonly outOfStockService: OutOfStockService,
   ) {}
 
   /** 列表（按 status/userId/warehouseId/orderNo 筛选 + 游标分页） */
@@ -263,5 +274,43 @@ export class AdminOrderController {
       },
     );
     return { success: true as const, data: order };
+  }
+
+  /**
+   * 项级缺货登记（缺货履约闭环批1 2026-10-24）
+   *
+   * 窗口 CONFIRMED/PICKED（D7 拣货段）；整项缺或部分缺（outOfStockQty ≤ quantity）。
+   * 全缺判定：登记后整单全部项缺 → 订单 CANCELLED(reason=OUT_OF_STOCK)（D11，状态机零改动），
+   * 响应 orderCancelled=true 前端据此刷新订单状态。
+   * 校验：数量 / suggestionItemId 本单归属（D18）/ evidenceUrls dispatch 同套（E-OOS 段，D19）。
+   */
+  @Post(':id/items/:itemId/out-of-stock')
+  // P3-2（审查 20261024）：方法级收窄——缺货登记是仓库动作（D7），客服越面去掉
+  @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async reportItemOutOfStock(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body(new ZodValidationPipe(AdminOutOfStockRequest)) body: z.infer<typeof AdminOutOfStockRequest>,
+    @Req() req: RequestWithUser,
+    @Headers('x-perspective') perspective: string | undefined,
+  ) {
+    if (!req.user) {
+      throw new HttpException(
+        { code: 'E-AUTH-002', message: 'Authentication required' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const result = await this.outOfStockService.adminReportItemOutOfStock(id, itemId, {
+      operatorId: req.user.sub,
+      deviceType: req.user.deviceType as DeviceType,
+      perspective,
+      outOfStockQty: body.outOfStockQty,
+      reason: body.reason,
+      note: body.note ?? null,
+      evidenceUrls: body.evidenceUrls,
+      suggestionItemId: body.suggestionItemId ?? null,
+    });
+    return { success: true as const, data: result };
   }
 }

@@ -39,6 +39,11 @@ export interface OrderItem {
   unitPrice: number;
   quantity: number;
   subtotal: number;
+  /** 缺货履约闭环批1（2026-10-24）：null=未登记缺货（可空新增向后兼容） */
+  outOfStockQty?: number | null;
+  outOfStockReason?: string | null;
+  outOfStockEvidenceUrls?: string[] | null;
+  suggestionItemId?: string | null;
 }
 
 export interface OrderListItem {
@@ -190,6 +195,44 @@ export function useUpdateOrder() {
         method: 'PATCH',
         body: JSON.stringify({ remark }),
       }).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+/** 缺货登记响应（缺货履约闭环批1 2026-10-24） */
+export interface OutOfStockReportResult {
+  itemId: string;
+  orderId: string;
+  outOfStockQty: number;
+  /** 本次登记是否触发整单全缺 → 订单已取消（D11） */
+  orderCancelled: boolean;
+}
+
+/** admin 项级缺货登记（POST /admin/orders/:id/items/:itemId/out-of-stock，窗口 CONFIRMED/PICKED） */
+export function useReportOutOfStock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      itemId,
+      input,
+    }: {
+      orderId: string;
+      itemId: string;
+      input: {
+        outOfStockQty: number;
+        reason: string;
+        note?: string | null;
+        evidenceUrls?: string[];
+        suggestionItemId?: string | null;
+      };
+    }) =>
+      apiFetch<ApiSuccess<OutOfStockReportResult>>(
+        `/admin/orders/${orderId}/items/${itemId}/out-of-stock`,
+        { method: 'POST', body: JSON.stringify(input) },
+      ).then((res) => res.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['orders'] });
     },

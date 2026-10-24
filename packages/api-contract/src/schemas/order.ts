@@ -89,6 +89,15 @@ export const OrderItem = z.object({
   subtotal: Money,
   /** 当前库存（全仓库聚合，B12）。undefined=无库存信息 */
   stock: z.number().int().optional(),
+  /**
+   * 缺货履约闭环批1（2026-10-24）：实送一致性（A2）缺货标记，可空新增向后兼容。
+   * outOfStockQty null=未登记缺货；部分缺订单照常 DELIVERED* 但项显缺货标记（D18 字段永久保留）；
+   * 缺货项永不参与「已送达」口径。
+   */
+  outOfStockQty: z.number().int().nonnegative().nullable().optional(),
+  outOfStockReason: z.string().nullable().optional(),
+  outOfStockEvidenceUrls: z.array(z.string().url()).nullable().optional(),
+  suggestionItemId: Id.nullable().optional(),
 });
 
 /** 订单实体（含 warehouseId，按收货地址 PostGIS 匹配） */
@@ -171,6 +180,36 @@ export const CreateOrderRequest = z.object({
 /** 取消订单请求 */
 export const CancelOrderRequest = z.object({
   reason: z.string().min(1).max(200),
+});
+
+// ============================================================================
+// 缺货履约闭环批1（2026-10-24）：项级缺货登记
+// ============================================================================
+
+/** 缺货原因（登记快照值） */
+export const OutOfStockReason = z.enum(['DAMAGED', 'EXPIRED', 'MISSING', 'MISLABELED', 'OTHER']);
+
+/** 仓库侧项级缺货登记请求（POST /admin/orders/:id/items/:itemId/out-of-stock，窗口 CONFIRMED/PICKED） */
+export const AdminOutOfStockRequest = z.object({
+  outOfStockQty: z.number().int().positive(),
+  reason: OutOfStockReason,
+  note: z.string().max(200).optional(),
+  /** 取证照片 URL（先传平台 upload 端点获取；≤3 张，服务端 isOwnUrl 校验） */
+  evidenceUrls: z.array(z.string().url()).max(3).optional(),
+  /** 替代建议项（可空；必须属于本单，service 层校验，D18） */
+  suggestionItemId: Id.optional(),
+});
+
+/** 骑手兜底部分缺登记请求（POST /rider/orders/:id/out-of-stock，窗口 OUT_FOR_DELIVERY，仅部分缺 D12） */
+export const RiderOutOfStockRequest = AdminOutOfStockRequest;
+
+/** 缺货登记响应 */
+export const OutOfStockReportResponse = z.object({
+  itemId: Id,
+  orderId: Id,
+  outOfStockQty: z.number().int().positive(),
+  /** 本次登记是否触发整单全缺 → 订单已取消（D11） */
+  orderCancelled: z.boolean(),
 });
 
 /**

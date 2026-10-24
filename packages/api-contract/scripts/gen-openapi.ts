@@ -136,6 +136,9 @@ import {
   OrderItem,
   CreateOrderRequest,
   CancelOrderRequest,
+  // 缺货履约闭环批1（2026-10-24）
+  AdminOutOfStockRequest,
+  OutOfStockReportResponse,
   BatchDeleteOrdersRequest,
   DeleteOrderResponse,
   UpdateOrderRequest,
@@ -512,6 +515,8 @@ registry.register('Order', Order);
 registry.register('OrderItem', OrderItem);
 registry.register('CreateOrderRequest', CreateOrderRequest);
 registry.register('CancelOrderRequest', CancelOrderRequest);
+registry.register('AdminOutOfStockRequest', AdminOutOfStockRequest);
+registry.register('OutOfStockReportResponse', OutOfStockReportResponse);
 registry.register('UpdateOrderRequest', UpdateOrderRequest);
 registry.register('OrderNo', OrderNo);
 registry.register('PaymentMethod', PaymentMethod);
@@ -4719,6 +4724,56 @@ registry.registerPath({
       },
     },
     409: { description: 'ORDER_STATUS_INVALID', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 缺货履约闭环批1（2026-10-24）：仓库侧项级缺货登记
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/orders/{id}/items/{itemId}/out-of-stock',
+  tags: ['order'],
+  description:
+    '项级缺货登记（仓库侧，窗口 CONFIRMED/PICKED）。整项缺或部分缺（outOfStockQty ≤ quantity）。' +
+    '全缺判定：登记后整单全部项缺 → 订单 CANCELLED(reason=OUT_OF_STOCK)（D11）。' +
+    '错误码 E-OOS 段：001 窗口非法 / 002 数量或建议项非法 / 003 重复登记 / 005 证据 URL 非法。',
+  request: {
+    params: z.object({ id: Id, itemId: Id }),
+    body: { content: { 'application/json': { schema: AdminOutOfStockRequest } } },
+  },
+  responses: {
+    200: {
+      description: '登记成功（orderCancelled=true 表示整单全缺已取消）',
+      content: {
+        'application/json': { schema: z.object({ success: z.literal(true), data: OutOfStockReportResponse }) },
+      },
+    },
+    400: { description: 'E-OOS-002 数量非法 / E-OOS-005 证据非法', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: '订单或订单项不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-OOS-001 窗口非法 / E-OOS-003 重复登记', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 缺货履约闭环批1（2026-10-24）：骑手兜底部分缺登记
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/orders/{id}/out-of-stock',
+  tags: ['order'],
+  description:
+    '骑手兜底部分缺登记（窗口 OUT_FOR_DELIVERY，仅部分缺——全缺请求拒 E-OOS-004，D12）。' +
+    '骑手段永不触发全缺取消。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: AdminOutOfStockRequest } } },
+  },
+  responses: {
+    200: {
+      description: '登记成功（orderCancelled 恒 false）',
+      content: {
+        'application/json': { schema: z.object({ success: z.literal(true), data: OutOfStockReportResponse }) },
+      },
+    },
+    400: { description: 'E-OOS-002 数量非法 / E-OOS-005 证据非法', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-OOS-001 窗口非法 / E-OOS-003 重复登记 / E-OOS-004 骑手段禁全缺', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 
