@@ -66,5 +66,13 @@
   "viewNudge": {
     "title": "Masih mempertimbangkan?",
     "content": "Anda melihat produk ini beberapa hari lalu. Mungkin inilah yang Anda butuhkan."
+  },
+  "outOfStock": {
+    "title": "Barang Habis",
+    "content": "Beberapa barang di pesanan {orderNo} sedang habis: {items}. Ketuk untuk melihat detail."
+  },
+  "outOfStockCancelled": {
+    "title": "Pesanan Dibatalkan - Barang Habis",
+    "content": "Semua barang di pesanan {orderNo} habis ({items}). Pesanan dibatalkan dan akan dikembalikan otomatis."
   }
 }

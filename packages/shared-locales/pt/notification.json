@@ -66,5 +66,13 @@
   "viewNudge": {
     "title": "Ainda a pensar?",
     "content": "Viu este produto há alguns dias. Talvez seja mesmo o que precisa."
+  },
+  "outOfStock": {
+    "title": "Produto em falta",
+    "content": "Alguns itens do seu pedido {orderNo} estão em falta: {items}. Toque para ver os detalhes."
+  },
+  "outOfStockCancelled": {
+    "title": "Pedido Cancelado - Produtos em falta",
+    "content": "Todos os itens do seu pedido {orderNo} estão em falta ({items}). O pedido foi cancelado e será reembolsado automaticamente."
   }
 }

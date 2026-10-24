@@ -66,5 +66,13 @@
   "viewNudge": {
     "title": "Still thinking it over?",
     "content": "You viewed this product a few days ago. It might be just what you need."
+  },
+  "outOfStock": {
+    "title": "Item Out of Stock",
+    "content": "Some items in your order {orderNo} are out of stock: {items}. Tap to view details."
+  },
+  "outOfStockCancelled": {
+    "title": "Order Cancelled - Items Out of Stock",
+    "content": "All items in your order {orderNo} are out of stock ({items}). The order has been cancelled and will be refunded automatically."
   }
 }

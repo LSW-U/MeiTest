@@ -13,14 +13,17 @@
  * 错误码段（D19，独立 E-OOS 段）：
  *   E-OOS-001 窗口非法 / 002 数量非法 / 003 重复登记 / 004 骑手段禁全缺 / 005 证据 URL 非法
  *
- * 本批不接推送（批2）、不建退款单（批3）——全缺只落 CANCELLED。
+ * 本批不建退款单（批3）——全缺只落 CANCELLED。
+ * 批2（2026-10-24，D16）：登记事务 commit 后同步直推 outOfStock 事件（不进 BullMQ、
+ * 不经 E3 频控闸 D8）；推送失败不回滚登记，告警 + 单次补偿重试。
  */
-import { Inject, Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ConflictException, BadRequestException, Optional } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, type Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { StorageService } from '../../shared/storage/storage.service';
 import { OrderService } from './order.service';
+import type { NotificationEventService } from '../notification/notification-event.service';
 import { toPrismaDeviceType } from './order.types';
 import type { ContractDeviceType } from './order.types';
 
@@ -75,6 +78,10 @@ export class OutOfStockService {
     @Inject(StorageService) private readonly storage: StorageService | null,
     // 全缺 → CANCELLED 复用 OrderService.cancelOrderInternal 既有取消链（D11 零状态机改动）
     @Inject(OrderService) private readonly orderService: OrderService,
+    // 批2（D16）：同步直推。@Optional 兜底单测直 new 不传（notify 内部全链 try/catch 容忍）；
+    // DI 显式 token（tsx 无 decorator metadata，order.module 已注册 useExisting）
+    @Optional() @Inject('NotificationEventServiceToken')
+    private readonly notificationEvents?: NotificationEventService | null,
   ) {}
 
   /**
@@ -120,12 +127,14 @@ export class OutOfStockService {
       });
     }
 
+    // P2-2：登记开始时刻（预读前），补偿探针时间窗下界——同单二次登记不命中旧行
+    const startedAt = new Date();
     // P2-1（审查 20261024）：登记 + 事件 + 全缺判定收进同一事务——两个 staff 并发登记
     // 最后两个未登记项时，事务外先 update 再重读会让两次全缺判定都读到对方提交前快照
     // → 漏取消。ReadCommitted 下事务内 update 持行锁，重读可见对方已提交行，判定原子。
     // cancelOrderInternal 自身幂等（updateMany 条件守卫）兜底取消侧并发，不收进本事务
     // （其内部自带 withTransaction，嵌套会开独立事务，语义仍正确：判定为真才走到它）。
-    return withTransaction(async (tx: Tx) => {
+    const result = await withTransaction(async (tx: Tx) => {
       await tx.orderItem.update({
         where: { id: itemId },
         data: {
@@ -168,6 +177,14 @@ export class OutOfStockService {
 
       return { itemId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled };
     });
+
+    // 批2（D16）：事务已 commit，同步直推（推送失败不回滚登记——notify 内部全链 try/catch +
+    // 本方法单次补偿重试，见 notifyOutOfStock）；P3-3 全缺 → cancelled 分支文案
+    await this.notifyOutOfStock(orderId, itemId, input.outOfStockQty, {
+      startedAt,
+      orderCancelled: result.orderCancelled,
+    });
+    return result;
   }
 
   /**
@@ -199,7 +216,6 @@ export class OutOfStockService {
     if (items.length === 0) {
       throw new NotFoundException({ code: 'E-ORDER-005', message: 'Order has no items' });
     }
-
     // 骑手段登记的目标项集：所有项（骑手只报「这单缺 X 件」粒度不精细到项时，
     // 按任务书简化版 UI：项选择 + 数量）——这里取 body 指定项；未指定项单条路径走 admin 端点。
     // D12：骑手段全缺请求直接拒（先算累计已缺 + 本次将缺，若覆盖整单全部数量 → E-OOS-004）
@@ -218,10 +234,12 @@ export class OutOfStockService {
       });
     }
 
+    // P2-2：登记开始时刻，补偿探针时间窗下界（骑手链同 admin）
+    const startedAt = new Date();
     // 骑手段按单累计登记：写到第一个未登记项（简化语义：骑手端不做项级精细分摊，
     // 缺货量落到首项，剩余项保持未缺——两账分离，退款金额批3 引擎按项级字段算）
     // 找一个还有余量的项落账（已登记满的项跳过）
-    let target = items.find((i) => (i.outOfStockQty ?? 0) === 0 && i.quantity > 0);
+    const target = items.find((i) => (i.outOfStockQty ?? 0) === 0 && i.quantity > 0);
     if (!target) {
       throw new ConflictException({
         code: 'E-OOS-003',
@@ -237,13 +255,14 @@ export class OutOfStockService {
     }
 
     this.assertEvidence(input.evidenceUrls);
-    await this.assertSuggestionItemBelongsToOrder(orderId, target.id, input.suggestionItemId);
+    const targetId = target.id;
+    await this.assertSuggestionItemBelongsToOrder(orderId, targetId, input.suggestionItemId);
 
     // P2-1 同口径：登记 + 事件收进事务（骑手段永不触发取消，无判定侧并发问题，
     // 事务化只为两步写原子性）
-    return withTransaction(async (tx: Tx) => {
+    const result = await withTransaction(async (tx: Tx) => {
       await tx.orderItem.update({
-        where: { id: target.id },
+        where: { id: targetId },
         data: {
           outOfStockQty: input.outOfStockQty,
           outOfStockReason: input.reason,
@@ -256,7 +275,7 @@ export class OutOfStockService {
       await this.writeReportEvent(
         orderId,
         {
-          itemId: target.id,
+          itemId: targetId,
           outOfStockQty: input.outOfStockQty,
           reason: input.reason,
           source: 'RIDER',
@@ -268,17 +287,120 @@ export class OutOfStockService {
       logger.info({
         msg: 'OUT_OF_STOCK_REPORTED_RIDER',
         orderId,
-        itemId: target.id,
+        itemId: targetId,
         qty: input.outOfStockQty,
         reason: input.reason,
       });
 
       // 骑手段永不触发全缺取消（D12：窗口 OUT_FOR_DELIVERY 无 →CANCELLED 合法边，且上方已拒全缺）
-      return { itemId: target.id, orderId, outOfStockQty: input.outOfStockQty, orderCancelled: false };
+      return { itemId: targetId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled: false };
     });
+
+    // 批2（D16）：事务已 commit，同步直推（同 admin 链）；骑手段恒部分缺（D12）→ 非取消文案
+    await this.notifyOutOfStock(orderId, targetId, input.outOfStockQty, {
+      startedAt,
+      orderCancelled: false,
+    });
+    return result;
   }
 
   // ===================== 内部 =====================
+
+  /**
+   * 缺货登记推送（批2，D16 同步直推；P2-2/P3-2/P3-3 审查修复 20261024）
+   *
+   * 挂点：两条登记链事务 commit 之后（通知一律放事务外，notification-event.service 既有纪律）。
+   * 语义：
+   *   - 事件 outOfStock（受众 CUSTOMER、ORDER_UPDATE），data.orderId + 缺货项摘要（品名/数量）
+   *     —— client-app 深链跳订单详情（routeFromPushData ORDER_UPDATE + orderId 既有分流，
+   *     缺货标记由批1 items 新字段在详情页可见）
+   *   - P3-3：orderCancelled=true（全缺 → 订单已 CANCELLED）时 data.cancelled=true，
+   *     五语模板 content 分支「订单已取消-全部商品缺货」（模板 params.cancelled 渲染差异文案）
+   *   - P3-2：摘要品名兜底链 en → productName Json 首个可用值（pt/tet 用户至少拿到快照里
+   *     首语言而非空串）；按用户 locale 精确匹配留批3 五语透传
+   *   - 推送失败不回滚登记：notify 内部全链 try/catch；本方法再补一次显式重试（单次补偿，
+   *     Q7 拍板），两次都失败仅告警日志（OUT_OF_STOCK_NOTIFY_FAILED），登记事实不受影响
+   *   - P2-2 补偿探针收窄时间窗：startedAt 取自登记事务开始前（调用方传入），探针加
+   *     createdAt >= startedAt——同单二次登记不再命中首次登记的旧行假阳性，零侵入不改 notify 签名
+   *   - 不进 BullMQ（D16：省一跳队列延迟，A1 ≤1 分钟走最短路径）、不经 E3 频控闸（D8）
+   *   - notificationEvents 未注入（单测）时静默跳过
+   */
+  private async notifyOutOfStock(
+    orderId: string,
+    itemId: string,
+    outOfStockQty: number,
+    opts: { startedAt: Date; orderCancelled: boolean },
+  ): Promise<void> {
+    if (!this.notificationEvents) return;
+    try {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { userId: true, orderNo: true },
+      });
+      if (!order?.userId) {
+        logger.warn({ msg: 'OUT_OF_STOCK_NOTIFY_SKIPPED', orderId, reason: 'no userId' });
+        return;
+      }
+      // P3-2：品名兜底链 en → 首个可用值（productName Json 为 Record<lang,string> 快照，
+      // Object.values 顺序即写入序；全空才落空串）。按用户 locale 渲染留批3 五语透传
+      const item = await db.orderItem.findUnique({
+        where: { id: itemId },
+        select: { productName: true },
+      });
+      const nameRecord = (item?.productName ?? {}) as Record<string, string>;
+      const itemName = nameRecord.en ?? Object.values(nameRecord).find(Boolean) ?? '';
+      const itemsSummary = `${itemName} x${outOfStockQty}`;
+
+      // P3-3：全缺 → 订单已取消，模板渲染「已取消-全部商品缺货」分支文案
+      // （outOfStock.cancelled.*；部分缺走默认 *.* 文案）
+      const cancelled = opts.orderCancelled;
+      const eventKey = cancelled ? 'outOfStockCancelled' : 'outOfStock';
+      const params: Record<string, string> = { orderNo: order.orderNo ?? '', items: itemsSummary };
+
+      // notify 全链吞错恒 resolve（不炸主流程的既有纪律），调用侧无法用返回值判断成败；
+      // 以「Notification 行是否落库」为成功探针（data.orderId 精确匹配 + P2-2 时间窗
+      // createdAt >= startedAt——同单二次登记不命中旧行假阳性），未落库 = 失败 → 单次补偿重试（D16 Q7），再失败仅告警
+      const attempt = async (): Promise<boolean> => {
+        await this.notificationEvents!.notify({
+          event: eventKey,
+          userId: order.userId,
+          type: 'ORDER_UPDATE',
+          data: { orderId, orderNo: order.orderNo, itemsSummary, cancelled },
+          params,
+        });
+        const row = await db.notification.findFirst({
+          where: {
+            userId: order.userId,
+            data: { path: ['orderId'], equals: orderId },
+            createdAt: { gte: opts.startedAt },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
+        });
+        return row != null;
+      };
+
+      if (await attempt()) return;
+      // 单次补偿重试（仍失败 → 告警日志，登记事实不受影响）
+      const retried = await attempt();
+      if (!retried) {
+        logger.warn({
+          msg: 'OUT_OF_STOCK_NOTIFY_FAILED',
+          orderId,
+          itemId,
+          error: 'notification row missing after 1 compensation retry',
+        });
+      }
+    } catch (e) {
+      // notify 恒不抛；此 catch 防御 direct-mock 单测注入抛错实现
+      logger.warn({
+        msg: 'OUT_OF_STOCK_NOTIFY_FAILED',
+        orderId,
+        itemId,
+        error: (e as Error).message,
+      });
+    }
+  }
 
   /** 数量 + 证据统一校验（admin 路径；数量 1..quantity） */
   private assertQtyAndEvidence(itemQty: number, outOfStockQty: number, evidenceUrls?: string[]): void {

@@ -33,6 +33,10 @@ export const NOTIFICATION_EVENT_KEYS = [
   'priceDropAlert',
   'restockAlert',
   'viewNudge',
+  // 缺货履约闭环批2（2026-10-24）：缺货登记推送（D8/D16，同步直推不进 BullMQ）
+  'outOfStock',
+  // 批2 审查 P3-3（20261024）：全缺 → 订单已 CANCELLED，「已取消-全部商品缺货」分支文案
+  'outOfStockCancelled',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -58,4 +62,8 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   priceDropAlert: { titleKey: 'priceDropAlert.title', contentKey: 'priceDropAlert.content' },
   restockAlert: { titleKey: 'restockAlert.title', contentKey: 'restockAlert.content' },
   viewNudge: { titleKey: 'viewNudge.title', contentKey: 'viewNudge.content' },
+  // 缺货履约闭环批2：登记后通知顾客（受众 CUSTOMER、ORDER_UPDATE，data.orderId + 缺货项摘要）
+  outOfStock: { titleKey: 'outOfStock.title', contentKey: 'outOfStock.content' },
+  // 批2 审查 P3-3：全缺订单已取消分支（同受众；data.cancelled=true 时 notify 用此 key）
+  outOfStockCancelled: { titleKey: 'outOfStockCancelled.title', contentKey: 'outOfStockCancelled.content' },
 };

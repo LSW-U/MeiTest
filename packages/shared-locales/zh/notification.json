@@ -66,5 +66,13 @@
   "viewNudge": {
     "title": "还在犹豫吗？",
     "content": "您几天前浏览过这件商品，也许正是您需要的。"
+  },
+  "outOfStock": {
+    "title": "商品缺货通知",
+    "content": "您的订单 {orderNo} 中部分商品缺货：{items}。点击查看详情。"
+  },
+  "outOfStockCancelled": {
+    "title": "订单已取消-全部商品缺货",
+    "content": "您的订单 {orderNo} 全部商品缺货（{items}），订单已取消，将自动退款。"
   }
 }
