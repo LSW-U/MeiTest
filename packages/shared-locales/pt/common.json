@@ -1393,7 +1393,18 @@
       "exportRepeatRate": "Taxa de Recompra",
       "exportAvgOrderValueUsdCents": "Valor Médio por Pedido (centavos USD)",
       "exportGmvOrderCount": "Pedidos GMV",
-      "exportOrderUserCount": "Utilizadores que Encomendaram"
+      "exportOrderUserCount": "Utilizadores que Encomendaram",
+      "oosBoardTab": "Ruptura de Stock",
+      "oosReportRate": "Taxa de Registo",
+      "oosReportRateDenominator": "Denominador: {fulfilled} pedidos cumpridos, {reported} com registo de ruptura",
+      "oosAutoRefundRate": "Taxa de Reembolso Automático",
+      "oosAutoRefundRateDenominator": "Denominador: {total} reembolsos OUT_OF_STOCK, {system} processados pelo sistema",
+      "oosManualRate": "Taxa de Intervenção Manual",
+      "oosManualRateDenominator": "Denominador: {total} reembolsos OUT_OF_STOCK, {pending} aguardam revisão manual",
+      "oosTrend": "Tendência Diária",
+      "oosTrendReported": "Pedidos Registados",
+      "oosTrendOosRefunds": "Reembolsos de Ruptura",
+      "oosTrendSystemRefunds": "Reembolsos do Sistema"
     },
     "settings": {
       "title": "Configurações",

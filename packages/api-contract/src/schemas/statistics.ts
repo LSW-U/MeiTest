@@ -200,3 +200,66 @@ export const StatisticsCustomersData = z.object({
 export type StatisticsCustomersDataType = z.infer<typeof StatisticsCustomersData>;
 
 export const StatisticsCustomersResponse = ApiResponse(StatisticsCustomersData);
+
+// ===== 缺货看板（缺货履约闭环批4，2026-10-24 · A5 三指标）=====
+
+/** 缺货看板 query：时间范围（复用公共 rangeFields + refine，同批C~E 范式） */
+export const StatisticsOosQuery = z
+  .object({ ...rangeFields })
+  .refine((q) => (q.from && q.to) || q.range, rangeRequired);
+export type StatisticsOosQueryType = z.infer<typeof StatisticsOosQuery>;
+
+/** 缺货看板单日趋势行（Dili 当地日切桶） */
+export const StatisticsOosTrendItem = z.object({
+  /** Dili 当地日期 YYYY-MM-DD */
+  date: z.string(),
+  /** 当日新登记缺货的订单数（按登记事件锚定） */
+  reported: z.number().int().nonnegative(),
+  /** 当日新建 OUT_OF_STOCK 退款单数 */
+  oosRefunds: z.number().int().nonnegative(),
+  /** 当日 system 通路退款单数（reviewedBy='SYSTEM' 全 status：含直退 COMPLETED + 超限转人工 PENDING） */
+  systemRefunds: z.number().int().nonnegative(),
+});
+export type StatisticsOosTrendItemType = z.infer<typeof StatisticsOosTrendItem>;
+
+/**
+ * 缺货看板响应（缺货履约闭环批4 · A5，口径 = 模块收尾文档 §三指标口径）：
+ *   - 登记率 = reportedOrderCount / fulfilledOrderCount
+ *     （履约订单 = Order.status ∈ GMV_ORDER_STATUSES 或全缺取消单 [status='CANCELLED' 且
+ *      cancelReason='OUT_OF_STOCK']（批4 审查 P2-1 方案1：保证分子⊆分母、率恒≤1），
+ *      且 createdAt ∈ range；
+ *      有缺货登记 = 订单任一 OrderItem.outOfStockQty 非空，锚点 Order.createdAt ∈ range）
+ *   - 自动退款率 = systemRefundCount / oosRefundCount
+ *     （OUT_OF_STOCK 退款 = Refund.reason='OUT_OF_STOCK' 且 createdAt ∈ range，全 status 计入；
+ *      system = reviewedBy='SYSTEM'）
+ *   - 人工介入率 = pendingCount / oosRefundCount
+ *     （pending = status='PENDING' 的 OUT_OF_STOCK 退款——含超限转人工 D17，可观测指标）
+ *   - 分母 0 → 对应 rate = null（同批D/E 范式）
+ *   - 规则表变更追溯：不落本响应——走 AuditLog(resourceType='OutOfStockRule') + OOS_RULE_UPDATED 日志
+ */
+export const StatisticsOosData = z.object({
+  /** 实际生效的查询区间起止（UTC ISO，回显给前端） */
+  from: z.string(),
+  to: z.string(),
+  /** 区间内履约订单数（GMV 状态集 + 全缺取消单，登记率分母，批4 P2-1 口径） */
+  fulfilledOrderCount: z.number().int().nonnegative(),
+  /** 区间内有缺货登记的订单数（任一 OrderItem.outOfStockQty 非空） */
+  reportedOrderCount: z.number().int().nonnegative(),
+  /** 登记率 = reportedOrderCount / fulfilledOrderCount（0-1；分母 0 → null） */
+  reportRate: z.number().min(0).max(1).nullable(),
+  /** 区间内 OUT_OF_STOCK 退款单数（全 status，自动退款率/人工介入率分母） */
+  oosRefundCount: z.number().int().nonnegative(),
+  /** 区间内 system 退款单数（reviewedBy='SYSTEM'） */
+  systemRefundCount: z.number().int().nonnegative(),
+  /** 自动退款率 = systemRefundCount / oosRefundCount（0-1；分母 0 → null） */
+  autoRefundRate: z.number().min(0).max(1).nullable(),
+  /** 区间内 PENDING 人工队列 OUT_OF_STOCK 退款单数（含超限转人工 D17） */
+  pendingCount: z.number().int().nonnegative(),
+  /** 人工介入率 = pendingCount / oosRefundCount（0-1；分母 0 → null） */
+  manualInterventionRate: z.number().min(0).max(1).nullable(),
+  /** 按日趋势（Dili 当地日切桶，日期升序） */
+  trend: z.array(StatisticsOosTrendItem),
+});
+export type StatisticsOosDataType = z.infer<typeof StatisticsOosData>;
+
+export const StatisticsOosResponse = ApiResponse(StatisticsOosData);

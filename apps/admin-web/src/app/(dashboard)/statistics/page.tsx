@@ -51,6 +51,7 @@ import { TopProductsTab } from '@/components/statistics/top-products-tab';
 import { RidersTab } from '@/components/statistics/riders-tab';
 import { RefundsTab } from '@/components/statistics/refunds-tab';
 import { CustomersTab } from '@/components/statistics/customers-tab';
+import { OosBoardTab } from '@/components/statistics/oos-board-tab';
 
 const RANGES: DashboardRange[] = ['today', 'week', 'month'];
 
@@ -63,7 +64,7 @@ export default function StatisticsPage() {
 
   // 报表级 tab：总览 / 商品排行 / 骑手绩效 / 退款统计 / 客户分析
   const [reportTab, setReportTab] = useState<
-    'overview' | 'topProducts' | 'riders' | 'refunds' | 'customers'
+    'overview' | 'topProducts' | 'riders' | 'refunds' | 'customers' | 'oosBoard'
   >('overview');
 
   // 时间范围：预设三值 + 自定义（提交后生效；isCustom 区分当前模式）
@@ -108,13 +109,14 @@ export default function StatisticsPage() {
 
       {/* 页头公共件：报表 tab + 时间范围选择器（预设三值 + 自定义起止） */}
       <div className="flex flex-wrap items-center gap-4">
-        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts' | 'riders' | 'refunds' | 'customers')}>
+        <Tabs value={reportTab} onValueChange={(v) => setReportTab(v as 'overview' | 'topProducts' | 'riders' | 'refunds' | 'customers' | 'oosBoard')}>
           <TabsList>
             <TabsTrigger value="overview">{t('admin.statistics.overviewTab')}</TabsTrigger>
             <TabsTrigger value="topProducts">{t('admin.statistics.topProductsTab')}</TabsTrigger>
             <TabsTrigger value="riders">{t('admin.statistics.ridersTab')}</TabsTrigger>
             <TabsTrigger value="refunds">{t('admin.statistics.refundsTab')}</TabsTrigger>
             <TabsTrigger value="customers">{t('admin.statistics.customersTab')}</TabsTrigger>
+            <TabsTrigger value="oosBoard">{t('admin.statistics.oosBoardTab')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -359,6 +361,15 @@ export default function StatisticsPage() {
             <CustomersTab custom={custom} />
           ) : (
             <CustomersTab range={range} />
+          )}
+        </TabsContent>
+
+        {/* ===== 缺货看板 tab（缺货履约闭环批4 新增 · A5 三指标） ===== */}
+        <TabsContent value="oosBoard">
+          {isCustom && custom.from && custom.to ? (
+            <OosBoardTab custom={custom} />
+          ) : (
+            <OosBoardTab range={range} />
           )}
         </TabsContent>
       </Tabs>

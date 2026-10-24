@@ -148,6 +148,40 @@ export function useCustomers(params: CustomersParams) {
   });
 }
 
+// ===== 缺货看板（缺货履约闭环批4，2026-10-24 · A5）=====
+
+type StatisticsOosData = components['schemas']['StatisticsOosData'];
+type StatisticsOosTrendItem = components['schemas']['StatisticsOosTrendItem'];
+
+export interface OosBoardParams {
+  /** 预设范围（自定义时为 undefined） */
+  range?: StatisticsRange;
+  /** 自定义范围 YYYY-MM-DD 含头尾（预设时为 undefined） */
+  custom?: { from: string; to: string };
+}
+
+function buildOosQuery(params: OosBoardParams): string {
+  const qs = new URLSearchParams();
+  if (params.range) qs.set('range', params.range);
+  if (params.custom) {
+    qs.set('from', params.custom.from);
+    qs.set('to', params.custom.to);
+  }
+  return qs.toString();
+}
+
+export function useOosBoard(params: OosBoardParams) {
+  return useQuery({
+    queryKey: ['statistics', 'oos-board', params.range, params.custom?.from, params.custom?.to],
+    queryFn: async () => {
+      const res = await apiFetch<ApiSuccess<StatisticsOosData>>(
+        `/admin/statistics/out-of-stock?${buildOosQuery(params)}`,
+      );
+      return res.data;
+    },
+  });
+}
+
 export type {
   StatisticsRidersResponseItem,
   StatisticsRidersData,
@@ -156,4 +190,6 @@ export type {
   StatisticsRefundReasonItem,
   StatisticsRefundsData,
   StatisticsCustomersData,
+  StatisticsOosData,
+  StatisticsOosTrendItem,
 };

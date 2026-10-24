@@ -1393,7 +1393,18 @@
       "exportRepeatRate": "Taxa Sosa Fali",
       "exportAvgOrderValueUsdCents": "Valor Médio Pedidu (sen USD)",
       "exportGmvOrderCount": "Pedidu GMV",
-      "exportOrderUserCount": "Uzaariu Sosa"
+      "exportOrderUserCount": "Uzaariu Sosa",
+      "oosBoardTab": "Sosa Mamuk",
+      "oosReportRate": "Taxa Rejistu",
+      "oosReportRateDenominator": "Denominadór: {fulfilled} pedidu kumpre, {reported} ho rejistu sosa mamuk",
+      "oosAutoRefundRate": "Taxa Reembolso Automátiku",
+      "oosAutoRefundRateDenominator": "Denominadór: {total} reembolsu OUT_OF_STOCK, {system} sistema prosesa",
+      "oosManualRate": "Taxa Intervensaun Manuál",
+      "oosManualRateDenominator": "Denominadór: {total} reembolsu OUT_OF_STOCK, {pending} hein revizau manuál",
+      "oosTrend": "Tende Diáriu",
+      "oosTrendReported": "Pedidu Rejistadu",
+      "oosTrendOosRefunds": "Reembolsu Sosa Mamuk",
+      "oosTrendSystemRefunds": "Reembolsu Sistema"
     },
     "settings": {
       "title": "Konfigurasaun",

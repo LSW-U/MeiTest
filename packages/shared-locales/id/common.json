@@ -1393,7 +1393,18 @@
       "exportRepeatRate": "Rasio Pembelian Ulang",
       "exportAvgOrderValueUsdCents": "Nilai Rata-rata Pesanan (sen USD)",
       "exportGmvOrderCount": "Jumlah Pesanan GMV",
-      "exportOrderUserCount": "Jumlah Pengguna Memesan"
+      "exportOrderUserCount": "Jumlah Pengguna Memesan",
+      "oosBoardTab": "Stok Habis",
+      "oosReportRate": "Tingkat Pelaporan",
+      "oosReportRateDenominator": "Penyebut: {fulfilled} pesanan terpenuhi, {reported} dilaporkan stok habis",
+      "oosAutoRefundRate": "Tingkat Refund Otomatis",
+      "oosAutoRefundRateDenominator": "Penyebut: {total} refund OUT_OF_STOCK, {system} diproses sistem",
+      "oosManualRate": "Tingkat Intervensi Manual",
+      "oosManualRateDenominator": "Penyebut: {total} refund OUT_OF_STOCK, {pending} menunggu tinjauan manual",
+      "oosTrend": "Tren Harian",
+      "oosTrendReported": "Pesanan Dilaporkan",
+      "oosTrendOosRefunds": "Refund Stok Habis",
+      "oosTrendSystemRefunds": "Refund Sistem"
     },
     "settings": {
       "title": "Pengaturan",

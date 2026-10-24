@@ -13,6 +13,7 @@ import { Controller, Get, Query, Inject, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { StatisticsService } from './statistics.service';
 import { StatisticsCsvService } from './statistics-csv.service';
+import { OosBoardService } from './oos-board.service';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import {
@@ -21,6 +22,7 @@ import {
   StatisticsExportQuery,
   StatisticsRefundsQuery,
   StatisticsCustomersQuery,
+  StatisticsOosQuery,
 } from '@meimart/api-contract';
 
 @Controller('api/v1/admin/statistics')
@@ -29,6 +31,7 @@ export class StatisticsController {
   constructor(
     @Inject(StatisticsService) private readonly statistics: StatisticsService,
     @Inject(StatisticsCsvService) private readonly csv: StatisticsCsvService,
+    @Inject(OosBoardService) private readonly oosBoard: OosBoardService,
   ) {}
 
   /** 商品销量排行（R9：OrderItem 区间聚合，金额单位分） */
@@ -171,5 +174,19 @@ export class StatisticsController {
       `attachment; filename="customers-${new Date().toISOString().slice(0, 10)}.csv"`,
     );
     return csv;
+  }
+
+  /** 缺货看板三指标（缺货履约闭环批4 · A5：登记率/自动退款率/人工介入率，只读聚合） */
+  @Get('out-of-stock')
+  async getOosBoard(
+    @Query(new ZodValidationPipe(StatisticsOosQuery))
+    query: {
+      range?: 'today' | 'week' | 'month';
+      from?: string;
+      to?: string;
+    },
+  ) {
+    const data = await this.oosBoard.getOosBoard(query);
+    return { success: true as const, data };
   }
 }

@@ -1393,7 +1393,18 @@
       "exportRepeatRate": "复购率",
       "exportAvgOrderValueUsdCents": "客单价（美分）",
       "exportGmvOrderCount": "GMV 订单数",
-      "exportOrderUserCount": "下单用户数"
+      "exportOrderUserCount": "下单用户数",
+      "oosBoardTab": "缺货看板",
+      "oosReportRate": "登记率",
+      "oosReportRateDenominator": "分母：区间内履约订单 {fulfilled} 单，其中 {reported} 单有缺货登记",
+      "oosAutoRefundRate": "自动退款率",
+      "oosAutoRefundRateDenominator": "分母：OUT_OF_STOCK 退款 {total} 单，其中 {system} 单 system 直退",
+      "oosManualRate": "人工介入率",
+      "oosManualRateDenominator": "分母：OUT_OF_STOCK 退款 {total} 单，其中 {pending} 单待人工处理",
+      "oosTrend": "按日趋势",
+      "oosTrendReported": "缺货登记单",
+      "oosTrendOosRefunds": "缺货退款单",
+      "oosTrendSystemRefunds": "system 直退单"
     },
     "settings": {
       "title": "系统设置",

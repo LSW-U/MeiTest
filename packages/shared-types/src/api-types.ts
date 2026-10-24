@@ -6618,6 +6618,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/statistics/out-of-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 缺货看板三指标（缺货履约闭环批4 · A5，只读聚合不动 RealOrderAggregator/Settlement）：登记率=有缺货登记订单/履约订单（履约=Order 状态∈GMV_ORDER_STATUSES 且 createdAt∈range；有登记=任一 OrderItem.outOfStockQty 非空，锚 Order.createdAt）；自动退款率=system退款单/OUT_OF_STOCK退款单（Refund.reason=OUT_OF_STOCK 全 status，system=reviewedBy=SYSTEM）；人工介入率=PENDING人工队列/OUT_OF_STOCK退款单（含超限转人工 D17，可观测）。分母 0 → rate=null；trend=Dili 当地日切桶日期升序。规则表变更追溯走 AuditLog(resourceType=OutOfStockRule)+OOS_RULE_UPDATED 日志，不落本响应。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天） */
+        get: {
+            parameters: {
+                query?: {
+                    range?: "today" | "week" | "month";
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 缺货看板三指标（率 0-1，前端格式化） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                from: string;
+                                to: string;
+                                fulfilledOrderCount: number;
+                                reportedOrderCount: number;
+                                reportRate: number | null;
+                                oosRefundCount: number;
+                                systemRefundCount: number;
+                                autoRefundRate: number | null;
+                                pendingCount: number;
+                                manualInterventionRate: number | null;
+                                trend: {
+                                    date: string;
+                                    reported: number;
+                                    oosRefunds: number;
+                                    systemRefunds: number;
+                                }[];
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/common/support/config": {
         parameters: {
             query?: never;
@@ -27050,6 +27131,59 @@ export interface components {
                 avgOrderValue: number | null;
                 gmvOrderCount: number;
                 orderUserCount: number;
+            };
+            message?: string;
+        };
+        StatisticsOosQuery: {
+            /** @enum {string} */
+            range?: "today" | "week" | "month";
+            from?: string;
+            to?: string;
+        };
+        StatisticsOosTrendItem: {
+            date: string;
+            reported: number;
+            oosRefunds: number;
+            systemRefunds: number;
+        };
+        StatisticsOosData: {
+            from: string;
+            to: string;
+            fulfilledOrderCount: number;
+            reportedOrderCount: number;
+            reportRate: number | null;
+            oosRefundCount: number;
+            systemRefundCount: number;
+            autoRefundRate: number | null;
+            pendingCount: number;
+            manualInterventionRate: number | null;
+            trend: {
+                date: string;
+                reported: number;
+                oosRefunds: number;
+                systemRefunds: number;
+            }[];
+        };
+        StatisticsOosResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                from: string;
+                to: string;
+                fulfilledOrderCount: number;
+                reportedOrderCount: number;
+                reportRate: number | null;
+                oosRefundCount: number;
+                systemRefundCount: number;
+                autoRefundRate: number | null;
+                pendingCount: number;
+                manualInterventionRate: number | null;
+                trend: {
+                    date: string;
+                    reported: number;
+                    oosRefunds: number;
+                    systemRefunds: number;
+                }[];
             };
             message?: string;
         };

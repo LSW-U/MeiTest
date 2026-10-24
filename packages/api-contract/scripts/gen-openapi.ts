@@ -403,6 +403,11 @@ import {
   StatisticsCustomersQuery,
   StatisticsCustomersData,
   StatisticsCustomersResponse,
+  // statistics（缺货履约闭环批4，2026-10-24：缺货看板 A5）
+  StatisticsOosQuery,
+  StatisticsOosTrendItem,
+  StatisticsOosData,
+  StatisticsOosResponse,
   // common
   ErrorResponse,
   Id,
@@ -674,6 +679,11 @@ registry.register('StatisticsRefundsResponse', StatisticsRefundsResponse);
 registry.register('StatisticsCustomersQuery', StatisticsCustomersQuery);
 registry.register('StatisticsCustomersData', StatisticsCustomersData);
 registry.register('StatisticsCustomersResponse', StatisticsCustomersResponse);
+// statistics（缺货履约闭环批4，2026-10-24：缺货看板 A5）
+registry.register('StatisticsOosQuery', StatisticsOosQuery);
+registry.register('StatisticsOosTrendItem', StatisticsOosTrendItem);
+registry.register('StatisticsOosData', StatisticsOosData);
+registry.register('StatisticsOosResponse', StatisticsOosResponse);
 registry.register('AuditLogListItem', AuditLogListItem);
 registry.register('AuditLogDetail', AuditLogDetail);
 registry.register('AuditLogQuery', AuditLogQuery);
@@ -2128,6 +2138,26 @@ registry.registerPath({
     },
   },
 });
+// ===== statistics paths（缺货履约闭环批4，2026-10-24：缺货看板 A5） =====
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/statistics/out-of-stock',
+  tags: ['statistics'],
+  description:
+    '缺货看板三指标（缺货履约闭环批4 · A5，只读聚合不动 RealOrderAggregator/Settlement）：登记率=有缺货登记订单/履约订单（履约=Order 状态∈GMV_ORDER_STATUSES 且 createdAt∈range；有登记=任一 OrderItem.outOfStockQty 非空，锚 Order.createdAt）；自动退款率=system退款单/OUT_OF_STOCK退款单（Refund.reason=OUT_OF_STOCK 全 status，system=reviewedBy=SYSTEM）；人工介入率=PENDING人工队列/OUT_OF_STOCK退款单（含超限转人工 D17，可观测）。分母 0 → rate=null；trend=Dili 当地日切桶日期升序。规则表变更追溯走 AuditLog(resourceType=OutOfStockRule)+OOS_RULE_UPDATED 日志，不落本响应。时间范围：range 预设三值 或 from+to（YYYY-MM-DD Dili 当地日期含头尾，跨期上限 366 天）',
+  request: { query: StatisticsOosQuery },
+  responses: {
+    200: {
+      description: '缺货看板三指标（率 0-1，前端格式化）',
+      content: { 'application/json': { schema: StatisticsOosResponse } },
+    },
+    400: {
+      description: 'E-STATISTICS-001 时间范围无效 / E-STATISTICS-002 跨期超 366 天',
+      content: { 'application/json': { schema: ErrorResponse } },
+    },
+  },
+});
+
 registry.registerPath({
   method: 'get',
   path: '/api/v1/common/support/config',
