@@ -1443,7 +1443,20 @@
       "groupDelivery": "Pengiriman",
       "groupRider": "Kurir",
       "groupOrder": "Timeout Pesanan",
-      "groupOther": "Lainnya"
+      "groupOther": "Lainnya",
+      "groupOos": "Pengembalian Otomatis Kehabisan Stok",
+      "oosMirrorHint": "Cermin dari tabel aturan (global); ubah melalui API aturan, tidak dapat diedit di sini",
+      "readonlyMirror": "Cermin hanya-baca",
+      "oosFormHint": "Sumber: tabel aturan (global); menyimpan akan menulis aturan dan cermin SystemConfig dalam satu transaksi.",
+      "oosFullShortageLabel": "Pengembalian otomatis saat kehabisan total",
+      "oosThresholdEnabledLabel": "Pengembalian otomatis sebagian (ambang)",
+      "oosThresholdBpLabel": "Ambang kekurangan sebagian (basis poin)",
+      "oosThresholdBpHint": "Rasio dapat dikembalikan dari jumlah pesanan, basis poin (1-10000). 1000 = 10%.",
+      "oosMaxAmountLabel": "Batas maksimum pengembalian otomatis per transaksi (sen)",
+      "oosMaxAmountHint": "Pengembalian ≤ batas selesai otomatis; di atasnya ke peninjauan manual. 5000 = $50.00.",
+      "oosRuleSaved": "Aturan kehabisan stok disimpan",
+      "oosRuleInvalidThreshold": "Ambang harus bilangan bulat 1-10000",
+      "oosRuleInvalidMaxAmount": "Batas harus bilangan bulat positif (sen)"
     },
     "reviews": {
       "title": "Reviews",

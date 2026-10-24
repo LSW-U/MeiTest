@@ -37,6 +37,9 @@ export const NOTIFICATION_EVENT_KEYS = [
   'outOfStock',
   // 批2 审查 P3-3（20261024）：全缺 → 订单已 CANCELLED，「已取消-全部商品缺货」分支文案
   'outOfStockCancelled',
+  // 缺货履约闭环批3（2026-10-24）：system 自动退款结果推送（D9b/D17，直退完成 / 超限转人工）
+  'outOfStockAutoRefunded',
+  'outOfStockRefundPending',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -66,4 +69,7 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   outOfStock: { titleKey: 'outOfStock.title', contentKey: 'outOfStock.content' },
   // 批2 审查 P3-3：全缺订单已取消分支（同受众；data.cancelled=true 时 notify 用此 key）
   outOfStockCancelled: { titleKey: 'outOfStockCancelled.title', contentKey: 'outOfStockCancelled.content' },
+  // 缺货履约闭环批3：system 自动退款直退完成 / 超限转人工（同受众，data.orderId + amount）
+  outOfStockAutoRefunded: { titleKey: 'outOfStockAutoRefunded.title', contentKey: 'outOfStockAutoRefunded.content' },
+  outOfStockRefundPending: { titleKey: 'outOfStockRefundPending.title', contentKey: 'outOfStockRefundPending.content' },
 };

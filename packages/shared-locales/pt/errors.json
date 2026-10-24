@@ -198,5 +198,8 @@
   "E-WAREHOUSE-001": "Código de armazém já existe",
   "E-WAREHOUSE-002": "Fora da área de entrega",
   "E-WAREHOUSE-003": "Armazém não encontrado",
-  "E-WAREHOUSE-004": "Parâmetros de solicitação de armazém inválidos"
+  "E-WAREHOUSE-004": "Parâmetros de solicitação de armazém inválidos",
+  "E-OOS-006": "Apenas reembolsos automáticos do sistema podem ser contestados, e uma única vez",
+  "E-OOS-007": "O motor de reembolso automático falhou ao processar este reembolso",
+  "E-OOS-008": "Conflito de estado de reembolso: o reembolso já não está pendente (processamento concorrente)"
 }

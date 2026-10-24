@@ -81,6 +81,16 @@ export const Refund = z.object({
   pickupAt: IsoTimestamp.nullable(),
   /** 骑手取件完成时间（dispatch 集成 defer，当前 null；P14 时间轴 picked 步骤展示） */
   pickedAt: IsoTimestamp.nullable(),
+  /** 用户异议时间（缺货履约闭环批3 2026-10-24，D9）：非空 = 已异议（转人工复审） */
+  disputedAt: IsoTimestamp.nullable(),
+  /** 用户异议说明（≤500，dispute 端点提交） */
+  disputeNote: z.string().nullable(),
+});
+
+/** 用户对 system 自动退款提异议请求（缺货履约闭环批3，D9） */
+export const DisputeRefundRequest = z.object({
+  /** 异议说明（可空，≤500） */
+  note: z.string().max(500).optional(),
 });
 
 /** 创建退款请求 */

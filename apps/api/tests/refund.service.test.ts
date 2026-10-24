@@ -1266,4 +1266,161 @@ describe('RefundService', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  // ========================================================================
+  // disputeRefund + dispute 复审分流（P1-1 修复 2026-10-24：复审不碰已完成账）
+  // ========================================================================
+
+  describe('disputeRefund（P1-1 修复后语义：只留痕不动单）', () => {
+    // system 直退完成的退款单（COMPLETED + transactionId 非空）
+    const systemCompletedRefund = {
+      ...baseRefund,
+      reason: 'OUT_OF_STOCK',
+      status: 'COMPLETED',
+      transactionId: 'MOCK_REFUND_123',
+      reviewedBy: 'SYSTEM',
+      reviewNote: 'SYSTEM_AUTO_REFUND_OUT_OF_STOCK',
+      completedAt: new Date('2026-10-24T00:00:00Z'),
+      disputedAt: null,
+      disputeNote: null,
+    };
+
+    it('COMPLETED system 单 dispute → 只写 disputedAt/disputeNote，status 保持 COMPLETED（不翻 PENDING）', async () => {
+      const afterDispute = { ...systemCompletedRefund, disputedAt: new Date(), disputeNote: '商品已收到' };
+      mockDb.refund.findUnique
+        .mockResolvedValueOnce(systemCompletedRefund) // 首查
+        .mockResolvedValueOnce(afterDispute); // 尾读（findUniqueOrThrow 同 mock）
+      (mockDb.refund as unknown as Record<string, ReturnType<typeof vi.fn>>).findUniqueOrThrow =
+        vi.fn().mockResolvedValue(afterDispute);
+      mockDb.refund.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.disputeRefund('refund-1', 'user-1', '商品已收到');
+
+      // 不翻状态：断言 updateMany data 不含 status
+      expect(mockDb.refund.updateMany).toHaveBeenCalledWith({
+        where: { id: 'refund-1', disputedAt: null, reviewedBy: 'SYSTEM' },
+        data: expect.not.objectContaining({ status: expect.anything() }),
+      });
+      expect(result.status).toBe('COMPLETED');
+      expect(result.disputedAt).toBeTruthy();
+      // 不建新单（新单是复审 APPROVE 阶段动作）
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('非本人退款 → E-AUTH-012', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(systemCompletedRefund);
+      await expect(service.disputeRefund('refund-1', 'other-user')).rejects.toMatchObject({
+        response: { code: 'E-AUTH-012' },
+      });
+    });
+
+    it('非 SYSTEM 通路（人工审核单）→ E-OOS-006', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...systemCompletedRefund, reviewedBy: 'admin-1' });
+      await expect(service.disputeRefund('refund-1', 'user-1')).rejects.toMatchObject({
+        response: { code: 'E-OOS-006' },
+      });
+    });
+
+    it('已异议过（disputedAt 非空）→ E-OOS-006 一单一次', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...systemCompletedRefund, disputedAt: new Date() });
+      await expect(service.disputeRefund('refund-1', 'user-1')).rejects.toMatchObject({
+        response: { code: 'E-OOS-006' },
+      });
+    });
+
+    it('并发双 POST 输家（updateMany count=0）→ E-OOS-006', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(systemCompletedRefund);
+      mockDb.refund.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.disputeRefund('refund-1', 'user-1')).rejects.toMatchObject({
+        response: { code: 'E-OOS-006' },
+      });
+    });
+  });
+
+  describe('reviewRefund - dispute 复审分流（P1-1：复审不碰已完成账）', () => {
+    const disputedCompleted = {
+      ...baseRefund,
+      id: 'refund-1',
+      reason: 'OUT_OF_STOCK',
+      status: 'COMPLETED',
+      transactionId: 'MOCK_REFUND_123',
+      reviewedBy: 'SYSTEM',
+      reviewNote: 'SYSTEM_AUTO_REFUND_OUT_OF_STOCK',
+      completedAt: new Date('2026-10-24T00:00:00Z'),
+      disputedAt: new Date('2026-10-24T01:00:00Z'),
+      disputeNote: '用户异议：商品已收到',
+      items: [],
+    };
+
+    it('APPROVE（复审成立）→ 新建人工 PENDING 退款单，原单仅 disputeNote 追加留痕，不触发销量回滚/Settlement', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(disputedCompleted);
+      mockDb.refundItem.findMany.mockResolvedValue([
+        { orderItemId: 'oi-1', skuId: 'sku-1', productName: { en: 'A' }, unitPrice: 5000, refundQty: 1, subtotal: 5000 },
+      ]);
+      mockDb.refund.create.mockResolvedValue({
+        ...baseRefund,
+        id: 'refund-new',
+        status: 'PENDING',
+        reason: 'OUT_OF_STOCK',
+        reasonDetail: 'DISPUTE_REVIEW_OF:refund-1',
+        items: [],
+      });
+      mockDb.refund.update.mockResolvedValue({ ...disputedCompleted, disputeNote: '[DISPUTE_APPROVE]' });
+
+      const result = await service.reviewRefund('refund-1', 'admin-1', 'APPROVE', '异议成立');
+
+      // 新单 PENDING（走既有人工审核链，不在本步直退）
+      expect(result.status).toBe('PENDING');
+      expect(mockDb.refund.create).toHaveBeenCalledTimes(1);
+      // 代码层阻断：不走 completeRefundTx（无条件翻转/销量回滚/Settlement 调用）
+      expect(mockDb.refund.updateMany).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForFullOrder).not.toHaveBeenCalled();
+      expect(mockHelpers.rollbackSalesCountForRefundItems).not.toHaveBeenCalled();
+      expect(mockSettlementAdjustment.applyRefundSettlementAdjustment).not.toHaveBeenCalled();
+      // 原单留痕：disputeNote 追加复审结论（不动 status）
+      expect(mockDb.refund.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'refund-1' },
+          data: expect.objectContaining({ disputeNote: expect.stringContaining('[DISPUTE_APPROVE]') }),
+        }),
+      );
+    });
+
+    it('REJECT（复审驳回）→ 原单终态保持 COMPLETED，仅 disputeNote 追加复审结论', async () => {
+      mockDb.refund.findUnique.mockResolvedValue(disputedCompleted);
+      mockDb.refund.update.mockResolvedValue({
+        ...disputedCompleted,
+        disputeNote: '[DISPUTE_REJECT] 已核实商品未送达',
+      });
+
+      const result = await service.reviewRefund('refund-1', 'admin-1', 'REJECT', '已核实商品未送达');
+
+      // 原单终态不变（钱已退/账已动，不翻 REJECTED）
+      expect(result.status).toBe('COMPLETED');
+      // 仅留痕，不建新单、不动资金
+      expect(mockDb.refund.create).not.toHaveBeenCalled();
+      expect(mockDb.refund.updateMany).not.toHaveBeenCalled();
+      expect(mockSettlementAdjustment.applyRefundSettlementAdjustment).not.toHaveBeenCalled();
+      expect(mockDb.refund.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'refund-1' },
+          data: expect.objectContaining({ disputeNote: expect.stringContaining('[DISPUTE_REJECT]') }),
+        }),
+      );
+    });
+
+    it('旧遗留 dispute PENDING 单（升级前数据）也走分流，不复用 completeRefundTx', async () => {
+      mockDb.refund.findUnique.mockResolvedValue({ ...disputedCompleted, status: 'PENDING' });
+      mockDb.refundItem.findMany.mockResolvedValue([]);
+      mockDb.refund.create.mockResolvedValue({ ...baseRefund, id: 'refund-new', status: 'PENDING' });
+      mockDb.refund.update.mockResolvedValue({ ...disputedCompleted });
+
+      const result = await service.reviewRefund('refund-1', 'admin-1', 'APPROVE');
+
+      // 仍分流到 resolveDisputeReview（不走共享 completeRefundTx）
+      expect(result.status).toBe('PENDING');
+      expect(mockDb.refund.create).toHaveBeenCalledTimes(1);
+      expect(mockDb.refund.updateMany).not.toHaveBeenCalled();
+    });
+  });
 });

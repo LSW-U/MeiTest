@@ -45,6 +45,8 @@ import {
   useUpdateWarehousePricingConfig,
   useSystemConfigs,
   useUpdateSystemConfig,
+  useOosRule,
+  useUpdateOosRule,
   type Shop,
   type WarehousePricing,
   type SystemConfigItem,
@@ -52,7 +54,11 @@ import {
 import { ApiError } from '@/lib/api';
 
 const SHOP_NAME_LOCALES = ['en', 'zh', 'id', 'pt'] as const;
-const CONFIG_GROUP_PREFIXES = ['platform', 'delivery', 'rider', 'order'] as const;
+// 缺货履约闭环批3（2026-10-24，D17）：oos.* 为规则表镜像只读 key——运营不可直接改
+// （改了会被 out_of_stock_rule 写路径覆盖），该组渲染为只读展示卡片。
+const CONFIG_GROUP_PREFIXES = ['platform', 'delivery', 'rider', 'order', 'oos'] as const;
+/** 只读镜像组（规则表为真源，写入口走 out-of-stock-rule API） */
+const READONLY_GROUP_PREFIXES: readonly string[] = ['oos'];
 type ConfigGroupPrefix = (typeof CONFIG_GROUP_PREFIXES)[number];
 
 function configGroupOf(key: string): ConfigGroupPrefix | 'other' {
@@ -501,18 +507,28 @@ function PlatformTab() {
     { prefix: 'delivery', labelKey: 'admin.settings.groupDelivery' },
     { prefix: 'rider', labelKey: 'admin.settings.groupRider' },
     { prefix: 'order', labelKey: 'admin.settings.groupOrder' },
+    { prefix: 'oos', labelKey: 'admin.settings.groupOos' },
     { prefix: 'other', labelKey: 'admin.settings.groupOther' },
   ];
 
   return (
     <div className="space-y-4">
+      {/* P2-2（审查修复 2026-10-24）：oos 组改为可写表单（SUPER_ADMIN，PUT out-of-stock-rule，
+          规则表真源 + SystemConfig 镜像同事务回写），不再渲染只读镜像卡片 */}
+      <OosRuleFormCard />
       {groupOrder.map(({ prefix, labelKey }) => {
         const list = groups.get(prefix);
         if (!list || list.length === 0) return null;
+        // P2-2 修复：oos 组已由 OosRuleFormCard 可写表单承接，跳过只读镜像渲染
+        if (prefix === 'oos') return null;
+        const readOnly = READONLY_GROUP_PREFIXES.includes(prefix);
         return (
           <Card key={prefix}>
             <CardHeader>
               <CardTitle>{t(labelKey as 'admin.settings.groupPlatform')}</CardTitle>
+              {readOnly && (
+                <p className="text-xs text-muted-foreground">{t('admin.settings.oosMirrorHint')}</p>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
@@ -537,9 +553,13 @@ function PlatformTab() {
                         {row.updatedAt ? formatDateTime(row.updatedAt) : '-'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-                          {t('admin.settings.editValue')}
-                        </Button>
+                        {readOnly ? (
+                          <span className="text-xs text-muted-foreground">{t('admin.settings.readonlyMirror')}</span>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                            {t('admin.settings.editValue')}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -589,5 +609,111 @@ function PlatformTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ===== OOS 规则可写表单（P2-2 修复 2026-10-24）=====
+
+function OosRuleFormCard() {
+  const t = useTranslations('common');
+  const { toast } = useToast();
+  const { data: rule, isLoading, error, refetch } = useOosRule();
+  const updateMutation = useUpdateOosRule();
+
+  const [fullShortage, setFullShortage] = useState(true);
+  const [thresholdEnabled, setThresholdEnabled] = useState(false);
+  const [thresholdBpInput, setThresholdBpInput] = useState('');
+  const [maxAmountInput, setMaxAmountInput] = useState('');
+
+  useEffect(() => {
+    if (rule) {
+      setFullShortage(rule.autoRefundFullShortage);
+      setThresholdEnabled(rule.partialShortageThresholdEnabled);
+      setThresholdBpInput(rule.partialShortageThresholdBp == null ? '' : String(rule.partialShortageThresholdBp));
+      setMaxAmountInput(String(rule.autoRefundMaxAmount));
+    }
+  }, [rule]);
+
+  async function handleSave() {
+    // 校验：阈值 bp 100-10000；上限金额 >0（分）
+    let thresholdBp: number | null = null;
+    if (thresholdBpInput.trim() !== '') {
+      const n = Number(thresholdBpInput);
+      if (!Number.isInteger(n) || n < 1 || n > 10000) {
+        toast({ title: t('admin.settings.oosRuleInvalidThreshold'), variant: 'destructive' });
+        return;
+      }
+      thresholdBp = n;
+    }
+    const maxAmount = Number(maxAmountInput);
+    if (!Number.isInteger(maxAmount) || maxAmount <= 0) {
+      toast({ title: t('admin.settings.oosRuleInvalidMaxAmount'), variant: 'destructive' });
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        autoRefundFullShortage: fullShortage,
+        partialShortageThresholdEnabled: thresholdEnabled && thresholdBp != null,
+        partialShortageThresholdBp: thresholdEnabled && thresholdBp != null ? thresholdBp : null,
+        autoRefundMaxAmount: maxAmount,
+      });
+      toast({ title: t('admin.settings.oosRuleSaved') });
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t('admin.settings.saveFailed');
+      toast({ title: t('admin.settings.saveFailed'), description: message, variant: 'destructive' });
+    }
+  }
+
+  if (error) return <ErrorState onRetry={() => refetch()} />;
+  if (isLoading) {
+    return <div className="rounded-md border p-8 text-center text-muted-foreground">{t('loading')}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('admin.settings.groupOos')}</CardTitle>
+        <p className="text-xs text-muted-foreground">{t('admin.settings.oosFormHint')}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="oosFullShortage">{t('admin.settings.oosFullShortageLabel')}</Label>
+          <Switch id="oosFullShortage" checked={fullShortage} onCheckedChange={setFullShortage} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="oosThresholdEnabled">{t('admin.settings.oosThresholdEnabledLabel')}</Label>
+          <Switch id="oosThresholdEnabled" checked={thresholdEnabled} onCheckedChange={setThresholdEnabled} />
+        </div>
+        {thresholdEnabled && (
+          <div className="space-y-2">
+            <Label htmlFor="oosThresholdBp">{t('admin.settings.oosThresholdBpLabel')}</Label>
+            <Input
+              id="oosThresholdBp"
+              type="number"
+              min={1}
+              max={10000}
+              value={thresholdBpInput}
+              onChange={(e) => setThresholdBpInput(e.target.value)}
+              placeholder="1000 = 10%"
+            />
+            <p className="text-xs text-muted-foreground">{t('admin.settings.oosThresholdBpHint')}</p>
+          </div>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="oosMaxAmount">{t('admin.settings.oosMaxAmountLabel')}</Label>
+          <Input
+            id="oosMaxAmount"
+            type="number"
+            min={1}
+            value={maxAmountInput}
+            onChange={(e) => setMaxAmountInput(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">{t('admin.settings.oosMaxAmountHint')}</p>
+        </div>
+        <Button onClick={handleSave} disabled={updateMutation.isPending}>
+          {updateMutation.isPending ? t('admin.settings.saving') : t('admin.settings.save')}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

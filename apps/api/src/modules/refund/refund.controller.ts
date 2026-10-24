@@ -6,6 +6,7 @@
  *   GET    /                我的退款列表
  *   GET    /:id             退款详情
  *   POST   /:id/cancel      撤回退款申请
+ *   POST   /:id/dispute     对 system 自动退款提异议（批3 2026-10-24，D9 异议→转人工复审）
  *
  * Admin 端点（/api/v1/admin/refunds）：
  *   GET    /                退款列表（可按 status 筛选）
@@ -39,6 +40,10 @@ interface RequestWithUser {
   user?: RequestUser;
   headers: Record<string, string | string[] | undefined>;
 }
+
+const DisputeRefundRequest = z.object({
+  note: z.string().max(500).optional(),
+});
 
 const CreateRefundRequest = z.object({
   orderId: z.string().uuid(),
@@ -141,6 +146,24 @@ export class ClientRefundController {
       throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
     }
     const refund = await this.refundService.cancelRefund(id, req.user.sub);
+    return { success: true as const, data: refund };
+  }
+
+  /**
+   * 对 system 自动退款提异议（缺货履约闭环批3 2026-10-24，D9）
+   * 异议 → 转人工复审（退款单回 PENDING 进人工队列）；仅 reviewedBy='SYSTEM' 且未异议过可提
+   */
+  @Post(':id/dispute')
+  @Audit({ resource: 'Refund', resourceIdParam: 'id' })
+  async dispute(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(DisputeRefundRequest)) body: z.infer<typeof DisputeRefundRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const refund = await this.refundService.disputeRefund(id, req.user.sub, body.note);
     return { success: true as const, data: refund };
   }
 }

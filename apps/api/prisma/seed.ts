@@ -495,6 +495,29 @@ async function main() {
       value: '',
       description: 'Rider App changelog text (admin-web /apps page)',
     },
+    // 缺货履约闭环批3（2026-10-24，D17）：system 自动退款规则镜像 key（out_of_stock_rule
+    // 全局行为真源，此处为只读副本供 settings 页展示；规则表写路径同事务回写镜像）。
+    // value 一律空字符串：运营不可直接改此 key（改了也会被规则表覆盖），settings 页展示用。
+    {
+      key: 'oos.auto_refund_full_shortage',
+      value: '',
+      description: 'Readonly mirror of out_of_stock_rule global autoRefundFullShortage (true/false)',
+    },
+    {
+      key: 'oos.partial_shortage_threshold_enabled',
+      value: '',
+      description: 'Readonly mirror of out_of_stock_rule global partialShortageThresholdEnabled (true/false)',
+    },
+    {
+      key: 'oos.partial_shortage_threshold_bp',
+      value: '',
+      description: 'Readonly mirror of out_of_stock_rule global partialShortageThresholdBp (basis points)',
+    },
+    {
+      key: 'oos.auto_refund_max_amount',
+      value: '',
+      description: 'Readonly mirror of out_of_stock_rule global autoRefundMaxAmount (cents)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {

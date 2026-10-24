@@ -212,6 +212,20 @@ export const OutOfStockReportResponse = z.object({
   orderCancelled: z.boolean(),
 });
 
+/** 缺货自动退款全局规则更新（批3 D15/D17，PUT /admin/orders/out-of-stock-rule，仅 SUPER_ADMIN） */
+export const UpdateOutOfStockRuleRequest = z
+  .object({
+    /** 开关1：整单全缺自动直退 */
+    autoRefundFullShortage: z.boolean().optional(),
+    /** 开关2：部分缺金额占比阈值直退 */
+    partialShortageThresholdEnabled: z.boolean().optional(),
+    /** 部分缺占比阈值（万分位，3000=30%） */
+    partialShortageThresholdBp: z.number().int().min(0).max(10_000).nullable().optional(),
+    /** 免审上限（分，默认 5000=$50） */
+    autoRefundMaxAmount: z.number().int().min(1).max(10_000_000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'At least one rule field required' });
+
 /**
  * 订单状态计数（B3，个人中心 4 宫格 badge 数据源）
  *

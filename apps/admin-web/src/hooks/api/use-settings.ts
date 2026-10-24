@@ -164,3 +164,55 @@ export function useUpdateSystemConfig() {
     },
   });
 }
+
+// ===== OutOfStockRule（缺货履约闭环批3，P2-2 修复 2026-10-24：规则写入口 UI）=====
+// 真源 out_of_stock_rule 全局行（PUT /admin/orders/out-of-stock-rule，SUPER_ADMIN）；
+// 读侧复用 SystemConfig oos.* 镜像（写路径同事务回写，值始终一致）
+
+export interface OosRuleForm {
+  autoRefundFullShortage: boolean;
+  partialShortageThresholdEnabled: boolean;
+  /** 万分位（bp），null = 未设 */
+  partialShortageThresholdBp: number | null;
+  /** 分。$1 = 100 */
+  autoRefundMaxAmount: number;
+}
+
+export function useOosRule() {
+  return useQuery({
+    queryKey: ['settings', 'oos-rule'],
+    queryFn: async () => {
+      const res = await apiFetch<ApiSuccess<SystemConfigItem[]>>(`/admin/platform/system-configs`);
+      const map = new Map(res.data.map((c) => [c.key, c.value]));
+      return {
+        autoRefundFullShortage: map.get('oos.auto_refund_full_shortage') === 'true',
+        partialShortageThresholdEnabled: map.get('oos.partial_shortage_threshold_enabled') === 'true',
+        partialShortageThresholdBp: map.get('oos.partial_shortage_threshold_bp')
+          ? Number(map.get('oos.partial_shortage_threshold_bp'))
+          : null,
+        autoRefundMaxAmount: Number(map.get('oos.auto_refund_max_amount') ?? '5000'),
+      } as OosRuleForm;
+    },
+  });
+}
+
+export function useUpdateOosRule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      autoRefundFullShortage?: boolean;
+      partialShortageThresholdEnabled?: boolean;
+      partialShortageThresholdBp?: number | null;
+      autoRefundMaxAmount?: number;
+    }) =>
+      apiFetch<ApiSuccess<{ updated: boolean }>>(`/admin/orders/out-of-stock-rule`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }).then((res) => res.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'oos-rule'] });
+      // 镜像 key 同步刷新（写路径已回写 systemConfig + DEL 缓存）
+      qc.invalidateQueries({ queryKey: ['settings', 'system-configs'] });
+    },
+  });
+}

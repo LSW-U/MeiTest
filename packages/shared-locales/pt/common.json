@@ -1443,7 +1443,20 @@
       "groupDelivery": "Entrega",
       "groupRider": "Estafeta",
       "groupOrder": "Timeouts de Pedidos",
-      "groupOther": "Outros"
+      "groupOther": "Outros",
+      "groupOos": "Reembolso Automático de Ruptura",
+      "oosMirrorHint": "Espelho da tabela de regras (global); gerencie via API de regras, não editável aqui",
+      "readonlyMirror": "Espelho somente leitura",
+      "oosFormHint": "Fonte: tabela de regras (global); guardar escreve a regra e os espelhos SystemConfig numa transação.",
+      "oosFullShortageLabel": "Reembolso automático em rutura total",
+      "oosThresholdEnabledLabel": "Reembolso automático parcial (limiar)",
+      "oosThresholdBpLabel": "Limiar de rutura parcial (pontos base)",
+      "oosThresholdBpHint": "Rácio reembolsável do valor do pedido, pontos base (1-10000). 1000 = 10%.",
+      "oosMaxAmountLabel": "Limite máximo por reembolso automático (cêntimos)",
+      "oosMaxAmountHint": "Reembolso ≤ limite conclui automaticamente; acima vai para revisão manual. 5000 = $50.00.",
+      "oosRuleSaved": "Regra de ruptura de stock guardada",
+      "oosRuleInvalidThreshold": "O limiar deve ser um número inteiro entre 1 e 10000",
+      "oosRuleInvalidMaxAmount": "O limite deve ser um número inteiro positivo (cêntimos)"
     },
     "reviews": {
       "title": "Reviews",

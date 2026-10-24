@@ -1474,6 +1474,11 @@ model Refund {
   pickupAt      DateTime? @map("pickup_at")
   /// 骑手取件完成时间（dispatch PICKED_UP->DELIVERING 时写，P14 时间轴 picked 步骤展示；dispatch 集成 defer 到独立 ticket，当前 null）
   pickedAt      DateTime? @map("picked_at")
+  /// 用户异议时间（缺货履约闭环批3 2026-10-24，D9）：system 自动退款（reviewedBy='SYSTEM'）后
+  /// 用户可提异议一次 → 转人工复审；非空 = 已异议（admin 列表可见筛选）
+  disputedAt    DateTime? @map("disputed_at")
+  /// 用户异议说明（≤500，dispute 端点提交；仅 reviewedBy='SYSTEM' 且未异议过可提）
+  disputeNote   String?   @map("dispute_note")
 
   order      Order         @relation(fields: [orderId], references: [id])
   user       User          @relation(fields: [userId], references: [id])

@@ -88,6 +88,10 @@ export interface RefundView {
   pickupAt: string | null;
   /** 骑手取件完成时间（dispatch 集成 defer，当前 null；P14 时间轴 picked 步骤展示） */
   pickedAt: string | null;
+  /** 用户异议时间（缺货履约闭环批3 2026-10-24，D9）：非空 = 已异议（转人工复审） */
+  disputedAt: string | null;
+  /** 用户异议说明（dispute 端点提交，≤500） */
+  disputeNote: string | null;
 }
 
 @Injectable()
@@ -655,6 +659,14 @@ export class RefundService {
       });
     }
 
+    // 🔴 P1-1（总指挥拍板 2026-10-24）：dispute 复审单分流——dispute 只留痕不再回 PENDING
+    // （见 disputeRefund），复审入口改由「新人工退款单」承接；此分支须在 status!=='PENDING'
+    // 守卫之前（dispute 原单是 COMPLETED，会被状态守卫拦截），兜底拦截历史遗留 dispute 单，
+    // 杜绝 completeRefundTx 对已完成账二次施加销量回滚 + Settlement 负向调整。
+    if (refund.reviewedBy === 'SYSTEM' && refund.disputedAt) {
+      return this.resolveDisputeReview(refund, reviewerId, action, reviewNote);
+    }
+
     if (refund.status !== 'PENDING') {
       throw new ConflictException({
         code: 'E-REFUND-004',
@@ -791,6 +803,98 @@ export class RefundService {
   }
 
   /**
+   * dispute 复审分流（P1-1 修复 2026-10-24，总指挥拍板：复审不碰已完成账）
+   *
+   * 语义：
+   *   - APPROVE（复审成立，维持异议）→ 新建人工 PENDING 退款单（reasonDetail 关联原单
+   *     id + 异议说明，admin 走既有 reviewRefund 链处理），原 COMPLETED system 单不动
+   *     （不重复动销量/Settlement/资金），仅 disputeNote 追加复审结论留痕
+   *   - REJECT（复审驳回）→ 原 COMPLETED 单保持不动，仅 disputeNote 追加复审结论
+   *
+   * 代码层阻断（③）：本方法绝不触碰 completeRefundTx / completeSystemRefundTx——
+   * 钱已在直退时退过，任何路径不得二次施加资金副作用。
+   *
+   * 新单同单单笔守卫说明：原单已是 COMPLETED（不在 PENDING/APPROVED 进行中），
+   * createRefund 的同单单笔守卫不会命中；新建单走正常人工审核。
+   */
+  private async resolveDisputeReview(
+    refund: { id: string; orderId: string; userId: string; amount: number; reason: string; refundMethod: string; refundType: string; disputeNote: string | null; disputedAt: Date | null },
+    reviewerId: string,
+    action: 'APPROVE' | 'REJECT',
+    reviewNote?: string,
+  ): Promise<RefundView> {
+    const conclusion = `[DISPUTE_${action}] ${reviewNote ?? ''}`.trim().slice(0, 500);
+    const appendedNote = refund.disputeNote
+      ? `${refund.disputeNote.slice(0, 400)}\n${conclusion}`.slice(0, 500)
+      : conclusion;
+
+    if (action === 'APPROVE') {
+      // 复审成立（维持异议）→ 新建人工 PENDING 退款单（走既有 reviewRefund 链）
+      // 金额沿用原单金额（system 直退金额即缺货项合计，人工复核可在新单驳回）
+      const created = await db.refund.create({
+        data: {
+          orderId: refund.orderId,
+          userId: refund.userId,
+          amount: refund.amount,
+          reason: refund.reason,
+          // 关联原单：reasonDetail 承载 dispute 复审来源（审计链两单互查）
+          reasonDetail: `DISPUTE_REVIEW_OF:${refund.id}${reviewNote ? ` | ${reviewNote.slice(0, 200)}` : ''}`,
+          status: 'PENDING',
+          refundMethod: refund.refundMethod,
+          reviewedBy: null,
+          refundType: refund.refundType,
+          items: {
+            // 原单 items 快照复制（人工新单审核时 completeRefundTx 销量回滚按 RefundItem 走）
+            create: (await db.refundItem.findMany({ where: { refundId: refund.id } })).map((i) => ({
+              orderItemId: i.orderItemId,
+              skuId: i.skuId,
+              productName: i.productName as Prisma.InputJsonValue,
+              unitPrice: i.unitPrice,
+              refundQty: i.refundQty,
+              subtotal: i.subtotal,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+
+      // 原单留痕（不碰 status/disputedAt 语义：COMPLETED 终态不变）
+      await db.refund.update({
+        where: { id: refund.id },
+        data: { disputeNote: appendedNote },
+      });
+
+      logger.info({
+        msg: 'REFUND_DISPUTE_REVIEW_APPROVED_NEW_REFUND',
+        originalRefundId: refund.id,
+        newRefundId: created.id,
+        orderId: refund.orderId,
+        amount: refund.amount,
+        reviewerId,
+      });
+
+      return this.toView(created);
+    }
+
+    // REJECT（复审驳回）：原 COMPLETED 单保持不动，仅记复审结论
+    const updated = await db.refund.update({
+      where: { id: refund.id },
+      data: { disputeNote: appendedNote },
+      include: { items: true },
+    });
+
+    logger.info({
+      msg: 'REFUND_DISPUTE_REVIEW_REJECTED',
+      refundId: refund.id,
+      orderId: refund.orderId,
+      reviewerId,
+      reviewNote,
+    });
+
+    return this.toView(updated);
+  }
+
+  /**
    * 客户撤回退款申请（仅 PENDING 可撤）
    */
   async cancelRefund(refundId: string, userId: string): Promise<RefundView> {
@@ -822,6 +926,86 @@ export class RefundService {
       include: { items: true },
     });
 
+    return this.toView(updated);
+  }
+
+  /**
+   * 用户对 system 自动退款提异议（缺货履约闭环批3 2026-10-24，D9）
+   *
+   * 规则（用户拍板形态）：
+   *   - 仅 reviewedBy='SYSTEM'（system 通路自动退款）可提——人工审核路径有 REJECT/客服通道，无需异议
+   *   - 仅未异议过可提（disputedAt 为空，一单一次）
+   *   - 归属校验 E-AUTH-012（对齐 cancelRefund 先例）
+   *   - 异议 → 转人工复审：退款单落 PENDING（人工队列可见），写 disputedAt/disputeNote 留痕
+   *
+   * 规则（总指挥拍板 2026-10-24，P1-1 修复：复审不碰已完成账）：
+   *   - 仅 reviewedBy='SYSTEM'（system 通路自动退款）可提——人工审核路径有 REJECT/客服通道，无需异议
+   *   - 仅未异议过可提（disputedAt 为空，一单一次）
+   *   - 归属校验 E-AUTH-012（对齐 cancelRefund 先例）
+   *   - 🔴 异议只留痕不动单：原单保持 COMPLETED（钱已退/销量已回滚/Settlement 已调整，
+   *     翻回 PENDING 会让人工 APPROVE 走 completeRefundTx 二次施加资金副作用）。
+   *     复审语义在 reviewRefund 的 dispute 分支：APPROVE=新建人工 PENDING 退款单走既有
+   *     审核链；REJECT=仅记复审结论，原单终态不变
+   */
+  async disputeRefund(refundId: string, userId: string, note?: string): Promise<RefundView> {
+    const refund = await db.refund.findUnique({ where: { id: refundId } });
+    if (!refund) {
+      throw new NotFoundException({
+        code: 'E-REFUND-003',
+        message: `Refund not found: ${refundId}`,
+      });
+    }
+
+    if (refund.userId !== userId) {
+      throw new ForbiddenException({
+        code: 'E-AUTH-012',
+        message: 'Refund does not belong to this user',
+      });
+    }
+
+    // 仅 system 通路自动退款可异议（人工审核退款走既有 REJECT/客服通道）
+    if (refund.reviewedBy !== 'SYSTEM') {
+      throw new ConflictException({
+        code: 'E-OOS-006',
+        message: 'Only system auto refunds can be disputed',
+      });
+    }
+
+    // 一单一次：已异议过拒绝
+    if (refund.disputedAt) {
+      throw new ConflictException({
+        code: 'E-OOS-006',
+        message: 'Refund has already been disputed',
+      });
+    }
+
+    // 条件翻转封并发 TOCTOU（同款 P2-1 范式：disputedAt 为空作 WHERE 前置，双 POST 只有一笔赢）
+    // 🔴 P1-1 修复：只写 disputedAt/disputeNote 留痕，status 不动（原单保持 COMPLETED，
+    // 复审分支见 reviewRefund —— dispute 单走 completeRefundTx 会二次施加销量/Settlement）
+    const flipped = await db.refund.updateMany({
+      where: { id: refundId, disputedAt: null, reviewedBy: 'SYSTEM' },
+      data: {
+        disputedAt: new Date(),
+        disputeNote: note?.trim() ? note.trim().slice(0, 500) : null,
+      },
+    });
+    if (flipped.count === 0) {
+      throw new ConflictException({
+        code: 'E-OOS-006',
+        message: 'Refund has already been disputed',
+      });
+    }
+
+    logger.info({
+      msg: 'REFUND_DISPUTED',
+      refundId,
+      userId,
+    });
+
+    const updated = await db.refund.findUniqueOrThrow({
+      where: { id: refundId },
+      include: { items: true },
+    });
     return this.toView(updated);
   }
 
@@ -922,6 +1106,8 @@ export class RefundService {
     refundType: string;
     pickupAt: Date | null;
     pickedAt: Date | null;
+    disputedAt?: Date | null;
+    disputeNote?: string | null;
     items?: {
       id: string;
       refundId: string;
@@ -953,6 +1139,9 @@ export class RefundService {
       refundType: r.refundType ?? 'REFUND_ONLY',
       pickupAt: r.pickupAt?.toISOString() ?? null,
       pickedAt: r.pickedAt?.toISOString() ?? null,
+      // 缺货履约闭环批3（2026-10-24，D9）：异议字段透出（可空新增，向后兼容）
+      disputedAt: r.disputedAt?.toISOString() ?? null,
+      disputeNote: r.disputeNote ?? null,
       items: (r.items ?? []).map((it) => ({
         id: it.id,
         refundId: it.refundId,

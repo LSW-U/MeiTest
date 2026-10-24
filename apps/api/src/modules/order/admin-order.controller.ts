@@ -12,6 +12,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Body,
   Param,
@@ -77,6 +78,16 @@ const AdminCancelOrderRequest = z.object({
 const AdminUpdateOrderRequest = z.object({
   remark: z.string().max(200).nullable().optional(),
 });
+
+/** 缺货自动退款全局规则（批3 D15/D17；bp 万分位 0-10000，上限 1..$100000） */
+const UpdateOutOfStockRuleRequest = z
+  .object({
+    autoRefundFullShortage: z.boolean().optional(),
+    partialShortageThresholdEnabled: z.boolean().optional(),
+    partialShortageThresholdBp: z.number().int().min(0).max(10_000).nullable().optional(),
+    autoRefundMaxAmount: z.number().int().min(1).max(10_000_000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'At least one rule field required' });
 
 @Controller('api/v1/admin/orders')
 @Roles('SUPER_ADMIN', 'WAREHOUSE_STAFF', 'CUSTOMER_SERVICE')
@@ -312,5 +323,22 @@ export class AdminOrderController {
       suggestionItemId: body.suggestionItemId ?? null,
     });
     return { success: true as const, data: result };
+  }
+
+  /**
+   * 缺货自动退款全局规则更新（缺货履约闭环批3 2026-10-24，D15/D17）
+   *
+   * out_of_stock_rule 全局行为真源，SystemConfig oos.* 镜像同事务回写（updateGlobalRule）。
+   * 仅 SUPER_ADMIN（财务相关规则）；仓库精确行留后续批次（MVP 只开全局规则）。
+   */
+  @Put('out-of-stock-rule')
+  @Roles('SUPER_ADMIN')
+  @Audit({ resource: 'OutOfStockRule' })
+  async updateOutOfStockRule(
+    @Body(new ZodValidationPipe(UpdateOutOfStockRuleRequest))
+    body: z.infer<typeof UpdateOutOfStockRuleRequest>,
+  ) {
+    await this.outOfStockService.updateGlobalRule(body);
+    return { success: true as const, data: { updated: true } };
   }
 }

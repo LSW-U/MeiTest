@@ -74,5 +74,13 @@
   "outOfStockCancelled": {
     "title": "Pesanan Dibatalkan - Barang Habis",
     "content": "Semua barang di pesanan {orderNo} habis ({items}). Pesanan dibatalkan dan akan dikembalikan otomatis."
+  },
+  "outOfStockAutoRefunded": {
+    "title": "Pengembalian Dana Selesai",
+    "content": "Barang pesanan {orderNo} Anda habis. Pengembalian ${amount} telah diterbitkan otomatis. Jika tidak setuju, Anda dapat mengajukan keberatan di detail pesanan."
+  },
+  "outOfStockRefundPending": {
+    "title": "Pengembalian Diproses",
+    "content": "Beberapa barang pesanan {orderNo} Anda habis. Pengembalian ${amount} sedang diproses dan akan tiba setelah ditinjau."
   }
 }

@@ -74,5 +74,13 @@
   "outOfStockCancelled": {
     "title": "Pedido Cancelado - Produtos em falta",
     "content": "Todos os itens do seu pedido {orderNo} estão em falta ({items}). O pedido foi cancelado e será reembolsado automaticamente."
+  },
+  "outOfStockAutoRefunded": {
+    "title": "Reembolso Concluído",
+    "content": "Os artigos do seu pedido {orderNo} estavam esgotados. Um reembolso de ${amount} foi emitido automaticamente. Se discordar, pode contestá-lo nos detalhes do pedido."
+  },
+  "outOfStockRefundPending": {
+    "title": "Reembolso em Processamento",
+    "content": "Alguns artigos do seu pedido {orderNo} estavam esgotados. O seu reembolso de ${amount} está a ser processado e chegará após revisão."
   }
 }

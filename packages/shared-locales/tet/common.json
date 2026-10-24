@@ -1443,7 +1443,20 @@
       "groupDelivery": "Entrega",
       "groupRider": "Rider",
       "groupOrder": "Timeout Pedidu",
-      "groupOther": "Seluk"
+      "groupOther": "Seluk",
+      "groupOos": "[TET] Out-of-stock Auto Refund",
+      "oosMirrorHint": "[TET] Mirror of out_of_stock_rule (global); managed via the rule API, not editable here",
+      "readonlyMirror": "[TET] Read-only mirror",
+      "oosFormHint": "[TET] Rule source: out_of_stock_rule (global). Saving writes the rule and its SystemConfig mirrors in one transaction.",
+      "oosFullShortageLabel": "[TET] Auto refund on full shortage",
+      "oosThresholdEnabledLabel": "[TET] Auto refund on partial shortage (threshold)",
+      "oosThresholdBpLabel": "[TET] Partial shortage threshold (basis points)",
+      "oosThresholdBpHint": "[TET] Refundable ratio of order payable, in basis points (1-10000). 1000 = 10%.",
+      "oosMaxAmountLabel": "[TET] Auto refund max amount per refund (cents)",
+      "oosMaxAmountHint": "[TET] Single refund ≤ this amount is auto-completed; above goes to manual review. 5000 = $50.00.",
+      "oosRuleSaved": "[TET] Out-of-stock rule saved",
+      "oosRuleInvalidThreshold": "[TET] Threshold must be an integer between 1 and 10000",
+      "oosRuleInvalidMaxAmount": "[TET] Max amount must be a positive integer (cents)"
     },
     "reviews": {
       "title": "Reviews",

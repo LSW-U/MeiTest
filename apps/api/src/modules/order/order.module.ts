@@ -29,6 +29,7 @@ import { PromotionModule } from '../promotion/promotion.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrategy, WhatsAppNotifyStrategy } from '../../infrastructure';
 import { OutOfStockService } from './out-of-stock.service';
+import { OutOfStockRefundService } from './out-of-stock-refund.service';
 import { RiderOutOfStockController } from './rider-out-of-stock.controller';
 // 批1：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义，同 dispatch.module 先例）
 import { StorageModule } from '../../shared/storage/storage.module';
@@ -54,6 +55,8 @@ import { StorageModule } from '../../shared/storage/storage.module';
     OrderTimeoutProcessor,
     // 缺货履约闭环批1（2026-10-24）：缺货登记服务（admin 拣货段 + 骑手 DELIVERING 兜底）
     OutOfStockService,
+    // 批3（D9b 2026-10-24）：system 自动退款引擎（登记链 commit 后触发，规则表为源）
+    OutOfStockRefundService,
     // Notify 策略（W4-REVIEW P0-3）
     EmailNotifyStrategy,
     SmsNotifyStrategy,

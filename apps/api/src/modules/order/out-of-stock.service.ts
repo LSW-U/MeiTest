@@ -24,6 +24,7 @@ import { logger } from '../../shared/logger/logger';
 import { StorageService } from '../../shared/storage/storage.service';
 import { OrderService } from './order.service';
 import type { NotificationEventService } from '../notification/notification-event.service';
+import { OutOfStockRefundService } from './out-of-stock-refund.service';
 import { toPrismaDeviceType } from './order.types';
 import type { ContractDeviceType } from './order.types';
 
@@ -82,6 +83,9 @@ export class OutOfStockService {
     // DI 显式 token（tsx 无 decorator metadata，order.module 已注册 useExisting）
     @Optional() @Inject('NotificationEventServiceToken')
     private readonly notificationEvents?: NotificationEventService | null,
+    // 批3（D9b）：登记 commit 后触发 system 自动退款引擎（@Optional 同上，单测兜底）
+    @Optional() @Inject(OutOfStockRefundService)
+    private readonly refundEngine?: OutOfStockRefundService | null,
   ) {}
 
   /**
@@ -168,12 +172,14 @@ export class OutOfStockService {
         reason: input.reason,
       });
 
-      // 全缺判定（仅拣货段窗口，D11）：事务内重读全部项 → 全缺则 CANCELLED
+      // 全缺判定（仅拣货段窗口，D11）：事务内重读全部项 → 全缺则 CANCELLED。
+      // 必须传 tx：本事务刚写的 outOfStockQty 未 commit，走 db 全局连接读不到（快照隔离），
+      // 会恒判不全缺 → orderCancelled 恒 false（e2e 实证 20261024）
       const orderCancelled = await this.cancelIfFullyOutOfStock(orderId, {
         operatorId: input.operatorId,
         deviceType: input.deviceType,
         perspective: input.perspective,
-      });
+      }, tx);
 
       return { itemId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled };
     });
@@ -184,6 +190,8 @@ export class OutOfStockService {
       startedAt,
       orderCancelled: result.orderCancelled,
     });
+    // 批3（D9b）：事务已 commit，触发 system 自动退款引擎（内部规则判定，不命中静默返回）
+    await this.triggerRefundEngine(orderId, result.orderCancelled);
     return result;
   }
 
@@ -301,10 +309,76 @@ export class OutOfStockService {
       startedAt,
       orderCancelled: false,
     });
+    // 批3（D9b）：骑手段恒部分缺 → fullShortage=false（引擎侧阈值开关默认关，不命中静默返回）
+    await this.triggerRefundEngine(orderId, false);
     return result;
   }
 
   // ===================== 内部 =====================
+
+  /**
+   * 批3（D15/D17）：全局规则更新委托（admin 端点调用，真源规则表 + SystemConfig 镜像同事务）。
+   * 引擎未注入（单测）时防御直抛——规则页是运营动作，静默假成功不可接受。
+   */
+  async updateGlobalRule(input: {
+    autoRefundFullShortage?: boolean;
+    partialShortageThresholdEnabled?: boolean;
+    partialShortageThresholdBp?: number | null;
+    autoRefundMaxAmount?: number;
+  }): Promise<void> {
+    if (!this.refundEngine) {
+      // P3-2（审查修复 20261024）：引擎未注入（装配异常/单测）≠规则禁用——E-OOS-007 语义
+      // 改为「自动退款引擎不可用」，与并发冲突 E-OOS-008 分开
+      throw new ConflictException({
+        code: 'E-OOS-007',
+        message: 'Refund engine not available',
+      });
+    }
+    await this.refundEngine.updateGlobalRule(input);
+  }
+
+  /**
+   * 批3（D9b）：system 自动退款引擎触发（登记事务 commit 后、事务外）
+   *
+   * 构造 OosRefundCandidate：全量已登记项（含历史项——合并账时一次入账）+ 本次全缺判定结果。
+   * 引擎内部规则判定（开关关/阈值未命中静默返回 triggered=false），调用方不感知结果。
+   * 推送由引擎内部完成（notify 吞错纪律）；引擎未注入（单测）或抛错时仅告警，
+   * 不影响登记事实（与 notifyOutOfStock 同款失败不回滚纪律）。
+   */
+  private async triggerRefundEngine(orderId: string, fullShortage: boolean): Promise<void> {
+    if (!this.refundEngine) return;
+    try {
+      const items = await db.orderItem.findMany({
+        where: { orderId, outOfStockQty: { not: null } },
+        select: { id: true, skuId: true, productName: true, unitPrice: true, outOfStockQty: true },
+      });
+      if (items.length === 0) return;
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { warehouseId: true },
+      });
+      await this.refundEngine.processOutOfStockRefund({
+        orderId,
+        items: items.map((i) => ({
+          orderItemId: i.id,
+          skuId: i.skuId,
+          productName: i.productName,
+          unitPrice: i.unitPrice,
+          refundQty: i.outOfStockQty ?? 0,
+        })),
+        fullShortage,
+        warehouseId: order?.warehouseId ?? null,
+      });
+    } catch (e) {
+      // 退款引擎失败不回滚登记（D9b：登记是事实，退款可人工补——告警后继续）
+      logger.error({
+        msg: 'OOS_REFUND_ENGINE_FAILED',
+        orderId,
+        fullShortage,
+        error: (e as Error).message,
+      });
+    }
+  }
 
   /**
    * 缺货登记推送（批2，D16 同步直推；P2-2/P3-2/P3-3 审查修复 20261024）

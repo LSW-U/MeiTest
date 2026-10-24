@@ -139,6 +139,8 @@ import {
   // 缺货履约闭环批1（2026-10-24）
   AdminOutOfStockRequest,
   OutOfStockReportResponse,
+  // 缺货履约闭环批3（2026-10-24）
+  UpdateOutOfStockRuleRequest,
   BatchDeleteOrdersRequest,
   DeleteOrderResponse,
   UpdateOrderRequest,
@@ -264,6 +266,7 @@ import {
   ReviewRefundRequest as ReviewRefundRequestSchema,
   ListRefundsQuery as ListRefundsQuerySchema,
   RefundListResponse as RefundListResponseSchema,
+  DisputeRefundRequest as DisputeRefundRequestSchema,
   // rider earnings（批2 B-P1-2，R11 口径：派生自 Settlement/WithdrawalRequest）
   RiderEarningsSummary,
   RiderEarningsSummaryResponse,
@@ -4629,6 +4632,26 @@ registry.registerPath({
   responses: { 200: { description: '撤回成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } } },
 });
 
+// 缺货履约闭环批3（2026-10-24）：system 自动退款用户异议（D9，异议 → 转人工复审）
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/refunds/{id}/dispute',
+  tags: ['refund'],
+  description:
+    '对 system 自动退款提异议（仅 reviewedBy=SYSTEM 且未异议过可提，一单一次）。' +
+    '异议 → 退款单回 PENDING 进人工复审队列，disputedAt/disputeNote 留痕。错误码 E-OOS-006。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: DisputeRefundRequestSchema } } },
+  },
+  responses: {
+    200: { description: '异议提交成功', content: { 'application/json': { schema: z.object({ success: z.literal(true), data: RefundSchema }) } } },
+    403: { description: 'E-AUTH-012 非本人退款', content: { 'application/json': { schema: ErrorResponse } } },
+    404: { description: 'E-REFUND-003 退款不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-OOS-006 非 system 退款或已异议过', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
 // ---- Admin ----
 registry.registerPath({
   method: 'get',
@@ -4774,6 +4797,27 @@ registry.registerPath({
     },
     400: { description: 'E-OOS-002 数量非法 / E-OOS-005 证据非法', content: { 'application/json': { schema: ErrorResponse } } },
     409: { description: 'E-OOS-001 窗口非法 / E-OOS-003 重复登记 / E-OOS-004 骑手段禁全缺', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// 缺货履约闭环批3（2026-10-24）：缺货自动退款全局规则更新（D15/D17，仅 SUPER_ADMIN）
+registry.register('UpdateOutOfStockRuleRequest', UpdateOutOfStockRuleRequest);
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/admin/orders/out-of-stock-rule',
+  tags: ['order'],
+  description:
+    '缺货自动退款全局规则更新（D15/D17）。out_of_stock_rule 全局行为真源，' +
+    'SystemConfig oos.* 镜像同事务回写；仓库精确行 MVP 不开放。仅 SUPER_ADMIN。',
+  request: { body: { content: { 'application/json': { schema: UpdateOutOfStockRuleRequest } } } },
+  responses: {
+    200: {
+      description: '更新成功',
+      content: {
+        'application/json': { schema: z.object({ success: z.literal(true), data: z.object({ updated: z.boolean() }) }) },
+      },
+    },
+    400: { description: '参数非法（bp 越界等）', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

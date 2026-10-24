@@ -74,5 +74,13 @@
   "outOfStockCancelled": {
     "title": "订单已取消-全部商品缺货",
     "content": "您的订单 {orderNo} 全部商品缺货（{items}），订单已取消，将自动退款。"
+  },
+  "outOfStockAutoRefunded": {
+    "title": "退款已完成",
+    "content": "您的订单 {orderNo} 商品缺货，已自动退款 ${amount}。如有异议，可在订单详情中提出。"
+  },
+  "outOfStockRefundPending": {
+    "title": "退款处理中",
+    "content": "您的订单 {orderNo} 部分商品缺货，退款 ${amount} 正在处理，审核通过后到账。"
   }
 }

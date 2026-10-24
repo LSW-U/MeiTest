@@ -1443,7 +1443,20 @@
       "groupDelivery": "配送",
       "groupRider": "骑手",
       "groupOrder": "订单超时",
-      "groupOther": "其他"
+      "groupOther": "其他",
+      "groupOos": "缺货自动退款",
+      "oosMirrorHint": "镜像自缺货规则表（全局行）；请通过规则接口修改，此处不可编辑",
+      "readonlyMirror": "只读镜像",
+      "oosFormHint": "真源为缺货规则表（全局行）；保存时规则与 SystemConfig 镜像同事务回写。",
+      "oosFullShortageLabel": "整单全缺自动退款",
+      "oosThresholdEnabledLabel": "部分缺货自动退款（阈值开关）",
+      "oosThresholdBpLabel": "部分缺货阈值（万分位）",
+      "oosThresholdBpHint": "可退金额占订单应付比例，万分位（1-10000）。1000 = 10%。",
+      "oosMaxAmountLabel": "单笔自动退款上限（分）",
+      "oosMaxAmountHint": "单笔 ≤ 上限自动直退，超过转人工审核。5000 = $50.00。",
+      "oosRuleSaved": "缺货退款规则已保存",
+      "oosRuleInvalidThreshold": "阈值须为 1-10000 的整数",
+      "oosRuleInvalidMaxAmount": "上限须为正整数（分）"
     },
     "reviews": {
       "title": "评论管理",

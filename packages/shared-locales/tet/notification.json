@@ -74,5 +74,13 @@
   "outOfStockCancelled": {
     "title": "[TET] Order Cancelled - Items Out of Stock",
     "content": "[TET] All items in your order {orderNo} are out of stock ({items}). The order has been cancelled and will be refunded automatically."
+  },
+  "outOfStockAutoRefunded": {
+    "title": "[TET] Refund Completed",
+    "content": "[TET] Your order {orderNo} items were out of stock. A refund of ${amount} has been automatically issued. If you disagree, you can dispute it in the order details."
+  },
+  "outOfStockRefundPending": {
+    "title": "[TET] Refund Being Processed",
+    "content": "[TET] Some items in your order {orderNo} were out of stock. Your refund of ${amount} is being processed and will arrive after review."
   }
 }

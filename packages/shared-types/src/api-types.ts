@@ -17045,6 +17045,9 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
                             }[];
                         };
                     };
@@ -17142,6 +17145,9 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
                             };
                         };
                     };
@@ -17250,6 +17256,9 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
                             };
                         };
                     };
@@ -17362,6 +17371,166 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/refunds/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 对 system 自动退款提异议（仅 reviewedBy=SYSTEM 且未异议过可提，一单一次）。异议 → 退款单回 PENDING 进人工复审队列，disputedAt/disputeNote 留痕。错误码 E-OOS-006。 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        note?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 异议提交成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                /** Format: uuid */
+                                userId: string;
+                                amount: number;
+                                /** @enum {string} */
+                                reason: "OUT_OF_STOCK" | "EXPIRED" | "QUALITY_ISSUE" | "WRONG_ITEM" | "SHORTAGE" | "DELIVERY_TOO_SLOW" | "CUSTOMER_CHANGE_MIND" | "OTHER";
+                                reasonDetail: string | null;
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "FAILED" | "CANCELLED";
+                                transactionId: string | null;
+                                refundMethod: string;
+                                /** Format: uuid */
+                                reviewedBy: string | null;
+                                /** Format: date-time */
+                                reviewedAt: string | null;
+                                reviewNote: string | null;
+                                /** Format: date-time */
+                                completedAt: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    refundId: string;
+                                    /** Format: uuid */
+                                    orderItemId: string;
+                                    /** Format: uuid */
+                                    skuId: string;
+                                    productName: {
+                                        [key: string]: string;
+                                    };
+                                    unitPrice: number;
+                                    refundQty: number;
+                                    subtotal: number;
+                                }[];
+                                photos: string[];
+                                /** @enum {string} */
+                                refundType: "REFUND_ONLY" | "RETURN_REFUND";
+                                /** Format: date-time */
+                                pickupAt: string | null;
+                                /** Format: date-time */
+                                pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
+                            };
+                        };
+                    };
+                };
+                /** @description E-AUTH-012 非本人退款 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-REFUND-003 退款不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description E-OOS-006 非 system 退款或已异议过 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
                             };
                         };
                     };
@@ -17456,6 +17625,9 @@ export interface paths {
                                     pickupAt: string | null;
                                     /** Format: date-time */
                                     pickedAt: string | null;
+                                    /** Format: date-time */
+                                    disputedAt: string | null;
+                                    disputeNote: string | null;
                                 }[];
                                 nextCursor: string | null;
                                 hasMore: boolean;
@@ -17551,6 +17723,9 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
                             };
                         };
                     };
@@ -17673,6 +17848,9 @@ export interface paths {
                                 pickupAt: string | null;
                                 /** Format: date-time */
                                 pickedAt: string | null;
+                                /** Format: date-time */
+                                disputedAt: string | null;
+                                disputeNote: string | null;
                             };
                         };
                     };
@@ -18128,6 +18306,76 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/orders/out-of-stock-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description 缺货自动退款全局规则更新（D15/D17）。out_of_stock_rule 全局行为真源，SystemConfig oos.* 镜像同事务回写；仓库精确行 MVP 不开放。仅 SUPER_ADMIN。 */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        autoRefundFullShortage?: boolean;
+                        partialShortageThresholdEnabled?: boolean;
+                        partialShortageThresholdBp?: number | null;
+                        autoRefundMaxAmount?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description 更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                updated: boolean;
+                            };
+                        };
+                    };
+                };
+                /** @description 参数非法（bp 越界等） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -27084,6 +27332,12 @@ export interface components {
             captchaId: string;
             svg: string;
             expireIn: number;
+        };
+        UpdateOutOfStockRuleRequest: {
+            autoRefundFullShortage?: boolean;
+            partialShortageThresholdEnabled?: boolean;
+            partialShortageThresholdBp?: number | null;
+            autoRefundMaxAmount?: number;
         };
         GeocodeRequest: {
             address: string;

@@ -7335,6 +7335,22 @@ components:
         - captchaId
         - svg
         - expireIn
+    UpdateOutOfStockRuleRequest:
+      type: object
+      properties:
+        autoRefundFullShortage:
+          type: boolean
+        partialShortageThresholdEnabled:
+          type: boolean
+        partialShortageThresholdBp:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 10000
+        autoRefundMaxAmount:
+          type: integer
+          minimum: 1
+          maximum: 10000000
     GeocodeRequest:
       type: object
       properties:
@@ -33587,6 +33603,13 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
                     required:
                       - id
                       - orderId
@@ -33608,6 +33631,8 @@ paths:
                       - refundType
                       - pickupAt
                       - pickedAt
+                      - disputedAt
+                      - disputeNote
                 required:
                   - success
                   - data
@@ -33767,6 +33792,13 @@ paths:
                           type: string
                           nullable: true
                           format: date-time
+                        disputedAt:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        disputeNote:
+                          type: string
+                          nullable: true
                       required:
                         - id
                         - orderId
@@ -33788,6 +33820,8 @@ paths:
                         - refundType
                         - pickupAt
                         - pickedAt
+                        - disputedAt
+                        - disputeNote
                 required:
                   - success
                   - data
@@ -33924,6 +33958,13 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
                     required:
                       - id
                       - orderId
@@ -33945,6 +33986,8 @@ paths:
                       - refundType
                       - pickupAt
                       - pickedAt
+                      - disputedAt
+                      - disputeNote
                 required:
                   - success
                   - data
@@ -34110,6 +34153,13 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
                     required:
                       - id
                       - orderId
@@ -34131,9 +34181,274 @@ paths:
                       - refundType
                       - pickupAt
                       - pickedAt
+                      - disputedAt
+                      - disputeNote
                 required:
                   - success
                   - data
+  /api/v1/client/refunds/{id}/dispute:
+    post:
+      tags:
+        - refund
+      description: 对 system 自动退款提异议（仅 reviewedBy=SYSTEM 且未异议过可提，一单一次）。异议 → 退款单回
+        PENDING 进人工复审队列，disputedAt/disputeNote 留痕。错误码 E-OOS-006。
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                  maxLength: 500
+      responses:
+        "200":
+          description: 异议提交成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      orderId:
+                        type: string
+                        format: uuid
+                      userId:
+                        type: string
+                        format: uuid
+                      amount:
+                        type: integer
+                        minimum: 0
+                        maximum: 999999
+                      reason:
+                        type: string
+                        enum: *a86
+                      reasonDetail:
+                        type: string
+                        nullable: true
+                        maxLength: 500
+                      status:
+                        type: string
+                        enum: *a87
+                      transactionId:
+                        type: string
+                        nullable: true
+                      refundMethod:
+                        type: string
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        format: uuid
+                      reviewedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      reviewNote:
+                        type: string
+                        nullable: true
+                      completedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            refundId:
+                              type: string
+                              format: uuid
+                            orderItemId:
+                              type: string
+                              format: uuid
+                            skuId:
+                              type: string
+                              format: uuid
+                            productName:
+                              type: object
+                              additionalProperties:
+                                type: string
+                            unitPrice:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                            refundQty:
+                              type: integer
+                              minimum: 1
+                            subtotal:
+                              type: integer
+                              minimum: 0
+                              maximum: 999999
+                          required:
+                            - id
+                            - refundId
+                            - orderItemId
+                            - skuId
+                            - productName
+                            - unitPrice
+                            - refundQty
+                            - subtotal
+                      photos:
+                        type: array
+                        items:
+                          type: string
+                          format: uri
+                      refundType:
+                        type: string
+                        enum: *a88
+                      pickupAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      pickedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
+                    required:
+                      - id
+                      - orderId
+                      - userId
+                      - amount
+                      - reason
+                      - reasonDetail
+                      - status
+                      - transactionId
+                      - refundMethod
+                      - reviewedBy
+                      - reviewedAt
+                      - reviewNote
+                      - completedAt
+                      - createdAt
+                      - updatedAt
+                      - items
+                      - photos
+                      - refundType
+                      - pickupAt
+                      - pickedAt
+                      - disputedAt
+                      - disputeNote
+                required:
+                  - success
+                  - data
+        "403":
+          description: E-AUTH-012 非本人退款
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "404":
+          description: E-REFUND-003 退款不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-OOS-006 非 system 退款或已异议过
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
   /api/v1/admin/refunds:
     get:
       tags:
@@ -34297,6 +34612,13 @@ paths:
                               type: string
                               nullable: true
                               format: date-time
+                            disputedAt:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            disputeNote:
+                              type: string
+                              nullable: true
                           required:
                             - id
                             - orderId
@@ -34318,6 +34640,8 @@ paths:
                             - refundType
                             - pickupAt
                             - pickedAt
+                            - disputedAt
+                            - disputeNote
                       nextCursor:
                         type: string
                         nullable: true
@@ -34465,6 +34789,13 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
                     required:
                       - id
                       - orderId
@@ -34486,6 +34817,8 @@ paths:
                       - refundType
                       - pickupAt
                       - pickedAt
+                      - disputedAt
+                      - disputeNote
                 required:
                   - success
                   - data
@@ -34671,6 +35004,13 @@ paths:
                         type: string
                         nullable: true
                         format: date-time
+                      disputedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      disputeNote:
+                        type: string
+                        nullable: true
                     required:
                       - id
                       - orderId
@@ -34692,6 +35032,8 @@ paths:
                       - refundType
                       - pickupAt
                       - pickedAt
+                      - disputedAt
+                      - disputeNote
                 required:
                   - success
                   - data
@@ -35227,6 +35569,82 @@ paths:
                   - error
         "409":
           description: E-OOS-001 窗口非法 / E-OOS-003 重复登记 / E-OOS-004 骑手段禁全缺
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/orders/out-of-stock-rule:
+    put:
+      tags:
+        - order
+      description: 缺货自动退款全局规则更新（D15/D17）。out_of_stock_rule 全局行为真源，SystemConfig oos.*
+        镜像同事务回写；仓库精确行 MVP 不开放。仅 SUPER_ADMIN。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                autoRefundFullShortage:
+                  type: boolean
+                partialShortageThresholdEnabled:
+                  type: boolean
+                partialShortageThresholdBp:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  maximum: 10000
+                autoRefundMaxAmount:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000000
+      responses:
+        "200":
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      updated:
+                        type: boolean
+                    required:
+                      - updated
+                required:
+                  - success
+                  - data
+        "400":
+          description: 参数非法（bp 越界等）
           content:
             application/json:
               schema:

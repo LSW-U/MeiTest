@@ -1446,7 +1446,20 @@
       "groupDelivery": "Delivery",
       "groupRider": "Rider",
       "groupOrder": "Order Timeouts",
-      "groupOther": "Other"
+      "groupOther": "Other",
+      "groupOos": "Out-of-stock Auto Refund",
+      "oosMirrorHint": "Mirror of out_of_stock_rule (global); managed via the rule API, not editable here",
+      "readonlyMirror": "Read-only mirror",
+      "oosFormHint": "Rule source: out_of_stock_rule (global). Saving writes the rule and its SystemConfig mirrors in one transaction.",
+      "oosFullShortageLabel": "Auto refund on full shortage",
+      "oosThresholdEnabledLabel": "Auto refund on partial shortage (threshold)",
+      "oosThresholdBpLabel": "Partial shortage threshold (basis points)",
+      "oosThresholdBpHint": "Refundable ratio of order payable, in basis points (1-10000). 1000 = 10%.",
+      "oosMaxAmountLabel": "Auto refund max amount per refund (cents)",
+      "oosMaxAmountHint": "Single refund ≤ this amount is auto-completed; above goes to manual review. 5000 = $50.00.",
+      "oosRuleSaved": "Out-of-stock rule saved",
+      "oosRuleInvalidThreshold": "Threshold must be an integer between 1 and 10000",
+      "oosRuleInvalidMaxAmount": "Max amount must be a positive integer (cents)"
     },
     "reviews": {
       "title": "Reviews",
