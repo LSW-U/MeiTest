@@ -14,7 +14,10 @@ jobs:
   deploy:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [quality, contract]
+    # 原写 needs: [quality, contract] 引用的是 ci.yml 里的 job——跨 workflow
+    # 的 needs 会被 GitHub 解析为 workflow file issue 直接 0s fail。
+    # 手动触发部署前置「main CI 绿」由人工确认（main 最新 CI run 结论），
+    # workflow 级硬依赖需 ci.yml 拆 workflow_call 才能实现，另行立项。
     environment: staging
     steps:
       - uses: actions/checkout@v4
