@@ -33,3 +33,8 @@ export const ENGAGEMENT_QUEUE = 'engagement';
  * 每 6 小时全量重算相似用户推荐 → 物化 similar_user_picks（A9/B7 读路径数据源）
  */
 export const COLLABORATIVE_QUEUE = 'collaborative';
+/**
+ * 替换建议超时扫描队列（替换品批1，2026-10-29 D7）
+ * 每 5min 扫 PENDING 建议超时（oos.suggestion_timeout_hours 默认 24h）→ 自动 DECLINED + 退款链 + 推送
+ */
+export const SUGGESTION_TIMEOUT_QUEUE = 'suggestion-timeout';

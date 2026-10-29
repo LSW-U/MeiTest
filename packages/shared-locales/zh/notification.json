@@ -82,5 +82,13 @@
   "outOfStockRefundPending": {
     "title": "退款处理中",
     "content": "您的订单 {orderNo} 部分商品缺货，退款 ${amount} 正在处理，审核通过后到账。"
+  },
+  "outOfStockSuggestion": {
+    "title": "替换建议",
+    "content": "您的订单 {orderNo} 中有商品缺货，建议替换：{items}。点击查看并确认或拒绝。"
+  },
+  "outOfStockSuggestionExpired": {
+    "title": "替换建议已过期",
+    "content": "您未在时限内处理订单 {orderNo} 的替换建议，缺货商品将自动退款。"
   }
 }

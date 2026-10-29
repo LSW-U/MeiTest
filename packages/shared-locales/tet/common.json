@@ -587,6 +587,8 @@
       "oosToastCancelled": "Foun tomak: pedidu kansela ona",
       "oosReportedTag": "tiha rejistra ona",
       "oosAddEvidence": "Aumenta foto proba",
+      "oosSuggestionPolicyNone": "Kliente nei hari substituisaun ba pedidu ida-ne'e — laiha sugerensa disponível",
+      "oosSuggestionPolicySpecify": "Kliente limita substituisaun ba sasan balun de'it — de'it sasan iha lista mutin maka bele hili",
       "oosAmountDelta": "Folanai produtu mamuk"
     },
     "riders": {

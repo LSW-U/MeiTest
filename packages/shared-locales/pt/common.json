@@ -587,6 +587,8 @@
       "oosToastCancelled": "Falta total: pedido foi cancelado",
       "oosReportedTag": "já registrado",
       "oosAddEvidence": "Adicionar fotos de evidência",
+      "oosSuggestionPolicyNone": "O cliente desativou substituições neste pedido — nenhuma sugestão disponível",
+      "oosSuggestionPolicySpecify": "O cliente restringiu substituições a itens específicos — apenas itens da lista branca selecionáveis",
       "oosAmountDelta": "Valor em falta"
     },
     "riders": {

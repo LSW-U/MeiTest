@@ -5445,6 +5445,17 @@ export interface paths {
                                 outOfStockEvidenceUrls?: string[] | null;
                                 /** Format: uuid */
                                 suggestionItemId?: string | null;
+                                /** @enum {string|null} */
+                                suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                /** Format: date-time */
+                                suggestionDecidedAt?: string | null;
+                                suggestionItem?: {
+                                    name: {
+                                        [key: string]: string;
+                                    };
+                                    image: string | null;
+                                    unitPrice: number;
+                                } | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -5492,6 +5503,9 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            /** @enum {string} */
+                            replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                            allowedReplacementSkuIds?: string[] | null;
                             acceptingReservation: boolean;
                         }[];
                     };
@@ -5522,6 +5536,9 @@ export interface paths {
                         paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                         /** Format: uuid */
                         couponId?: string;
+                        /** @enum {string} */
+                        replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                        allowedReplacementSkuIds?: string[];
                     };
                 };
             };
@@ -5565,6 +5582,17 @@ export interface paths {
                                 outOfStockEvidenceUrls?: string[] | null;
                                 /** Format: uuid */
                                 suggestionItemId?: string | null;
+                                /** @enum {string|null} */
+                                suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                /** Format: date-time */
+                                suggestionDecidedAt?: string | null;
+                                suggestionItem?: {
+                                    name: {
+                                        [key: string]: string;
+                                    };
+                                    image: string | null;
+                                    unitPrice: number;
+                                } | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -5612,6 +5640,9 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            /** @enum {string} */
+                            replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                            allowedReplacementSkuIds?: string[] | null;
                             acceptingReservation: boolean;
                         };
                     };
@@ -6960,6 +6991,17 @@ export interface paths {
                                 outOfStockEvidenceUrls?: string[] | null;
                                 /** Format: uuid */
                                 suggestionItemId?: string | null;
+                                /** @enum {string|null} */
+                                suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                /** Format: date-time */
+                                suggestionDecidedAt?: string | null;
+                                suggestionItem?: {
+                                    name: {
+                                        [key: string]: string;
+                                    };
+                                    image: string | null;
+                                    unitPrice: number;
+                                } | null;
                             }[];
                             totalAmount: number;
                             deliveryFee: number;
@@ -7007,6 +7049,9 @@ export interface paths {
                             } | null;
                             /** Format: date-time */
                             scheduledFor: string | null;
+                            /** @enum {string} */
+                            replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                            allowedReplacementSkuIds?: string[] | null;
                             acceptingReservation: boolean;
                         };
                     };
@@ -7192,6 +7237,86 @@ export interface paths {
                     content: {
                         "application/json": {
                             success: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/orders/{orderId}/items/{itemId}/suggestion/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description 替换建议决策（D5）：accept=true 采纳（原地改快照+落单价=min+差额退款+OrderEvent REPLACED）；false=拒绝走自动退款链。非 PENDING → 409 幂等 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        accept: boolean;
+                        /** Format: uuid */
+                        replacementItemId?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description 决策成功（返回更新后订单项摘要） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description ORDER/ITEM_NOT_FOUND 或建议项不属于本单 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description SUGGESTION_ALREADY_DECIDED（幂等，D5） */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
                         };
                     };
                 };
@@ -11906,6 +12031,17 @@ export interface paths {
                                         outOfStockEvidenceUrls?: string[] | null;
                                         /** Format: uuid */
                                         suggestionItemId?: string | null;
+                                        /** @enum {string|null} */
+                                        suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                        /** Format: date-time */
+                                        suggestionDecidedAt?: string | null;
+                                        suggestionItem?: {
+                                            name: {
+                                                [key: string]: string;
+                                            };
+                                            image: string | null;
+                                            unitPrice: number;
+                                        } | null;
                                     }[];
                                     totalAmount: number;
                                     deliveryFee: number;
@@ -11953,6 +12089,9 @@ export interface paths {
                                     } | null;
                                     /** Format: date-time */
                                     scheduledFor: string | null;
+                                    /** @enum {string} */
+                                    replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                                    allowedReplacementSkuIds?: string[] | null;
                                     acceptingReservation: boolean;
                                 }[];
                                 /** Format: uuid */
@@ -12071,6 +12210,17 @@ export interface paths {
                                     outOfStockEvidenceUrls?: string[] | null;
                                     /** Format: uuid */
                                     suggestionItemId?: string | null;
+                                    /** @enum {string|null} */
+                                    suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                    /** Format: date-time */
+                                    suggestionDecidedAt?: string | null;
+                                    suggestionItem?: {
+                                        name: {
+                                            [key: string]: string;
+                                        };
+                                        image: string | null;
+                                        unitPrice: number;
+                                    } | null;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -12118,6 +12268,9 @@ export interface paths {
                                 } | null;
                                 /** Format: date-time */
                                 scheduledFor: string | null;
+                                /** @enum {string} */
+                                replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                                allowedReplacementSkuIds?: string[] | null;
                                 acceptingReservation: boolean;
                             };
                         };
@@ -12209,6 +12362,17 @@ export interface paths {
                                     outOfStockEvidenceUrls?: string[] | null;
                                     /** Format: uuid */
                                     suggestionItemId?: string | null;
+                                    /** @enum {string|null} */
+                                    suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                                    /** Format: date-time */
+                                    suggestionDecidedAt?: string | null;
+                                    suggestionItem?: {
+                                        name: {
+                                            [key: string]: string;
+                                        };
+                                        image: string | null;
+                                        unitPrice: number;
+                                    } | null;
                                 }[];
                                 totalAmount: number;
                                 deliveryFee: number;
@@ -12256,6 +12420,9 @@ export interface paths {
                                 } | null;
                                 /** Format: date-time */
                                 scheduledFor: string | null;
+                                /** @enum {string} */
+                                replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+                                allowedReplacementSkuIds?: string[] | null;
                                 acceptingReservation: boolean;
                             };
                         };
@@ -25990,6 +26157,17 @@ export interface components {
                 outOfStockEvidenceUrls?: string[] | null;
                 /** Format: uuid */
                 suggestionItemId?: string | null;
+                /** @enum {string|null} */
+                suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+                /** Format: date-time */
+                suggestionDecidedAt?: string | null;
+                suggestionItem?: {
+                    name: {
+                        [key: string]: string;
+                    };
+                    image: string | null;
+                    unitPrice: number;
+                } | null;
             }[];
             totalAmount: number;
             deliveryFee: number;
@@ -26037,6 +26215,9 @@ export interface components {
             } | null;
             /** Format: date-time */
             scheduledFor: string | null;
+            /** @enum {string} */
+            replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+            allowedReplacementSkuIds?: string[] | null;
             acceptingReservation: boolean;
         };
         OrderItem: {
@@ -26062,6 +26243,17 @@ export interface components {
             outOfStockEvidenceUrls?: string[] | null;
             /** Format: uuid */
             suggestionItemId?: string | null;
+            /** @enum {string|null} */
+            suggestionStatus?: "PENDING" | "ACCEPTED" | "DECLINED" | null;
+            /** Format: date-time */
+            suggestionDecidedAt?: string | null;
+            suggestionItem?: {
+                name: {
+                    [key: string]: string;
+                };
+                image: string | null;
+                unitPrice: number;
+            } | null;
         };
         CreateOrderRequest: {
             /** Format: uuid */
@@ -26076,6 +26268,9 @@ export interface components {
             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** Format: uuid */
             couponId?: string;
+            /** @enum {string} */
+            replacementPolicy?: "ALLOW" | "SPECIFY" | "NONE";
+            allowedReplacementSkuIds?: string[];
         };
         CancelOrderRequest: {
             reason: string;
@@ -26088,6 +26283,11 @@ export interface components {
             evidenceUrls?: string[];
             /** Format: uuid */
             suggestionItemId?: string;
+        };
+        SuggestionDecisionRequest: {
+            accept: boolean;
+            /** Format: uuid */
+            replacementItemId?: string;
         };
         OutOfStockReportResponse: {
             /** Format: uuid */

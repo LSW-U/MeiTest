@@ -12,6 +12,7 @@
  *
  * 错误码段（D19，独立 E-OOS 段）：
  *   E-OOS-001 窗口非法 / 002 数量非法 / 003 重复登记 / 004 骑手段禁全缺 / 005 证据 URL 非法
+ *   替换品批1 2026-10-29：009 策略 NONE 禁建议项 / 010 建议项不在 SPECIFY 白名单
  *
  * 本批不建退款单（批3）——全缺只落 CANCELLED。
  * 批2（2026-10-24，D16）：登记事务 commit 后同步直推 outOfStock 事件（不进 BullMQ、
@@ -70,6 +71,8 @@ export interface OutOfStockReportResult {
   outOfStockQty: number;
   /** 本次登记是否触发整单全缺 → 订单已取消（D11） */
   orderCancelled: boolean;
+  /** 替换品批1（D6）：本次登记带建议项且已置 PENDING（true = 退款引擎跳过，等用户决策/超时） */
+  suggestionPending?: boolean;
 }
 
 @Injectable()
@@ -122,6 +125,8 @@ export class OutOfStockService {
     }
     this.assertQtyAndEvidence(item.quantity, input.outOfStockQty, input.evidenceUrls);
     await this.assertSuggestionItemBelongsToOrder(orderId, itemId, input.suggestionItemId);
+    // 替换品批1（D9/D13）：订单级策略校验建议项合法性（NONE 禁 / SPECIFY 白名单）
+    await this.assertSuggestionAllowedByPolicy(orderId, input.suggestionItemId);
 
     // 重复登记幂等（E-OOS-003）：已登记过缺货的项拒绝再次登记（字段永久保留 D18，不覆盖）
     if (item.outOfStockQty != null) {
@@ -139,6 +144,9 @@ export class OutOfStockService {
     // cancelOrderInternal 自身幂等（updateMany 条件守卫）兜底取消侧并发，不收进本事务
     // （其内部自带 withTransaction，嵌套会开独立事务，语义仍正确：判定为真才走到它）。
     const result = await withTransaction(async (tx: Tx) => {
+      // 替换品批1（D6）：登记带建议项且策略允许 → 置 PENDING 锁定（不直退）；
+      // ACCEPTED/DECLINED 决策后再走差额/全额退款。NONE/SPECIFY 非法已在上方拦截。
+      const suggestionPending = Boolean(input.suggestionItemId) && (await this.policyAllowsSuggestion(orderId));
       await tx.orderItem.update({
         where: { id: itemId },
         data: {
@@ -147,6 +155,7 @@ export class OutOfStockService {
           outOfStockNote: input.note?.trim() ? input.note.trim().slice(0, 200) : null,
           outOfStockEvidenceUrls: input.evidenceUrls ?? [],
           suggestionItemId: input.suggestionItemId ?? null,
+          ...(suggestionPending ? { suggestionStatus: 'PENDING' as const } : {}),
         },
       });
 
@@ -181,7 +190,7 @@ export class OutOfStockService {
         perspective: input.perspective,
       }, tx);
 
-      return { itemId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled };
+      return { itemId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled, suggestionPending };
     });
 
     // 批2（D16）：事务已 commit，同步直推（推送失败不回滚登记——notify 内部全链 try/catch +
@@ -189,9 +198,13 @@ export class OutOfStockService {
     await this.notifyOutOfStock(orderId, itemId, input.outOfStockQty, {
       startedAt,
       orderCancelled: result.orderCancelled,
+      suggestionPending: result.suggestionPending,
     });
     // 批3（D9b）：事务已 commit，触发 system 自动退款引擎（内部规则判定，不命中静默返回）
-    await this.triggerRefundEngine(orderId, result.orderCancelled);
+    // 替换品批1（D6）：登记带建议项且置了 PENDING → 不直退（退款决策权交用户决策端点/超时队列）
+    if (!result.suggestionPending) {
+      await this.triggerRefundEngine(orderId, result.orderCancelled);
+    }
     return result;
   }
 
@@ -265,10 +278,14 @@ export class OutOfStockService {
     this.assertEvidence(input.evidenceUrls);
     const targetId = target.id;
     await this.assertSuggestionItemBelongsToOrder(orderId, targetId, input.suggestionItemId);
+    // 替换品批1（D9/D13）：骑手段同套策略校验（NONE 禁 / SPECIFY 白名单）
+    await this.assertSuggestionAllowedByPolicy(orderId, input.suggestionItemId);
 
     // P2-1 同口径：登记 + 事件收进事务（骑手段永不触发取消，无判定侧并发问题，
     // 事务化只为两步写原子性）
     const result = await withTransaction(async (tx: Tx) => {
+      // 替换品批1（D6）：登记带建议项且策略允许 → 置 PENDING 锁定（同 admin 链）
+      const suggestionPending = Boolean(input.suggestionItemId) && (await this.policyAllowsSuggestion(orderId));
       await tx.orderItem.update({
         where: { id: targetId },
         data: {
@@ -277,6 +294,7 @@ export class OutOfStockService {
           outOfStockNote: input.note?.trim() ? input.note.trim().slice(0, 200) : null,
           outOfStockEvidenceUrls: input.evidenceUrls ?? [],
           suggestionItemId: input.suggestionItemId ?? null,
+          ...(suggestionPending ? { suggestionStatus: 'PENDING' as const } : {}),
         },
       });
 
@@ -300,17 +318,20 @@ export class OutOfStockService {
         reason: input.reason,
       });
 
-      // 骑手段永不触发全缺取消（D12：窗口 OUT_FOR_DELIVERY 无 →CANCELLED 合法边，且上方已拒全缺）
-      return { itemId: targetId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled: false };
+      return { itemId: targetId, orderId, outOfStockQty: input.outOfStockQty, orderCancelled: false, suggestionPending };
     });
 
     // 批2（D16）：事务已 commit，同步直推（同 admin 链）；骑手段恒部分缺（D12）→ 非取消文案
     await this.notifyOutOfStock(orderId, targetId, input.outOfStockQty, {
       startedAt,
       orderCancelled: false,
+      suggestionPending: result.suggestionPending,
     });
     // 批3（D9b）：骑手段恒部分缺 → fullShortage=false（引擎侧阈值开关默认关，不命中静默返回）
-    await this.triggerRefundEngine(orderId, false);
+    // 替换品批1（D6）：同 admin 链，PENDING 锁定时跳过退款引擎
+    if (!result.suggestionPending) {
+      await this.triggerRefundEngine(orderId, false);
+    }
     return result;
   }
 
@@ -403,7 +424,10 @@ export class OutOfStockService {
     orderId: string,
     itemId: string,
     outOfStockQty: number,
-    opts: { startedAt: Date; orderCancelled: boolean },
+    // 替换品批1（D6）：带建议项且策略放行 → suggestionPending=true，通知走
+    // outOfStockSuggestion 模板（shared-locales 五语已配）且 data 带 replacementItem
+    //（client-app NotificationItem CTA 既有探针：data.replacementItem → swap 图标 + viewDetails CTA）
+    opts: { startedAt: Date; orderCancelled: boolean; suggestionPending?: boolean },
   ): Promise<void> {
     if (!this.notificationEvents) return;
     try {
@@ -428,7 +452,12 @@ export class OutOfStockService {
       // P3-3：全缺 → 订单已取消，模板渲染「已取消-全部商品缺货」分支文案
       // （outOfStock.cancelled.*；部分缺走默认 *.* 文案）
       const cancelled = opts.orderCancelled;
-      const eventKey = cancelled ? 'outOfStockCancelled' : 'outOfStock';
+      // 替换品批1（D6）：带建议项 PENDING → 专用模板（客户端 CTA 跳详情确认弹层）
+      const eventKey = opts.suggestionPending
+        ? 'outOfStockSuggestion'
+        : cancelled
+          ? 'outOfStockCancelled'
+          : 'outOfStock';
       const params: Record<string, string> = { orderNo: order.orderNo ?? '', items: itemsSummary };
 
       // notify 全链吞错恒 resolve（不炸主流程的既有纪律），调用侧无法用返回值判断成败；
@@ -439,7 +468,15 @@ export class OutOfStockService {
           event: eventKey,
           userId: order.userId,
           type: 'ORDER_UPDATE',
-          data: { orderId, orderNo: order.orderNo, itemsSummary, cancelled },
+          data: {
+            orderId,
+            orderNo: order.orderNo,
+            itemsSummary,
+            cancelled,
+            // client-app NotificationItem 既有探针字段：data.replacementItem 非空 →
+            // swap 图标 + viewDetails CTA（跳详情确认弹层）。建议项 ID 由登记入参取
+            ...(opts.suggestionPending ? { replacementItem: itemId } : {}),
+          },
           params,
         });
         const row = await db.notification.findFirst({
@@ -543,6 +580,58 @@ export class OutOfStockService {
   }
 
   /**
+   * 替换品批1（D9/D13）：订单级策略校验建议项合法性（替换品批1 新增，2026-10-29）
+   *
+   *   - NONE 策略 → 禁建议项（E-OOS-009）
+   *   - SPECIFY 策略 → 建议 skuId 必须在 allowedReplacementSkuIds 白名单（E-OOS-010）
+   *   - ALLOW（或存量缺省）→ 不限
+   *
+   * 建议项 skuId 取被建议行（suggestionItemId 指向的项）的 skuId——白名单语义是
+   * 「允许被换成哪些 SKU」。归属校验已在 assertSuggestionItemBelongsToOrder 完成。
+   */
+  private async assertSuggestionAllowedByPolicy(orderId: string, suggestionItemId?: string | null): Promise<void> {
+    if (!suggestionItemId) return;
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { replacementPolicy: true, allowedReplacementSkuIds: true },
+    });
+    if (!order) return; // 归属校验链上游已挡
+    if (order.replacementPolicy === 'NONE') {
+      throw new ConflictException({
+        code: 'E-OOS-009',
+        message: 'Order policy NONE does not allow replacement suggestions',
+      });
+    }
+    if (order.replacementPolicy === 'SPECIFY') {
+      const suggestion = await db.orderItem.findUnique({
+        where: { id: suggestionItemId },
+        select: { skuId: true },
+      });
+      const whitelist = Array.isArray(order.allowedReplacementSkuIds)
+        ? (order.allowedReplacementSkuIds as string[])
+        : [];
+      if (!suggestion || !whitelist.includes(suggestion.skuId)) {
+        throw new ConflictException({
+          code: 'E-OOS-010',
+          message: 'Suggested replacement SKU is not in the order whitelist',
+        });
+      }
+    }
+  }
+
+  /**
+   * 替换品批1（D6）：策略是否允许建议项（登记事务内置 PENDING 前判定）。
+   * NONE → false；ALLOW/SPECIFY（建议项合法性已由 assertSuggestionAllowedByPolicy 硬校验）→ true。
+   */
+  private async policyAllowsSuggestion(orderId: string): Promise<boolean> {
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { replacementPolicy: true },
+    });
+    return order?.replacementPolicy !== 'NONE';
+  }
+
+  /**
    * 全缺判定（D11，仅拣货段调用）：重读订单全部项，全部项 outOfStockQty = quantity → CANCELLED
    *
    * 走 OrderService.cancelOrderInternal 既有取消链（释放库存 + 关 PENDING_ASSIGN/ASSIGNED
@@ -563,9 +652,15 @@ export class OutOfStockService {
     // 终态（可能已被并发取消）不判
     if (order.status === 'CANCELLED' || order.status === 'COMPLETED') return false;
 
-    const fullyShort = order.items.length > 0 && order.items.every(
-      (i) => i.outOfStockQty != null && i.outOfStockQty >= i.quantity,
-    );
+    // 替换品批1（P1-2 修复，调度拍板方案 a 2026-10-29）：带 PENDING 建议的项不计入全缺判定
+    // ——该单不取消，等用户决策（ACCEPTED=替换落单继续履约 / DECLINED=决策端点重判全缺后取消+退款）
+    // 或超时 processor 自动拒绝后重判。否则全缺取消会把 PENDING 锁进 CANCELLED，决策窗口
+    // 409 + processor 候选过滤排除 → 该缺货量退款永不发生（死锁）。
+    const hasPendingSuggestion = order.items.some((i) => i.suggestionStatus === 'PENDING');
+    const fullyShort =
+      order.items.length > 0 &&
+      order.items.every((i) => i.outOfStockQty != null && i.outOfStockQty >= i.quantity) &&
+      !hasPendingSuggestion;
     if (!fullyShort) return false;
 
     await this.orderService.cancelOrderInternal(orderId, {

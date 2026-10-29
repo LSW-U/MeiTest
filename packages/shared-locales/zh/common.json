@@ -587,6 +587,8 @@
       "oosToastCancelled": "整单缺货：订单已取消",
       "oosReportedTag": "已登记",
       "oosAddEvidence": "添加取证照片",
+      "oosSuggestionPolicyNone": "该订单客户已禁止替换 — 不可填替代建议",
+      "oosSuggestionPolicySpecify": "客户仅允许白名单内商品替换 — 只能选择白名单内商品项",
       "oosAmountDelta": "缺货金额"
     },
     "riders": {

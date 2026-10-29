@@ -31,7 +31,7 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { CreateOrderRequest, CancelOrderRequest, BatchDeleteOrdersRequest } from '@meimart/api-contract';
+import { CreateOrderRequest, CancelOrderRequest, BatchDeleteOrdersRequest, SuggestionDecisionRequest } from '@meimart/api-contract';
 import { OrderService } from './order.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -132,6 +132,9 @@ export class OrderController {
       deviceType: user.deviceType,
       perspective,
       couponId: body.couponId,
+      // 替换品批1（D9/D13）：三选一策略 + SPECIFY 白名单透传
+      replacementPolicy: body.replacementPolicy,
+      allowedReplacementSkuIds: body.allowedReplacementSkuIds,
     };
 
     const order = await this.idempotencyService.withIdempotency(
@@ -271,6 +274,33 @@ export class OrderController {
       perspective,
     });
     return { success: true as const, data: { id, status: 'CANCELLED' } };
+  }
+
+  /**
+   * 替换品批1（2026-10-29 D5）：替换建议决策
+   *
+   * POST /client/orders/:orderId/items/:itemId/suggestion/decision
+   *   - accept=true  采纳：原地改快照（D8）+ 落单价=min（D1）+ 差额退款 + OrderEvent(REPLACED)
+   *   - accept=false 拒绝：走会话1 自动退款链（D6）
+   *   - 幂等：非 PENDING → 409 SUGGESTION_ALREADY_DECIDED（D5）
+   */
+  @Post(':id/items/:itemId/suggestion/decision')
+  @Audit({ resource: 'Order', resourceIdParam: 'id' })
+  async decideSuggestion(
+    @Param('id') orderId: string,
+    @Param('itemId') itemId: string,
+    @Body(new ZodValidationPipe(SuggestionDecisionRequest)) body: z.infer<typeof SuggestionDecisionRequest>,
+    @Req() req: RequestWithUser,
+  ) {
+    const user = req.user;
+    if (!user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const result = await this.orderService.decideSuggestion(orderId, itemId, user.sub, {
+      accept: body.accept,
+      replacementItemId: body.replacementItemId,
+    });
+    return { success: true as const, data: result };
   }
 
   /**

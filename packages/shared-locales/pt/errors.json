@@ -201,5 +201,9 @@
   "E-WAREHOUSE-004": "Parâmetros de solicitação de armazém inválidos",
   "E-OOS-006": "Apenas reembolsos automáticos do sistema podem ser contestados, e uma única vez",
   "E-OOS-007": "O motor de reembolso automático falhou ao processar este reembolso",
-  "E-OOS-008": "Conflito de estado de reembolso: o reembolso já não está pendente (processamento concorrente)"
+  "E-OOS-008": "Conflito de estado de reembolso: o reembolso já não está pendente (processamento concorrente)",
+  "E-ORDER-010": "Alguns SKUs da whitelist são inválidos ou inativos",
+  "E-OOS-009": "A política NONE do pedido não permite sugestões de substituição",
+  "E-OOS-010": "O SKU de substituição sugerido não está na whitelist do pedido",
+  "E-OOS-011": "Sugestão de substituição já decidida"
 }

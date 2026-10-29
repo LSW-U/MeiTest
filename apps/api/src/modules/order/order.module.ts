@@ -31,6 +31,10 @@ import { NotifyFactory, EmailNotifyStrategy, SmsNotifyStrategy, PushNotifyStrate
 import { OutOfStockService } from './out-of-stock.service';
 import { OutOfStockRefundService } from './out-of-stock-refund.service';
 import { RiderOutOfStockController } from './rider-out-of-stock.controller';
+// 替换品批1（2026-10-29 D7）：PENDING 建议超时扫描（scheduler 注册 + processor 消费）
+import { SuggestionTimeoutScheduler } from './suggestion-timeout.scheduler';
+import { SuggestionTimeoutProcessor } from './suggestion-timeout.processor';
+import { SUGGESTION_TIMEOUT_QUEUE } from '../../shared/queue';
 // 批1：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义，同 dispatch.module 先例）
 import { StorageModule } from '../../shared/storage/storage.module';
 
@@ -47,6 +51,8 @@ import { StorageModule } from '../../shared/storage/storage.module';
     RealtimeModule,
     StorageModule,
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
+    // 替换品批1（D7）：PENDING 建议超时扫描队列
+    BullModule.registerQueue({ name: SUGGESTION_TIMEOUT_QUEUE }),
   ],
   controllers: [OrderController, AdminOrderController, RiderOutOfStockController],
   providers: [
@@ -57,6 +63,9 @@ import { StorageModule } from '../../shared/storage/storage.module';
     OutOfStockService,
     // 批3（D9b 2026-10-24）：system 自动退款引擎（登记链 commit 后触发，规则表为源）
     OutOfStockRefundService,
+    // 替换品批1（D7 2026-10-29）：PENDING 建议超时扫描
+    SuggestionTimeoutScheduler,
+    SuggestionTimeoutProcessor,
     // Notify 策略（W4-REVIEW P0-3）
     EmailNotifyStrategy,
     SmsNotifyStrategy,
@@ -69,6 +78,8 @@ import { StorageModule } from '../../shared/storage/storage.module';
     { provide: 'RealtimeGatewayToken', useExisting: RealtimeGateway },
     { provide: 'NotifyFactoryToken', useExisting: NotifyFactory },
     { provide: 'NotificationEventServiceToken', useExisting: NotificationEventService },
+    // 替换品批1（D7）：processor 取 OrderService（退款链 + 推送）的显式 token
+    { provide: 'SUGGESTION_TIMEOUT_ORDER_SERVICE', useExisting: OrderService },
   ],
   exports: [OrderService, OrderNoService],
 })

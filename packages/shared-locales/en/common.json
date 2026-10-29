@@ -590,6 +590,8 @@
       "oosToastCancelled": "Full shortage: order has been cancelled",
       "oosReportedTag": "already reported",
       "oosAddEvidence": "Add photos",
+      "oosSuggestionPolicyNone": "Customer disabled replacements for this order — no suggestion available",
+      "oosSuggestionPolicySpecify": "Customer restricted replacements to specific items — only whitelisted items selectable",
       "oosAmountDelta": "Out-of-stock amount"
     },
     "riders": {

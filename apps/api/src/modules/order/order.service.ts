@@ -29,7 +29,7 @@
  *      c. 写 OrderEvent(CANCELLED)
  *   3. （预付场景）W5 接入 RefundService：触发 refund，标 PaymentIntent.REFUNDED
  */
-import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException, Optional } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, deductStock, releaseStock, findWarehouseByPoint, incrementSalesCountForOrder, isWarehouseOpen, nextOpenAt } from '../../shared/db';
 import type { Tx } from '../../shared/db';
@@ -54,6 +54,7 @@ import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
 import { PricingService } from '../pricing/pricing.service';
 import { resolveOrderEffectiveRate, buildOrderRateFields } from '../rate/rate.service';
 import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
+import { OutOfStockRefundService } from './out-of-stock-refund.service';
 import {
   enqueueOrderTimeout,
   cancelOrderTimeout,
@@ -122,6 +123,9 @@ export interface OrderWithRelations {
    * admin 详情非 null = 「用户已删除」展示依据。
    */
   deletedAt: string | null;
+  /** 替换品批1（D9/D13）：订单级替换策略 + SPECIFY 白名单透出 */
+  replacementPolicy: string;
+  allowedReplacementSkuIds: string[] | null;
   items: Array<{
     id: string;
     productId: string;
@@ -134,6 +138,16 @@ export interface OrderWithRelations {
     subtotal: number;
     /** 当前库存（全仓库聚合，B12）。undefined=无库存信息 */
     stock?: number;
+    /** 替换品批1（D4）：确认态，null=未触发确认 */
+    suggestionStatus: string | null;
+    /** 用户决策时间 ISO（ACCEPTED/DECLINED 落点） */
+    suggestionDecidedAt: string | null;
+    /** 替换品批1 P2-3（2026-10-29）：建议目标摘要（join 同单目标行；null=无建议） */
+    suggestionItem: {
+      name: unknown;
+      image: string | null;
+      unitPrice: number;
+    } | null;
   }>;
   events: Array<{
     id: string;
@@ -199,6 +213,10 @@ export class OrderService {
         params?: Record<string, string>;
       }) => Promise<void>;
     } | null,
+    // 替换品批1（2026-10-29 D5/D6）：决策端点复用 system 退款引擎（差额/拒绝全额），
+    // @Optional 兜底单测直 new 不传（out-of-stock.service 同款）
+    @Optional() @Inject(OutOfStockRefundService)
+    private readonly oosRefundEngine?: OutOfStockRefundService | null,
   ) {}
 
   /**
@@ -293,6 +311,23 @@ export class OrderService {
         code: 'E-ORDER-005',
         message: 'Some products are inactive',
       });
+    }
+
+    // ===== Step 3.5: SPECIFY 白名单 SKU 校验（替换品批1 D13）=====
+    // 契约 superRefine 已保证 SPECIFY⇒非空 / 非 SPECIFY⇒禁带；此处防御 service 直调 +
+    // 校验白名单 SKU 全部合法且属于本单（允许本单主购项也进白名单，无额外约束）。
+    if (input.replacementPolicy === 'SPECIFY' && input.allowedReplacementSkuIds) {
+      const whitelistIds = [...new Set(input.allowedReplacementSkuIds)];
+      const whitelistSkus = await db.sku.findMany({
+        where: { id: { in: whitelistIds }, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      if (whitelistSkus.length !== whitelistIds.length) {
+        throw new ConflictException({
+          code: 'E-ORDER-010',
+          message: 'Some allowedReplacementSkuIds are invalid or inactive',
+        });
+      }
     }
 
     // ===== Step 4: 计算金额（整数分） =====
@@ -408,6 +443,10 @@ export class OrderService {
             estimatedCnyAmount: rateFields.estimatedCnyAmount,
             // 预约单承载（T5-c）：null=即时单；打烊仓=下次开门时间
             scheduledFor,
+            // 替换品批1（D9/D13）：三选一策略 + SPECIFY 白名单持久化（缺省 ALLOW）
+            replacementPolicy: input.replacementPolicy ?? 'ALLOW',
+            allowedReplacementSkuIds:
+              input.replacementPolicy === 'SPECIFY' ? input.allowedReplacementSkuIds ?? [] : Prisma.JsonNull,
           },
         });
 
@@ -1584,6 +1623,8 @@ export class OrderService {
       cancelledAt: Date | null;
       cancelReason: string | null;
       deletedAt?: Date | null; // P27 批B1：软删标记（admin 详情读非 null 标「用户已删除」）
+      replacementPolicy?: string; // 替换品批1 D9（存量行 Prisma 有默认值，类型可选防旧 mock 缺字段）
+      allowedReplacementSkuIds?: unknown; // D13 Json 列
       items: Array<Record<string, unknown>>;
       events: Array<Record<string, unknown>>;
       orderPromotions?: Array<Record<string, unknown>>;
@@ -1643,6 +1684,9 @@ export class OrderService {
       cancelReason: o.cancelReason,
       // P27 批B1：软删标记透出（client 详情过滤软删行恒 null；admin 详情非 null = 「用户已删除」）
       deletedAt: toIso(o.deletedAt ?? null),
+      // 替换品批1（D9/D13）：策略 + 白名单透出（前端确认弹层/选品提示数据源）
+      replacementPolicy: o.replacementPolicy ?? 'ALLOW',
+      allowedReplacementSkuIds: (o.allowedReplacementSkuIds as string[] | null) ?? null,
       items: o.items.map((i) => ({
         id: i.id as string,
         productId: i.productId as string,
@@ -1660,6 +1704,23 @@ export class OrderService {
         outOfStockReason: (i.outOfStockReason as string | null) ?? null,
         outOfStockEvidenceUrls: (i.outOfStockEvidenceUrls as string[] | null) ?? [],
         suggestionItemId: (i.suggestionItemId as string | null) ?? null,
+        // 替换品批1（2026-10-29 D4）：确认态透出（client 确认弹层 + admin/rider 策略展示）
+        suggestionStatus: (i.suggestionStatus as string | null) ?? null,
+        suggestionDecidedAt: toIso((i.suggestionDecidedAt as Date | null) ?? null),
+        // 替换品批1 P2-3（2026-10-29）：建议目标摘要——join 同单目标行取快照
+        //（契约只增；D8 快照改写语义下目标行未被改写，unitPrice 是决策前真实替换价，
+        // 前端据此渲染原/替对比 + 差额行并明示 D1 钳制 min）
+        suggestionItem: (() => {
+          const sid = i.suggestionItemId as string | null;
+          if (!sid) return null;
+          const target = (o.items as Array<Record<string, unknown>>).find((it) => it.id === sid);
+          if (!target) return null;
+          return {
+            name: target.productName,
+            image: (target.productImage as string | null) ?? null,
+            unitPrice: target.unitPrice as number,
+          };
+        })(),
       })),
       events: o.events.map((e) => ({
         id: e.id as string,
@@ -1679,5 +1740,359 @@ export class OrderService {
             }
           : null,
     };
+  }
+
+  // ===================== 替换品批1（2026-10-29 D5/D6/D8） =====================
+
+  /**
+   * 替换建议决策（POST /client/orders/:orderId/items/:itemId/suggestion/decision）
+   *
+   *   - 归属校验：订单属本人 + item 属本单（404，不暴露存在性）
+   *   - 幂等（D5）：suggestionStatus 非 PENDING → 409 E-OOS-011
+   *   - accept=false（D6）：置 DECLINED + decidedAt → 走会话1 system 退款链
+   *     （processOutOfStockRefund，部分缺 fullShortage=false；已置 PENDING 时登记链未退，
+   *     此处为该缺货量的唯一退款路径）
+   *   - accept=true（D8 原地改快照 + D1 钳制）：
+   *     事务内 update itemId 行快照（productId/skuId/三快照/unitPrice=min(替换价,原价)/
+   *     subtotal）+ suggestionStatus=ACCEPTED + decidedAt + 重算 Order.payableAmount
+   *     （totalAmount 同步重算）+ OrderEvent(REPLACED)；替换项被消费（原项已被本行占用，
+   *     无重复占用问题——快照改写语义）
+   *     事务外差额退款：refundQty = 原单价-落单价 的差额折算（D1：替换价>原价钳制后
+   *     差额 = (原价-min)×qty，走 system 通路合并账）
+   *
+   * replacementItemId 可空：缺省用登记时 item.suggestionItemId 指向的行；
+   * 显式传入时校验其属本单（且不指向自身）。
+   */
+  async decideSuggestion(
+    orderId: string,
+    itemId: string,
+    userId: string,
+    input: { accept: boolean; replacementItemId?: string },
+  ): Promise<{ itemId: string; orderId: string; suggestionStatus: 'ACCEPTED' | 'DECLINED'; replacementItemId: string | null; refundedAmount: number }> {
+    // 订单归属（本人）+ 软删过滤（client 详情同口径）
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (!order || order.userId !== userId || order.deletedAt) {
+      throw new NotFoundException({ code: 'E-ORDER-004', message: 'Order not found' });
+    }
+    const item = order.items.find((i) => i.id === itemId);
+    if (!item) {
+      throw new NotFoundException({ code: 'E-ORDER-004', message: `Order item not found in order: ${itemId}` });
+    }
+    // D5 幂等：非 PENDING → 409（null=未触发确认，同样不可决策）
+    if (item.suggestionStatus !== 'PENDING') {
+      throw new ConflictException({
+        code: 'E-OOS-011',
+        message: `Suggestion is not pending (status=${item.suggestionStatus ?? 'NONE'})`,
+      });
+    }
+    // 决策窗口 = 缺货登记窗口（CONFIRMED/PICKED）+ 骑手段兜底（OUT_FOR_DELIVERY）；
+    // 订单已取消（全缺已走登记链取消）→ 不可再决策
+    if (!['CONFIRMED', 'PICKED', 'OUT_FOR_DELIVERY'].includes(order.status)) {
+      throw new ConflictException({
+        code: 'E-OOS-001',
+        message: `Decision window is CONFIRMED/PICKED/OUT_FOR_DELIVERY, order status is ${order.status}`,
+      });
+    }
+
+    // 决策目标：显式传入优先，否则登记时的 suggestionItemId
+    const replacementId = input.replacementItemId ?? item.suggestionItemId;
+    if (!replacementId) {
+      throw new BadRequestException({
+        code: 'E-OOS-002',
+        message: 'No replacement item recorded for this suggestion',
+      });
+    }
+    if (replacementId === itemId) {
+      throw new BadRequestException({
+        code: 'E-OOS-002',
+        message: 'replacementItemId must reference a different item in the same order',
+      });
+    }
+    const replacement = order.items.find((i) => i.id === replacementId);
+    if (!replacement) {
+      throw new BadRequestException({
+        code: 'E-OOS-002',
+        message: 'replacementItemId must reference an item in the same order',
+      });
+    }
+
+    if (!input.accept) {
+      // ===== DECLINED（D6）：走会话1 退款链 =====
+      await db.orderItem.update({
+        where: { id: itemId },
+        data: { suggestionStatus: 'DECLINED', suggestionDecidedAt: new Date() },
+      });
+      const refunded = await this.triggerDeclinedRefund(order, itemId);
+      // P1-2 修复（调度拍板方案 a 2026-10-29）：决策后重判全缺——该单登记时可能因
+      // 带 PENDING 建议被豁免取消（cancelIfFullyOutOfStock 跳过 PENDING 项）；
+      // 现在建议已拒绝，若整单无有效项（全缺）→ 走全缺取消 + 退款引擎。
+      // 判定走 db（无 tx 上下文），cancelOrderInternal 幂等兜底并发。
+      await this.rejudgeFullyOutOfStock(orderId, userId);
+      logger.info({
+        msg: 'SUGGESTION_DECIDED_DECLINED',
+        orderId,
+        itemId,
+        refundedAmount: refunded,
+      });
+      return { itemId, orderId, suggestionStatus: 'DECLINED', replacementItemId: null, refundedAmount: refunded };
+    }
+
+    // ===== ACCEPTED（D8 原地改快照 + D1 钳制）=====
+    // 落单价 = min(替换价, 原价)（D1：用户绝不付出更高价）
+    const newUnitPrice = Math.min(replacement.unitPrice, item.unitPrice);
+    const newSubtotal = newUnitPrice * item.quantity;
+    const decidedAt = new Date();
+
+    await withTransaction(async (tx: Tx) => {
+      // 原地改快照（D8）：productId/skuId/productName/productImage/skuName/unitPrice/subtotal
+      await tx.orderItem.update({
+        where: { id: itemId },
+        data: {
+          productId: replacement.productId,
+          skuId: replacement.skuId,
+          productName: replacement.productName as Prisma.InputJsonValue,
+          productImage: replacement.productImage,
+          skuName: replacement.skuName as Prisma.InputJsonValue,
+          unitPrice: newUnitPrice,
+          subtotal: newSubtotal,
+          suggestionStatus: 'ACCEPTED',
+          suggestionDecidedAt: decidedAt,
+        },
+      });
+
+      // 重算订单金额：totalAmount = Σ 新 subtotal；payableAmount = totalAmount + deliveryFee - discount
+      const items = await tx.orderItem.findMany({ where: { orderId }, select: { subtotal: true } });
+      const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
+      const payableAmount = totalAmount + order.deliveryFee - order.discountAmount;
+      await tx.order.update({ where: { id: orderId }, data: { totalAmount, payableAmount } });
+
+      // D8 审计：OrderEvent(REPLACED)（项级替换不改订单状态，from = to = 当前状态）
+      await tx.orderEvent.create({
+        data: {
+          orderId,
+          eventType: 'REPLACED',
+          fromStatus: order.status,
+          toStatus: order.status,
+          operatorId: userId,
+          metadata: {
+            itemId,
+            replacementItemId: replacementId,
+            fromSkuId: item.skuId,
+            toSkuId: replacement.skuId,
+            fromUnitPrice: item.unitPrice,
+            appliedUnitPrice: newUnitPrice,
+            clamped: replacement.unitPrice > item.unitPrice,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    });
+
+    // 事务外差额退款（D1）：落单价 < 原价时差额 = (原价 - 落单价) × qty，
+    // 走 system 通路合并账（快照改写后原项 unitPrice 已是落单价，差额按决策前快照折算）。
+    // 快照改写语义下 RefundItem 引用同一 orderItemId（金额按差额行记，语义=差价退还）。
+    let refundedAmount = 0;
+    const diffUnit = item.unitPrice - newUnitPrice;
+    if (diffUnit > 0 && this.oosRefundEngine) {
+      try {
+        const result = await this.oosRefundEngine.processOutOfStockRefund({
+          orderId,
+          items: [
+            {
+              orderItemId: itemId,
+              skuId: replacement.skuId,
+              productName: replacement.productName,
+              unitPrice: diffUnit,
+              refundQty: item.quantity,
+            },
+          ],
+          fullShortage: false,
+          warehouseId: order.warehouseId,
+        });
+        refundedAmount = result.triggered ? result.amount : 0;
+        // P3-2（审查 20261029）：引擎规则未命中（partialShortage 开关关/阈值未达）时
+        // triggered=false 静默不退——差额让利语义是「替换必退差价」，静默零退款至少要可观测
+        if (!result.triggered) {
+          logger.warn({
+            msg: 'SUGGESTION_DIFF_REFUND_NOT_TRIGGERED',
+            orderId,
+            itemId,
+            diffUnit,
+            mode: result.mode,
+            hint: 'refund engine rule not met (partialShortage switch/threshold); manual refund may be needed',
+          });
+        }
+      } catch (e) {
+        // 差额退款失败不回滚替换事实（同登记链纪律：告警后继续，人工可补）
+        logger.error({
+          msg: 'SUGGESTION_DIFF_REFUND_FAILED',
+          orderId,
+          itemId,
+          diffUnit,
+          error: (e as Error).message,
+        });
+      }
+    }
+
+    // 推送（事务外，notify 吞错）：采纳确认（复用 outOfStock 事件族外新 key）
+    if (this.notificationEvents) {
+      try {
+        await this.notificationEvents.notify({
+          event: 'orderConfirmed',
+          userId,
+          type: 'ORDER_UPDATE',
+          data: { orderId, orderNo: order.orderNo, itemId, replacementItemId: replacementId, suggestionAccepted: true },
+          params: { orderNo: order.orderNo ?? '' },
+        });
+      } catch {
+        // 吞错（notify 内部亦吞错，双保险）
+      }
+    }
+
+    logger.info({
+      msg: 'SUGGESTION_DECIDED_ACCEPTED',
+      orderId,
+      itemId,
+      replacementItemId: replacementId,
+      appliedUnitPrice: newUnitPrice,
+      clamped: replacement.unitPrice > item.unitPrice,
+      refundedAmount,
+    });
+    return { itemId, orderId, suggestionStatus: 'ACCEPTED', replacementItemId: replacementId, refundedAmount };
+  }
+
+  /**
+   * P1-2 修复（调度拍板方案 a 2026-10-29）：决策后全缺重判。
+   *
+   * 背景：登记链 cancelIfFullyOutOfStock（out-of-stock.service）在全缺判定时跳过
+   * 带 PENDING 建议的项（豁免取消，等决策）——否则全缺×PENDING 会把订单锁进
+   * CANCELLED，决策窗口 409 + processor 候选过滤排除 → 退款死锁。
+   *
+   * 本方法在决策落地后调用（DECINED / 超时拒绝两路）：重读整单，若全部项已登记
+   * 缺货（此时 PENDING 已清，无豁免对象）→ 复用 cancelOrderInternal 取消
+   * （reason=OUT_OF_STOCK，同登记链 D11 语义）+ 触发全缺退款引擎。
+   * 幂等：cancelOrderInternal 终态守卫 + 引擎合并账。
+   */
+  async rejudgeFullyOutOfStock(orderId: string, operatorId: string): Promise<void> {
+    try {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { status: true, warehouseId: true, items: { select: { outOfStockQty: true, quantity: true } } },
+      });
+      if (!order || order.status === 'CANCELLED' || order.status === 'COMPLETED') return;
+      const fullyShort =
+        order.items.length > 0 && order.items.every((i) => i.outOfStockQty != null && i.outOfStockQty >= i.quantity);
+      if (!fullyShort) return;
+      logger.info({ msg: 'SUGGESTION_DECIDED_REJUDGE_FULL_SHORTAGE', orderId });
+      await this.cancelOrderInternal(orderId, {
+        operatorId,
+        deviceType: 'system' as ContractDeviceType,
+        perspective: 'system',
+        reason: 'OUT_OF_STOCK',
+      });
+      // 全缺退款走引擎（fullShortage=true，规则判定 fullShortage 开关）
+      if (this.oosRefundEngine) {
+        const items = await db.orderItem.findMany({
+          where: { orderId, outOfStockQty: { not: null } },
+          select: { id: true, skuId: true, productName: true, unitPrice: true, outOfStockQty: true },
+        });
+        if (items.length > 0) {
+          await this.oosRefundEngine.processOutOfStockRefund({
+            orderId,
+            items: items.map((i) => ({
+              orderItemId: i.id,
+              skuId: i.skuId,
+              productName: i.productName,
+              unitPrice: i.unitPrice,
+              refundQty: i.outOfStockQty ?? 0,
+            })),
+            fullShortage: true,
+            warehouseId: order.warehouseId,
+          });
+        }
+      }
+    } catch (e) {
+      // 重判失败不阻断决策返回（取消/退款可人工补——单次补偿纪律）
+      logger.error({
+        msg: 'SUGGESTION_REJUDGE_FAILED',
+        orderId,
+        error: (e as Error).message,
+      });
+    }
+  }
+
+  /**
+   * DECLINED 退款（D6）：把该缺货项折算成退款候选走会话1 system 通路。
+   * 注意：决策点在置 DECLINED 之后，退款失败仅告警（可人工补）。
+   */
+  private async triggerDeclinedRefund(
+    order: { id: string; warehouseId: string },
+    itemId: string,
+  ): Promise<number> {
+    if (!this.oosRefundEngine) return 0;
+    try {
+      const item = await db.orderItem.findUnique({
+        where: { id: itemId },
+        select: { skuId: true, productName: true, unitPrice: true, outOfStockQty: true },
+      });
+      if (!item?.outOfStockQty) return 0;
+      const result = await this.oosRefundEngine.processOutOfStockRefund({
+        orderId: order.id,
+        items: [
+          {
+            orderItemId: itemId,
+            skuId: item.skuId,
+            productName: item.productName,
+            unitPrice: item.unitPrice,
+            refundQty: item.outOfStockQty,
+          },
+        ],
+        fullShortage: false,
+        warehouseId: order.warehouseId,
+      });
+      return result.triggered ? result.amount : 0;
+    } catch (e) {
+      logger.error({
+        msg: 'SUGGESTION_DECLINED_REFUND_FAILED',
+        orderId: order.id,
+        itemId,
+        error: (e as Error).message,
+      });
+      return 0;
+    }
+  }
+
+  /**
+   * 替换品批1（D7）：超时自动拒绝后的退款 + 推送（suggestion-timeout.processor 调用）。
+   * item 已由 processor 置 DECLINED；本方法只做退款候选折算 + outOfStockSuggestionExpired 推送。
+   * 决策窗口/幂等已由 processor 校验（此处不重查状态，单次补偿纪律：失败仅告警）。
+   */
+  async decideSuggestionTimeoutRefund(orderId: string, itemId: string): Promise<void> {
+    const refunded = await this.triggerDeclinedRefund({ id: orderId, warehouseId: '' }, itemId);
+    // P1-2 修复：超时自动拒绝同样触发全缺重判（豁免取消的单，拒绝后可能真全缺 → 取消+退款）
+    await this.rejudgeFullyOutOfStock(orderId, 'system');
+    // 推送超时通知（事务外，notify 吞错）
+    if (this.notificationEvents) {
+      try {
+        const item = await db.orderItem.findUnique({
+          where: { id: itemId },
+          select: { order: { select: { userId: true, orderNo: true, warehouseId: true } } },
+        });
+        if (item) {
+          await this.notificationEvents.notify({
+            event: 'outOfStockSuggestionExpired',
+            userId: item.order.userId,
+            type: 'ORDER_UPDATE',
+            data: { orderId, orderNo: item.order.orderNo, itemId },
+            params: { orderNo: item.order.orderNo ?? '' },
+          });
+        }
+      } catch {
+        // 吞错
+      }
+    }
+    logger.info({ msg: 'SUGGESTION_TIMEOUT_DECLINED', orderId, itemId, refundedAmount: refunded });
   }
 }

@@ -34,7 +34,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { uploadByScene } from '@/lib/upload-scenes';
 import { ApiError } from '@/lib/api';
-import { useReportOutOfStock, type OrderItem } from '@/hooks/api/use-orders';
+import { useReportOutOfStock, type OrderItem, type ReplacementPolicy } from '@/hooks/api/use-orders';
 import type { I18nText } from '@/hooks/api/use-products';
 
 const OOS_REASONS = ['DAMAGED', 'EXPIRED', 'MISSING', 'MISLABELED', 'OTHER'] as const;
@@ -55,6 +55,10 @@ interface OutOfStockDialogProps {
   onOpenChange: (open: boolean) => void;
   orderId: string;
   items: OrderItem[];
+  /** 替换品批1（2026-10-29）：下单替换策略（缺省视为 ALLOW，向后兼容旧数据） */
+  replacementPolicy?: ReplacementPolicy;
+  /** SPECIFY 策略的替代品白名单（skuId 集合）；非 SPECIFY 忽略 */
+  allowedReplacementSkuIds?: string[] | null;
   /** 登记成功回调（toast 已在内部处理，这里用于 refetch） */
   onReported: (orderCancelled: boolean) => void;
 }
@@ -64,6 +68,8 @@ export function OutOfStockDialog({
   onOpenChange,
   orderId,
   items,
+  replacementPolicy = 'ALLOW',
+  allowedReplacementSkuIds,
   onReported,
 }: OutOfStockDialogProps) {
   const t = useTranslations('common');
@@ -80,10 +86,26 @@ export function OutOfStockDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedItem = useMemo(() => items.find((i) => i.id === itemId), [items, itemId]);
-  const suggestionCandidates = useMemo(
-    () => items.filter((i) => i.id !== itemId),
-    [items, itemId],
-  );
+  // 替换品批1（D9/D13）：建议候选按下单策略过滤——
+  // NONE：用户下单时明确禁替换 → 不给建议项（后端 E-OOS-009 硬拒，前端先挡）
+  // SPECIFY：只允许白名单 SKU（后端 E-OOS-010，前端先挡并提示）
+  // ALLOW（缺省）：全部其他项可选（现状）
+  const suggestionCandidates = useMemo(() => {
+    const others = items.filter((i) => i.id !== itemId);
+    if (replacementPolicy === 'NONE') return [];
+    if (replacementPolicy === 'SPECIFY') {
+      const whitelist = new Set(allowedReplacementSkuIds ?? []);
+      return others.filter((i) => whitelist.has(i.skuId));
+    }
+    return others;
+  }, [items, itemId, replacementPolicy, allowedReplacementSkuIds]);
+  const suggestionDisabled = replacementPolicy === 'NONE';
+  const policyHint =
+    replacementPolicy === 'NONE'
+      ? t('admin.orders.oosSuggestionPolicyNone')
+      : replacementPolicy === 'SPECIFY'
+        ? t('admin.orders.oosSuggestionPolicySpecify')
+        : null;
 
   function resetForm() {
     setItemId('');
@@ -265,7 +287,11 @@ export function OutOfStockDialog({
 
           <div className="space-y-2">
             <Label>{t('admin.orders.oosSuggestionLabel')}</Label>
-            <Select value={suggestionItemId} onValueChange={setSuggestionItemId} disabled={!selectedItem}>
+            <Select
+              value={suggestionItemId}
+              onValueChange={setSuggestionItemId}
+              disabled={!selectedItem || suggestionDisabled}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -278,6 +304,7 @@ export function OutOfStockDialog({
                 ))}
               </SelectContent>
             </Select>
+            {policyHint && <p className="text-sm text-muted-foreground">{policyHint}</p>}
           </div>
         </div>
         <DialogFooter>

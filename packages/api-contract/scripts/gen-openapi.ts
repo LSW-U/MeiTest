@@ -136,6 +136,7 @@ import {
   OrderItem,
   CreateOrderRequest,
   CancelOrderRequest,
+  SuggestionDecisionRequest,
   // 缺货履约闭环批1（2026-10-24）
   AdminOutOfStockRequest,
   OutOfStockReportResponse,
@@ -524,6 +525,7 @@ registry.register('OrderItem', OrderItem);
 registry.register('CreateOrderRequest', CreateOrderRequest);
 registry.register('CancelOrderRequest', CancelOrderRequest);
 registry.register('AdminOutOfStockRequest', AdminOutOfStockRequest);
+registry.register('SuggestionDecisionRequest', SuggestionDecisionRequest);
 registry.register('OutOfStockReportResponse', OutOfStockReportResponse);
 registry.register('UpdateOrderRequest', UpdateOrderRequest);
 registry.register('OrderNo', OrderNo);
@@ -2282,6 +2284,23 @@ registry.registerPath({
       description: '批量删除成功',
       content: { 'application/json': { schema: DeleteOrderResponse } },
     },
+  },
+});
+
+// ===== 替换品批1（2026-10-29 D5）：替换建议决策端点 =====
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/client/orders/{orderId}/items/{itemId}/suggestion/decision',
+  tags: ['order'],
+  description:
+    '替换建议决策（D5）：accept=true 采纳（原地改快照+落单价=min+差额退款+OrderEvent REPLACED）；false=拒绝走自动退款链。非 PENDING → 409 幂等',
+  request: {
+    body: { content: { 'application/json': { schema: SuggestionDecisionRequest } } },
+  },
+  responses: {
+    200: { description: '决策成功（返回更新后订单项摘要）' },
+    404: { description: 'ORDER/ITEM_NOT_FOUND 或建议项不属于本单', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'SUGGESTION_ALREADY_DECIDED（幂等，D5）', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

@@ -40,6 +40,9 @@ export const NOTIFICATION_EVENT_KEYS = [
   // 缺货履约闭环批3（2026-10-24）：system 自动退款结果推送（D9b/D17，直退完成 / 超限转人工）
   'outOfStockAutoRefunded',
   'outOfStockRefundPending',
+  // 替换品批1（2026-10-29 D21）：替换建议确认卡（PENDING 推送）+ 超时自动拒绝
+  'outOfStockSuggestion',
+  'outOfStockSuggestionExpired',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -72,4 +75,7 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   // 缺货履约闭环批3：system 自动退款直退完成 / 超限转人工（同受众，data.orderId + amount）
   outOfStockAutoRefunded: { titleKey: 'outOfStockAutoRefunded.title', contentKey: 'outOfStockAutoRefunded.content' },
   outOfStockRefundPending: { titleKey: 'outOfStockRefundPending.title', contentKey: 'outOfStockRefundPending.content' },
+  // 替换品批1（D21）：登记建议项置 PENDING 后推送确认卡；超时自动拒绝推送
+  outOfStockSuggestion: { titleKey: 'outOfStockSuggestion.title', contentKey: 'outOfStockSuggestion.content' },
+  outOfStockSuggestionExpired: { titleKey: 'outOfStockSuggestionExpired.title', contentKey: 'outOfStockSuggestionExpired.content' },
 };

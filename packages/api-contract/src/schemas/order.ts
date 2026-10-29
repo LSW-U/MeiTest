@@ -98,6 +98,25 @@ export const OrderItem = z.object({
   outOfStockReason: z.string().nullable().optional(),
   outOfStockEvidenceUrls: z.array(z.string().url()).nullable().optional(),
   suggestionItemId: Id.nullable().optional(),
+  /**
+   * 替换品批1（2026-10-29 D4）：确认态，null=未触发确认；PENDING→ACCEPTED/DECLINED 终态。
+   * suggestionDecidedAt 同步透出（前端确认卡已决策提示）。
+   */
+  suggestionStatus: z.enum(['PENDING', 'ACCEPTED', 'DECLINED']).nullable().optional(),
+  suggestionDecidedAt: IsoTimestamp.nullable().optional(),
+  /**
+   * 替换品批1 P2-3 修复（2026-10-29）：建议目标摘要（原/替对比 + 差额明示数据源）。
+   * 由 suggestionItemId join 同单目标行取快照（无新增列）；null/undefined = 无建议。
+   * name 为目标行多语快照；unitPrice 为目标行当前单价（分）；image 可空。
+   */
+  suggestionItem: z
+    .object({
+      name: I18nText,
+      image: z.string().nullable(),
+      unitPrice: Money,
+    })
+    .nullable()
+    .optional(),
 });
 
 /** 订单实体（含 warehouseId，按收货地址 PostGIS 匹配） */
@@ -145,6 +164,12 @@ export const Order = z.object({
   /** 预约单（保证金批A T5-c 2026-09-10）：打烊时段下单 = 该仓下一次开门时间；即时单 null */
   scheduledFor: IsoTimestamp.nullable(),
   /**
+   * 替换品批1（2026-10-29 D9/D13）：订单级替换策略 + SPECIFY 白名单。
+   * 默认 ALLOW（向后兼容存量单）；SPECIFY 时 allowedReplacementSkuIds 非空。
+   */
+  replacementPolicy: z.enum(['ALLOW', 'SPECIFY', 'NONE']).optional(),
+  allowedReplacementSkuIds: z.array(Id).nullable().optional(),
+  /**
    * 预约单标注（保证金批A P2-1 2026-09-10）：true = 本次下单走了预约（打烊时段）。
    * createOrder 响应携带（前端结算跳转页展示"明早开门可配送"）；scheduledFor 非空 ⇔ true。
    */
@@ -175,6 +200,28 @@ export const CreateOrderRequest = z.object({
    * 不传 = 不用券。
    */
   couponId: Id.optional(),
+  /**
+   * 替换品批1（2026-10-29 D9/D13）：下单三选一替换策略，缺省 = ALLOW。
+   * SPECIFY 必须带非空 allowedReplacementSkuIds；NONE 禁带白名单（refine 校验）。
+   */
+  replacementPolicy: z.enum(['ALLOW', 'SPECIFY', 'NONE']).optional(),
+  /** SPECIFY 白名单：允许的替代 SKU id 集合（仅 SPECIFY 传入） */
+  allowedReplacementSkuIds: z.array(Id).optional(),
+}).superRefine((v, ctx) => {
+  if (v.replacementPolicy === 'SPECIFY' && (!v.allowedReplacementSkuIds || v.allowedReplacementSkuIds.length === 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['allowedReplacementSkuIds'], message: 'SPECIFY requires non-empty allowedReplacementSkuIds' });
+  }
+  if (v.replacementPolicy !== 'SPECIFY' && v.allowedReplacementSkuIds && v.allowedReplacementSkuIds.length > 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['allowedReplacementSkuIds'], message: 'allowedReplacementSkuIds only allowed with SPECIFY policy' });
+  }
+});
+
+/** 替换建议决策请求（替换品批1 D5：POST /client/orders/:orderId/items/:itemId/suggestion/decision） */
+export const SuggestionDecisionRequest = z.object({
+  /** true=采纳替换（原地改快照+差额退款）；false=拒绝（走会话1 自动退款链） */
+  accept: z.boolean(),
+  /** 采纳时指定的替换项 id（可空 = 用登记时登记的 suggestionItemId） */
+  replacementItemId: Id.optional(),
 });
 
 /** 取消订单请求 */

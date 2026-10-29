@@ -46,6 +46,10 @@ export interface CreateOrderInput {
    * 结算页从卡包选券传入，事务内 applyCoupon 校验 + 标 USED。
    */
   couponId?: string;
+  /** 替换品批1（2026-10-29 D9/D13）：下单三选一替换策略，缺省 = ALLOW */
+  replacementPolicy?: 'ALLOW' | 'SPECIFY' | 'NONE';
+  /** SPECIFY 白名单：允许的替代 SKU id 集合（仅 SPECIFY 传入；契约 superRefine 已保证配对） */
+  allowedReplacementSkuIds?: string[];
 }
 
 /** 下单后返回（service → controller → client） */

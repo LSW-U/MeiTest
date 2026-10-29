@@ -82,5 +82,13 @@
   "outOfStockRefundPending": {
     "title": "Pengembalian Diproses",
     "content": "Beberapa barang pesanan {orderNo} Anda habis. Pengembalian ${amount} sedang diproses dan akan tiba setelah ditinjau."
+  },
+  "outOfStockSuggestion": {
+    "title": "Saran Penggantian",
+    "content": "Ada item di pesanan {orderNo} yang habis. Saran pengganti: {items}. Ketuk untuk konfirmasi atau tolak."
+  },
+  "outOfStockSuggestionExpired": {
+    "title": "Saran Penggantian Kedaluwarsa",
+    "content": "Anda tidak menanggapi saran penggantian untuk pesanan {orderNo} tepat waktu. Item yang habis akan otomatis dikembalikan dananya."
   }
 }

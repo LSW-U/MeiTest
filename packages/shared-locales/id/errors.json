@@ -201,5 +201,9 @@
   "E-WAREHOUSE-004": "Parameter permintaan gudang tidak valid",
   "E-OOS-006": "Hanya pengembalian otomatis sistem yang dapat digugat, dan hanya sekali",
   "E-OOS-007": "Mesin pengembalian otomatis gagal memproses pengembalian ini",
-  "E-OOS-008": "Konflik status pengembalian: pengembalian tidak lagi menunggu (pemrosesan bersamaan)"
+  "E-OOS-008": "Konflik status pengembalian: pengembalian tidak lagi menunggu (pemrosesan bersamaan)",
+  "E-ORDER-010": "Beberapa SKU whitelist tidak valid atau tidak aktif",
+  "E-OOS-009": "Kebijakan pesanan NONE tidak mengizinkan saran penggantian",
+  "E-OOS-010": "SKU pengganti yang disarankan tidak ada dalam whitelist pesanan",
+  "E-OOS-011": "Saran penggantian sudah diputuskan"
 }

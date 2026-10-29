@@ -201,5 +201,9 @@
   "E-WAREHOUSE-004": "Invalid warehouse request parameters",
   "E-OOS-006": "Only system auto refunds can be disputed, and each can be disputed once",
   "E-OOS-007": "Automatic refund engine failed to process this refund",
-  "E-OOS-008": "Refund status conflict: the refund is no longer pending (concurrent processing)"
+  "E-OOS-008": "Refund status conflict: the refund is no longer pending (concurrent processing)",
+  "E-ORDER-010": "Some allowedReplacementSkuIds are invalid or inactive",
+  "E-OOS-009": "Order policy NONE does not allow replacement suggestions",
+  "E-OOS-010": "Suggested replacement SKU is not in the order whitelist",
+  "E-OOS-011": "Replacement suggestion already decided"
 }

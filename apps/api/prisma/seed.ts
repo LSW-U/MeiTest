@@ -518,6 +518,13 @@ async function main() {
       value: '',
       description: 'Readonly mirror of out_of_stock_rule global autoRefundMaxAmount (cents)',
     },
+    // 替换品批1（2026-10-29，D7）：PENDING 建议确认超时时限（小时）。
+    // SUGGESTION_TIMEOUT 队列每 5min 扫描；key 缺失时代码内置默认 24h（D11 缺 key 不依赖 seed 同款纪律）。
+    {
+      key: 'oos.suggestion_timeout_hours',
+      value: '24',
+      description: 'Replacement suggestion PENDING timeout in hours (suggestion-timeout queue)',
+    },
   ];
 
   for (const cfg of SYSTEM_CONFIGS) {

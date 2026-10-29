@@ -82,5 +82,13 @@
   "outOfStockRefundPending": {
     "title": "[TET] Refund Being Processed",
     "content": "[TET] Some items in your order {orderNo} were out of stock. Your refund of ${amount} is being processed and will arrive after review."
+  },
+  "outOfStockSuggestion": {
+    "title": "[TET] Replacement Suggestion",
+    "content": "[TET] An item in your order {orderNo} is out of stock. A replacement is suggested: {items}. Tap to confirm or decline."
+  },
+  "outOfStockSuggestionExpired": {
+    "title": "[TET] Replacement Expired",
+    "content": "[TET] You did not respond to the replacement suggestion for order {orderNo} in time. The out-of-stock item will be refunded automatically."
   }
 }

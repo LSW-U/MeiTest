@@ -82,5 +82,13 @@
   "outOfStockRefundPending": {
     "title": "Reembolso em Processamento",
     "content": "Alguns artigos do seu pedido {orderNo} estavam esgotados. O seu reembolso de ${amount} está a ser processado e chegará após revisão."
+  },
+  "outOfStockSuggestion": {
+    "title": "Sugestão de Substituição",
+    "content": "Um item do seu pedido {orderNo} está esgotado. Sugestão de substituição: {items}. Toque para confirmar ou recusar."
+  },
+  "outOfStockSuggestionExpired": {
+    "title": "Sugestão Expirada",
+    "content": "Não respondeu à sugestão de substituição do pedido {orderNo} a tempo. O item esgotado será reembolsado automaticamente."
   }
 }

@@ -46,6 +46,8 @@ export interface OrderItem {
   suggestionItemId?: string | null;
 }
 
+export type ReplacementPolicy = 'ALLOW' | 'SPECIFY' | 'NONE';
+
 export interface OrderListItem {
   id: string;
   orderNo: string;
@@ -64,6 +66,9 @@ export interface OrderListItem {
 
 export interface OrderDetail extends OrderListItem {
   items: OrderItem[];
+  /** 替换品批1（D9/D13）：下单替换策略 + SPECIFY 白名单（拣货登记卡策略校验数据源） */
+  replacementPolicy?: ReplacementPolicy;
+  allowedReplacementSkuIds?: string[] | null;
   remark: string | null;
   riderId: string | null;
   discountAmount: number;

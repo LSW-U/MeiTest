@@ -115,6 +115,21 @@ enum OrderEventType {
   REFUNDED // 已退款
   ISSUE_REPORTED // W3-C S5:骑手异常上报（CUSTOMER_UNREACHABLE / REJECTED 等）
   OUT_OF_STOCK_REPORTED // 缺货履约闭环批1 2026-10-24:缺货登记（拣货段/骑手段兜底）
+  REPLACED // 替换品批1 2026-10-29:用户采纳替代建议，原地改 OrderItem 快照（D8 审计）
+}
+
+/// 替换建议确认态（替换品批1 D4）：null=未触发确认（未登记建议项或策略 NONE）
+enum SuggestionStatus {
+  PENDING // 已推送待用户决策
+  ACCEPTED // 用户采纳，已原地改快照
+  DECLINED // 用户拒绝/超时自动拒绝，走退款链
+}
+
+/// 订单级替换策略（替换品批1 D9）：下单三选一，默认 ALLOW 向后兼容存量单
+enum ReplacementPolicy {
+  ALLOW // 允许任意本单内替代品
+  SPECIFY // 仅允许白名单 allowedReplacementSkuIds 内替代品
+  NONE // 禁止建议项
 }
 
 /// 支付方式(v0.3 决策 D 全预留 + 批B 补位 3 渠道,2 真实 + 6 mock/stub)
@@ -585,6 +600,12 @@ model Order {
   // 超时豁免：order-timeout 15min 取消跳过 scheduledFor 非空的单（T5-e）。
   scheduledFor DateTime? @map("scheduled_for")
 
+  // 替换品批1（2026-10-29 D9/D13）：订单级替换策略 + SPECIFY 白名单
+  /// 三选一策略，默认 ALLOW 向后兼容存量单
+  replacementPolicy ReplacementPolicy @default(ALLOW) @map("replacement_policy")
+  /// SPECIFY 白名单：允许的替代 SKU id 集合（仅 SPECIFY 有值；D13 缺货登记时硬校验）
+  allowedReplacementSkuIds Json? @map("allowed_replacement_sku_ids")
+
   // 支付(v0.3:5 枚举)
   paymentMethod PaymentMethod @map("payment_method")
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
@@ -666,6 +687,12 @@ model OrderItem {
   outOfStockEvidenceUrls String[] @map("out_of_stock_evidence_urls")
   /// 替代建议商品项（可空；D18 service 层校验必须属于本单，防跨单脏引用）
   suggestionItemId       String?  @map("suggestion_item_id")
+
+  // 替换确认态（替换品批1 2026-10-29 D4）：与 suggestionItemId 1:1 强绑定，全部可空向后兼容
+  /// 确认态：null=未触发确认；PENDING→ACCEPTED/DECLINED 终态（D5 幂等依据）
+  suggestionStatus    SuggestionStatus? @map("suggestion_status")
+  /// 用户决策时间（ACCEPTED/DECLINED 落点；超时自动拒绝也写此列）
+  suggestionDecidedAt DateTime?         @map("suggestion_decided_at")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   sku   Sku   @relation(fields: [skuId], references: [id])

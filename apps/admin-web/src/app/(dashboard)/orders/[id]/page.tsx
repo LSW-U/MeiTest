@@ -428,6 +428,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           onOpenChange={setOosOpen}
           orderId={id}
           items={order.items}
+          replacementPolicy={order.replacementPolicy}
+          allowedReplacementSkuIds={order.allowedReplacementSkuIds}
           onReported={() => refetch()}
         />
       )}
