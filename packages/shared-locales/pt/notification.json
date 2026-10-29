@@ -90,5 +90,9 @@
   "outOfStockSuggestionExpired": {
     "title": "Sugestão Expirada",
     "content": "Não respondeu à sugestão de substituição do pedido {orderNo} a tempo. O item esgotado será reembolsado automaticamente."
+  },
+  "ticketCreated": {
+    "title": "Ticket de Problema Criado",
+    "content": "Um ticket {ticketNo} foi criado para o seu pedido {orderNo}. A equipa de apoio entrará em contacto."
   }
 }

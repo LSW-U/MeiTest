@@ -43,6 +43,8 @@ export const NOTIFICATION_EVENT_KEYS = [
   // 替换品批1（2026-10-29 D21）：替换建议确认卡（PENDING 推送）+ 超时自动拒绝
   'outOfStockSuggestion',
   'outOfStockSuggestionExpired',
+  // 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建单 → 通知顾客（data.ticketNo）
+  'ticketCreated',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -78,4 +80,6 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   // 替换品批1（D21）：登记建议项置 PENDING 后推送确认卡；超时自动拒绝推送
   outOfStockSuggestion: { titleKey: 'outOfStockSuggestion.title', contentKey: 'outOfStockSuggestion.content' },
   outOfStockSuggestionExpired: { titleKey: 'outOfStockSuggestionExpired.title', contentKey: 'outOfStockSuggestionExpired.content' },
+  // 替换品批2 工单化：异常上报建工单（受众 CUSTOMER、ORDER_UPDATE，data.ticketNo + data.orderNo）
+  ticketCreated: { titleKey: 'ticketCreated.title', contentKey: 'ticketCreated.content' },
 };

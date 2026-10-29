@@ -90,5 +90,9 @@
   "outOfStockSuggestionExpired": {
     "title": "[TET] Replacement Expired",
     "content": "[TET] You did not respond to the replacement suggestion for order {orderNo} in time. The out-of-stock item will be refunded automatically."
+  },
+  "ticketCreated": {
+    "title": "[TET] Issue Ticket Created",
+    "content": "[TET] An issue ticket {ticketNo} has been created for your order {orderNo}. Our support team will follow up."
   }
 }

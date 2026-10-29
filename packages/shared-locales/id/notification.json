@@ -90,5 +90,9 @@
   "outOfStockSuggestionExpired": {
     "title": "Saran Penggantian Kedaluwarsa",
     "content": "Anda tidak menanggapi saran penggantian untuk pesanan {orderNo} tepat waktu. Item yang habis akan otomatis dikembalikan dananya."
+  },
+  "ticketCreated": {
+    "title": "Tiket Masalah Dibuat",
+    "content": "Tiket {ticketNo} telah dibuat untuk pesanan {orderNo} Anda. Tim dukungan akan menindaklanjuti."
   }
 }

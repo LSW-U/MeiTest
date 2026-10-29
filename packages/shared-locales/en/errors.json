@@ -205,5 +205,6 @@
   "E-ORDER-010": "Some allowedReplacementSkuIds are invalid or inactive",
   "E-OOS-009": "Order policy NONE does not allow replacement suggestions",
   "E-OOS-010": "Suggested replacement SKU is not in the order whitelist",
-  "E-OOS-011": "Replacement suggestion already decided"
+  "E-OOS-011": "Replacement suggestion already decided",
+  "E-TICKET-001": "Ticket not found"
 }

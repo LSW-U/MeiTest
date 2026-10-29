@@ -205,5 +205,6 @@
   "E-ORDER-010": "Beberapa SKU whitelist tidak valid atau tidak aktif",
   "E-OOS-009": "Kebijakan pesanan NONE tidak mengizinkan saran penggantian",
   "E-OOS-010": "SKU pengganti yang disarankan tidak ada dalam whitelist pesanan",
-  "E-OOS-011": "Saran penggantian sudah diputuskan"
+  "E-OOS-011": "Saran penggantian sudah diputuskan",
+  "E-TICKET-001": "Tiket tidak ditemukan"
 }

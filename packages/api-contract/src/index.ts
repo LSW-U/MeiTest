@@ -32,6 +32,8 @@ export * from './schemas/search';
 export * from './schemas/settle';
 export * from './schemas/shop';
 export * from './schemas/statistics';
+// 替换品批2 工单化（2026-10-29）：工单契约（用户端三端点）
+export * from './schemas/ticket';
 export * from './schemas/unified-auth';
 export * from './schemas/upload';
 // notification 必须在 user 之前导出（user.ts 对 notification schema 做 re-export）

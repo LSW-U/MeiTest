@@ -409,6 +409,12 @@ import {
   StatisticsOosTrendItem,
   StatisticsOosData,
   StatisticsOosResponse,
+  // 替换品批2 工单化（2026-10-29）
+  Ticket,
+  TicketEvent,
+  TicketListResponse,
+  TicketDetailResponse,
+  TicketEventListResponse,
   // common
   ErrorResponse,
   Id,
@@ -6162,6 +6168,70 @@ registry.registerPath({
   },
 });
 
+// ============================================================================
+// 替换品批2 工单化（2026-10-29，方案v2 D10/D15/D16/D19/D20）
+// ============================================================================
+
+registry.register('Ticket', Ticket);
+registry.register('TicketEvent', TicketEvent);
+registry.register('TicketListResponse', TicketListResponse);
+registry.register('TicketDetailResponse', TicketDetailResponse);
+registry.register('TicketEventListResponse', TicketEventListResponse);
+
+// ---- 用户工单三端点（ticketNo 寻址，非 id）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/tickets',
+  tags: ['ticket'],
+  description: '我的工单分页列表（当前用户，游标分页 items + nextCursor + hasMore）',
+  responses: { 200: { description: '工单列表', content: { 'application/json': { schema: TicketListResponse } } } },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/tickets/{ticketNo}',
+  tags: ['ticket'],
+  description: '工单详情（按 ticketNo 业务键寻址；非本人 404 防枚举）',
+  request: { params: z.object({ ticketNo: z.string() }) },
+  responses: {
+    200: { description: '工单详情', content: { 'application/json': { schema: TicketDetailResponse } } },
+    404: { description: 'E-TICKET-001 工单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/client/tickets/{ticketNo}/events',
+  tags: ['ticket'],
+  description: '工单时间线分页（D16 TicketEvent 子表，按 createdAt asc）',
+  request: { params: z.object({ ticketNo: z.string() }) },
+  responses: {
+    200: { description: '时间线列表', content: { 'application/json': { schema: TicketEventListResponse } } },
+    404: { description: 'E-TICKET-001 工单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- report-issue 响应 +ticketNo（D20 只增不改）----
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/rider/dispatch/tasks/{id}/report-issue',
+  tags: ['dispatch'],
+  description:
+    '骑手报告配送异常（WS 推 customer-service room + OrderEvent ISSUE_REPORTED）。' +
+    '批2 工单化（D20 只增不改）：旁路建 Ticket（sourceType=DELIVERY_ISSUE, sourceId=taskId，D19 同源幂等），' +
+    '响应 data 增量字段 ticketNo（首次建单返回新工单号；重复上报返回既有工单号，原 task 字段语义不变）。',
+  request: {
+    params: z.object({ id: Id }),
+    body: { content: { 'application/json': { schema: ReportIssueRequest } } },
+  },
+  responses: {
+    200: {
+      description: '异常上报成功（data 含 ticketNo 工单号回显）',
+      content: { 'application/json': { schema: z.object({ success: z.literal(true), data: DeliveryTaskRef.extend({ ticketNo: z.string() }) }) } },
+    },
+  },
+});
+
 const generator = new OpenApiGeneratorV3(registry.definitions);
 const openapi = generator.generateDocument({
   openapi: '3.0.3',
@@ -6203,6 +6273,7 @@ const openapi = generator.generateDocument({
     { name: 'onboarding', description: '引导页内容可配置（slides 管理 + 客户端下发）' },
     { name: 'search', description: '热搜词（Redis ZSET + 运营种子词）' },
     { name: 'rate', description: '汇率（批A USD→CNY 每日汇率 + 下单快照兜底）' },
+    { name: 'ticket', description: '工单（替换品批2 工单化：reportIssue 旁路建单 + 用户查询）' },
   ],
 });
 

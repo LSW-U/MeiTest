@@ -309,6 +309,8 @@ model User {
   // 触达自动化批4（2026-10-18）：流触发记录 + 补货订阅
   outreachTriggers  OutreachTrigger[]
   subscriptions     ClientSubscription[]
+  // 替换品批2 工单化（D10 2026-10-29）：用户名下工单（reportIssue 旁路建单）
+  tickets           Ticket[]
 
   @@index([role, status])
   @@map("users")
@@ -1935,6 +1937,81 @@ model StatementImportBatch {
 
   @@index([format, createdAt])
   @@map("statement_import_batches")
+}
+
+// ============================================================================
+// 工单（替换品批2 工单化，方案v2 D10/D12/D15/D16/D19，2026-10-29）
+// reportIssue 旁路建单（sourceType=DELIVERY_ISSUE, sourceId=taskId）；Feedback 不升级（D17）
+// ============================================================================
+
+/// 工单主表（D10 独立 model，不升级 Feedback）
+model Ticket {
+  id           String      @id @default(uuid())
+  /// 工单号（D12：TK + yyyyMMdd + seq(6)，Redis INCR ticket:seq:{date} 2 天过期，Asia/Dili）
+  ticketNo     String      @unique @map("ticket_no") @db.VarChar(16)
+  /// 状态机（D18 四态：OPEN→IN_PROGRESS→RESOLVED→CLOSED；escalated 非独立态）
+  status       TicketStatus @default(OPEN)
+  /// 类型（D15：reportIssue 五枚举 + FEEDBACK 预留不使用）
+  type         TicketType
+  /// 来源（D19 幂等：DELIVERY_ISSUE + taskId）
+  sourceType   String      @map("source_type") @db.VarChar(32)
+  sourceId     String      @map("source_id") @db.VarChar(64)
+  /// 承诺时限（D2/D11：建单时按 类型覆盖 > 全局 > 默认(24/48) 算出）
+  firstRespDue DateTime?   @map("first_resp_due")
+  resolveDue   DateTime?   @map("resolve_due")
+  /// 超时升级标记（D18 批2 不置位，批3 TICKET_TIMEOUT 队列写）
+  escalated    Boolean     @default(false)
+  /// 提单用户（reportIssue 场景 = 订单 userId；用户端「我的工单」按此查询）
+  userId       String      @map("user_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user   User          @relation(fields: [userId], references: [id])
+  events TicketEvent[]
+
+  /// D19 幂等：同一来源只建一票（重复上报捕 P2002 返回既有 ticket）
+  @@unique([sourceType, sourceId])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("tickets")
+}
+
+/// 工单事件子表（D16 时间线：分页查询，Json 字段撑不住分页验收）
+model TicketEvent {
+  id           String   @id @default(uuid())
+  ticketId     String   @map("ticket_id")
+  /// 事件类型（批2 只有 CREATED；批3 加 STATUS_CHANGED/ESCALATED 等）
+  eventType    String   @map("event_type") @db.VarChar(32)
+  /// 操作人类型（D16 三值）
+  operatorType String   @map("operator_type") @db.VarChar(16)
+  /// 操作人 id（SYSTEM 时 null；CUSTOMER 时 userId；ADMIN 时操作者 id）
+  operatorId   String?  @map("operator_id")
+  /// 备注（建单时透传 reportIssue note，可空）
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_events")
+}
+
+/// 工单状态机（D18 四态 FREEZE：批2 只建 OPEN，流转在批3 admin 工作台）
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+/// 工单类型（D15：reportIssue 五枚举直接继承 + FEEDBACK 预留）
+enum TicketType {
+  CUSTOMER_UNREACHABLE
+  CUSTOMER_REJECTED
+  ADDRESS_NOT_FOUND
+  TRAFFIC_ACCIDENT
+  OTHER
+  FEEDBACK
 }
 
 // ============================================================================

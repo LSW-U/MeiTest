@@ -205,5 +205,6 @@
   "E-ORDER-010": "Alguns SKUs da whitelist são inválidos ou inativos",
   "E-OOS-009": "A política NONE do pedido não permite sugestões de substituição",
   "E-OOS-010": "O SKU de substituição sugerido não está na whitelist do pedido",
-  "E-OOS-011": "Sugestão de substituição já decidida"
+  "E-OOS-011": "Sugestão de substituição já decidida",
+  "E-TICKET-001": "Ticket não encontrado"
 }

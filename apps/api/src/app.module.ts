@@ -46,6 +46,8 @@ import { SettleModule } from './modules/settle/settle.module';
 import { SearchModule } from './modules/search/search.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
+// 替换品批2 工单化（2026-10-29）：工单模块（reportIssue 旁路建单 + 用户查询）
+import { TicketModule } from './modules/ticket/ticket.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { UserModule } from './modules/user/user.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
@@ -95,6 +97,7 @@ import { RateLimitGuard } from './shared/guards/rate-limit.guard';
     SearchModule,
     ShopModule,
     StatisticsModule,
+    TicketModule,
     UploadModule,
     UserModule,
     WarehouseModule,

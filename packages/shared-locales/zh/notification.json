@@ -90,5 +90,9 @@
   "outOfStockSuggestionExpired": {
     "title": "替换建议已过期",
     "content": "您未在时限内处理订单 {orderNo} 的替换建议，缺货商品将自动退款。"
+  },
+  "ticketCreated": {
+    "title": "问题工单已创建",
+    "content": "您的订单 {orderNo} 已创建问题工单 {ticketNo}，客服将尽快跟进处理。"
   }
 }

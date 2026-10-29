@@ -140,7 +140,7 @@ describe('DispatchService', () => {
   let service: DispatchService;
 
   beforeEach(() => {
-    service = new DispatchService(mockRealtime as never, mockEligibility as never, null);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never, null, null, null);
     Object.values(mockDb).forEach((table) => {
       if (typeof table === 'object') {
         Object.values(table).forEach((fn) => fn.mockReset?.());
@@ -515,6 +515,7 @@ describe('DispatchService', () => {
         mockEligibility as never,
         null,
         { isOwnUrl: (url: string) => url.startsWith('http://own/meimart/') } as never,
+        null,
       );
       await expect(
         withStorage.pickupTask({
@@ -533,6 +534,7 @@ describe('DispatchService', () => {
         mockEligibility as never,
         null,
         { isOwnUrl: (url: string) => url.startsWith('http://own/meimart/') } as never,
+        null,
       );
       const urls = ['http://own/meimart/tasks/evidence-1.jpg', 'http://own/meimart/tasks/evidence-2.png'];
       await withStorage.pickupTask({ riderId: 'r1', taskId: 'task-1', evidenceUrls: urls });
@@ -1320,7 +1322,7 @@ describe('DispatchService - A4 事件通知挂点', () => {
 
   beforeEach(() => {
     notify.mockReset().mockResolvedValue(undefined);
-    service = new DispatchService(mockRealtime as never, mockEligibility as never, { notify });
+    service = new DispatchService(mockRealtime as never, mockEligibility as never, { notify }, null, null);
     Object.values(mockDb).forEach((table) => {
       if (typeof table === 'object') {
         Object.values(table).forEach((fn) => fn.mockReset?.());
@@ -1464,5 +1466,105 @@ describe('DispatchService - A4 事件通知挂点', () => {
 
     expect(result.status).toBe('DELIVERED');
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+// ===== 替换品批2 工单化（2026-10-29）：reportIssue 旁路建单（D10/D19/D20）=====
+describe('DispatchService - reportIssue 旁路建工单', () => {
+  // ticketService mock（记录调用 + 可控返回）
+  const ticketSvc = { createFromDeliveryIssue: vi.fn() };
+  const notify = vi.fn().mockResolvedValue(undefined);
+  let service: DispatchService;
+
+  const setupReportIssue = () => {
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({ riderId: 'r1', status: 'PICKED_UP', orderId: 'order-1' }),
+    );
+    mockDb.order.findUnique.mockResolvedValue({ status: 'PICKED', userId: 'user-customer-1' });
+    mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'FAILED' }));
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          deliveryTask: { update: vi.fn().mockResolvedValue(buildTask({ riderId: 'r1', status: 'FAILED' })) },
+          orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        }),
+    );
+  };
+
+  beforeEach(() => {
+    ticketSvc.createFromDeliveryIssue.mockReset().mockResolvedValue({ ticketNo: 'TK20261029000001' });
+    notify.mockReset().mockResolvedValue(undefined);
+    service = new DispatchService(mockRealtime as never, mockEligibility as never, { notify }, null, ticketSvc as never);
+    Object.values(mockDb).forEach((table) => {
+      if (typeof table === 'object') {
+        Object.values(table).forEach((fn) => fn.mockReset?.());
+      }
+    });
+    mockHelpers.withTransaction.mockReset();
+    mockServer.to.mockClear();
+    mockServer.emit.mockClear();
+    mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'r1' });
+  });
+
+  it('D20：reportIssue 原有逻辑保留（task FAILED + OrderEvent + WS）+ 响应带 ticketNo', async () => {
+    setupReportIssue();
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'CUSTOMER_UNREACHABLE', note: '电话打不通' });
+    expect(result.status).toBe('FAILED');
+    expect(result.ticketNo).toBe('TK20261029000001');
+    expect(ticketSvc.createFromDeliveryIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceId: 'task-1', userId: 'user-customer-1', type: 'CUSTOMER_UNREACHABLE', note: '电话打不通' }),
+    );
+    // 原有 WS 推送保留
+    expect(mockServer.emit).toHaveBeenCalledWith('dispatch:issue-reported', expect.objectContaining({ taskId: 'task-1' }));
+  });
+
+  it('建单成功 → notify(ticketCreated, ORDER_UPDATE, data.ticketNo) 推顾客', async () => {
+    setupReportIssue();
+    await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' });
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'ticketCreated',
+        userId: 'user-customer-1',
+        type: 'ORDER_UPDATE',
+        data: expect.objectContaining({ ticketNo: 'TK20261029000001' }),
+      }),
+    );
+  });
+
+  it('建单失败不阻断 reportIssue 主流程（ticketNo undefined + task FAILED 仍返回）', async () => {
+    setupReportIssue();
+    ticketSvc.createFromDeliveryIssue.mockRejectedValue(new Error('redis down'));
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' });
+    expect(result.status).toBe('FAILED');
+    expect(result.ticketNo).toBeUndefined();
+  });
+
+  it('ticketService = null（单测默认构造）→ 跳过建单不抛错', async () => {
+    setupReportIssue();
+    const plain = new DispatchService(mockRealtime as never, mockEligibility as never, { notify }, null, null);
+    const result = await plain.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' });
+    expect(result.status).toBe('FAILED');
+    expect(result.ticketNo).toBeUndefined();
+  });
+
+  // P3-1（审查 20261030）：orderSnapshot.userId 缺失 → 跳过建单（不再传空串撞 FK）+ 不抛错
+  it('P3-1：userId 缺失 → 跳过建单 + 不调 createFromDeliveryIssue + 主流程照常', async () => {
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({ riderId: 'r1', status: 'PICKED_UP', orderId: 'order-1' }),
+    );
+    mockDb.order.findUnique.mockResolvedValue({ status: 'PICKED', userId: null });
+    mockDb.deliveryTask.update.mockResolvedValue(buildTask({ riderId: 'r1', status: 'FAILED' }));
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          deliveryTask: { update: vi.fn().mockResolvedValue(buildTask({ riderId: 'r1', status: 'FAILED' })) },
+          orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        }),
+    );
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'OTHER' });
+    expect(result.status).toBe('FAILED');
+    expect(result.ticketNo).toBeUndefined();
+    expect(ticketSvc.createFromDeliveryIssue).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalledWith(expect.objectContaining({ event: 'ticketCreated' }));
   });
 });

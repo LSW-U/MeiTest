@@ -40,6 +40,8 @@ import { DepositEligibilityService } from '../rider/deposit-eligibility.service'
 import { SCORE_MAX_DISTANCE_KM } from '../rider/deposit-eligibility.service';
 import { getScoreWeights } from './dispatch-scores.config';
 import { StorageService } from '../../shared/storage/storage.service';
+// 替换品批2 工单化（2026-10-29 D10/D20）：reportIssue 旁路建 Ticket
+import { TicketService } from '../ticket/ticket.service';
 
 /** evidenceUrls 数量上限（与契约 dispatch.ts 三 DTO max(3) 同源；服务端再校验一次防御直调） */
 export const MAX_EVIDENCE_URLS = 3;
@@ -109,6 +111,11 @@ export interface DeliveryTaskView {
    * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
    */
   estimatedMinutes?: number;
+  /**
+   * 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建单回显工单号。
+   * 仅 reportIssue 响应携带；其余端点 undefined（只增不改）。
+   */
+  ticketNo?: string;
 }
 
 /** 抢单上下文 */
@@ -277,6 +284,8 @@ export class DispatchService {
     // StorageModule 由 UploadModule 导出链提供（dispatch.module 需 imports UploadModule 或 StorageModule）；
     // 单测传 null 兼容（与 notificationEvents 同款 null-容错惯例）
     @Inject(StorageService) private readonly storage: StorageService | null,
+    // 替换品批2 工单化（2026-10-29）：reportIssue 旁路建单（TicketModule 提供）；单测传 null 兼容
+    @Inject(TicketService) private readonly ticketService: TicketService | null,
   ) {}
 
   /**
@@ -1003,7 +1012,7 @@ export class DispatchService {
     // 查 order.status 用于 OrderEvent（事务外预查，事务内不再读）
     const orderSnapshot = await db.order.findUnique({
       where: { id: task.orderId },
-      select: { status: true },
+      select: { status: true, userId: true },
     });
 
     // V2-S1 修复：双 DB 写操作包事务（deliveryTask.update + orderEvent.create）
@@ -1104,7 +1113,48 @@ export class DispatchService {
       });
     }
 
-    return this.toView(updated);
+    // 替换品批2 工单化（D10/D19/D20，2026-10-29）：旁路建 Ticket（sourceType=DELIVERY_ISSUE, sourceId=taskId）
+    // - 原有逻辑零改动（上方事务/WS/通知全保留）；建单失败不阻断 reportIssue 主流程（失败容忍，工单可在批3 补建）
+    // - D19 幂等：同源重复上报返回既有票；D11 时限在 TicketService 内解析
+    let ticketNo: string | undefined;
+    if (this.ticketService) {
+      // P3-1：userId 缺失（orderSnapshot 预查失败/历史数据）→ 跳过建单，语义比空串 FK 报错明确（审查 P3-1）
+      if (!orderSnapshot?.userId) {
+        logger.warn({
+          msg: 'TICKET_CREATE_SKIPPED_NO_USER',
+          taskId: input.taskId,
+        });
+      } else {
+        try {
+          const ticket = await this.ticketService.createFromDeliveryIssue({
+            sourceId: input.taskId,
+            userId: orderSnapshot.userId,
+            type: input.reason,
+            note: input.note,
+            operatorId: riderId,
+          });
+          ticketNo = ticket.ticketNo;
+          // 挂点：建单成功 → 通知顾客（受众 CUSTOMER，data.ticketNo）
+          if (this.notificationEvents) {
+            await this.notificationEvents.notify({
+              event: 'ticketCreated',
+              userId: orderSnapshot.userId,
+              type: 'ORDER_UPDATE',
+              data: { ticketNo: ticket.ticketNo, orderId: task.orderId },
+              params: { ticketNo: ticket.ticketNo },
+            });
+          }
+        } catch (e) {
+          logger.warn({
+            msg: 'TICKET_CREATE_FROM_ISSUE_FAILED',
+            taskId: input.taskId,
+            error: (e as Error).message,
+          });
+        }
+      }
+    }
+
+    return { ...this.toView(updated), ticketNo };
   }
 
   /**

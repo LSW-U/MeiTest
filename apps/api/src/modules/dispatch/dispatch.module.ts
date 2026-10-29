@@ -19,12 +19,14 @@ import { NotificationModule } from '../notification/notification.module';
 import { NotificationEventService } from '../notification/notification-event.service';
 // 批2（后端依赖专项 2026-10-01）：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义）
 import { StorageModule } from '../../shared/storage/storage.module';
+// 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建 Ticket
+import { TicketModule } from '../ticket/ticket.module';
 
 /** DispatchService DI token（OrderService 用此 token 注入避免循环依赖） */
 export const DISPATCH_SERVICE_TOKEN = Symbol('DISPATCH_SERVICE_TOKEN');
 
 @Module({
-  imports: [RealtimeModule, RiderModule, forwardRef(() => NotificationModule), StorageModule],
+  imports: [RealtimeModule, RiderModule, forwardRef(() => NotificationModule), StorageModule, TicketModule],
   controllers: [DispatchController, AdminDispatchController],
   providers: [
     DispatchService,

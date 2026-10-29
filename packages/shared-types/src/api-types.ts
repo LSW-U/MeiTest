@@ -16969,7 +16969,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description 骑手报告配送异常（WS 推 customer-service room + OrderEvent ISSUE_REPORTED） */
+        /** @description 骑手报告配送异常（WS 推 customer-service room + OrderEvent ISSUE_REPORTED）。批2 工单化（D20 只增不改）：旁路建 Ticket（sourceType=DELIVERY_ISSUE, sourceId=taskId，D19 同源幂等），响应 data 增量字段 ticketNo（首次建单返回新工单号；重复上报返回既有工单号，原 task 字段语义不变）。 */
         post: {
             parameters: {
                 query?: never;
@@ -16990,7 +16990,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description 异常上报成功 */
+                /** @description 异常上报成功（data 含 ticketNo 工单号回显） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -16999,7 +16999,9 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: components["schemas"]["DeliveryTask"];
+                            data: components["schemas"]["DeliveryTask"] & {
+                                ticketNo: string;
+                            };
                         };
                     };
                 };
@@ -24719,6 +24721,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/client/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 我的工单分页列表（当前用户，游标分页 items + nextCursor + hasMore） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 工单列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    ticketNo: string;
+                                    /** @enum {string} */
+                                    status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+                                    /** @enum {string} */
+                                    type: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER" | "FEEDBACK";
+                                    sourceType: string;
+                                    sourceId: string;
+                                    /** Format: date-time */
+                                    firstRespDue: string | null;
+                                    /** Format: date-time */
+                                    resolveDue: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                    /** Format: date-time */
+                                    updatedAt: string;
+                                }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/tickets/{ticketNo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 工单详情（按 ticketNo 业务键寻址；非本人 404 防枚举） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ticketNo: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 工单详情 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                /** Format: uuid */
+                                id: string;
+                                ticketNo: string;
+                                /** @enum {string} */
+                                status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+                                /** @enum {string} */
+                                type: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER" | "FEEDBACK";
+                                sourceType: string;
+                                sourceId: string;
+                                /** Format: date-time */
+                                firstRespDue: string | null;
+                                /** Format: date-time */
+                                resolveDue: string | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description E-TICKET-001 工单不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client/tickets/{ticketNo}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 工单时间线分页（D16 TicketEvent 子表，按 createdAt asc） */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ticketNo: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 时间线列表 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    /** Format: uuid */
+                                    ticketId: string;
+                                    eventType: string;
+                                    /** @enum {string} */
+                                    operatorType: "CUSTOMER" | "ADMIN" | "SYSTEM";
+                                    /** Format: uuid */
+                                    operatorId: string | null;
+                                    note: string | null;
+                                    /** Format: date-time */
+                                    createdAt: string;
+                                }[];
+                                nextCursor: string | null;
+                                hasMore: boolean;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+                /** @description E-TICKET-001 工单不存在 */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: false;
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: {
+                                    [key: string]: unknown;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -28706,6 +28929,113 @@ export interface components {
                 createdAt: string;
             }[];
             nextCursor: string | null;
+        };
+        Ticket: {
+            /** Format: uuid */
+            id: string;
+            ticketNo: string;
+            /** @enum {string} */
+            status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+            /** @enum {string} */
+            type: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER" | "FEEDBACK";
+            sourceType: string;
+            sourceId: string;
+            /** Format: date-time */
+            firstRespDue: string | null;
+            /** Format: date-time */
+            resolveDue: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TicketEvent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ticketId: string;
+            eventType: string;
+            /** @enum {string} */
+            operatorType: "CUSTOMER" | "ADMIN" | "SYSTEM";
+            /** Format: uuid */
+            operatorId: string | null;
+            note: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TicketListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    ticketNo: string;
+                    /** @enum {string} */
+                    status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+                    /** @enum {string} */
+                    type: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER" | "FEEDBACK";
+                    sourceType: string;
+                    sourceId: string;
+                    /** Format: date-time */
+                    firstRespDue: string | null;
+                    /** Format: date-time */
+                    resolveDue: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                    /** Format: date-time */
+                    updatedAt: string;
+                }[];
+                nextCursor: string | null;
+                hasMore: boolean;
+                total?: number;
+            };
+        };
+        TicketDetailResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** Format: uuid */
+                id: string;
+                ticketNo: string;
+                /** @enum {string} */
+                status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+                /** @enum {string} */
+                type: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER" | "FEEDBACK";
+                sourceType: string;
+                sourceId: string;
+                /** Format: date-time */
+                firstRespDue: string | null;
+                /** Format: date-time */
+                resolveDue: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            };
+        };
+        TicketEventListResponse: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: {
+                    /** Format: uuid */
+                    id: string;
+                    /** Format: uuid */
+                    ticketId: string;
+                    eventType: string;
+                    /** @enum {string} */
+                    operatorType: "CUSTOMER" | "ADMIN" | "SYSTEM";
+                    /** Format: uuid */
+                    operatorId: string | null;
+                    note: string | null;
+                    /** Format: date-time */
+                    createdAt: string;
+                }[];
+                nextCursor: string | null;
+                hasMore: boolean;
+                total?: number;
+            };
         };
     };
     responses: never;
