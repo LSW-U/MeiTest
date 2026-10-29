@@ -10582,6 +10582,410 @@ components:
         - resolveDue
         - createdAt
         - updatedAt
+    AdminTicket:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticketNo:
+          type: string
+        status:
+          type: string
+          enum: *a54
+        type:
+          type: string
+          enum: *a55
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+        firstRespDue:
+          type: string
+          nullable: true
+          format: date-time
+        resolveDue:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        escalated:
+          type: boolean
+        userId:
+          type: string
+          format: uuid
+      required:
+        - id
+        - ticketNo
+        - status
+        - type
+        - sourceType
+        - sourceId
+        - firstRespDue
+        - resolveDue
+        - createdAt
+        - updatedAt
+        - escalated
+        - userId
+    AdminTicketDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticketNo:
+          type: string
+        status:
+          type: string
+          enum: *a54
+        type:
+          type: string
+          enum: *a55
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+        firstRespDue:
+          type: string
+          nullable: true
+          format: date-time
+        resolveDue:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        escalated:
+          type: boolean
+        userId:
+          type: string
+          format: uuid
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              ticketId:
+                type: string
+                format: uuid
+              eventType:
+                type: string
+              operatorType:
+                type: string
+                enum: &a56
+                  - CUSTOMER
+                  - ADMIN
+                  - SYSTEM
+              operatorId:
+                type: string
+                nullable: true
+                format: uuid
+              note:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+            required:
+              - id
+              - ticketId
+              - eventType
+              - operatorType
+              - operatorId
+              - note
+              - createdAt
+      required:
+        - id
+        - ticketNo
+        - status
+        - type
+        - sourceType
+        - sourceId
+        - firstRespDue
+        - resolveDue
+        - createdAt
+        - updatedAt
+        - escalated
+        - userId
+        - events
+    AdminTicketListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  ticketNo:
+                    type: string
+                  status:
+                    type: string
+                    enum: *a54
+                  type:
+                    type: string
+                    enum: *a55
+                  sourceType:
+                    type: string
+                  sourceId:
+                    type: string
+                  firstRespDue:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  resolveDue:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  escalated:
+                    type: boolean
+                  userId:
+                    type: string
+                    format: uuid
+                required:
+                  - id
+                  - ticketNo
+                  - status
+                  - type
+                  - sourceType
+                  - sourceId
+                  - firstRespDue
+                  - resolveDue
+                  - createdAt
+                  - updatedAt
+                  - escalated
+                  - userId
+            nextCursor:
+              type: string
+              nullable: true
+            hasMore:
+              type: boolean
+            total:
+              type: integer
+          required:
+            - items
+            - nextCursor
+            - hasMore
+      required:
+        - success
+        - data
+    AdminTicketDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            ticketNo:
+              type: string
+            status:
+              type: string
+              enum: *a54
+            type:
+              type: string
+              enum: *a55
+            sourceType:
+              type: string
+            sourceId:
+              type: string
+            firstRespDue:
+              type: string
+              nullable: true
+              format: date-time
+            resolveDue:
+              type: string
+              nullable: true
+              format: date-time
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            escalated:
+              type: boolean
+            userId:
+              type: string
+              format: uuid
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  ticketId:
+                    type: string
+                    format: uuid
+                  eventType:
+                    type: string
+                  operatorType:
+                    type: string
+                    enum: *a56
+                  operatorId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  note:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - ticketId
+                  - eventType
+                  - operatorType
+                  - operatorId
+                  - note
+                  - createdAt
+          required:
+            - id
+            - ticketNo
+            - status
+            - type
+            - sourceType
+            - sourceId
+            - firstRespDue
+            - resolveDue
+            - createdAt
+            - updatedAt
+            - escalated
+            - userId
+            - events
+      required:
+        - success
+        - data
+    AdminTicketStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            ticketNo:
+              type: string
+            status:
+              type: string
+              enum: *a54
+            type:
+              type: string
+              enum: *a55
+            sourceType:
+              type: string
+            sourceId:
+              type: string
+            firstRespDue:
+              type: string
+              nullable: true
+              format: date-time
+            resolveDue:
+              type: string
+              nullable: true
+              format: date-time
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            escalated:
+              type: boolean
+            userId:
+              type: string
+              format: uuid
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  ticketId:
+                    type: string
+                    format: uuid
+                  eventType:
+                    type: string
+                  operatorType:
+                    type: string
+                    enum: *a56
+                  operatorId:
+                    type: string
+                    nullable: true
+                    format: uuid
+                  note:
+                    type: string
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - ticketId
+                  - eventType
+                  - operatorType
+                  - operatorId
+                  - note
+                  - createdAt
+          required:
+            - id
+            - ticketNo
+            - status
+            - type
+            - sourceType
+            - sourceId
+            - firstRespDue
+            - resolveDue
+            - createdAt
+            - updatedAt
+            - escalated
+            - userId
+            - events
+      required:
+        - success
+        - data
     TicketEvent:
       type: object
       properties:
@@ -10595,10 +10999,7 @@ components:
           type: string
         operatorType:
           type: string
-          enum: &a56
-            - CUSTOMER
-            - ADMIN
-            - SYSTEM
+          enum: *a56
         operatorId:
           type: string
           nullable: true
@@ -45465,6 +45866,445 @@ paths:
                   - data
         "404":
           description: E-TICKET-001 工单不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/tickets:
+    get:
+      tags:
+        - ticket
+      description: admin 工单分页列表（游标 items + nextCursor + hasMore；status/escalated
+        筛选）。D22 独立客服角色守卫（CUSTOMER_SERVICE + SUPER_ADMIN）；P2-2：不依赖封号状态，封号用户工单仍可查。
+      parameters:
+        - schema:
+            type: string
+            enum: *a54
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: escalated
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: 工单列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            ticketNo:
+                              type: string
+                            status:
+                              type: string
+                              enum: *a54
+                            type:
+                              type: string
+                              enum: *a55
+                            sourceType:
+                              type: string
+                            sourceId:
+                              type: string
+                            firstRespDue:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            resolveDue:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                            escalated:
+                              type: boolean
+                            userId:
+                              type: string
+                              format: uuid
+                          required:
+                            - id
+                            - ticketNo
+                            - status
+                            - type
+                            - sourceType
+                            - sourceId
+                            - firstRespDue
+                            - resolveDue
+                            - createdAt
+                            - updatedAt
+                            - escalated
+                            - userId
+                      nextCursor:
+                        type: string
+                        nullable: true
+                      hasMore:
+                        type: boolean
+                      total:
+                        type: integer
+                    required:
+                      - items
+                      - nextCursor
+                      - hasMore
+                required:
+                  - success
+                  - data
+  /api/v1/admin/tickets/{ticketNo}:
+    get:
+      tags:
+        - ticket
+      description: admin 工单详情（含 escalated/userId 内部字段；无归属过滤）
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: ticketNo
+          in: path
+      responses:
+        "200":
+          description: 工单详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      ticketNo:
+                        type: string
+                      status:
+                        type: string
+                        enum: *a54
+                      type:
+                        type: string
+                        enum: *a55
+                      sourceType:
+                        type: string
+                      sourceId:
+                        type: string
+                      firstRespDue:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      resolveDue:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      escalated:
+                        type: boolean
+                      userId:
+                        type: string
+                        format: uuid
+                      events:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            ticketId:
+                              type: string
+                              format: uuid
+                            eventType:
+                              type: string
+                            operatorType:
+                              type: string
+                              enum: *a56
+                            operatorId:
+                              type: string
+                              nullable: true
+                              format: uuid
+                            note:
+                              type: string
+                              nullable: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - ticketId
+                            - eventType
+                            - operatorType
+                            - operatorId
+                            - note
+                            - createdAt
+                    required:
+                      - id
+                      - ticketNo
+                      - status
+                      - type
+                      - sourceType
+                      - sourceId
+                      - firstRespDue
+                      - resolveDue
+                      - createdAt
+                      - updatedAt
+                      - escalated
+                      - userId
+                      - events
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-TICKET-001 工单不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+  /api/v1/admin/tickets/{ticketNo}/status:
+    post:
+      tags:
+        - ticket
+      description: admin 工单状态流转（D18 四态线性 OPEN→IN_PROGRESS→RESOLVED→CLOSED；写
+        TicketEvent operatorType=ADMIN）。非法流转 409 E-TICKET-002 / 同态 400
+        E-TICKET-003。
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: ticketNo
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: *a54
+                note:
+                  type: string
+                  maxLength: 500
+              required:
+                - action
+      responses:
+        "200":
+          description: 流转后工单
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      ticketNo:
+                        type: string
+                      status:
+                        type: string
+                        enum: *a54
+                      type:
+                        type: string
+                        enum: *a55
+                      sourceType:
+                        type: string
+                      sourceId:
+                        type: string
+                      firstRespDue:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      resolveDue:
+                        type: string
+                        nullable: true
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      escalated:
+                        type: boolean
+                      userId:
+                        type: string
+                        format: uuid
+                      events:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            ticketId:
+                              type: string
+                              format: uuid
+                            eventType:
+                              type: string
+                            operatorType:
+                              type: string
+                              enum: *a56
+                            operatorId:
+                              type: string
+                              nullable: true
+                              format: uuid
+                            note:
+                              type: string
+                              nullable: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                          required:
+                            - id
+                            - ticketId
+                            - eventType
+                            - operatorType
+                            - operatorId
+                            - note
+                            - createdAt
+                    required:
+                      - id
+                      - ticketNo
+                      - status
+                      - type
+                      - sourceType
+                      - sourceId
+                      - firstRespDue
+                      - resolveDue
+                      - createdAt
+                      - updatedAt
+                      - escalated
+                      - userId
+                      - events
+                required:
+                  - success
+                  - data
+        "404":
+          description: E-TICKET-001 工单不存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum:
+                      - false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        pattern: ^E-[A-Z]+-\d{3}$|^E-HTTP-\d{3}$
+                      message:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties:
+                          nullable: true
+                    required:
+                      - code
+                      - message
+                required:
+                  - success
+                  - error
+        "409":
+          description: E-TICKET-002 非法状态流转
           content:
             application/json:
               schema:

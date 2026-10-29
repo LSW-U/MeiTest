@@ -38,3 +38,9 @@ export const COLLABORATIVE_QUEUE = 'collaborative';
  * 每 5min 扫 PENDING 建议超时（oos.suggestion_timeout_hours 默认 24h）→ 自动 DECLINED + 退款链 + 推送
  */
 export const SUGGESTION_TIMEOUT_QUEUE = 'suggestion-timeout';
+/**
+ * 工单超时升级扫描队列（替换品批3，2026-10-30 D18）
+ * 每 5min 扫超时未达标工单（firstRespDue/resolveDue 已过且非 RESOLVED/CLOSED）
+ * → escalated=true + WS 推 customer-service room + PUSH
+ */
+export const TICKET_TIMEOUT_QUEUE = 'ticket-timeout';

@@ -53,7 +53,8 @@
     "groupSystem": "",
     "onboardingSlides": "Slide Onboarding",
     "groupSupport": "Layanan Pelanggan",
-    "support": "Pusat Layanan"
+    "support": "Pusat Layanan",
+    "tickets": "Tiket"
   },
   "dashboard": {
     "title": "Dasbor Platform",

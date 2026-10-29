@@ -206,5 +206,7 @@
   "E-OOS-009": "[TET] Order policy NONE does not allow replacement suggestions",
   "E-OOS-010": "[TET] Suggested replacement SKU is not in the order whitelist",
   "E-OOS-011": "[TET] Replacement suggestion already decided",
-  "E-TICKET-001": "Tiket la hetan"
+  "E-TICKET-001": "Tiket la hetan",
+  "E-TICKET-002": "Mudansa estatus tiket la permite",
+  "E-TICKET-003": "Tiket tiha ona iha estatus ida nee"
 }

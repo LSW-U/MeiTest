@@ -94,5 +94,9 @@
   "ticketCreated": {
     "title": "[TET] Issue Ticket Created",
     "content": "[TET] An issue ticket {ticketNo} has been created for your order {orderNo}. Our support team will follow up."
+  },
+  "ticketEscalated": {
+    "title": "Tiket Ea Aan Liur",
+    "content": "Ita nian tiket {ticketNo} liur tempu prometida ona no eskala ona. Ekipa apoiu sei fahe prioritidade ba ida nee."
   }
 }

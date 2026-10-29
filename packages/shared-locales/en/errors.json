@@ -206,5 +206,7 @@
   "E-OOS-009": "Order policy NONE does not allow replacement suggestions",
   "E-OOS-010": "Suggested replacement SKU is not in the order whitelist",
   "E-OOS-011": "Replacement suggestion already decided",
-  "E-TICKET-001": "Ticket not found"
+  "E-TICKET-001": "Ticket not found",
+  "E-TICKET-002": "Ticket status transition is not allowed",
+  "E-TICKET-003": "Ticket is already in this status"
 }

@@ -94,5 +94,9 @@
   "ticketCreated": {
     "title": "问题工单已创建",
     "content": "您的订单 {orderNo} 已创建问题工单 {ticketNo}，客服将尽快跟进处理。"
+  },
+  "ticketEscalated": {
+    "title": "工单已升级",
+    "content": "您的工单 {ticketNo} 已超出处理时限并被升级，客服将优先跟进处理。"
   }
 }

@@ -19,9 +19,12 @@ const { mockDb, mockRedis } = vi.hoisted(() => ({
       findUnique: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     ticketEvent: {
       findMany: vi.fn(),
+      create: vi.fn(),
     },
     systemConfig: {
       findUnique: vi.fn(),
@@ -258,5 +261,127 @@ describe('TicketService - 用户查询', () => {
     await expect(
       svc.listTicketEvents({ ticketNo: 'TK20261029000001', userId: 'user-1' }),
     ).rejects.toMatchObject({ response: { code: 'E-TICKET-001' } });
+  });
+});
+
+// ============================================================================
+// 批3（2026-10-30 D18/D22）：admin 查询 / 状态流转 / 超时升级
+// ============================================================================
+
+describe('TicketService - admin（批3 D22）', () => {
+  let svc: TicketService;
+  beforeEach(() => {
+    svc = new TicketService({ nextTicketNo: vi.fn() } as never);
+    mockDb.ticket.findUnique.mockReset();
+    mockDb.ticket.findMany.mockReset();
+    mockDb.ticket.update.mockReset();
+    mockDb.ticketEvent.create.mockReset();
+  });
+
+  it('admin 列表：游标分页 + escalated 筛选透传', async () => {
+    mockDb.ticket.findMany.mockResolvedValue([buildTicket({ escalated: true })]);
+    const r = await svc.listAdminTickets({ escalated: true, limit: 1 });
+    expect(mockDb.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { escalated: true } }),
+    );
+    expect(r.items[0]).toMatchObject({ escalated: true, userId: 'user-1', ticketNo: 'TK20261029000001' });
+  });
+
+  it('admin 详情：不存在 → 404；存在 → 返回含 escalated/userId/events（P2-1 内联时间线）', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue(null);
+    await expect(svc.getAdminTicketByNo('TK00000000000000')).rejects.toMatchObject({
+      response: { code: 'E-TICKET-001' },
+    });
+    mockDb.ticket.findUnique.mockResolvedValue({
+      ...buildTicket({ escalated: true }),
+      events: [
+        { id: 'ev-1', ticketId: 'ticket-1', eventType: 'CREATED', operatorType: 'SYSTEM', operatorId: null, note: null, createdAt: new Date('2026-10-29T00:00:00Z') },
+      ],
+    });
+    const t = await svc.getAdminTicketByNo('TK20261029000001');
+    expect(t.escalated).toBe(true);
+    expect(t.events).toHaveLength(1);
+    expect(t.events[0]!.eventType).toBe('CREATED');
+  });
+
+  it('状态流转合法：OPEN→IN_PROGRESS（写 TicketEvent ADMIN）', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue(buildTicket({ status: 'OPEN' }));
+    mockDb.ticket.update.mockResolvedValue(buildTicket({ status: 'IN_PROGRESS' }));
+    const t = await svc.updateTicketStatus({ ticketNo: 'TK20261029000001', action: 'IN_PROGRESS', operatorId: 'admin-1' });
+    expect(t.status).toBe('IN_PROGRESS');
+    expect(mockDb.ticketEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'STATUS_CHANGED', operatorType: 'ADMIN', operatorId: 'admin-1' }),
+      }),
+    );
+  });
+
+  it('状态流转非法：OPEN→RESOLVED 跳态 → 409 E-TICKET-002', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue(buildTicket({ status: 'OPEN' }));
+    await expect(
+      svc.updateTicketStatus({ ticketNo: 'TK20261029000001', action: 'RESOLVED', operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({ response: { code: 'E-TICKET-002' } });
+  });
+
+  it('状态流转非法：CLOSED 终态再动 → 409 E-TICKET-002', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue(buildTicket({ status: 'CLOSED' }));
+    await expect(
+      svc.updateTicketStatus({ ticketNo: 'TK20261029000001', action: 'IN_PROGRESS', operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({ response: { code: 'E-TICKET-002' } });
+  });
+
+  it('状态流转同态 → 400 E-TICKET-003', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue(buildTicket({ status: 'IN_PROGRESS' }));
+    await expect(
+      svc.updateTicketStatus({ ticketNo: 'TK20261029000001', action: 'IN_PROGRESS', operatorId: 'admin-1' }),
+    ).rejects.toMatchObject({ response: { code: 'E-TICKET-003' } });
+  });
+
+  it('escalateTicket：首次置位（updateMany count=1 + ESCALATED SYSTEM 事件）', async () => {
+    mockDb.ticket.updateMany.mockResolvedValue({ count: 1 });
+    const first = await svc.escalateTicket('ticket-1');
+    expect(first).toBe(true);
+    // P3-1：原子幂等——updateMany where 带 escalated:false 条件，非先查后写
+    expect(mockDb.ticket.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'ticket-1', escalated: false },
+        data: { escalated: true },
+      }),
+    );
+    expect(mockDb.ticketEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventType: 'ESCALATED', operatorType: 'SYSTEM' }),
+      }),
+    );
+  });
+
+  it('escalateTicket 幂等：count=0（已被并发实例置位/不存在）→ false 不写事件', async () => {
+    mockDb.ticket.updateMany.mockResolvedValue({ count: 0 });
+    const first = await svc.escalateTicket('ticket-1');
+    expect(first).toBe(false);
+    expect(mockDb.ticketEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('admin 详情：内联时间线 events 全量 asc（P2-1）', async () => {
+    mockDb.ticket.findUnique.mockResolvedValue({
+      ...buildTicket({ escalated: true }),
+      events: [
+        { id: 'ev-1', ticketId: 'ticket-1', eventType: 'CREATED', operatorType: 'SYSTEM', operatorId: null, note: null, createdAt: new Date('2026-10-29T00:00:00Z') },
+        { id: 'ev-2', ticketId: 'ticket-1', eventType: 'STATUS_CHANGED', operatorType: 'ADMIN', operatorId: 'admin-1', note: 'STATUS: OPEN -> IN_PROGRESS', createdAt: new Date('2026-10-29T01:00:00Z') },
+      ],
+    });
+    const t = await svc.getAdminTicketByNo('TK20261029000001');
+    // include events asc 断言（一次取数免分页）
+    expect(mockDb.ticket.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { ticketNo: 'TK20261029000001' },
+        include: { events: { orderBy: { createdAt: 'asc' } } },
+      }),
+    );
+    expect(t.escalated).toBe(true);
+    expect(t.events).toHaveLength(2);
+    expect(t.events[0]!.eventType).toBe('CREATED');
+    expect(t.events[1]!.operatorType).toBe('ADMIN');
+    expect(t.events[1]!.createdAt).toBe('2026-10-29T01:00:00.000Z');
   });
 });

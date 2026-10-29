@@ -94,5 +94,9 @@
   "ticketCreated": {
     "title": "Ticket de Problema Criado",
     "content": "Um ticket {ticketNo} foi criado para o seu pedido {orderNo}. A equipa de apoio entrará em contacto."
+  },
+  "ticketEscalated": {
+    "title": "Ticket Escalado",
+    "content": "O seu ticket {ticketNo} excedeu o prazo e foi escalado. A equipa de apoio irá priorizá-lo."
   }
 }

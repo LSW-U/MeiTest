@@ -415,6 +415,14 @@ import {
   TicketListResponse,
   TicketDetailResponse,
   TicketEventListResponse,
+  // 替换品批3 admin 工单工作台（2026-10-30 D22）
+  AdminTicket,
+  AdminTicketDetail,
+  AdminListTicketsQuery,
+  AdminUpdateTicketStatusRequest,
+  AdminTicketListResponse,
+  AdminTicketDetailResponse,
+  AdminTicketStatusResponse,
   // common
   ErrorResponse,
   Id,
@@ -6173,6 +6181,11 @@ registry.registerPath({
 // ============================================================================
 
 registry.register('Ticket', Ticket);
+registry.register('AdminTicket', AdminTicket);
+registry.register('AdminTicketDetail', AdminTicketDetail);
+registry.register('AdminTicketListResponse', AdminTicketListResponse);
+registry.register('AdminTicketDetailResponse', AdminTicketDetailResponse);
+registry.register('AdminTicketStatusResponse', AdminTicketStatusResponse);
 registry.register('TicketEvent', TicketEvent);
 registry.register('TicketListResponse', TicketListResponse);
 registry.register('TicketDetailResponse', TicketDetailResponse);
@@ -6208,6 +6221,50 @@ registry.registerPath({
   responses: {
     200: { description: '时间线列表', content: { 'application/json': { schema: TicketEventListResponse } } },
     404: { description: 'E-TICKET-001 工单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+// ---- 批3 admin 工单工作台（D22：客服角色读写，CUSTOMER_SERVICE + SUPER_ADMIN）----
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/tickets',
+  tags: ['ticket'],
+  description:
+    'admin 工单分页列表（游标 items + nextCursor + hasMore；status/escalated 筛选）。' +
+    'D22 独立客服角色守卫（CUSTOMER_SERVICE + SUPER_ADMIN）；P2-2：不依赖封号状态，封号用户工单仍可查。',
+  request: { query: AdminListTicketsQuery },
+  responses: {
+    200: { description: '工单列表', content: { 'application/json': { schema: AdminTicketListResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/admin/tickets/{ticketNo}',
+  tags: ['ticket'],
+  description: 'admin 工单详情（含 escalated/userId 内部字段；无归属过滤）',
+  request: { params: z.object({ ticketNo: z.string() }) },
+  responses: {
+    200: { description: '工单详情', content: { 'application/json': { schema: AdminTicketDetailResponse } } },
+    404: { description: 'E-TICKET-001 工单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+  },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/admin/tickets/{ticketNo}/status',
+  tags: ['ticket'],
+  description:
+    'admin 工单状态流转（D18 四态线性 OPEN→IN_PROGRESS→RESOLVED→CLOSED；写 TicketEvent operatorType=ADMIN）。' +
+    '非法流转 409 E-TICKET-002 / 同态 400 E-TICKET-003。',
+  request: {
+    params: z.object({ ticketNo: z.string() }),
+    body: { content: { 'application/json': { schema: AdminUpdateTicketStatusRequest } } },
+  },
+  responses: {
+    200: { description: '流转后工单', content: { 'application/json': { schema: AdminTicketStatusResponse } } },
+    404: { description: 'E-TICKET-001 工单不存在', content: { 'application/json': { schema: ErrorResponse } } },
+    409: { description: 'E-TICKET-002 非法状态流转', content: { 'application/json': { schema: ErrorResponse } } },
   },
 });
 

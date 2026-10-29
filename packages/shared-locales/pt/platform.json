@@ -53,7 +53,8 @@
     "groupSystem": "",
     "onboardingSlides": "Slides de Onboarding",
     "groupSupport": "Atendimento ao Cliente",
-    "support": "Central de Atendimento"
+    "support": "Central de Atendimento",
+    "tickets": "Tickets"
   },
   "dashboard": {
     "title": "Painel da Plataforma",

@@ -70,3 +70,49 @@ export const TicketDetailResponse = z.object({
 
 /** 时间线分页响应（D16） */
 export const TicketEventListResponse = PaginatedResponse(TicketEvent);
+
+// ============================================================================
+// 批3（2026-10-30 D18/D22）：admin 工单工作台
+// ============================================================================
+
+/** admin 工单项（用户视角字段 + escalated/userId 内部字段） */
+export const AdminTicket = Ticket.extend({
+  /** 超时升级标记（D18，admin 筛选/高亮） */
+  escalated: z.boolean(),
+  /** 提单用户（admin 反查） */
+  userId: Id,
+});
+
+/**
+ * admin 工单详情（P2-1 批3 审查修复 2026-10-30）：详情专有内联时间线全量 asc
+ * （detail Dialog 一次取数免分页；量级 = 工单生命周期事件，无分页需求）
+ */
+export const AdminTicketDetail = AdminTicket.extend({
+  events: z.array(TicketEvent),
+});
+
+/** admin 列表查询（游标分页 + 状态/escalated 筛选） */
+export const AdminListTicketsQuery = z.object({
+  status: TicketStatus.optional(),
+  escalated: z.enum(['true', 'false']).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+/** admin 状态流转请求（D18 四态线性：action 即目标状态） */
+export const AdminUpdateTicketStatusRequest = z.object({
+  action: TicketStatus,
+  note: z.string().max(500).optional(),
+});
+
+/** admin 列表响应 */
+export const AdminTicketListResponse = PaginatedResponse(AdminTicket);
+
+/** admin 详情响应（含内联时间线 events，P2-1） */
+export const AdminTicketDetailResponse = z.object({
+  success: z.literal(true),
+  data: AdminTicketDetail,
+});
+
+/** admin 状态流转响应 */
+export const AdminTicketStatusResponse = AdminTicketDetailResponse;

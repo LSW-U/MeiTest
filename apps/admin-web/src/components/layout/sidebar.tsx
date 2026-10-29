@@ -123,6 +123,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: RotateCcw,
     perspectives: ['platform', 'merchant', 'support'],
   },
+  // 工单管理（替换品批3 D22，20261030）：客服角色守卫，support + platform 可见
+  {
+    labelKey: 'menu.tickets',
+    href: '/tickets',
+    icon: LifeBuoy,
+    perspectives: ['platform', 'support'],
+  },
   {
     labelKey: 'menu.reviews',
     href: '/reviews',
@@ -286,7 +293,7 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   { labelKey: 'menu.groupOverview', groupKey: 'groupOverview', icon: LayoutGrid, hrefs: ['/dashboard', '/statistics'] },
   { labelKey: 'menu.groupCatalog', groupKey: 'groupCatalog', icon: Store, hrefs: ['/products', '/categories', '/banners', '/onboarding-slides', '/hot-search'] },
-  { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/reviews', '/payments'] },
+  { labelKey: 'menu.groupTrade', groupKey: 'groupTrade', icon: Tags, hrefs: ['/orders', '/refunds', '/tickets', '/reviews', '/payments'] },
   // 履约组（20261020 二级分栏）：仓储 / 骑手 / 配送 三小节
   {
     labelKey: 'menu.groupFulfillment',

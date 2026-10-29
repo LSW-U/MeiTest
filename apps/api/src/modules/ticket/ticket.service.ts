@@ -10,7 +10,13 @@
  *
  * 批2 边界：只建 OPEN 态；流转/升级/审计视角在批3 admin 工作台。
  */
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma, TicketStatus, TicketType } from '../../prisma/client';
 import { db } from '../../shared/db';
 import { TicketNoService } from './ticket-no.service';
@@ -28,6 +34,11 @@ export const TICKET_RESOLVE_TYPE_KEY_PREFIX = 'ticket.resolve_hours.';
 /** reportIssue 旁路建单来源 */
 export const TICKET_SOURCE_DELIVERY_ISSUE = 'DELIVERY_ISSUE';
 
+/** 时间线事件类型（批2 只有 CREATED；批3 加 STATUS_CHANGED/ESCALATED） */
+export const TICKET_EVENT_CREATED = 'CREATED';
+export const TICKET_EVENT_STATUS_CHANGED = 'STATUS_CHANGED';
+export const TICKET_EVENT_ESCALATED = 'ESCALATED';
+
 /** 工单用户视角视图 */
 export interface TicketView {
   id: string;
@@ -41,6 +52,20 @@ export interface TicketView {
   resolveDue: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** 工单 admin 视角视图（用户视图 + escalated + userId） */
+export interface AdminTicketView extends TicketView {
+  /** 超时升级标记（D18，admin 筛选/高亮） */
+  escalated: boolean;
+  /** 提单用户（admin 反查） */
+  userId: string;
+}
+
+/** 工单 admin 详情视图（详情专有：内联时间线全量 asc，免分页——P2-1 修复 2026-10-30） */
+export interface AdminTicketDetailView extends AdminTicketView {
+  /** 时间线（createdAt asc 全量；详情一次取数，量级 = 工单生命周期事件，无分页需求） */
+  events: TicketEventView[];
 }
 
 /** 工单时间线事件视图 */
@@ -230,6 +255,142 @@ export class TicketService {
 
   // === private ===
 
+  // === admin（批3 D22：客服角色读写，P2-2 落点——不依赖封号状态） ===
+
+  /**
+   * admin 工单分页列表（游标，状态/escalated 筛选）
+   *
+   * P2-2：本方法只查 Ticket 表，不做 User.status 校验——被风控封号的用户工单
+   * 仍对客服可见可处理（封号不切断客服入口）。
+   */
+  async listAdminTickets(options: {
+    status?: TicketStatus;
+    escalated?: boolean;
+    cursor?: string;
+    limit?: number;
+  }): Promise<{ items: AdminTicketView[]; nextCursor: string | null; hasMore: boolean }> {
+    const limit = Math.min(options.limit ?? 20, 100);
+    const tickets = await db.ticket.findMany({
+      where: {
+        ...(options.status ? { status: options.status } : {}),
+        ...(options.escalated !== undefined ? { escalated: options.escalated } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+    });
+    const hasMore = tickets.length > limit;
+    const items = hasMore ? tickets.slice(0, limit) : tickets;
+    return {
+      items: items.map((t) => this.toAdminView(t)),
+      nextCursor: hasMore ? items[items.length - 1]!.id : null,
+      hasMore,
+    };
+  }
+
+  /**
+   * admin 工单详情（按 ticketNo 寻址；不存在 404，无归属过滤）
+   *
+   * P2-1（批3 审查修复）：内联查询时间线全量 asc 一次返回（AdminTicketDetailView.events），
+   * admin 详情 Dialog 免分页一次取数；无 admin events 独立端点（裁决方案①）。
+   */
+  async getAdminTicketByNo(ticketNo: string): Promise<AdminTicketDetailView> {
+    const ticket = await db.ticket.findUnique({
+      where: { ticketNo },
+      include: {
+        events: {
+          orderBy: { createdAt: 'asc' as const },
+        },
+      },
+    });
+    if (!ticket) {
+      throw new NotFoundException({ code: 'E-TICKET-001', message: 'Ticket not found' });
+    }
+    return {
+      ...this.toAdminView(ticket),
+      events: ticket.events.map((ev) => this.toEventView(ev)),
+    };
+  }
+
+  /**
+   * admin 状态流转（D18 四态线性：OPEN→IN_PROGRESS→RESOLVED→CLOSED）
+   *
+   * - 非法流转（跳态/回退/终态再动）→ 409 E-TICKET-002
+   * - 目标状态与当前相同 → 400 E-TICKET-003
+   * - 写 TicketEvent(eventType=STATUS_CHANGED, operatorType=ADMIN, operatorId=操作者)
+   */
+  async updateTicketStatus(params: {
+    ticketNo: string;
+    action: TicketStatus;
+    operatorId: string;
+    note?: string;
+  }): Promise<AdminTicketView> {
+    const ticket = await db.ticket.findUnique({ where: { ticketNo: params.ticketNo } });
+    if (!ticket) {
+      throw new NotFoundException({ code: 'E-TICKET-001', message: 'Ticket not found' });
+    }
+    if (ticket.status === params.action) {
+      throw new BadRequestException({
+        code: 'E-TICKET-003',
+        message: `Ticket is already ${params.action}`,
+      });
+    }
+    const allowed: Record<TicketStatus, TicketStatus[]> = {
+      OPEN: ['IN_PROGRESS'],
+      IN_PROGRESS: ['RESOLVED'],
+      RESOLVED: ['CLOSED'],
+      CLOSED: [],
+    };
+    if (!allowed[ticket.status].includes(params.action)) {
+      throw new ConflictException({
+        code: 'E-TICKET-002',
+        message: `Invalid transition ${ticket.status} -> ${params.action}`,
+      });
+    }
+    const updated = await db.ticket.update({
+      where: { id: ticket.id },
+      data: { status: params.action },
+    });
+    await db.ticketEvent.create({
+      data: {
+        ticketId: ticket.id,
+        eventType: TICKET_EVENT_STATUS_CHANGED,
+        operatorType: 'ADMIN',
+        operatorId: params.operatorId,
+        note: params.note ?? `STATUS: ${ticket.status} -> ${params.action}`,
+      },
+    });
+    return this.toAdminView(updated);
+  }
+
+  /**
+   * 超时升级置位（D18，TICKET_TIMEOUT processor 调用）
+   *
+   * - 原子幂等（P3-1 批3 审查修复）：update 加 `escalated: false` 条件按 count 判定首次，
+   *   消除多实例并发双写 ESCALATED 事件的读-写竞态（单实例 concurrency=1 也不够，PM2/k8s 多实例同扫）
+   * - 置位 + TicketEvent(ESCALATED, SYSTEM)；升级不改处理态（D18：避免状态机分叉）
+   *
+   * @returns 是否本次实际置位（true = 首次升级）
+   */
+  async escalateTicket(ticketId: string): Promise<boolean> {
+    const updated = await db.ticket.updateMany({
+      where: { id: ticketId, escalated: false },
+      data: { escalated: true },
+    });
+    // count=0：票不存在或已被并发实例置位 → 幂等跳过
+    if (updated.count === 0) return false;
+    await db.ticketEvent.create({
+      data: {
+        ticketId,
+        eventType: TICKET_EVENT_ESCALATED,
+        operatorType: 'SYSTEM',
+        operatorId: null,
+        note: 'ESCALATED: deadline exceeded',
+      },
+    });
+    return true;
+  }
+
   private toView(t: {
     id: string;
     ticketNo: string;
@@ -253,6 +414,28 @@ export class TicketService {
       resolveDue: t.resolveDue?.toISOString() ?? null,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
+    };
+  }
+
+  /** admin 视图 = 用户视图 + escalated/userId（内部 SLA 标记只对 admin 透出） */
+  private toAdminView(t: {
+    id: string;
+    ticketNo: string;
+    status: TicketStatus;
+    type: TicketType;
+    sourceType: string;
+    sourceId: string;
+    firstRespDue: Date | null;
+    resolveDue: Date | null;
+    escalated: boolean;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): AdminTicketView {
+    return {
+      ...this.toView(t),
+      escalated: t.escalated,
+      userId: t.userId,
     };
   }
 

@@ -206,5 +206,7 @@
   "E-OOS-009": "A política NONE do pedido não permite sugestões de substituição",
   "E-OOS-010": "O SKU de substituição sugerido não está na whitelist do pedido",
   "E-OOS-011": "Sugestão de substituição já decidida",
-  "E-TICKET-001": "Ticket não encontrado"
+  "E-TICKET-001": "Ticket não encontrado",
+  "E-TICKET-002": "Transição de estado do ticket não permitida",
+  "E-TICKET-003": "O ticket já se encontra neste estado"
 }

@@ -53,7 +53,8 @@
     "groupSystem": "System",
     "onboardingSlides": "Onboarding Slides",
     "groupSupport": "Customer Service",
-    "support": "Support Workbench"
+    "support": "Support Workbench",
+    "tickets": "Tickets"
   },
   "dashboard": {
     "title": "Platform Dashboard",

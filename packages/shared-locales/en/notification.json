@@ -94,5 +94,9 @@
   "ticketCreated": {
     "title": "Issue Ticket Created",
     "content": "An issue ticket {ticketNo} has been created for your order {orderNo}. Our support team will follow up."
+  },
+  "ticketEscalated": {
+    "title": "Ticket Escalated",
+    "content": "Your ticket {ticketNo} has exceeded its response deadline and was escalated. Our support team will prioritize it."
   }
 }

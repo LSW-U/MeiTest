@@ -45,6 +45,8 @@ export const NOTIFICATION_EVENT_KEYS = [
   'outOfStockSuggestionExpired',
   // 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建单 → 通知顾客（data.ticketNo）
   'ticketCreated',
+  // 替换品批3（2026-10-30 D21）：工单超时升级 → 通知顾客（data.ticketNo）
+  'ticketEscalated',
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_KEYS)[number];
@@ -82,4 +84,6 @@ export const EVENT_TEMPLATES: Record<NotificationEventType, { titleKey: string; 
   outOfStockSuggestionExpired: { titleKey: 'outOfStockSuggestionExpired.title', contentKey: 'outOfStockSuggestionExpired.content' },
   // 替换品批2 工单化：异常上报建工单（受众 CUSTOMER、ORDER_UPDATE，data.ticketNo + data.orderNo）
   ticketCreated: { titleKey: 'ticketCreated.title', contentKey: 'ticketCreated.content' },
+  // 替换品批3 超时升级：工单超时未达标升级（受众 CUSTOMER、ORDER_UPDATE，data.ticketNo）
+  ticketEscalated: { titleKey: 'ticketEscalated.title', contentKey: 'ticketEscalated.content' },
 };
