@@ -9,6 +9,7 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -16,6 +17,16 @@ import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ErrorState } from '@/components/common/error-state';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useRefundDetail, useRetriggerReturnTask, type RefundItem } from '@/hooks/api/use-refunds';
@@ -51,8 +62,10 @@ export default function RefundDetailPage() {
   const retrigger = useRetriggerReturnTask();
   const { toast } = useToast();
 
+  // C4：替换裸 window.confirm，改用 shadcn AlertDialog（与 banners/settlements 等页删除确认一致）
+  const [retriggerOpen, setRetriggerOpen] = useState(false);
+
   const handleRetrigger = () => {
-    if (!window.confirm(t('admin.refunds.retriggerConfirm'))) return;
     retrigger.mutate(id, {
       onSuccess: () => {
         toast({ title: t('admin.refunds.retriggerSuccess') });
@@ -218,7 +231,7 @@ export default function RefundDetailPage() {
           <p className="text-sm text-muted-foreground">{t('admin.refunds.retriggerDesc')}</p>
           <Button
             variant="outline"
-            onClick={handleRetrigger}
+            onClick={() => setRetriggerOpen(true)}
             disabled={retrigger.isPending}
           >
             {retrigger.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -226,6 +239,24 @@ export default function RefundDetailPage() {
           </Button>
         </section>
       )}
+
+      {/* C4：重触发确认弹层（替代 window.confirm，文案沿用 admin.refunds.retriggerConfirm） */}
+      <AlertDialog open={retriggerOpen} onOpenChange={setRetriggerOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.refunds.retriggerTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.refunds.retriggerConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRetrigger}>
+              {t('confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* lightbox Dialog 已收口到 EvidenceImageGroup 内部（批1 抽取） */}
     </div>

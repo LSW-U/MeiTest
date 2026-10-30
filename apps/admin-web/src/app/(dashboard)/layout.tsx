@@ -4,7 +4,7 @@
  * 布局结构（经典后台）：
  *   - Header 横跨顶部全宽（MeiMart logo + 视角/语言切换 + 铃铛）
  *   - 下方一行：Sidebar 左侧 + main 内容右侧
- * - PerspectiveGuard 不套这一层（用户可能在 5 视角间切换）
+ * - 视角权限守卫不在此层（用户可能在 5 视角间切换）
  *   由具体页面（如 /products）的子组件判断视角权限
  * - 使用 flex h-screen overflow-hidden 防止整页滚动
  *
