@@ -657,8 +657,11 @@ model Order {
   @@index([warehouseId, status])
   // 保证金批A T5-c（2026-09-10）：预约单大厅可见性查询用（scheduledFor<=now 过滤）
   @@index([scheduledFor, status])
-  // DBA 批次1-4（2026-08-27）：移除 @@index([status])——被 (status, created_at DESC) 复合索引最左前缀覆盖，冗余
-  // DBA 批次1-4：移除 @@index([orderNo])——orderNo 已有 @unique 自动建 UQ B-tree，普通索引冗余
+  // DBA 批次1-4（2026-08-27）登记：移除冗余 @@index([status])（被下条复合索引最左前缀覆盖）与
+  //   @@index([orderNo])（@unique 已自动建 UQ B-tree）。
+  // 技术债收尾批2（D3 2026-10-30）：(status, created_at DESC) 复合索引（migration 20260628010000，
+  //   CONCURRENTLY 建）已回填下方 @@index 声明，schema 与 DB 实况对齐，防后续会话误判为漏配。
+  @@index([status, createdAt(sort: Desc)])
   @@index([riderId])
   @@map("orders")
 }
@@ -702,8 +705,11 @@ model OrderItem {
   @@index([orderId])
   // 批1性能清理（§七）：退款销量回滚按 sku_id 前缀查询，raw CONCURRENTLY 见 migration 20261012000002
   @@index([skuId])
-  // 统计批A（2026-09-09）：raw SQL migration 补 (product_id, order_id) 复合索引（商品排行 R9 聚合），
-  // Prisma 不支持 @@index 声明为 CONCURRENTLY，见 migration 20260909000002_add_order_items_product_idx
+  // 统计批A（2026-09-09）登记：(product_id, order_id) 复合索引（商品排行 R9 聚合），原以 raw SQL
+  //   migration 20260909000002_add_order_items_product_idx 建（CONCURRENTLY）。
+  // 技术债收尾批2（D3 2026-10-30）：该索引已回填下方 @@index 声明，schema 与 DB 实况对齐，
+  //   防后续会话误判为漏配（DB 内仍保留 CONCURRENTLY 建的物理索引，声明仅同步元数据）。
+  @@index([productId, orderId])
   @@map("order_items")
 }
 
@@ -1368,6 +1374,9 @@ model OnboardingSlide {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  // 技术债收尾批2（D3 2026-10-30）：回填 DB 实际索引声明（migration 20261014000000 建，CONCURRENTLY），
+  //   引导页后台列表按 enabled+sort_order 过滤排序
+  @@index([enabled, sortOrder])
   @@map("onboarding_slides")
 }
 
