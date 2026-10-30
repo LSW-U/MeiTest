@@ -1633,9 +1633,20 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/client/products/search',
   tags: ['product'],
-  description: '搜索商品（按多语言 name 匹配）',
+  description:
+    '搜索商品（按多语言 name 匹配）。分页双口径：传 offset/limit 走 offset 分页（skip=offset，服务端 clamp offset 0~1000、limit 默认20/max100）；都不传走 page 口径（page 从 1）。offset 超量返回 items=[] 且 hasMore=false',
+  parameters: [
+    { name: 'keyword', in: 'query', required: false, schema: { type: 'string' }, description: '搜索关键词（多语言 name ILIKE 匹配）' },
+    { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 }, description: '页码（page 口径，从 1；与 offset 口径互斥）' },
+    { name: 'offset', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 }, description: '翻页偏移（offset 口径，游标语义）：skip=offset；负值/非数字→0，服务端 clamp 0~1000；传 offset 或 limit 任一即走 offset 口径' },
+    { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 }, description: '每页数量（offset 口径）：非法（负/NaN/0）→20，超上限 clamp 100；仅与 offset 口径配合，不虚构 page 口径 pageSize 参数（controller 不接受）' },
+    { name: 'sortBy', in: 'query', required: false, schema: { type: 'string', enum: ['all', 'bestSelling', 'priceAsc', 'newArrivals'] }, description: '排序方式，默认 all 综合' },
+  ],
   responses: {
-    200: { description: '搜索结果', content: { 'application/json': { schema: ProductSummary.array() } } },
+    200: {
+      description: '搜索结果（分页对象，与 /client/products 列表同形状）',
+      content: { 'application/json': { schema: z.object({ items: ProductSummary.array(), total: z.number(), page: z.number(), pageSize: z.number(), hasMore: z.boolean() }) } },
+    },
   },
 });
 

@@ -4296,39 +4296,56 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description 搜索商品（按多语言 name 匹配） */
+        /** @description 搜索商品（按多语言 name 匹配）。分页双口径：传 offset/limit 走 offset 分页（skip=offset，服务端 clamp offset 0~1000、limit 默认20/max100）；都不传走 page 口径（page 从 1）。offset 超量返回 items=[] 且 hasMore=false */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description 搜索关键词（多语言 name ILIKE 匹配） */
+                    keyword?: string;
+                    /** @description 页码（page 口径，从 1；与 offset 口径互斥） */
+                    page?: number;
+                    /** @description 翻页偏移（offset 口径，游标语义）：skip=offset；负值/非数字→0，服务端 clamp 0~1000；传 offset 或 limit 任一即走 offset 口径 */
+                    offset?: number;
+                    /** @description 每页数量（offset 口径）：非法（负/NaN/0）→20，超上限 clamp 100；仅与 offset 口径配合，不虚构 page 口径 pageSize 参数（controller 不接受） */
+                    limit?: number;
+                    /** @description 排序方式，默认 all 综合 */
+                    sortBy?: "all" | "bestSelling" | "priceAsc" | "newArrivals";
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description 搜索结果 */
+                /** @description 搜索结果（分页对象，与 /client/products 列表同形状） */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
-                            id: string;
-                            name: {
-                                [key: string]: string;
-                            };
-                            mainImage: string;
-                            priceMin: number;
-                            /** Format: uuid */
-                            defaultSkuId: string | null;
-                            /** @enum {string} */
-                            status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
-                            salesCount: number;
-                            isCategoryTop3: boolean;
-                            stock?: number;
-                            rating?: number;
-                        }[];
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                name: {
+                                    [key: string]: string;
+                                };
+                                mainImage: string;
+                                priceMin: number;
+                                /** Format: uuid */
+                                defaultSkuId: string | null;
+                                /** @enum {string} */
+                                status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
+                                salesCount: number;
+                                isCategoryTop3: boolean;
+                                stock?: number;
+                                rating?: number;
+                            }[];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                            hasMore: boolean;
+                        };
                     };
                 };
             };

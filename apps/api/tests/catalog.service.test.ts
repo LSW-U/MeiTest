@@ -98,6 +98,7 @@ vi.mock('../src/shared/cache/redis', () => ({
 }));
 
 import { CatalogService } from '../src/modules/catalog/catalog.service';
+import { clampOffset, clampSearchLimit } from '../src/modules/catalog/catalog.controller';
 import { db } from '../src/shared/db';
 import {
   AdminSalesBatchAdjustRequest,
@@ -217,6 +218,87 @@ describe('CatalogService', () => {
       const result = await service.listProducts({ page: 1, pageSize: 20 });
       expect(result.items).toHaveLength(0);
       expect(m.productFindMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ===== 技术债收尾批1 D3（2026-10-30）：search offset/limit 口径 =====
+  describe('listProducts offset 口径（D3 search offset 化）', () => {
+    it('offset=0&limit=20 与 page=1 结果集一致（回归红线：skip=0/take=20）', async () => {
+      m.queryRaw.mockResolvedValueOnce([{ id: 'prod-1' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const offsetResult = await service.listProducts({ keyword: 'milk', offset: 0, limit: 20 });
+      const offsetCall = m.productFindMany.mock.calls[0][0];
+      expect(offsetCall.skip).toBe(0);
+      expect(offsetCall.take).toBe(20);
+      expect(offsetResult.items).toHaveLength(1);
+
+      // page 口径同参对比：skip/take 相同
+      m.productFindMany.mockClear();
+      m.queryRaw.mockResolvedValueOnce([{ id: 'prod-1' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      await service.listProducts({ keyword: 'milk', page: 1, pageSize: 20 });
+      const pageCall = m.productFindMany.mock.calls[0][0];
+      expect(pageCall.skip).toBe(0);
+      expect(pageCall.take).toBe(20);
+    });
+
+    it('offset 推进：offset=20&limit=20 → skip=20/take=20（与 page=2 等价空间）', async () => {
+      m.queryRaw.mockResolvedValueOnce([]);
+      m.productFindMany.mockResolvedValueOnce([]);
+      m.productCount.mockResolvedValueOnce(100);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ keyword: 'milk', offset: 20, limit: 20 });
+      const call = m.productFindMany.mock.calls[0][0];
+      expect(call.skip).toBe(20);
+      expect(call.take).toBe(20);
+      expect(result.items).toEqual([]);
+      // hasMore：skip + items.length(0) = 20 < 100
+      expect(result.hasMore).toBe(true);
+    });
+
+    it('offset 超量 → items=[] 且 hasMore=false', async () => {
+      m.queryRaw.mockResolvedValueOnce([]);
+      m.productFindMany.mockResolvedValueOnce([]);
+      m.productCount.mockResolvedValueOnce(5);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ keyword: 'milk', offset: 999, limit: 20 });
+      expect(result.items).toEqual([]);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it('口径互斥：传 offset 走 offset（忽略 page），不传走 page', async () => {
+      m.queryRaw.mockResolvedValueOnce([{ id: 'prod-1' }]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      await service.listProducts({ keyword: 'milk', page: 3, offset: 0, limit: 20 });
+      // offset 优先：skip=0（page=3 的 skip=40 被忽略）
+      expect(m.productFindMany.mock.calls[0][0].skip).toBe(0);
+
+      m.productFindMany.mockClear();
+      m.queryRaw.mockResolvedValueOnce([]);
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(100);
+      m.skuFindMany.mockResolvedValueOnce([]);
+      await service.listProducts({ keyword: 'milk', page: 3, pageSize: 20 });
+      expect(m.productFindMany.mock.calls[0][0].skip).toBe(40);
+    });
+
+    it('offset 口径 pageSize 回显 limit（响应字段语义对齐）', async () => {
+      m.queryRaw.mockResolvedValueOnce([]);
+      m.productFindMany.mockResolvedValueOnce([]);
+      m.productCount.mockResolvedValueOnce(0);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      const result = await service.listProducts({ keyword: 'milk', offset: 0, limit: 50 });
+      expect(result.pageSize).toBe(50);
     });
   });
 
@@ -412,6 +494,30 @@ describe('CatalogService', () => {
           take: 6,
         }),
       );
+    });
+  });
+
+  // ===== D3 controller clamp 函数直测（clampOffset 先例复用 + clampSearchLimit 新增）=====
+  describe('search clamp 函数（D3 controller 层）', () => {
+    it('clampOffset：负/NaN→0，正常值 floor，超 1000 clamp', () => {
+      expect(clampOffset(undefined)).toBe(0);
+      expect(clampOffset('-5')).toBe(0);
+      expect(clampOffset('abc')).toBe(0);
+      expect(clampOffset('0')).toBe(0);
+      expect(clampOffset('20')).toBe(20);
+      expect(clampOffset('3.9')).toBe(3);
+      expect(clampOffset('5000')).toBe(1000);
+    });
+
+    it('clampSearchLimit：不传→undefined（page 口径），非法→20，超限→100', () => {
+      expect(clampSearchLimit(undefined)).toBeUndefined();
+      expect(clampSearchLimit('-1')).toBe(20);
+      expect(clampSearchLimit('abc')).toBe(20);
+      expect(clampSearchLimit('0')).toBe(20);
+      expect(clampSearchLimit('20')).toBe(20);
+      expect(clampSearchLimit('7.9')).toBe(7);
+      expect(clampSearchLimit('500')).toBe(100);
+      expect(clampSearchLimit('100')).toBe(100);
     });
   });
 

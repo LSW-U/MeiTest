@@ -218,8 +218,8 @@ describe('热搜记录 userId（顺手修 id→sub）', () => {
     await controller.list(undefined, 'milk', undefined, undefined, undefined, 'en', req);
     expect(recordSearch.mock.calls.at(-1)![2]).toBe('user-sub-1');
 
-    // search(keyword, page, sortBy, acceptLang, req)
-    await controller.search('milk', undefined, undefined, 'en', req);
+    // search(keyword, page, sortBy, offset, limit, acceptLang, req)——D3 批1 2026-10-30 补 offset/limit 两参
+    await controller.search('milk', undefined, undefined, undefined, undefined, 'en', req);
     expect(recordSearch.mock.calls.at(-1)![2]).toBe('user-sub-1');
   });
 

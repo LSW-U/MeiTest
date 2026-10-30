@@ -56,6 +56,13 @@ export class CatalogService {
     keyword?: string;
     page?: number;
     pageSize?: number;
+    /**
+     * offset 口径（技术债收尾批1 D3 2026-10-30）：search 端点向后兼容新增。
+     * 与 page 口径互斥——传 offset 即走 offset 分页（skip=offset），否则走 page。
+     * offset 超量 → items=[] 且 hasMore=false；offset=0&limit=20 与 page=1 结果集一致（回归红线）。
+     */
+    offset?: number;
+    limit?: number;
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
     /** 排序方式（P8 决策 2-B），默认 all 综合 */
     sortBy?: ProductSortBy;
@@ -66,9 +73,12 @@ export class CatalogService {
     /** 搜索记录用：客户端 IP（匿名 dedupe 兜底） */
     clientIp?: string | null;
   } = {}) {
+    // 口径互斥：传 offset（controller 已保证 limit 同批出现）走 offset 分页，否则 page
+    const useOffset = opts.offset !== undefined;
     const page = opts.page ?? 1;
     const pageSize = Math.min(opts.pageSize ?? 20, 100);
-    const skip = (page - 1) * pageSize;
+    const limit = useOffset ? Math.min(opts.limit ?? 20, 100) : pageSize;
+    const skip = useOffset ? opts.offset! : (page - 1) * pageSize;
 
     // 子分类适配：categoryId 是大类（有子分类）-> 返大类+所有子分类商品；叶子 -> 返自身
     // 💭-1 已知优化点：children 查询每次列表请求一次（个位数子分类，加 parent_id 索引 <1ms）；
@@ -118,7 +128,7 @@ export class CatalogService {
         // Why: ?? all 兜底 - controller 用 as 断言透传，若客户端传非法值，Record 查不到回退综合排序
         orderBy: SORT_BY_ORDERBY[opts.sortBy ?? 'all'] ?? SORT_BY_ORDERBY.all,
         skip,
-        take: pageSize,
+        take: limit,
       }),
       this.getCachedCount(where, Boolean(kw)),
     ]);
@@ -152,7 +162,7 @@ export class CatalogService {
         isCategoryTop3: top3Ids.has(p.id),
       })),
       page,
-      pageSize,
+      pageSize: limit,
       total,
       hasMore: skip + items.length < total,
     };

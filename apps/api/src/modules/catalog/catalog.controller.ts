@@ -52,10 +52,22 @@ import { Audit } from '../../shared/decorators/audit.decorator';
  * offset 翻页参数 clamp（换一批按钮 批1 2026-10-17）：负值/NaN → 0，上限 1000（防深翻页放大）
  * @Query 恒为 string | undefined，与 limit 同款范式
  */
-function clampOffset(offset?: string): number {
+export function clampOffset(offset?: string): number {
   const parsed = Number(offset);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.min(Math.floor(parsed), 1000);
+}
+
+/**
+ * search limit clamp（技术债收尾批1 D3 2026-10-30）：offset 口径下的页大小
+ * 非法（负/NaN/0）→ 20，超上限 → clamp 100（对齐 service pageSize 口径）
+ * 不传返回 undefined → 走 page 口径（page/pageSize 行为不变），limit 仅在 offset 口径消费
+ */
+export function clampSearchLimit(limit?: string): number | undefined {
+  if (limit === undefined) return undefined;
+  const parsed = Number(limit);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 20;
+  return Math.min(Math.floor(parsed), 100);
 }
 
 @Controller('api/v1/client/products')
@@ -188,11 +200,18 @@ export class ClientProductController {
     return { success: true, data };
   }
 
+  /**
+   * 搜索商品（技术债收尾批1 D3 2026-10-30：向后兼容补 offset+limit offset 口径）
+   * 传 offset（或 limit）走 offset 分页（skip=offset）；都不传走原 page 口径，行为逐参数不变。
+   * offset 用 clampOffset（0~1000，同 recommendations 先例）；limit clamp 默认20/max100。
+   */
   @Get('search')
   async search(
     @Query('keyword') keyword?: string,
     @Query('page') page?: string,
     @Query('sortBy') sortBy?: string,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
     @Headers('accept-language') acceptLang?: string,
     @Req() req?: any,
   ) {
@@ -201,10 +220,12 @@ export class ClientProductController {
       (req?.headers?.['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ||
       (req?.ip as string | undefined) ||
       null;
+    const hasOffset = offset !== undefined || limit !== undefined;
     const data = await this.catalog.listProducts({
       keyword,
       page: page ? Number(page) : undefined,
       sortBy: sortBy as ProductSortBy | undefined,
+      ...(hasOffset && { offset: clampOffset(offset), limit: clampSearchLimit(limit) }),
       lang,
       userId: req?.user?.sub ?? null, // 旧代码误取 id（RequestUser 无 id），热搜 userId 恒 null——顺手修复
       clientIp,
