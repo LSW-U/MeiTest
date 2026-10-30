@@ -489,7 +489,8 @@ describe('offset 翻页（换一批按钮 批1）', () => {
     m.productFindMany
       .mockResolvedValueOnce([productRow('prod-h1', { categoryId: 'cat-1' })])
       .mockResolvedValueOnce([]) // 类目池无补货候选
-      .mockResolvedValueOnce([]); // top3 徽章（不会走到，切片为空提前返回）
+      .mockResolvedValueOnce([]) // top3 徽章（不会走到，切片为空提前返回）
+      .mockResolvedValueOnce([]); // P3-1 批3：池非空 offset 翻出池尾 → 回退销量切片（notIn）无剩余 → 空数组
 
     // offset 超过候选总量（仅 1 条历史）
     await expect(service.getRecommendations('user-A', 6, 100)).resolves.toEqual([]);

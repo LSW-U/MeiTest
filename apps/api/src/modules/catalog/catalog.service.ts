@@ -280,6 +280,12 @@ export class CatalogService {
    *
    * offset 翻页（换一批按钮 批1 2026-10-17）：个性化路径无单条 SQL 可加 OFFSET
    * （Prisma 多段查询+内存拼装）→ offset 落点为内存切片；回退路径 skip: offset。
+   *
+   * 技术债收尾批3（2026-10-30）两处改造（原 aggregateCategoryPreference 内联逻辑拆出）：
+   * - P3-2 diversity：池构建拆为 buildCategoryPreferencePool，偏好类目在池内零代表时
+   *   per-category 补位（仅挤压场景触发，非挤压逐字节等价——见该方法的等价性注释）
+   * - P3-1 批内去重：候选耗尽（offset 翻出池尾）时回退销量切片排除池内 id（notIn），
+   *   防同会话翻页重复；池空（无历史）仍走底部匿名分支（行为不变）
    */
   async getRecommendations(userId: string | null, limit = 6, offset = 0) {
     // B7 总闸（批6 2026-10-18 接管：协同过滤就绪）：
@@ -288,12 +294,32 @@ export class CatalogService {
     //     融合只影响 ON 路径，OFF 路径无任何额外查询）
     const personalRanking = await getPersonalRankingEnabled();
     if (userId) {
-      const items = await this.aggregateCategoryPreference(userId, limit, offset);
-      if (items.length > 0) {
+      const pool = await this.buildCategoryPreferencePool(userId, limit);
+      // offset 翻页：候选全量有序后内存切片（换一批按钮 批1 2026-10-17）；
+      // offset=0 时 slice(0, limit) 与现状一致；候选耗尽（slice 空）走下方回退
+      const page = pool.slice(offset, offset + limit);
+      if (page.length > 0) {
+        const items = await this.assembleProductCards(page);
         if (personalRanking) {
           return this.fuseSimilarSignal(userId, items);
         }
         return items;
+      }
+      if (pool.length > 0) {
+        // P3-1 批内去重回退（技术债收尾批3 2026-10-30）：池非空但 offset 已翻出池尾
+        //   （先前页展示的正是本池）→ 回退销量切片时排除池内 id，防同会话翻页重复展示。
+        //   notIn 过滤后的列表仍按销量序单调，skip: offset 跨页不回退；过滤后无剩余 → 返回
+        //   空数组（不回填不造假，同池耗尽语义）。无历史（池空）不进此分支，落底部匿名分支。
+        const sales = await db.product.findMany({
+          where: { status: 'ACTIVE', id: { notIn: pool.map((p) => p.id) } },
+          orderBy: { salesCount: 'desc' },
+          take: limit,
+          skip: offset,
+        });
+        if (sales.length > 0) {
+          return this.assembleProductCards(sales);
+        }
+        return [];
       }
     }
     // 未登录 / 无历史：销量 top N，skip: offset（offset=0 与现状逐参数一致）
@@ -317,7 +343,7 @@ export class CatalogService {
    */
   private async fuseSimilarSignal(
     userId: string,
-    items: Awaited<ReturnType<CatalogService['aggregateCategoryPreference']>>,
+    items: Awaited<ReturnType<CatalogService['assembleProductCards']>>,
   ) {
     const cfg = await getCollaborativeConfig();
     const w = cfg.b7SimilarWeight;
@@ -336,14 +362,19 @@ export class CatalogService {
   }
 
   /**
-   * 类目偏好加权（R1）：用户历史类目分布 → 同类目 ACTIVE 高销量优先 / 跨类目高销量次之
+   * 类目偏好候选池构建（批3 P3-2 拆出，2026-10-30）：getRecommendations 个性化路径的切片前半程
    *
-   * 排序规则：
-   *   1. 用户历史商品（按聚合频次降序，即偏好强度）中仍 ACTIVE 的优先；
-   *   2. 再按历史类目分布顺序，从每个类目补 ACTIVE 高销量商品（排除已入选），直到 limit。
-   * 不做 migration、不加权重参数——复用批 1 聚合 SQL（含 deletedAt 不过滤口径）。
+   * P3-2 diversity 补足（预防性，D2 2026-10-30）：池查询 take: limit*5 是全局窗口，
+   *   头部类目销量占满窗口时（单类目 ACTIVE ≥ limit*5 ≈ 30，v1 触发阈值），后面的偏好类目
+   *   在池内 0 候选（挤占）。改造：分组后检测「偏好类目在池内零代表」（挤压信号），
+   *   对被挤压类目逐个发起 per-category 补位查询（take: limit，销量序），追加到池尾。
+   *
+   * 行为等价性（R-v2-1）：补位查询只在存在零代表类目时运行——即仅挤压（超阈/截断）场景；
+   *   非挤压场景（现网实测单类目头部 23 < 30，池内各偏好类目均有代表）池内容与顺序逐字节
+   *   等价改造前（同一条 take: limit*5 全局查询 + 同款按偏好顺序分组拼接）。补位项固定追加
+   *   池尾：已翻过的页不变，仅池耗尽前的尾部页从「回退全局销量」变为「先出被挤占类目」。
    */
-  private async aggregateCategoryPreference(userId: string, limit: number, offset = 0) {
+  private async buildCategoryPreferencePool(userId: string, limit: number) {
     // 复用批 1 聚合：用户买过商品按频次排序（LIMIT 放大到全量历史商品以支撑类目分布统计，
     // 上限 100 防超大历史放大；推荐候选池内再 take limit）
     const rows = (await db.$queryRaw<
@@ -391,21 +422,35 @@ export class CatalogService {
         take: limit * 5, // 每类目候选上限兜底，排除已入选后足够填满 limit
       });
       // 按偏好类目顺序分组（保持 salesCount desc）
+      const byCategory = new Map<string, typeof pool>();
+      for (const p of pool) {
+        if (p.categoryId === null || pickedIds.has(p.id)) continue;
+        const list = byCategory.get(p.categoryId);
+        if (list) list.push(p);
+        else byCategory.set(p.categoryId, [p]);
+      }
       for (const catId of preferredCategoryIds) {
-        for (const p of pool) {
-          if (p.categoryId === catId && !pickedIds.has(p.id)) {
-            categoryPicks.push(p);
-            pickedIds.add(p.id);
-          }
+        const list = byCategory.get(catId);
+        if (list) {
+          categoryPicks.push(...list);
+          for (const p of list) pickedIds.add(p.id);
         }
       }
-    }
 
-    // offset 翻页：候选全量有序后内存切片（换一批按钮 批1 2026-10-17）；
-    // offset=0 时 slice(0, limit) 与现状一致；候选耗尽返回空数组（E4 回绕信号，不抛错）
-    const ordered = [...historyOrdered, ...categoryPicks].slice(offset, offset + limit);
-    if (ordered.length === 0) return [];
-    return this.assembleProductCards(ordered);
+      // P3-2 挤压补位：偏好类目在池内零代表 → per-category 补位查询（take: limit），
+      //   追加池尾（不影响既有页序）；有代表的类目不动（等价性红线）
+      const squeezed = preferredCategoryIds.filter((c) => !byCategory.has(c));
+      for (const catId of squeezed) {
+        const topUp = await db.product.findMany({
+          where: { categoryId: catId, status: 'ACTIVE', id: { notIn: [...pickedIds] } },
+          orderBy: { salesCount: 'desc' },
+          take: limit,
+        });
+        categoryPicks.push(...topUp);
+        for (const p of topUp) pickedIds.add(p.id);
+      }
+    }
+    return [...historyOrdered, ...categoryPicks];
   }
 
   /**
