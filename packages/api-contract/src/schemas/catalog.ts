@@ -18,9 +18,10 @@ export const ProductStatus = z.enum(['ACTIVE', 'INACTIVE', 'OUT_OF_STOCK']);
  * - all：综合（热销优先 + 新到兜底，与 listProducts 历史默认一致）
  * - bestSelling：按销量降序（salesCount desc）
  * - priceAsc：按价格升序（priceMin asc，priceMin 由 SKU 聚合）
+ * - priceDesc：按价格降序（priceMin desc，与 priceAsc 对称）
  * - newArrivals：按上新降序（createdAt desc）
  */
-export const ProductSortBy = z.enum(['all', 'bestSelling', 'priceAsc', 'newArrivals']);
+export const ProductSortBy = z.enum(['all', 'bestSelling', 'priceAsc', 'priceDesc', 'newArrivals']);
 export type ProductSortBy = z.infer<typeof ProductSortBy>;
 
 /** SKU 状态 */

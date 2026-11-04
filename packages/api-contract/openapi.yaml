@@ -16393,6 +16393,7 @@ paths:
               - all
               - bestSelling
               - priceAsc
+              - priceDesc
               - newArrivals
           description: 排序方式，默认 all 综合
       responses:

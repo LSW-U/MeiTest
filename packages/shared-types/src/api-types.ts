@@ -4309,7 +4309,7 @@ export interface paths {
                     /** @description 每页数量（offset 口径）：非法（负/NaN/0）→20，超上限 clamp 100；仅与 offset 口径配合，不虚构 page 口径 pageSize 参数（controller 不接受） */
                     limit?: number;
                     /** @description 排序方式，默认 all 综合 */
-                    sortBy?: "all" | "bestSelling" | "priceAsc" | "newArrivals";
+                    sortBy?: "all" | "bestSelling" | "priceAsc" | "priceDesc" | "newArrivals";
                 };
                 header?: never;
                 path?: never;

@@ -34,6 +34,7 @@ const SORT_BY_ORDERBY: Record<
   all: [{ salesCount: 'desc' }, { createdAt: 'desc' }],
   bestSelling: [{ salesCount: 'desc' }],
   priceAsc: [{ priceMin: 'asc' }],
+  priceDesc: [{ priceMin: 'desc' }],
   newArrivals: [{ createdAt: 'desc' }],
 };
 

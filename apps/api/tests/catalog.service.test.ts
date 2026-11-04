@@ -183,6 +183,34 @@ describe('CatalogService', () => {
       expect(result.items[0].defaultSkuId).toBeNull();
     });
 
+    it('sortBy=priceDesc 走 priceMin desc（与 priceAsc 对称）', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      await service.listProducts({ page: 1, pageSize: 20, sortBy: 'priceDesc' });
+
+      expect(m.productFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ priceMin: 'desc' }],
+        }),
+      );
+    });
+
+    it('sortBy=priceAsc 回归：仍走 priceMin asc', async () => {
+      m.productFindMany.mockResolvedValueOnce([mockProduct]);
+      m.productCount.mockResolvedValueOnce(1);
+      m.skuFindMany.mockResolvedValueOnce([]);
+
+      await service.listProducts({ page: 1, pageSize: 20, sortBy: 'priceAsc' });
+
+      expect(m.productFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ priceMin: 'asc' }],
+        }),
+      );
+    });
+
     it('列表项标记 isCategoryTop3（批D P2-1：Top3 批量直出，非 N+1）', async () => {
       const p1 = { ...mockProduct, id: 'prod-1', categoryId: 'cat-1' };
       const p2 = { ...mockProduct, id: 'prod-2', categoryId: 'cat-2' };

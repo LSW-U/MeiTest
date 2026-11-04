@@ -1640,7 +1640,7 @@ registry.registerPath({
     { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 1 }, description: '页码（page 口径，从 1；与 offset 口径互斥）' },
     { name: 'offset', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 }, description: '翻页偏移（offset 口径，游标语义）：skip=offset；负值/非数字→0，服务端 clamp 0~1000；传 offset 或 limit 任一即走 offset 口径' },
     { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 }, description: '每页数量（offset 口径）：非法（负/NaN/0）→20，超上限 clamp 100；仅与 offset 口径配合，不虚构 page 口径 pageSize 参数（controller 不接受）' },
-    { name: 'sortBy', in: 'query', required: false, schema: { type: 'string', enum: ['all', 'bestSelling', 'priceAsc', 'newArrivals'] }, description: '排序方式，默认 all 综合' },
+    { name: 'sortBy', in: 'query', required: false, schema: { type: 'string', enum: ['all', 'bestSelling', 'priceAsc', 'priceDesc', 'newArrivals'] }, description: '排序方式，默认 all 综合' },
   ],
   responses: {
     200: {
