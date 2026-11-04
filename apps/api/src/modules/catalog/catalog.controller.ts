@@ -204,10 +204,13 @@ export class ClientProductController {
    * 搜索商品（技术债收尾批1 D3 2026-10-30：向后兼容补 offset+limit offset 口径）
    * 传 offset（或 limit）走 offset 分页（skip=offset）；都不传走原 page 口径，行为逐参数不变。
    * offset 用 clampOffset（0~1000，同 recommendations 先例）；limit clamp 默认20/max100。
+   * categoryId（2026-11-05 搜索首页 Filter Tags 联动）：透传 listProducts 既有过滤（service 已支持，
+   *   同 list 端点先例），空词+纯分类浏览合法（recordSearch 有 if(kw) 守卫不记热搜）。
    */
   @Get('search')
   async search(
     @Query('keyword') keyword?: string,
+    @Query('categoryId') categoryId?: string,
     @Query('page') page?: string,
     @Query('sortBy') sortBy?: string,
     @Query('offset') offset?: string,
@@ -222,6 +225,7 @@ export class ClientProductController {
       null;
     const hasOffset = offset !== undefined || limit !== undefined;
     const data = await this.catalog.listProducts({
+      categoryId,
       keyword,
       page: page ? Number(page) : undefined,
       sortBy: sortBy as ProductSortBy | undefined,
