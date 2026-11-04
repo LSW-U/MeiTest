@@ -30,6 +30,13 @@ export class SearchService {
    * normalize：trim + lowerCase + slice 50，避免 Milk/milk/ milk 算 3 个词。
    * 防刷：Redis SETEX NX 10s 去重（同 user/ip + 同 word）。
    * 零结果词也记（resultCount=0 最有运营价值）。
+   *
+   * 20261105 碎片词治理（3A+3D）：
+   * - 单字符词不记——results 页敲字 debounce 300ms 即触发真 search，每个中间态停顿都记账，
+   *   单字节单字符（e/a）与 CJK 单字（手/米）对热搜榜无导航价值（ILIKE 包含匹配使单字符
+   *   几乎全能命中，resultCount 守卫拦不住）；至少 2 个字符（CJK 同门槛）才记。
+   * - 首字符非「字母/数字/CJK」不记——拦 $、f6t-ok 类乱码/符号开头的垃圾词（拼音中间态
+   *   如 "da mi" 是真实用户输入习惯，保留）。
    */
   async recordSearch(
     raw: string,
@@ -43,6 +50,12 @@ export class SearchService {
     try {
       const word = raw.trim().toLowerCase().slice(0, 50);
       if (!word || !SUPPORTED_LANGS.includes(lang)) return;
+      if (
+        [...word].length < 2 || // 单字符（按 code point 数，CJK 单字即拦）
+        !/[\p{L}\p{N}]/u.test(word[0]) // 首字符非字母/数字（符号/乱码开头）
+      ) {
+        return;
+      }
 
       const dedupeKey = `search:dedupe:${userId ?? clientIp ?? 'anon'}:${lang}:${word}`;
       const set = await redis.set(dedupeKey, '1', 'EX', DEDUPE_TTL, 'NX');

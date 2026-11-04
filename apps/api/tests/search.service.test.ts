@@ -99,6 +99,26 @@ describe('SearchService', () => {
       );
     });
 
+    it('碎片词治理 20261105：单字符词不记（e/a 与 CJK 单字 手/米）', async () => {
+      m.redisSet.mockResolvedValue('OK');
+      await service.recordSearch('e', 'en', null, 60, null);
+      await service.recordSearch('a', 'en', null, 60, null);
+      await service.recordSearch('手', 'zh', null, 2, null);
+      await service.recordSearch('米', 'zh', null, 1, null);
+      expect(m.searchLogCreate).not.toHaveBeenCalled();
+      expect(m.redisZincrby).not.toHaveBeenCalled();
+    });
+
+    it('碎片词治理 20261105：符号/乱码开头词不记（$、f6t-ok）', async () => {
+      m.redisSet.mockResolvedValue('OK');
+      await service.recordSearch('$', 'zh', null, 0, null);
+      await service.recordSearch('$abc', 'en', null, 3, null);
+      expect(m.searchLogCreate).not.toHaveBeenCalled();
+      // f6t-ok 首字符是字母 f，仍记账（守卫只拦符号开头；脏词走 BLOCKED 词库治理）
+      await service.recordSearch('f6t-ok', 'zh', null, 0, null);
+      expect(m.searchLogCreate).toHaveBeenCalled();
+    });
+
     it('不支持的语言不记', async () => {
       m.redisSet.mockResolvedValue('OK');
       await service.recordSearch('milk', 'fr', null, 5, null);
