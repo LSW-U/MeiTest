@@ -142,7 +142,10 @@
       "batchAdjustConfirm": "Aplika",
       "batchAdjustSuccess": "Ajusta ona produtu {count}",
       "batchAdjustSkipped": "{count} pasadu (produtu la hetan)",
-      "batchAdjustFailed": "Ajustamentu hamutuk la susesu"
+      "batchAdjustFailed": "Ajustamentu hamutuk la susesu",
+      "shelfLifeDays": "Tempu vida (loron)",
+      "shelfLifeDaysPlaceholder": "ez. 7",
+      "shelfLifeDaysHint": "Produtu ho vida restante <= 3 loron marca nudar bainda kudu."
     },
     "categories": {
       "title": "Kategoria",
@@ -167,6 +170,7 @@
       "iconUploadFailed": "Upload sala",
       "uploading": "Upload hela...",
       "formSortOrder": "Sortir",
+      "formColdChain": "Kadeia malirin",
       "formNameLabel": "Naran ({locale})",
       "creating": "Creating...",
       "createSubmit": "Kria Kategoria",

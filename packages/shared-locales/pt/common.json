@@ -142,7 +142,10 @@
       "batchAdjustConfirm": "Aplicar",
       "batchAdjustSuccess": "{count} produto(s) ajustado(s)",
       "batchAdjustSkipped": "{count} ignorado(s) (produto não encontrado)",
-      "batchAdjustFailed": "Falha no ajuste em lote"
+      "batchAdjustFailed": "Falha no ajuste em lote",
+      "shelfLifeDays": "Validade (dias)",
+      "shelfLifeDaysPlaceholder": "ex. 7",
+      "shelfLifeDaysHint": "Opcional. Produtos com validade restante <= 3 dias são marcados como quase a vencer."
     },
     "categories": {
       "title": "Categorias",
@@ -167,6 +170,7 @@
       "iconUploadFailed": "Falha no carregamento",
       "uploading": "A carregar...",
       "formSortOrder": "Ordem",
+      "formColdChain": "Cadeia de Frio",
       "formNameLabel": "Nome ({locale})",
       "creating": "Criando...",
       "createSubmit": "Criar Categoria",

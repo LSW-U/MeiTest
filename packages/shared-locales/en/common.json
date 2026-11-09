@@ -145,7 +145,10 @@
       "batchAdjustConfirm": "Apply",
       "batchAdjustSuccess": "Adjusted {count} product(s)",
       "batchAdjustSkipped": "{count} skipped (product not found)",
-      "batchAdjustFailed": "Batch adjustment failed"
+      "batchAdjustFailed": "Batch adjustment failed",
+      "shelfLifeDays": "Shelf life (days)",
+      "shelfLifeDaysPlaceholder": "e.g. 7",
+      "shelfLifeDaysHint": "Optional. Products with remaining shelf life <= 3 days are marked as near expiry."
     },
     "categories": {
       "title": "Categories",
@@ -170,6 +173,7 @@
       "iconUploadFailed": "Upload failed",
       "uploading": "Uploading...",
       "formSortOrder": "Sort Order",
+      "formColdChain": "Cold Chain",
       "formNameLabel": "Name ({locale})",
       "creating": "Creating...",
       "createSubmit": "Create Category",

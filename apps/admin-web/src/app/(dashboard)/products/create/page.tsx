@@ -9,6 +9,7 @@
  *   - description（4 语言，可选）
  *   - categoryId（select，可选）
  *   - unit（4 语言，可选）
+ *   - shelfLifeDays（保质期天数，可空=不标临期，P3批1）
  *   - status（ACTIVE/INACTIVE，默认 ACTIVE）
  */
 'use client';
@@ -53,6 +54,8 @@ export default function CreateProductPage() {
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
   const [unit, setUnit] = useState<I18nText>({});
+  // P3批1：保质期天数（string 中转便于空输入；提交转 number/null）
+  const [shelfLifeDays, setShelfLifeDays] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [uploading, setUploading] = useState(false);
@@ -110,6 +113,8 @@ export default function CreateProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mainImage || !unit.en) return;
+    // P3-1：非数字输入（Number→NaN）拦下不提交、保持输入不清空（number input 正常路径到不了这）
+    if (shelfLifeDays.trim() && !Number.isFinite(Number(shelfLifeDays))) return;
     try {
       const res = await createMutation.mutateAsync({
         name,
@@ -118,6 +123,8 @@ export default function CreateProductPage() {
         unit,
         categoryId: categoryId || undefined,
         status,
+        // P3批1：空串=不录入（null 落库），非空转正整数
+        shelfLifeDays: shelfLifeDays.trim() ? Number(shelfLifeDays) : null,
       });
       router.push(`/products/${res.data.id}`);
     } catch {
@@ -250,6 +257,19 @@ export default function CreateProductPage() {
             t('w.products.unitPlaceholder'),
             'en',
           )}
+          {/* P3批1：保质期天数录入（可空=不标临期） */}
+          <div className="space-y-2">
+            <Label>{t('w.products.shelfLifeDays')}</Label>
+            <Input
+              type="number"
+              min={1}
+              value={shelfLifeDays}
+              onChange={(e) => setShelfLifeDays(e.target.value)}
+              placeholder={t('w.products.shelfLifeDaysPlaceholder')}
+              className="max-w-[200px]"
+            />
+            <p className="text-xs text-muted-foreground">{t('w.products.shelfLifeDaysHint')}</p>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{t('w.form.category')}</Label>

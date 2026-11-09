@@ -230,6 +230,26 @@ export class OrderController {
       },
     });
 
+    // P3批2：冷链订单标识——OrderItem 是快照模型无品类关联，按首商品 → Product.categoryId →
+    // Category.coldChain 派生（R1c 单品类语义：订单跨品类以首商品为准，宁缺毋假不逐项判）
+    const firstItem = await db.orderItem.findFirst({
+      where: { orderId: id },
+      orderBy: { id: 'asc' },
+      select: { productId: true },
+    });
+    const firstProduct = firstItem
+      ? await db.product.findUnique({
+          where: { id: firstItem.productId },
+          select: { categoryId: true },
+        })
+      : null;
+    const coldChainCategory = firstProduct?.categoryId
+      ? await db.category.findUnique({
+          where: { id: firstProduct.categoryId },
+          select: { coldChain: true },
+        })
+      : null;
+
     return {
       success: true as const,
       data: {
@@ -237,6 +257,8 @@ export class OrderController {
         orderNo: order.orderNo,
         orderStatus: order.status,
         paymentStatus: order.paymentStatus,
+        // P3批2：冷链订单标识（分类 coldChain 派生，无商品/无分类恒 false）
+        isColdChain: coldChainCategory?.coldChain ?? false,
         task: task
           ? {
               taskId: task.id,

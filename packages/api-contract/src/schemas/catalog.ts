@@ -41,6 +41,12 @@ export const Product = z.object({
   status: ProductStatus,
   unit: I18nText,
   priceMin: Money,
+  /** 保质期剩余天数（P3批1：后端按 shelfLifeDays − createdAt 近似已过天数派生；null=未录入保质期不标） */
+  daysToExpiry: z.number().int().nullable(),
+  /** 临期标注（P3批1：0 ≤ daysToExpiry ≤ 阈值（默认 3 天，后端 config）；后端单点派生，前端只读不自行计算） */
+  isNearExpiry: z.boolean(),
+  /** 冷链商品（P3批2：按所属分类 Category.coldChain 后端单点派生；无分类恒 false） */
+  isColdChain: z.boolean(),
   /** 默认 SKU id（最低价 ACTIVE SKU），前端列表"加购物车"直接用 */
   defaultSkuId: Id.nullable(),
   salesCount: z.number().int(),
@@ -62,6 +68,10 @@ export const ProductSummary = z.object({
   defaultSkuId: Id.nullable(),
   status: ProductStatus,
   salesCount: z.number().int(),
+  /** 临期标注（P3批1：后端单点派生直出，同 Product.isNearExpiry 口径；shelfLifeDays 未录入恒 false） */
+  isNearExpiry: z.boolean(),
+  /** 冷链商品（P3批2：同 Product.isColdChain 口径，分类 coldChain 后端派生直出） */
+  isColdChain: z.boolean(),
   /** 同分类 ACTIVE 销量 Top3（批D P2-1：列表 BEST SELLER 徽章后端直出，替代前端 salesCount>500 阈值；与 ProductDetail.isCategoryTop3 同口径） */
   isCategoryTop3: z.boolean(),
   /** 库存（聚合全仓库 ACTIVE SKU，B1）。undefined=无库存信息，0=断货 */
@@ -78,6 +88,8 @@ export const CreateProductRequest = z.object({
   mainImage: z.string(),
   images: z.array(z.string()).default([]),
   unit: I18nText,
+  /** 保质期天数（P3批1，可空=不标临期） */
+  shelfLifeDays: z.number().int().positive().nullable().optional(),
   status: ProductStatus.optional(),
 });
 
@@ -178,6 +190,8 @@ const CategoryBase = z.object({
   iconUrl: z.string().url().or(z.literal('')),
   parentId: Id.nullable(),
   sortOrder: z.number().int(),
+  /** 冷链分类（P3批2：true=该分类商品按冷链履约展示；默认 false） */
+  coldChain: z.boolean().optional(),
   /** 上下架状态（admin 端可见；client 端 service 已过滤 ACTIVE，不返此字段） */
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   /**
@@ -199,6 +213,8 @@ export const CreateCategoryRequest = z.object({
   iconUrl: z.string().url().or(z.literal('')),
   parentId: Id.nullable().optional(),
   sortOrder: z.number().int().optional(),
+  /** 冷链分类（P3批2，可空=不冷链） */
+  coldChain: z.boolean().optional(),
 });
 
 /** 修改分类请求（含 status toggle，修现存 admin-web status 写不进库的不一致） */

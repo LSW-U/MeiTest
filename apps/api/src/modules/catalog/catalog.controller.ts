@@ -310,6 +310,7 @@ export class AdminProductController {
     images?: string[];
     unit: Record<string, string>;
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+    shelfLifeDays?: number | null;
   }) {
     const data = await this.catalog.createProduct(body);
     return { success: true, data };
@@ -345,6 +346,7 @@ export class AdminProductController {
       images: string[];
       unit: Record<string, string>;
       status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+      shelfLifeDays?: number | null;
     }>,
   ) {
     const data = await this.catalog.updateProduct(id, body);
@@ -442,6 +444,7 @@ export class AdminCategoryController {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
+    coldChain?: boolean;
   }) {
     // 注：create 不接 status，契约 CreateCategoryRequest 不含 status，永远默认 ACTIVE（审查 F3）
     // status toggle 走 PATCH /:id（UpdateCategoryRequest 含 status）
@@ -458,6 +461,7 @@ export class AdminCategoryController {
       iconUrl: string;
       parentId: string | null;
       sortOrder: number;
+      coldChain: boolean;
       status: 'ACTIVE' | 'INACTIVE';
     }>,
   ) {

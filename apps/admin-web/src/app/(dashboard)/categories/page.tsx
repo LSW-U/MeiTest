@@ -505,6 +505,7 @@ function CreateCategoryDialog({
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
+    coldChain?: boolean;
   }) => void;
   pending: boolean;
   error?: string;
@@ -514,6 +515,8 @@ function CreateCategoryDialog({
   const [iconUrl, setIconUrl] = useState('');
   const [parentId, setParentId] = useState<string | null>(initialParentId);
   const [sortOrder, setSortOrder] = useState('0');
+  // P3批2：冷链分类（默认不冷链）
+  const [coldChain, setColdChain] = useState(false);
 
   // initialParentId 变化时同步（F5 "添加子分类" 预填）
   useEffect(() => {
@@ -528,11 +531,13 @@ function CreateCategoryDialog({
       iconUrl,
       parentId,
       sortOrder: parseInt(sortOrder, 10) || 0,
+      coldChain,
     });
     setName({});
     setIconUrl('');
     setParentId(null);
     setSortOrder('0');
+    setColdChain(false);
     onOpenChange(false);
   };
 
@@ -564,6 +569,15 @@ function CreateCategoryDialog({
               />
             </div>
           </div>
+          {/* P3批2：冷链分类开关 */}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={coldChain}
+              onCheckedChange={setColdChain}
+              aria-label={t('w.categories.formColdChain')}
+            />
+            <Label>{t('w.categories.formColdChain')}</Label>
+          </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -592,6 +606,7 @@ function EditCategoryDialog({
     iconUrl?: string;
     parentId?: string | null;
     sortOrder?: number;
+    coldChain?: boolean;
     status?: 'ACTIVE' | 'INACTIVE';
   }) => void;
   pending: boolean;
@@ -606,6 +621,8 @@ function EditCategoryDialog({
   const [parentId, setParentId] = useState<string | null>(category.parentId ?? null);
   const [sortOrder, setSortOrder] = useState(String(category.sortOrder ?? 0));
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>(category.status ?? 'ACTIVE');
+  // P3批2：冷链分类回显
+  const [coldChain, setColdChain] = useState(category.coldChain ?? false);
 
   // 每次打开重置到最新 category（仅 open 切换时同步，编辑中不因 refetch 丢失）
   useEffect(() => {
@@ -615,6 +632,7 @@ function EditCategoryDialog({
       setParentId(category.parentId ?? null);
       setSortOrder(String(category.sortOrder ?? 0));
       setStatus(category.status ?? 'ACTIVE');
+      setColdChain(category.coldChain ?? false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -626,6 +644,7 @@ function EditCategoryDialog({
       iconUrl: iconUrl || undefined,
       parentId,
       sortOrder: parseInt(sortOrder, 10) || 0,
+      coldChain,
       status,
     });
     setOpen(false);
@@ -673,6 +692,15 @@ function EditCategoryDialog({
                 ? t('w.categories.statusActive')
                 : t('w.categories.statusInactive')}
             </Label>
+          </div>
+          {/* P3批2：冷链分类开关 */}
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={coldChain}
+              onCheckedChange={setColdChain}
+              aria-label={t('w.categories.formColdChain')}
+            />
+            <Label>{t('w.categories.formColdChain')}</Label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

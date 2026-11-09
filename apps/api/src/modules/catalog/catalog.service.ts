@@ -16,12 +16,14 @@ import { db } from '../../shared/db';
 import { Prisma, ProductStatus, SkuStatus } from '../../prisma/client';
 import { adjustSalesCountForAdmin } from '../../shared/db/sales-count';
 import { getCategoryTop3ProductIds } from '../../shared/db/category-top3';
+import { batchGetCategoryInfo } from '../../shared/db/category-info';
 import { SearchService } from '../search/search.service';
 import { redis, setWithTTL } from '../../shared/cache/redis';
 import { ProductSortBy } from '@meimart/api-contract';
 import { getPersonalRankingEnabled } from './recommendation.config';
 import { CollaborativeFilterService } from './collaborative-filter.service';
 import { getCollaborativeConfig } from './collaborative.config';
+import { deriveNearExpiry } from './near-expiry.config';
 
 /**
  * 排序方式 → Prisma orderBy（P8 决策 2-B 后端排序）
@@ -159,7 +161,8 @@ export class CatalogService {
         defaultSkuId: defaultSkuMap.get(p.id) ?? null,
         stock: stockMap.get(p.id),
         rating: ratingMap.get(p.id),
-        categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+        categoryName: p.categoryId ? (categoryMap.get(p.categoryId)?.name ?? null) : null,
+        isColdChain: p.categoryId ? (categoryMap.get(p.categoryId)?.coldChain ?? false) : false,
         isCategoryTop3: top3Ids.has(p.id),
       })),
       page,
@@ -188,7 +191,8 @@ export class CatalogService {
       defaultSkuId: product.skus[0]?.id ?? null,
       stock: stockMap.get(id),
       rating: ratingMap.get(id),
-      categoryName: product.categoryId ? (categoryMap.get(product.categoryId) ?? null) : null,
+      categoryName: product.categoryId ? (categoryMap.get(product.categoryId)?.name ?? null) : null,
+      isColdChain: product.categoryId ? (categoryMap.get(product.categoryId)?.coldChain ?? false) : false,
       skus: product.skus.map((s) => this.toSkuDTO(s)),
     };
   }
@@ -258,7 +262,8 @@ export class CatalogService {
       defaultSkuId: product.skus[0]?.id ?? null,
       // 兼容透传：与 batchGetProductStock 同语义（无库存记录 = undefined）
       stock: stockRows.length > 0 ? totalStock : undefined,
-      categoryName: product.categoryId ? (categoryMap.get(product.categoryId) ?? null) : null,
+      categoryName: product.categoryId ? (categoryMap.get(product.categoryId)?.name ?? null) : null,
+      isColdChain: product.categoryId ? (categoryMap.get(product.categoryId)?.coldChain ?? false) : false,
       // 批B 真增量
       stocks,
       totalStock,
@@ -630,7 +635,8 @@ export class CatalogService {
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
-      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId)?.name ?? null) : null,
+      isColdChain: p.categoryId ? (categoryMap.get(p.categoryId)?.coldChain ?? false) : false,
       isCategoryTop3: top3Ids.has(p.id),
     }));
   }
@@ -654,7 +660,8 @@ export class CatalogService {
       defaultSkuId: defaultSkuMap.get(p.id) ?? null,
       stock: stockMap.get(p.id),
       rating: ratingMap.get(p.id),
-      categoryName: p.categoryId ? (categoryMap.get(p.categoryId) ?? null) : null,
+      categoryName: p.categoryId ? (categoryMap.get(p.categoryId)?.name ?? null) : null,
+      isColdChain: p.categoryId ? (categoryMap.get(p.categoryId)?.coldChain ?? false) : false,
       isCategoryTop3: top3Ids.has(p.id),
     }));
   }
@@ -667,6 +674,8 @@ export class CatalogService {
     images?: string[];
     unit: Record<string, string>;
     status?: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+    /** 保质期天数（P3批1，可空=不标临期） */
+    shelfLifeDays?: number | null;
   }) {
     const shop = await db.shop.findFirst();
     if (!shop) {
@@ -686,6 +695,7 @@ export class CatalogService {
         images: input.images ?? [],
         unit: input.unit,
         status: (input.status ?? 'ACTIVE') as ProductStatus,
+        shelfLifeDays: input.shelfLifeDays ?? null,
         priceMin: 0, // 没 SKU 前是 0
       },
     });
@@ -702,6 +712,7 @@ export class CatalogService {
     images: string[];
     unit: Record<string, string>;
     status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK';
+    shelfLifeDays?: number | null;
   }>) {
     const existing = await db.product.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException({ code: 'E-CATALOG-001', message: 'Product not found' });
@@ -716,9 +727,10 @@ export class CatalogService {
         ...(input.images !== undefined && { images: input.images }),
         ...(input.unit !== undefined && { unit: input.unit }),
         ...(input.status !== undefined && { status: input.status as ProductStatus }),
+        ...(input.shelfLifeDays !== undefined && { shelfLifeDays: input.shelfLifeDays }),
       },
     });
-    // count 缓存失效：仅 status/categoryId 变化才影响 ACTIVE count（name/image/description/unit 不影响）
+    // count 缓存失效：仅 status/categoryId 变化才影响 ACTIVE count（name/image/description/unit/shelfLifeDays 不影响）
     if (input.status !== undefined || input.categoryId !== undefined) {
       void this.bumpCountVersion();
     }
@@ -952,6 +964,7 @@ export class CatalogService {
       iconUrl: c.iconUrl,
       parentId: c.parentId,
       sortOrder: c.sortOrder,
+      coldChain: c.coldChain,
       status: c.status as 'ACTIVE' | 'INACTIVE',
       productCount: productCountMap.get(c.id) ?? 0,
     }));
@@ -984,6 +997,7 @@ export class CatalogService {
     iconUrl: string;
     parentId?: string | null;
     sortOrder?: number;
+    coldChain?: boolean;
     // 注：create 不接 status，永远默认 ACTIVE（契约 CreateCategoryRequest 不含 status，审查观察①）
     // status toggle 走 updateCategory（PATCH /:id，UpdateCategoryRequest 含 status）
   }) {
@@ -999,6 +1013,7 @@ export class CatalogService {
         iconUrl: input.iconUrl,
         parentId: input.parentId ?? null,
         sortOrder: input.sortOrder ?? 0,
+        coldChain: input.coldChain ?? false,
         status: 'ACTIVE',
       },
     });
@@ -1008,6 +1023,7 @@ export class CatalogService {
       iconUrl: created.iconUrl,
       parentId: created.parentId,
       sortOrder: created.sortOrder,
+      coldChain: created.coldChain,
       status: created.status as 'ACTIVE' | 'INACTIVE',
     };
   }
@@ -1017,6 +1033,7 @@ export class CatalogService {
     iconUrl: string;
     parentId: string | null;
     sortOrder: number;
+    coldChain: boolean;
     status: 'ACTIVE' | 'INACTIVE';
   }>) {
     const existing = await db.category.findUnique({ where: { id } });
@@ -1039,6 +1056,7 @@ export class CatalogService {
         ...(input.iconUrl !== undefined && { iconUrl: input.iconUrl }),
         ...(input.parentId !== undefined && { parentId: input.parentId }),
         ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
+        ...(input.coldChain !== undefined && { coldChain: input.coldChain }),
         ...(input.status !== undefined && { status: input.status }),
       },
     });
@@ -1048,6 +1066,7 @@ export class CatalogService {
       iconUrl: updated.iconUrl,
       parentId: updated.parentId,
       sortOrder: updated.sortOrder,
+      coldChain: updated.coldChain,
       status: updated.status as 'ACTIVE' | 'INACTIVE',
     };
   }
@@ -1230,22 +1249,15 @@ export class CatalogService {
 
   /**
    * 批量查询 categoryId -> 多语言分类名 map（B11：商品 DTO 补 categoryName）
+   * P3批2：同查询带出 coldChain（零额外查询），组装链派生 isColdChain（D2b 单点）
    *
-   * 解决前端拿 categoryId(uuid) 无法显示分类名的问题。categorySlug 未补（Category 表无 slug 字段，
-   * 加需 migration+回填；B6 已提供真实 SKU 端点绕过 variantTemplates 按 slug 匹配）。
+   * P3批2 P1-1：实现拆到 shared/db/category-info.ts（user.service favorites 同口径复用），
+   * 此处保留私有委托，类内 5 个调用点零改动。
    */
   private async batchGetCategoryNameMap(
     categoryIds: (string | null)[],
-  ): Promise<Map<string, Record<string, string>>> {
-    const validIds = [...new Set(categoryIds.filter((id): id is string => id !== null))];
-    if (validIds.length === 0) return new Map();
-    const cats = await db.category.findMany({
-      where: { id: { in: validIds } },
-      select: { id: true, name: true },
-    });
-    const map = new Map<string, Record<string, string>>();
-    for (const c of cats) map.set(c.id, c.name as Record<string, string>);
-    return map;
+  ): Promise<Map<string, { name: Record<string, string>; coldChain: boolean }>> {
+    return batchGetCategoryInfo(db, categoryIds);
   }
 
   private async batchGetDefaultSkuIds(productIds: string[]): Promise<Map<string, string>> {
@@ -1276,9 +1288,12 @@ export class CatalogService {
     unit: unknown;
     priceMin: number;
     salesCount: number;
+    shelfLifeDays?: number | null;
     createdAt: Date;
     updatedAt: Date;
   }) {
+    // P3体验增强 批1（D1c）：临期字段后端单点派生直出（shelfLifeDays 未录入 → 不标）
+    const nearExpiry = deriveNearExpiry(p.shelfLifeDays ?? null, p.createdAt);
     return {
       id: p.id,
       shopId: p.shopId,
@@ -1291,6 +1306,8 @@ export class CatalogService {
       unit: p.unit as Record<string, string>,
       priceMin: p.priceMin,
       salesCount: p.salesCount,
+      daysToExpiry: nearExpiry.daysToExpiry,
+      isNearExpiry: nearExpiry.isNearExpiry,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
     };

@@ -34,6 +34,8 @@ export interface Product {
   priceMax?: number;
   salesCount?: number;
   categoryId?: string;
+  /** 保质期天数（P3批1，可空=未录入不标临期） */
+  shelfLifeDays?: number | null;
   /** 分类名（多语言，后端 adminListProducts 已挂，前端列表展示用） */
   categoryName?: I18nText;
 }
@@ -46,6 +48,8 @@ export interface CreateProductInput {
   images?: string[];
   status?: 'ACTIVE' | 'INACTIVE';
   categoryId?: string | null;
+  /** 保质期天数（P3批1，可空=不标临期） */
+  shelfLifeDays?: number | null;
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {}

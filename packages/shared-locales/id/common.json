@@ -142,7 +142,10 @@
       "batchAdjustConfirm": "Terapkan",
       "batchAdjustSuccess": "{count} produk berhasil diatur",
       "batchAdjustSkipped": "{count} dilewati (produk tidak ditemukan)",
-      "batchAdjustFailed": "Penyesuaian massal gagal"
+      "batchAdjustFailed": "Penyesuaian massal gagal",
+      "shelfLifeDays": "Masa simpan (hari)",
+      "shelfLifeDaysPlaceholder": "cth. 7",
+      "shelfLifeDaysHint": "Opsional. Produk dengan masa simpan tersisa <= 3 hari ditandai mendekati kedaluwarsa."
     },
     "categories": {
       "title": "Kategori",
@@ -167,6 +170,7 @@
       "iconUploadFailed": "Unggah gagal",
       "uploading": "Mengunggah...",
       "formSortOrder": "Urutan Sortir",
+      "formColdChain": "Rantai Dingin",
       "formNameLabel": "Nama ({locale})",
       "creating": "Membuat...",
       "createSubmit": "Buat Kategori",

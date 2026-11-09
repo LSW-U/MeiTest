@@ -142,7 +142,10 @@
       "batchAdjustConfirm": "确认调整",
       "batchAdjustSuccess": "已调整 {count} 个商品",
       "batchAdjustSkipped": "{count} 个商品不存在被跳过",
-      "batchAdjustFailed": "批量调整失败"
+      "batchAdjustFailed": "批量调整失败",
+      "shelfLifeDays": "保质期（天）",
+      "shelfLifeDaysPlaceholder": "如 7",
+      "shelfLifeDaysHint": "可选。剩余保质期 ≤ 3 天的商品将被标注「临期」。"
     },
     "categories": {
       "title": "分类",
@@ -167,6 +170,7 @@
       "iconUploadFailed": "上传失败",
       "uploading": "上传中...",
       "formSortOrder": "排序",
+      "formColdChain": "冷链配送",
       "formNameLabel": "名称（{locale}）",
       "creating": "创建中...",
       "createSubmit": "新建分类",

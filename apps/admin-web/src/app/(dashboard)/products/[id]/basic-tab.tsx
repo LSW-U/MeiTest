@@ -35,6 +35,8 @@ export function BasicTab({ productId, product }: { productId: string; product: P
   const [mainImage, setMainImage] = useState('');
   const [description, setDescription] = useState<I18nText>({});
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  // P3批1：保质期天数（string 中转便于空输入；保存转 number/null）
+  const [shelfLifeDays, setShelfLifeDays] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   // 批B（改动4）：手动重试兜底状态
@@ -47,6 +49,8 @@ export function BasicTab({ productId, product }: { productId: string; product: P
     setMainImage(product.mainImage ?? '');
     setDescription(product.description ?? {});
     setCategoryId(product.categoryId ?? null);
+    // P3批1：回显（null/undefined → 空串）
+    setShelfLifeDays(product.shelfLifeDays != null ? String(product.shelfLifeDays) : '');
   }, [product]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +99,8 @@ export function BasicTab({ productId, product }: { productId: string; product: P
   };
 
   const handleSaveBasic = async () => {
+    // P3-1：非数字输入（Number→NaN，JSON 序列化静默变 null 误清空原值）拦下不提交、保持输入不清空
+    if (shelfLifeDays.trim() && !Number.isFinite(Number(shelfLifeDays))) return;
     await updateMutation.mutateAsync({
       id: productId,
       input: {
@@ -102,6 +108,8 @@ export function BasicTab({ productId, product }: { productId: string; product: P
         mainImage: mainImage || undefined,
         description,
         categoryId: categoryId ?? null,
+        // P3批1：空串=清空（null 落库），非空转正整数
+        shelfLifeDays: shelfLifeDays.trim() ? Number(shelfLifeDays) : null,
       },
     });
   };
@@ -186,6 +194,19 @@ export function BasicTab({ productId, product }: { productId: string; product: P
           )}
         </div>
         {i18nInputs(t('w.form.description'), description, setDescription)}
+        {/* P3批1：保质期天数录入（可空=不标临期） */}
+        <div className="space-y-2">
+          <Label>{t('w.products.shelfLifeDays')}</Label>
+          <Input
+            type="number"
+            min={1}
+            value={shelfLifeDays}
+            onChange={(e) => setShelfLifeDays(e.target.value)}
+            placeholder={t('w.products.shelfLifeDaysPlaceholder')}
+            className="max-w-[200px]"
+          />
+          <p className="text-xs text-muted-foreground">{t('w.products.shelfLifeDaysHint')}</p>
+        </div>
         <div className="space-y-2">
           <Label>{t('w.form.category')}</Label>
           <CategorySelect value={categoryId} onChange={setCategoryId} />

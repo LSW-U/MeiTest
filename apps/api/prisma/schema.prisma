@@ -449,6 +449,8 @@ model Product {
   unit        Json
   /// 最低价(分),由 SKU 聚合更新
   priceMin    Int           @map("price_min")
+  /// 保质期(天),可空=未录入不标临期（P3体验增强 批1）
+  shelfLifeDays Int?        @map("shelf_life_days")
   salesCount  Int           @default(0) @map("sales_count")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
@@ -505,6 +507,8 @@ model Category {
   parentId  String?        @map("parent_id")
   sortOrder Int            @default(0) @map("sort_order")
   status    CategoryStatus @default(ACTIVE)
+  /// 冷链分类（P3体验增强 批2）：商品随分类继承，履约属性非下单决策因素
+  coldChain Boolean        @default(false) @map("cold_chain")
 
   parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children Category[] @relation("CategoryTree")

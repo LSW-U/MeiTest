@@ -4640,6 +4640,8 @@ registry.registerPath({
               orderNo: OrderNo,
               orderStatus: OrderStatus,
               paymentStatus: PaymentStatus,
+              /** P3批2：冷链订单标识（分类 coldChain 派生，无商品/无分类恒 false） */
+              isColdChain: z.boolean(),
               task: z
                 .object({
                   taskId: Id,

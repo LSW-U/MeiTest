@@ -598,6 +598,10 @@ components:
                 - OUT_OF_STOCK
             salesCount:
               type: integer
+            isNearExpiry:
+              type: boolean
+            isColdChain:
+              type: boolean
             isCategoryTop3:
               type: boolean
             stock:
@@ -612,6 +616,8 @@ components:
             - defaultSkuId
             - status
             - salesCount
+            - isNearExpiry
+            - isColdChain
             - isCategoryTop3
         createdAt:
           type: string
@@ -1704,6 +1710,10 @@ components:
               enum: *a5
             salesCount:
               type: integer
+            isNearExpiry:
+              type: boolean
+            isColdChain:
+              type: boolean
             isCategoryTop3:
               type: boolean
             stock:
@@ -1718,6 +1728,8 @@ components:
             - defaultSkuId
             - status
             - salesCount
+            - isNearExpiry
+            - isColdChain
             - isCategoryTop3
         items:
           type: array
@@ -1746,6 +1758,10 @@ components:
                 enum: *a5
               salesCount:
                 type: integer
+              isNearExpiry:
+                type: boolean
+              isColdChain:
+                type: boolean
               isCategoryTop3:
                 type: boolean
               stock:
@@ -1760,6 +1776,8 @@ components:
               - defaultSkuId
               - status
               - salesCount
+              - isNearExpiry
+              - isColdChain
               - isCategoryTop3
         coOrderCount:
           type: integer
@@ -1798,6 +1816,10 @@ components:
                 enum: *a5
               salesCount:
                 type: integer
+              isNearExpiry:
+                type: boolean
+              isColdChain:
+                type: boolean
               isCategoryTop3:
                 type: boolean
               stock:
@@ -1812,6 +1834,8 @@ components:
               - defaultSkuId
               - status
               - salesCount
+              - isNearExpiry
+              - isColdChain
               - isCategoryTop3
       required:
         - items
@@ -2795,6 +2819,13 @@ components:
           type: integer
           minimum: 0
           maximum: 999999
+        daysToExpiry:
+          type: integer
+          nullable: true
+        isNearExpiry:
+          type: boolean
+        isColdChain:
+          type: boolean
         defaultSkuId:
           type: string
           nullable: true
@@ -2823,6 +2854,9 @@ components:
         - status
         - unit
         - priceMin
+        - daysToExpiry
+        - isNearExpiry
+        - isColdChain
         - defaultSkuId
         - salesCount
         - createdAt
@@ -2852,6 +2886,10 @@ components:
           enum: *a5
         salesCount:
           type: integer
+        isNearExpiry:
+          type: boolean
+        isColdChain:
+          type: boolean
         isCategoryTop3:
           type: boolean
         stock:
@@ -2866,6 +2904,8 @@ components:
         - defaultSkuId
         - status
         - salesCount
+        - isNearExpiry
+        - isColdChain
         - isCategoryTop3
     ProductDetail:
       type: object
@@ -2911,6 +2951,13 @@ components:
           type: integer
           minimum: 0
           maximum: 999999
+        daysToExpiry:
+          type: integer
+          nullable: true
+        isNearExpiry:
+          type: boolean
+        isColdChain:
+          type: boolean
         defaultSkuId:
           type: string
           nullable: true
@@ -3010,6 +3057,9 @@ components:
         - status
         - unit
         - priceMin
+        - daysToExpiry
+        - isNearExpiry
+        - isColdChain
         - defaultSkuId
         - salesCount
         - createdAt
@@ -3062,6 +3112,11 @@ components:
           type: object
           additionalProperties:
             type: string
+        shelfLifeDays:
+          type: integer
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
         status:
           type: string
           enum: *a5
@@ -3096,6 +3151,11 @@ components:
           type: object
           additionalProperties:
             type: string
+        shelfLifeDays:
+          type: integer
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
         status:
           type: string
           enum: *a5
@@ -3256,6 +3316,8 @@ components:
           format: uuid
         sortOrder:
           type: integer
+        coldChain:
+          type: boolean
         status:
           type: string
           enum: &a14
@@ -3288,6 +3350,8 @@ components:
                 format: uuid
               sortOrder:
                 type: integer
+              coldChain:
+                type: boolean
               status:
                 type: string
                 enum: *a14
@@ -3325,6 +3389,8 @@ components:
           format: uuid
         sortOrder:
           type: integer
+        coldChain:
+          type: boolean
       required:
         - name
         - iconUrl
@@ -3348,6 +3414,8 @@ components:
           format: uuid
         sortOrder:
           type: integer
+        coldChain:
+          type: boolean
         status:
           type: string
           enum:
@@ -12616,6 +12684,10 @@ paths:
                           enum: *a5
                         salesCount:
                           type: integer
+                        isNearExpiry:
+                          type: boolean
+                        isColdChain:
+                          type: boolean
                         isCategoryTop3:
                           type: boolean
                         stock:
@@ -12630,6 +12702,8 @@ paths:
                         - defaultSkuId
                         - status
                         - salesCount
+                        - isNearExpiry
+                        - isColdChain
                         - isCategoryTop3
                     createdAt:
                       type: string
@@ -15233,6 +15307,10 @@ paths:
                           enum: *a5
                         salesCount:
                           type: integer
+                        isNearExpiry:
+                          type: boolean
+                        isColdChain:
+                          type: boolean
                         isCategoryTop3:
                           type: boolean
                         stock:
@@ -15247,6 +15325,8 @@ paths:
                         - defaultSkuId
                         - status
                         - salesCount
+                        - isNearExpiry
+                        - isColdChain
                         - isCategoryTop3
                   total:
                     type: number
@@ -15315,6 +15395,13 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  daysToExpiry:
+                    type: integer
+                    nullable: true
+                  isNearExpiry:
+                    type: boolean
+                  isColdChain:
+                    type: boolean
                   defaultSkuId:
                     type: string
                     nullable: true
@@ -15343,6 +15430,9 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - daysToExpiry
+                  - isNearExpiry
+                  - isColdChain
                   - defaultSkuId
                   - salesCount
                   - createdAt
@@ -15431,6 +15521,13 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  daysToExpiry:
+                    type: integer
+                    nullable: true
+                  isNearExpiry:
+                    type: boolean
+                  isColdChain:
+                    type: boolean
                   defaultSkuId:
                     type: string
                     nullable: true
@@ -15528,6 +15625,9 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - daysToExpiry
+                  - isNearExpiry
+                  - isColdChain
                   - defaultSkuId
                   - salesCount
                   - createdAt
@@ -15707,6 +15807,10 @@ paths:
                       enum: *a5
                     salesCount:
                       type: integer
+                    isNearExpiry:
+                      type: boolean
+                    isColdChain:
+                      type: boolean
                     isCategoryTop3:
                       type: boolean
                     stock:
@@ -15721,6 +15825,8 @@ paths:
                     - defaultSkuId
                     - status
                     - salesCount
+                    - isNearExpiry
+                    - isColdChain
                     - isCategoryTop3
   /api/v1/client/products/buy-again:
     get:
@@ -15779,6 +15885,10 @@ paths:
                       enum: *a5
                     salesCount:
                       type: integer
+                    isNearExpiry:
+                      type: boolean
+                    isColdChain:
+                      type: boolean
                     isCategoryTop3:
                       type: boolean
                     stock:
@@ -15793,6 +15903,8 @@ paths:
                     - defaultSkuId
                     - status
                     - salesCount
+                    - isNearExpiry
+                    - isColdChain
                     - isCategoryTop3
   /api/v1/client/products/customers-also-bought:
     get:
@@ -15846,6 +15958,10 @@ paths:
                           enum: *a5
                         salesCount:
                           type: integer
+                        isNearExpiry:
+                          type: boolean
+                        isColdChain:
+                          type: boolean
                         isCategoryTop3:
                           type: boolean
                         stock:
@@ -15860,6 +15976,8 @@ paths:
                         - defaultSkuId
                         - status
                         - salesCount
+                        - isNearExpiry
+                        - isColdChain
                         - isCategoryTop3
                 required:
                   - items
@@ -15914,6 +16032,10 @@ paths:
                         enum: *a5
                       salesCount:
                         type: integer
+                      isNearExpiry:
+                        type: boolean
+                      isColdChain:
+                        type: boolean
                       isCategoryTop3:
                         type: boolean
                       stock:
@@ -15928,6 +16050,8 @@ paths:
                       - defaultSkuId
                       - status
                       - salesCount
+                      - isNearExpiry
+                      - isColdChain
                       - isCategoryTop3
                   items:
                     type: array
@@ -15956,6 +16080,10 @@ paths:
                           enum: *a5
                         salesCount:
                           type: integer
+                        isNearExpiry:
+                          type: boolean
+                        isColdChain:
+                          type: boolean
                         isCategoryTop3:
                           type: boolean
                         stock:
@@ -15970,6 +16098,8 @@ paths:
                         - defaultSkuId
                         - status
                         - salesCount
+                        - isNearExpiry
+                        - isColdChain
                         - isCategoryTop3
                   coOrderCount:
                     type: integer
@@ -16431,6 +16561,10 @@ paths:
                           enum: *a5
                         salesCount:
                           type: integer
+                        isNearExpiry:
+                          type: boolean
+                        isColdChain:
+                          type: boolean
                         isCategoryTop3:
                           type: boolean
                         stock:
@@ -16445,6 +16579,8 @@ paths:
                         - defaultSkuId
                         - status
                         - salesCount
+                        - isNearExpiry
+                        - isColdChain
                         - isCategoryTop3
                   total:
                     type: number
@@ -16494,6 +16630,8 @@ paths:
                       format: uuid
                     sortOrder:
                       type: integer
+                    coldChain:
+                      type: boolean
                     status:
                       type: string
                       enum: *a14
@@ -16524,6 +16662,8 @@ paths:
                             format: uuid
                           sortOrder:
                             type: integer
+                          coldChain:
+                            type: boolean
                           status:
                             type: string
                             enum: *a14
@@ -16627,6 +16767,11 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                shelfLifeDays:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  exclusiveMinimum: true
                 status:
                   type: string
                   enum: *a5
@@ -16683,6 +16828,13 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  daysToExpiry:
+                    type: integer
+                    nullable: true
+                  isNearExpiry:
+                    type: boolean
+                  isColdChain:
+                    type: boolean
                   defaultSkuId:
                     type: string
                     nullable: true
@@ -16711,6 +16863,9 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - daysToExpiry
+                  - isNearExpiry
+                  - isColdChain
                   - defaultSkuId
                   - salesCount
                   - createdAt
@@ -16749,6 +16904,11 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                shelfLifeDays:
+                  type: integer
+                  nullable: true
+                  minimum: 0
+                  exclusiveMinimum: true
                 status:
                   type: string
                   enum: *a5
@@ -16801,6 +16961,13 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  daysToExpiry:
+                    type: integer
+                    nullable: true
+                  isNearExpiry:
+                    type: boolean
+                  isColdChain:
+                    type: boolean
                   defaultSkuId:
                     type: string
                     nullable: true
@@ -16829,6 +16996,9 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - daysToExpiry
+                  - isNearExpiry
+                  - isColdChain
                   - defaultSkuId
                   - salesCount
                   - createdAt
@@ -16904,6 +17074,13 @@ paths:
                     type: integer
                     minimum: 0
                     maximum: 999999
+                  daysToExpiry:
+                    type: integer
+                    nullable: true
+                  isNearExpiry:
+                    type: boolean
+                  isColdChain:
+                    type: boolean
                   defaultSkuId:
                     type: string
                     nullable: true
@@ -16932,6 +17109,9 @@ paths:
                   - status
                   - unit
                   - priceMin
+                  - daysToExpiry
+                  - isNearExpiry
+                  - isColdChain
                   - defaultSkuId
                   - salesCount
                   - createdAt
@@ -17094,6 +17274,8 @@ paths:
                   format: uuid
                 sortOrder:
                   type: integer
+                coldChain:
+                  type: boolean
               required:
                 - name
                 - iconUrl
@@ -17125,6 +17307,8 @@ paths:
                     format: uuid
                   sortOrder:
                     type: integer
+                  coldChain:
+                    type: boolean
                   status:
                     type: string
                     enum: *a14
@@ -17155,6 +17339,8 @@ paths:
                           format: uuid
                         sortOrder:
                           type: integer
+                        coldChain:
+                          type: boolean
                         status:
                           type: string
                           enum: *a14
@@ -34819,6 +35005,8 @@ paths:
                       paymentStatus:
                         type: string
                         enum: *a21
+                      isColdChain:
+                        type: boolean
                       task:
                         type: object
                         nullable: true
@@ -34854,6 +35042,7 @@ paths:
                       - orderNo
                       - orderStatus
                       - paymentStatus
+                      - isColdChain
                       - task
                 required:
                   - success

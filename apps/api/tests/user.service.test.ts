@@ -27,6 +27,7 @@ const dbMocks = {
   notificationCount: vi.fn(),
   orderAggregate: vi.fn(),
   productFindMany: vi.fn(),
+  categoryFindMany: vi.fn(),
   $transaction: vi.fn(),
 };
 const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
@@ -50,6 +51,7 @@ const { dbMocks: hoistedMocks } = vi.hoisted(() => ({
     notificationCount: vi.fn(),
     orderAggregate: vi.fn(),
     productFindMany: vi.fn(),
+    categoryFindMany: vi.fn(),
     $transaction: vi.fn(),
   },
 }));
@@ -89,6 +91,10 @@ vi.mock('../src/shared/db', () => ({
     product: {
       // 批D P2-1：listFavorites 经 getCategoryTop3ProductIds 批量查 Top3
       findMany: hoistedMocks.productFindMany,
+    },
+    // P3批2 P1-1：listFavorites 经 batchGetCategoryInfo 批量查分类（coldChain 派生）
+    category: {
+      findMany: hoistedMocks.categoryFindMany,
     },
     $transaction: hoistedMocks.$transaction,
   },
@@ -373,13 +379,21 @@ describe('UserService', () => {
       ]);
       // Top3 批量查询：prod-1 入选、prod-2 落榜
       dbMocks.productFindMany.mockResolvedValueOnce([{ id: 'prod-1', categoryId: 'cat-1' }]);
+      // P3批2 P1-1：分类批量查询（batchGetCategoryInfo）——cat-1 非冷链
+      dbMocks.categoryFindMany.mockResolvedValueOnce([
+        { id: 'cat-1', name: { en: 'Cat' }, coldChain: false },
+      ]);
 
       const result = await service.listFavorites('user-1');
       expect(result).toHaveLength(2);
       expect(result[0].product.isCategoryTop3).toBe(true);
       expect(result[1].product.isCategoryTop3).toBe(false);
+      // P3批2 P1-1：ProductSummary 必填 isColdChain（分类 coldChain 派生，无分类恒 false）
+      expect(result[0].product.isColdChain).toBe(false);
+      expect(result[1].product.isColdChain).toBe(false);
       // 一次批量查询覆盖全部收藏分类
       expect(dbMocks.productFindMany).toHaveBeenCalledTimes(1);
+      expect(dbMocks.categoryFindMany).toHaveBeenCalledTimes(1);
     });
   });
 

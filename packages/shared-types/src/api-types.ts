@@ -1245,6 +1245,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -3410,6 +3412,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -3477,6 +3481,9 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            daysToExpiry: number | null;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
@@ -3565,6 +3572,9 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            daysToExpiry: number | null;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
@@ -3752,6 +3762,8 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             isCategoryTop3: boolean;
                             stock?: number;
                             rating?: number;
@@ -3809,6 +3821,8 @@ export interface paths {
                             /** @enum {string} */
                             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                             salesCount: number;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             isCategoryTop3: boolean;
                             stock?: number;
                             rating?: number;
@@ -3865,6 +3879,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -3922,6 +3938,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -3939,6 +3957,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -4337,6 +4357,8 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                                 salesCount: number;
+                                isNearExpiry: boolean;
+                                isColdChain: boolean;
                                 isCategoryTop3: boolean;
                                 stock?: number;
                                 rating?: number;
@@ -4390,6 +4412,7 @@ export interface paths {
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
+                            coldChain?: boolean;
                             /** @enum {string} */
                             status?: "ACTIVE" | "INACTIVE";
                             productCount?: number;
@@ -4403,6 +4426,7 @@ export interface paths {
                                 /** Format: uuid */
                                 parentId: string | null;
                                 sortOrder: number;
+                                coldChain?: boolean;
                                 /** @enum {string} */
                                 status?: "ACTIVE" | "INACTIVE";
                                 productCount?: number;
@@ -4506,6 +4530,7 @@ export interface paths {
                         unit: {
                             [key: string]: string;
                         };
+                        shelfLifeDays?: number | null;
                         /** @enum {string} */
                         status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                     };
@@ -4542,6 +4567,9 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            daysToExpiry: number | null;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
@@ -4616,6 +4644,7 @@ export interface paths {
                         unit?: {
                             [key: string]: string;
                         };
+                        shelfLifeDays?: number | null;
                         /** @enum {string} */
                         status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                     };
@@ -4652,6 +4681,9 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            daysToExpiry: number | null;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
@@ -4728,6 +4760,9 @@ export interface paths {
                                 [key: string]: string;
                             };
                             priceMin: number;
+                            daysToExpiry: number | null;
+                            isNearExpiry: boolean;
+                            isColdChain: boolean;
                             /** Format: uuid */
                             defaultSkuId: string | null;
                             salesCount: number;
@@ -4889,6 +4924,7 @@ export interface paths {
                         /** Format: uuid */
                         parentId?: string | null;
                         sortOrder?: number;
+                        coldChain?: boolean;
                     };
                 };
             };
@@ -4909,6 +4945,7 @@ export interface paths {
                             /** Format: uuid */
                             parentId: string | null;
                             sortOrder: number;
+                            coldChain?: boolean;
                             /** @enum {string} */
                             status?: "ACTIVE" | "INACTIVE";
                             productCount?: number;
@@ -4922,6 +4959,7 @@ export interface paths {
                                 /** Format: uuid */
                                 parentId: string | null;
                                 sortOrder: number;
+                                coldChain?: boolean;
                                 /** @enum {string} */
                                 status?: "ACTIVE" | "INACTIVE";
                                 productCount?: number;
@@ -17192,6 +17230,7 @@ export interface paths {
                                 orderStatus: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
                                 /** @enum {string} */
                                 paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
+                                isColdChain: boolean;
                                 task: {
                                     /** Format: uuid */
                                     taskId: string;
@@ -25457,6 +25496,8 @@ export interface components {
                 /** @enum {string} */
                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                 salesCount: number;
+                isNearExpiry: boolean;
+                isColdChain: boolean;
                 isCategoryTop3: boolean;
                 stock?: number;
                 rating?: number;
@@ -25854,6 +25895,8 @@ export interface components {
                 /** @enum {string} */
                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                 salesCount: number;
+                isNearExpiry: boolean;
+                isColdChain: boolean;
                 isCategoryTop3: boolean;
                 stock?: number;
                 rating?: number;
@@ -25871,6 +25914,8 @@ export interface components {
                 /** @enum {string} */
                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                 salesCount: number;
+                isNearExpiry: boolean;
+                isColdChain: boolean;
                 isCategoryTop3: boolean;
                 stock?: number;
                 rating?: number;
@@ -25891,6 +25936,8 @@ export interface components {
                 /** @enum {string} */
                 status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
                 salesCount: number;
+                isNearExpiry: boolean;
+                isColdChain: boolean;
                 isCategoryTop3: boolean;
                 stock?: number;
                 rating?: number;
@@ -26369,6 +26416,9 @@ export interface components {
                 [key: string]: string;
             };
             priceMin: number;
+            daysToExpiry: number | null;
+            isNearExpiry: boolean;
+            isColdChain: boolean;
             /** Format: uuid */
             defaultSkuId: string | null;
             salesCount: number;
@@ -26392,6 +26442,8 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
             salesCount: number;
+            isNearExpiry: boolean;
+            isColdChain: boolean;
             isCategoryTop3: boolean;
             stock?: number;
             rating?: number;
@@ -26420,6 +26472,9 @@ export interface components {
                 [key: string]: string;
             };
             priceMin: number;
+            daysToExpiry: number | null;
+            isNearExpiry: boolean;
+            isColdChain: boolean;
             /** Format: uuid */
             defaultSkuId: string | null;
             salesCount: number;
@@ -26484,6 +26539,7 @@ export interface components {
             unit: {
                 [key: string]: string;
             };
+            shelfLifeDays?: number | null;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
         };
@@ -26502,6 +26558,7 @@ export interface components {
             unit?: {
                 [key: string]: string;
             };
+            shelfLifeDays?: number | null;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE" | "OUT_OF_STOCK";
         };
@@ -26574,6 +26631,7 @@ export interface components {
             /** Format: uuid */
             parentId: string | null;
             sortOrder: number;
+            coldChain?: boolean;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE";
             productCount?: number;
@@ -26587,6 +26645,7 @@ export interface components {
                 /** Format: uuid */
                 parentId: string | null;
                 sortOrder: number;
+                coldChain?: boolean;
                 /** @enum {string} */
                 status?: "ACTIVE" | "INACTIVE";
                 productCount?: number;
@@ -26600,6 +26659,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string | null;
             sortOrder?: number;
+            coldChain?: boolean;
         };
         UpdateCategoryRequest: {
             name?: {
@@ -26609,6 +26669,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string | null;
             sortOrder?: number;
+            coldChain?: boolean;
             /** @enum {string} */
             status?: "ACTIVE" | "INACTIVE";
         };

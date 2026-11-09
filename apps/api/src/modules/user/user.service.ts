@@ -20,6 +20,8 @@ import { NotificationService } from '../notification/notification.service';
 import { passwordStrategy } from '../../infrastructure/otp/password.strategy';
 import { Address, NotificationItem } from '@meimart/api-contract';
 import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
+import { deriveNearExpiry } from '../catalog/near-expiry.config';
+import { batchGetCategoryInfo } from '../../shared/db/category-info';
 import { decimalToNumber } from '@meimart/shared-utils';
 
 type AddressDTO = z.infer<typeof Address>;
@@ -303,10 +305,16 @@ export class UserService {
     });
     // 批D P2-1：收藏列表商品带 isCategoryTop3（徽章后端直出；一次查询批量算，非 N+1）
     const top3Ids = await getCategoryTop3ProductIds(db, favorites.map((f) => f.product));
+    // P3批2 P1-1：ProductSummary 契约必填 isColdChain——复用 catalog 同款批量 category helper
+    // （shared/db/category-info 单点查询，零 N+1），同口径派生不复制
+    const categoryMap = await batchGetCategoryInfo(db, favorites.map((f) => f.product.categoryId));
     return favorites.map((f) => ({
       id: f.id,
       productId: f.productId,
-      product: { ...this.toProductSummary(f.product), isCategoryTop3: top3Ids.has(f.productId) },
+      product: {
+        ...this.toProductSummary(f.product, categoryMap.get(f.product.categoryId ?? '')?.coldChain),
+        isCategoryTop3: top3Ids.has(f.productId),
+      },
       createdAt: f.createdAt.toISOString(),
     }));
   }
@@ -331,8 +339,12 @@ export class UserService {
     priceMin: number;
     status: string;
     salesCount: number;
+    shelfLifeDays?: number | null;
+    createdAt: Date;
     skus: { price: number }[];
-  }) {
+  }, coldChain?: boolean) {
+    // P3体验增强 批1：收藏列表 ProductSummary 契约新增必填 isNearExpiry（后端单点派生，同 catalog 口径）
+    const nearExpiry = deriveNearExpiry(p.shelfLifeDays ?? null, p.createdAt);
     return {
       id: p.id,
       name: p.name as Record<string, string>,
@@ -340,6 +352,9 @@ export class UserService {
       price: p.priceMin,
       status: p.status,
       salesCount: p.salesCount,
+      isNearExpiry: nearExpiry.isNearExpiry,
+      // P3批2 P1-1：契约必填 isColdChain（分类 coldChain 后端派生；无分类/分类缺失恒 false）
+      isColdChain: coldChain ?? false,
     };
   }
 

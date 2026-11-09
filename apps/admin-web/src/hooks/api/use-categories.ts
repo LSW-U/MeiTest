@@ -21,6 +21,8 @@ export interface Category {
   iconUrl?: string;
   parentId?: string | null;
   sortOrder?: number;
+  /** 冷链分类（P3批2：true=该分类商品按冷链履约展示） */
+  coldChain?: boolean;
   status?: 'ACTIVE' | 'INACTIVE';
   /** 该分类下在售商品数（F2，仅 admin listCategoriesAdmin 返；删除 dialog 前置拦截用） */
   productCount?: number;
@@ -31,6 +33,8 @@ export interface CreateCategoryInput {
   iconUrl: string; // 后端契约必填
   parentId?: string | null;
   sortOrder?: number;
+  /** 冷链分类（P3批2，缺省 false） */
+  coldChain?: boolean;
 }
 
 export interface UpdateCategoryInput extends Partial<CreateCategoryInput> {
