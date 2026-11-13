@@ -522,6 +522,8 @@
       "columnPaymentMethod": "Método de Pagamento",
       "columnPayableAmount": "Pagável",
       "columnCreatedAt": "Criado em",
+      "columnActions": "Ações",
+      "pendingAction": "Pendente",
       "detailPaymentTime": "Hora do Pagamento",
       "detailItems": "Itens do Pedido",
       "detailAmount": "Detalhes do Valor",

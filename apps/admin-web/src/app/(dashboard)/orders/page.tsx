@@ -20,11 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
-import {
-  useOrders,
-  type OrderListItem,
-  type OrderStatus,
-} from '@/hooks/api/use-orders';
+import { useOrders, type OrderListItem, type OrderStatus } from '@/hooks/api/use-orders';
 import { formatCurrency } from '@/lib/utils';
 
 const STATUS_FILTERS: { value: OrderStatus | 'ALL'; labelKey: string }[] = [
@@ -58,7 +54,6 @@ export default function OrdersListPage() {
   });
 
   const items: OrderListItem[] = data?.pages.flatMap((p) => p.items) ?? [];
-
   const columns: Column<OrderListItem>[] = [
     {
       key: 'orderNo',
@@ -104,6 +99,25 @@ export default function OrdersListPage() {
           {new Date(row.createdAt).toLocaleString()}
         </span>
       ),
+    },
+    {
+      key: 'actions',
+      header: t('admin.orders.columnActions'),
+      // 待确认单给黄色提醒入口跳详情页确认（warning=现成 amber variant；详情页有完整 Confirm 按钮）
+      render: (row) =>
+        row.status === 'PENDING_CONFIRM' ? (
+          <Button
+            size="sm"
+            variant="warning"
+            className="bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/orders/${row.id}`);
+            }}
+          >
+            {t('admin.orders.pendingAction')}
+          </Button>
+        ) : null,
     },
   ];
 

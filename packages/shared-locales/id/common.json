@@ -522,6 +522,8 @@
       "columnPaymentMethod": "Metode Pembayaran",
       "columnPayableAmount": "Bayar",
       "columnCreatedAt": "Dibuat Pada",
+      "columnActions": "Aksi",
+      "pendingAction": "Menunggu",
       "detailPaymentTime": "Waktu Pembayaran",
       "detailItems": "Item Pesanan",
       "detailAmount": "Detail Jumlah",

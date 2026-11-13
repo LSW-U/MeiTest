@@ -522,6 +522,8 @@
       "columnPaymentMethod": "Metodu Pagamentu",
       "columnPayableAmount": "Pagavel",
       "columnCreatedAt": "Kria iha",
+      "columnActions": "Asaun",
+      "pendingAction": "Seidauk Konfirma",
       "detailPaymentTime": "Tempu Pagamentu",
       "detailItems": "Item Order",
       "detailAmount": "Detalle Valor",

@@ -522,6 +522,8 @@
       "columnPaymentMethod": "支付方式",
       "columnPayableAmount": "应付金额",
       "columnCreatedAt": "创建时间",
+      "columnActions": "操作",
+      "pendingAction": "待确认",
       "detailPaymentTime": "支付时间",
       "detailItems": "订单商品",
       "detailAmount": "金额明细",
