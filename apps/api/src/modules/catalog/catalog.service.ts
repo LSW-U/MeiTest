@@ -221,6 +221,7 @@ export class CatalogService {
         where: { sku: { productId: id, status: 'ACTIVE' } },
         select: {
           warehouseId: true,
+          skuId: true,
           quantity: true,
           warehouse: { select: { name: true } },
         },
@@ -234,6 +235,8 @@ export class CatalogService {
       this.isCategoryTop3(product),
     ]);
 
+    // Q1-A：另按 skuId 聚合一份 per-SKU 全仓合计（skus[].stock 数据源）
+    const stockBySku = new Map<string, number>();
     // 分仓聚合：同仓多 SKU 行求和；warehouseId 升序保证输出稳定
     const byWarehouse = new Map<
       string,
@@ -241,6 +244,7 @@ export class CatalogService {
     >();
     let totalStock = 0;
     for (const row of stockRows) {
+      stockBySku.set(row.skuId, (stockBySku.get(row.skuId) ?? 0) + row.quantity);
       const cur = byWarehouse.get(row.warehouseId);
       if (cur) {
         cur.quantity += row.quantity;
@@ -271,7 +275,11 @@ export class CatalogService {
         reviewAgg._avg.rating != null ? Number(reviewAgg._avg.rating.toFixed(1)) : undefined,
       ratingCount: reviewAgg._count,
       isCategoryTop3: isTop3,
-      skus: product.skus.map((s) => this.toSkuDTO(s)),
+      skus: product.skus.map((s) =>
+        // 20261114 详情页规格选择器（Q1-A）：skus[] 补 per-SKU stock（全仓聚合，
+        // 口径与 product.stock 一致），供前端 pill 缺货态判定
+        this.toSkuDTO(s, stockBySku.get(s.id) ?? 0),
+      ),
     };
   }
 
@@ -1313,17 +1321,21 @@ export class CatalogService {
     };
   }
 
-  private toSkuDTO(s: {
-    id: string;
-    productId: string;
-    name: unknown;
-    attributes: unknown;
-    price: number;
-    imageUrl: string | null;
-    status: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
+  private toSkuDTO(
+    s: {
+      id: string;
+      productId: string;
+      name: unknown;
+      attributes: unknown;
+      price: number;
+      imageUrl: string | null;
+      status: string;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    // Q1-A：per-SKU 全仓聚合库存（仅 getProductDetail 传入；其余调用点不传 → undefined 不下发）
+    stock?: number,
+  ) {
     return {
       id: s.id,
       productId: s.productId,
@@ -1334,6 +1346,7 @@ export class CatalogService {
       status: s.status as 'ACTIVE' | 'INACTIVE',
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
+      ...(stock != null ? { stock } : {}),
     };
   }
 }
