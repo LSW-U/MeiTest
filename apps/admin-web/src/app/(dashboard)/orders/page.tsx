@@ -103,7 +103,9 @@ export default function OrdersListPage() {
     {
       key: 'actions',
       header: t('admin.orders.columnActions'),
-      // 待确认单给黄色提醒入口跳详情页确认（warning=现成 amber variant；详情页有完整 Confirm 按钮）
+      // 待确认单给淡橙提醒入口跳详情页确认（warning variant 局部覆盖淡橙；详情页有完整 Confirm 按钮）。
+      // stopPropagation 是防御性保留：当前 DataTable 未传 onRowClick（导航只在 orderNo 内联 button），
+      // 无行级冒泡；若未来整行可点，此处防误触跳转（审查 e72371a P3-1）
       render: (row) =>
         row.status === 'PENDING_CONFIRM' ? (
           <Button
