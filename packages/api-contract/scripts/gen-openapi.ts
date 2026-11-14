@@ -606,7 +606,7 @@ const DeliveryTaskRef = registry.register('DeliveryTask', DeliveryTask);
 //   故走方向2：build-time 校验两处字段 key 集合一致，不一致即 gen 失败（CI 红灯），
 //   把漂移风险从「静默分歧」转成「显式失败」。
 const ADMIN_DELIVERY_TASK_VIEW_EXTRA_FIELDS = {
-  estimatedArrival: IsoTimestamp.nullable(),
+  // estimatedArrival 20261115 上移至基类 DeliveryTask（骑手端同样需要锚点字段）——与 dispatch.ts 两处同步修改
   warehouseCode: z.string(),
   order: TaskOrderSummary,
   rider: TaskRiderSummary.nullable(),

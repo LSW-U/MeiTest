@@ -45,6 +45,19 @@ export const DeliveryTask = z.object({
   evidenceUrls: z.array(z.string().url()).default([]),
   createdAt: IsoTimestamp,
   updatedAt: IsoTimestamp,
+  /** 关联业务订单号（MMxxx；骑手到店报单号展示用，20261115 契约补声明——toView 早已透传） */
+  orderNo: z.string().optional(),
+  /**
+   * 预约单开门时间（ISO，即时单 null；骑手大厅卡片-后端配合需求① 20261115）。
+   * 语义 = 预约开门时间，不是送达 deadline。前端已备「预约单」badge 防御性 UI。
+   */
+  scheduledFor: IsoTimestamp.nullable().optional(),
+  /**
+   * 送达 deadline 锚点（ISO，需求②/⑤B 20261115）。
+   * 来源 delivery_tasks.estimated_arrival（建单时刻 + 45min 静态值，接单不刷新——
+   * 已知瑕疵记录不阻塞，实时 ETA 另立项）。缺失 → 前端降级分钟口径文案。
+   */
+  estimatedArrival: IsoTimestamp.nullable().optional(),
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
   contactPhone: z.string().optional(),
   /**
@@ -162,9 +175,8 @@ export const TaskOrderSummary = z.object({
   paymentMethod: z.string(),
 });
 
-/** admin 视角任务（含 order + rider + warehouseCode + ETA） */
+/** admin 视角任务（含 order + rider + warehouseCode；estimatedArrival 20261115 上移至基类 DeliveryTask——骑手/管理员共用同一锚点字段） */
 export const AdminDeliveryTaskView = DeliveryTask.extend({
-  estimatedArrival: IsoTimestamp.nullable(),
   warehouseCode: z.string(),
   order: TaskOrderSummary,
   rider: TaskRiderSummary.nullable(),

@@ -5314,6 +5314,16 @@ components:
         updatedAt:
           type: string
           format: date-time
+        orderNo:
+          type: string
+        scheduledFor:
+          type: string
+          nullable: true
+          format: date-time
+        estimatedArrival:
+          type: string
+          nullable: true
+          format: date-time
         contactPhone:
           type: string
         deliveryFee:
@@ -5358,10 +5368,6 @@ components:
         - $ref: "#/components/schemas/DeliveryTask"
         - type: object
           properties:
-            estimatedArrival:
-              type: string
-              nullable: true
-              format: date-time
             warehouseCode:
               type: string
             order:
@@ -5399,7 +5405,6 @@ components:
                 - riderName
                 - phone
           required:
-            - estimatedArrival
             - warehouseCode
             - order
             - rider
@@ -5481,6 +5486,16 @@ components:
                   updatedAt:
                     type: string
                     format: date-time
+                  orderNo:
+                    type: string
+                  scheduledFor:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  estimatedArrival:
+                    type: string
+                    nullable: true
+                    format: date-time
                   contactPhone:
                     type: string
                   deliveryFee:
@@ -5560,7 +5575,6 @@ components:
                   - note
                   - createdAt
                   - updatedAt
-                  - estimatedArrival
                   - warehouseCode
                   - order
                   - rider
@@ -23033,6 +23047,16 @@ paths:
                             updatedAt:
                               type: string
                               format: date-time
+                            orderNo:
+                              type: string
+                            scheduledFor:
+                              type: string
+                              nullable: true
+                              format: date-time
+                            estimatedArrival:
+                              type: string
+                              nullable: true
+                              format: date-time
                             contactPhone:
                               type: string
                             deliveryFee:
@@ -23112,7 +23136,6 @@ paths:
                             - note
                             - createdAt
                             - updatedAt
-                            - estimatedArrival
                             - warehouseCode
                             - order
                             - rider

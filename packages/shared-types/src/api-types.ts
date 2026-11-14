@@ -9130,6 +9130,11 @@ export interface paths {
                                     createdAt: string;
                                     /** Format: date-time */
                                     updatedAt: string;
+                                    orderNo?: string;
+                                    /** Format: date-time */
+                                    scheduledFor?: string | null;
+                                    /** Format: date-time */
+                                    estimatedArrival?: string | null;
                                     contactPhone?: string;
                                     deliveryFee?: number;
                                     baseFee?: number;
@@ -9137,8 +9142,10 @@ export interface paths {
                                     billingDistanceKm?: number;
                                     distanceKm?: number;
                                     estimatedMinutes?: number;
-                                    /** Format: date-time */
-                                    estimatedArrival: string | null;
+                                    itemsSummary?: {
+                                        totalQty: number;
+                                        kinds: number;
+                                    };
                                     warehouseCode: string;
                                     order: {
                                         orderNo: string;
@@ -27416,6 +27423,11 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            orderNo?: string;
+            /** Format: date-time */
+            scheduledFor?: string | null;
+            /** Format: date-time */
+            estimatedArrival?: string | null;
             contactPhone?: string;
             deliveryFee?: number;
             baseFee?: number;
@@ -27423,10 +27435,12 @@ export interface components {
             billingDistanceKm?: number;
             distanceKm?: number;
             estimatedMinutes?: number;
+            itemsSummary?: {
+                totalQty: number;
+                kinds: number;
+            };
         };
         AdminDeliveryTaskView: components["schemas"]["DeliveryTask"] & {
-            /** Format: date-time */
-            estimatedArrival: string | null;
             warehouseCode: string;
             order: {
                 orderNo: string;
@@ -27482,6 +27496,11 @@ export interface components {
                     createdAt: string;
                     /** Format: date-time */
                     updatedAt: string;
+                    orderNo?: string;
+                    /** Format: date-time */
+                    scheduledFor?: string | null;
+                    /** Format: date-time */
+                    estimatedArrival?: string | null;
                     contactPhone?: string;
                     deliveryFee?: number;
                     baseFee?: number;
@@ -27489,8 +27508,10 @@ export interface components {
                     billingDistanceKm?: number;
                     distanceKm?: number;
                     estimatedMinutes?: number;
-                    /** Format: date-time */
-                    estimatedArrival: string | null;
+                    itemsSummary?: {
+                        totalQty: number;
+                        kinds: number;
+                    };
                     warehouseCode: string;
                     order: {
                         orderNo: string;

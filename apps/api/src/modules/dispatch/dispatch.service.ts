@@ -71,6 +71,20 @@ export interface DeliveryTaskView {
   updatedAt: string;
   /** 关联订单号（前端展示用） */
   orderNo?: string;
+  /**
+   * 预约单开门时间（ISO，即时单 null；骑手大厅卡片-后端配合需求① 20261114/15）。
+   * ⚠️ 语义 = 预约开门时间，不是送达 deadline，两者不能混用（即时单为 null）。
+   * 前端已备防御性可选字段 + 「预约单」badge UI（rider TaskCard scheduledFor），
+   * 后端透传即生效，无需前端再改大结构。
+   */
+  scheduledFor?: string | null;
+  /**
+   * 送达 deadline 锚点（ISO，骑手大厅卡片-后端配合需求②/⑤B 20261114/15）。
+   * 来源 delivery_tasks.estimated_arrival（建单时刻 + DEFAULT_ETA_MINUTES(45)）——
+   * ⚠️ 已知瑕疵：建单时静态写入，接单不刷新；先透传给前端做「需在 HH:mm 前送达」
+   * 锚点展示，实时 ETA（Redis 位置推算）另立项（方案 C）。
+   */
+  estimatedArrival?: string | null;
   /** 仓库代码（前端筛选用） */
   warehouseCode?: string;
   /** W7 补字段：订单应付金额（骑手 COD 收款参考） */
@@ -111,6 +125,11 @@ export interface DeliveryTaskView {
    * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
    */
   estimatedMinutes?: number;
+  /**
+   * 商品摘要（骑手大厅卡片-后端配合需求 20261115，对齐行业惯例：接单决策看件数不看明细）。
+   * totalQty = Σ OrderItem.quantity；kinds = 去重 SKU 数。order.items 未 include → undefined。
+   */
+  itemsSummary?: { totalQty: number; kinds: number };
   /**
    * 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建单回显工单号。
    * 仅 reportIssue 响应携带；其余端点 undefined（只增不改）。
@@ -343,7 +362,7 @@ export class DispatchService {
     };
     const include = {
       // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
-      order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+      order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
       warehouse: { select: { code: true } },
     };
 
@@ -390,7 +409,7 @@ export class DispatchService {
       orderBy: { updatedAt: 'desc' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -478,7 +497,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -617,7 +636,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
           warehouse: { select: { code: true } },
         },
       });
@@ -708,7 +727,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
           warehouse: { select: { code: true } },
         },
       });
@@ -781,7 +800,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
           warehouse: { select: { code: true } },
         },
       });
@@ -909,7 +928,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -948,7 +967,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
           warehouse: { select: { code: true } },
         },
       });
@@ -1170,7 +1189,7 @@ export class DispatchService {
       where: { orderId, taskType: 'delivery' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -1226,7 +1245,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -1367,7 +1386,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true } },
+        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
         warehouse: { select: { code: true } },
       },
     });
@@ -2037,6 +2056,15 @@ export class DispatchService {
     const estimatedMinutes =
       distanceKm != null ? estimateMinutesFromDistance(distanceKm, 20, DEFAULT_ETA_MINUTES) ?? undefined : undefined;
 
+    // 商品摘要（骑手大厅卡片 20261115）：order.items 未 include → undefined（前端降级隐藏）
+    const orderItems = (t.order as any)?.items as Array<{ skuId: string; quantity: number }> | undefined;
+    const itemsSummary = orderItems
+      ? {
+          totalQty: orderItems.reduce((s, i) => s + (i.quantity ?? 0), 0),
+          kinds: new Set(orderItems.map((i) => i.skuId)).size,
+        }
+      : undefined;
+
     return {
       id: t.id,
       orderId: t.orderId,
@@ -2058,6 +2086,9 @@ export class DispatchService {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
       orderNo: (t.order as any)?.orderNo,
+      // 骑手大厅卡片后端配合需求①②（20261115）：透传预约开门时间 + 送达 deadline 锚点
+      scheduledFor: (t.order as any)?.scheduledFor?.toISOString() ?? null,
+      estimatedArrival: t.estimatedArrival?.toISOString() ?? null,
       warehouseCode: (t.warehouse as any)?.code,
       payableAmount: (t.order as any)?.payableAmount,
       paymentMethod: (t.order as any)?.paymentMethod,
@@ -2080,6 +2111,7 @@ export class DispatchService {
         ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,
       distanceKm: distanceKm ?? undefined,
       estimatedMinutes,
+      itemsSummary,
     };
   }
 }
