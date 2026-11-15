@@ -3676,6 +3676,26 @@ components:
           type: string
           nullable: true
           format: uuid
+        customer:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            phone:
+              type: string
+            name:
+              type: string
+              nullable: true
+            avatarUrl:
+              type: string
+              nullable: true
+          required:
+            - id
+            - phone
+            - name
+            - avatarUrl
         paymentMethod:
           type: string
           enum: &a18
@@ -5344,6 +5364,18 @@ components:
         estimatedMinutes:
           type: integer
           minimum: 0
+        itemsSummary:
+          type: object
+          properties:
+            totalQty:
+              type: integer
+              minimum: 0
+            kinds:
+              type: integer
+              minimum: 0
+          required:
+            - totalQty
+            - kinds
       required:
         - id
         - orderId
@@ -5516,10 +5548,18 @@ components:
                   estimatedMinutes:
                     type: integer
                     minimum: 0
-                  estimatedArrival:
-                    type: string
-                    nullable: true
-                    format: date-time
+                  itemsSummary:
+                    type: object
+                    properties:
+                      totalQty:
+                        type: integer
+                        minimum: 0
+                      kinds:
+                        type: integer
+                        minimum: 0
+                    required:
+                      - totalQty
+                      - kinds
                   warehouseCode:
                     type: string
                   order:
@@ -17985,6 +18025,26 @@ paths:
                     type: string
                     nullable: true
                     format: uuid
+                  customer:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      phone:
+                        type: string
+                      name:
+                        type: string
+                        nullable: true
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                    required:
+                      - id
+                      - phone
+                      - name
+                      - avatarUrl
                   paymentMethod:
                     type: string
                     enum: *a18
@@ -18285,6 +18345,26 @@ paths:
                       type: string
                       nullable: true
                       format: uuid
+                    customer:
+                      type: object
+                      nullable: true
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        phone:
+                          type: string
+                        name:
+                          type: string
+                          nullable: true
+                        avatarUrl:
+                          type: string
+                          nullable: true
+                      required:
+                        - id
+                        - phone
+                        - name
+                        - avatarUrl
                     paymentMethod:
                       type: string
                       enum: *a18
@@ -20280,6 +20360,26 @@ paths:
                     type: string
                     nullable: true
                     format: uuid
+                  customer:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      phone:
+                        type: string
+                      name:
+                        type: string
+                        nullable: true
+                      avatarUrl:
+                        type: string
+                        nullable: true
+                    required:
+                      - id
+                      - phone
+                      - name
+                      - avatarUrl
                   paymentMethod:
                     type: string
                     enum: *a18
@@ -23077,10 +23177,18 @@ paths:
                             estimatedMinutes:
                               type: integer
                               minimum: 0
-                            estimatedArrival:
-                              type: string
-                              nullable: true
-                              format: date-time
+                            itemsSummary:
+                              type: object
+                              properties:
+                                totalQty:
+                                  type: integer
+                                  minimum: 0
+                                kinds:
+                                  type: integer
+                                  minimum: 0
+                              required:
+                                - totalQty
+                                - kinds
                             warehouseCode:
                               type: string
                             order:
@@ -27395,6 +27503,26 @@ paths:
                               type: string
                               nullable: true
                               format: uuid
+                            customer:
+                              type: object
+                              nullable: true
+                              properties:
+                                id:
+                                  type: string
+                                  format: uuid
+                                phone:
+                                  type: string
+                                name:
+                                  type: string
+                                  nullable: true
+                                avatarUrl:
+                                  type: string
+                                  nullable: true
+                              required:
+                                - id
+                                - phone
+                                - name
+                                - avatarUrl
                             paymentMethod:
                               type: string
                               enum: *a18
@@ -27750,6 +27878,26 @@ paths:
                         type: string
                         nullable: true
                         format: uuid
+                      customer:
+                        type: object
+                        nullable: true
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          phone:
+                            type: string
+                          name:
+                            type: string
+                            nullable: true
+                          avatarUrl:
+                            type: string
+                            nullable: true
+                        required:
+                          - id
+                          - phone
+                          - name
+                          - avatarUrl
                       paymentMethod:
                         type: string
                         enum: *a18
@@ -28076,6 +28224,26 @@ paths:
                         type: string
                         nullable: true
                         format: uuid
+                      customer:
+                        type: object
+                        nullable: true
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          phone:
+                            type: string
+                          name:
+                            type: string
+                            nullable: true
+                          avatarUrl:
+                            type: string
+                            nullable: true
+                        required:
+                          - id
+                          - phone
+                          - name
+                          - avatarUrl
                       paymentMethod:
                         type: string
                         enum: *a18

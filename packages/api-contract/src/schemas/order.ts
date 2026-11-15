@@ -134,6 +134,19 @@ export const Order = z.object({
   deliveryAddress: AddressSnapshot,
   remark: z.string().nullable(),
   riderId: Id.nullable(),
+  /**
+   * 下单人账号信息（admin-web 订单详情联系卡，2026-11-14）。
+   * 仅 GET /admin/orders/:id 返回；client 详情/列表恒 undefined（敏感信息不出 C 端）。
+   */
+  customer: z
+    .object({
+      id: Id,
+      phone: z.string(),
+      name: z.string().nullable(),
+      avatarUrl: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   paymentMethod: PaymentMethod,
   paymentStatus: PaymentStatus,
   paidAt: IsoTimestamp.nullable(),

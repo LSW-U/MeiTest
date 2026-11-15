@@ -96,6 +96,17 @@ export const DeliveryTask = z.object({
    * distanceKm 缺失 → undefined（前端降级到 etaPlaceholder）。
    */
   estimatedMinutes: z.number().int().nonnegative().optional(),
+  /**
+   * 商品摘要（骑手大厅卡片-后端配合需求 20261115）。
+   * totalQty = Σ OrderItem.quantity（总件数）；kinds = 去重 SKU 数。
+   * order.items 未 include → undefined（前端降级隐藏）。对齐行业惯例：接单决策看件数不看明细，不带商品图片。
+   */
+  itemsSummary: z
+    .object({
+      totalQty: z.number().int().nonnegative(),
+      kinds: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 // Why: taskId 走 URL path param（:id），body 不重复携带。

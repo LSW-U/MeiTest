@@ -916,9 +916,10 @@ export class DispatchService {
   /**
    * P14 ④：开始配送（PICKED_UP -> DELIVERING）
    *
-   * 决策 1 选 A（2026-08-11）：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本方法负责第一步）；
-   * delivery 任务保持两步 PICKED_UP->DELIVERED（跳过 DELIVERING，走 deliverTask）。
-   * 本方法仅 taskType=return 可调，打通原 DELIVERING 死状态（enum 有值无写入点）。
+   * 决策 1A 作废登记（20261116 拍板：普通单改三步）：delivery 任务保持两步
+   * PICKED_UP->DELIVERED 导致「配送中」tab 恒 0 且 navigate 页按钮语义错位，
+   * 现所有任务类型统一三步 PICKED_UP->DELIVERING->DELIVERED（本方法负责第一步）。
+   * E-DISPATCH-020 taskType 拦截已移除（E-DISPATCH-004 状态校验 + assertTaskTransition 双保险保留）。
    *
    * 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（return 任务）
    */
@@ -941,23 +942,16 @@ export class DispatchService {
         message: 'Task not assigned to this rider',
       });
     }
-    // P14 ④：仅 return 任务可调（delivery 走 deliverTask 跳过 DELIVERING）
-    if (task.taskType !== 'return') {
-      throw new ConflictException({
-        code: 'E-DISPATCH-020',
-        message: `Task ${input.taskId} invalid taskType ${task.taskType} (startDelivering only for return task)`,
-      });
-    }
     if (task.status !== 'PICKED_UP') {
       throw new ConflictException({
         code: 'E-DISPATCH-004',
         message: `Task status ${task.status} cannot start delivering`,
       });
     }
-    // 批2 v2 D8：状态机断言（return 任务三步流的第二步，与守卫双保险）
+    // 批2 v2 D8：状态机断言（三步流第二步，与守卫双保险）
     assertTaskTransition(task.status, 'DELIVERING');
 
-    // 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)
+    // 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（仅 return 任务有 refundId）
     const { updated } = await withTransaction(async (tx: Tx) => {
       const t = await tx.deliveryTask.update({
         where: { id: input.taskId },

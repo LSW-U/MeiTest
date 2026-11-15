@@ -5527,6 +5527,13 @@ export interface paths {
                             remark: string | null;
                             /** Format: uuid */
                             riderId: string | null;
+                            customer?: {
+                                /** Format: uuid */
+                                id: string;
+                                phone: string;
+                                name: string | null;
+                                avatarUrl: string | null;
+                            } | null;
                             /** @enum {string} */
                             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
@@ -5664,6 +5671,13 @@ export interface paths {
                             remark: string | null;
                             /** Format: uuid */
                             riderId: string | null;
+                            customer?: {
+                                /** Format: uuid */
+                                id: string;
+                                phone: string;
+                                name: string | null;
+                                avatarUrl: string | null;
+                            } | null;
                             /** @enum {string} */
                             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
@@ -7073,6 +7087,13 @@ export interface paths {
                             remark: string | null;
                             /** Format: uuid */
                             riderId: string | null;
+                            customer?: {
+                                /** Format: uuid */
+                                id: string;
+                                phone: string;
+                                name: string | null;
+                                avatarUrl: string | null;
+                            } | null;
                             /** @enum {string} */
                             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                             /** @enum {string} */
@@ -12120,6 +12141,13 @@ export interface paths {
                                     remark: string | null;
                                     /** Format: uuid */
                                     riderId: string | null;
+                                    customer?: {
+                                        /** Format: uuid */
+                                        id: string;
+                                        phone: string;
+                                        name: string | null;
+                                        avatarUrl: string | null;
+                                    } | null;
                                     /** @enum {string} */
                                     paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                     /** @enum {string} */
@@ -12299,6 +12327,13 @@ export interface paths {
                                 remark: string | null;
                                 /** Format: uuid */
                                 riderId: string | null;
+                                customer?: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    phone: string;
+                                    name: string | null;
+                                    avatarUrl: string | null;
+                                } | null;
                                 /** @enum {string} */
                                 paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
@@ -12451,6 +12486,13 @@ export interface paths {
                                 remark: string | null;
                                 /** Format: uuid */
                                 riderId: string | null;
+                                customer?: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    phone: string;
+                                    name: string | null;
+                                    avatarUrl: string | null;
+                                } | null;
                                 /** @enum {string} */
                                 paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
                                 /** @enum {string} */
@@ -26782,6 +26824,13 @@ export interface components {
             remark: string | null;
             /** Format: uuid */
             riderId: string | null;
+            customer?: {
+                /** Format: uuid */
+                id: string;
+                phone: string;
+                name: string | null;
+                avatarUrl: string | null;
+            } | null;
             /** @enum {string} */
             paymentMethod: "COD" | "BANK_TRANSFER" | "WECHAT" | "PAYPAL" | "STRIPE" | "WECHAT_GLOBAL" | "ALIPAY_CN" | "LOCAL_PSP";
             /** @enum {string} */
