@@ -39,6 +39,7 @@ import {
   usePickOrder,
   useUpdateOrder,
 } from '@/hooks/api/use-orders';
+import { useWarehouses } from '@/hooks/api/use-warehouses';
 import { OutOfStockDialog } from './out-of-stock-dialog';
 import { formatCurrency } from '@/lib/utils';
 import type { I18nText } from '@/hooks/api/use-products';
@@ -53,6 +54,18 @@ function displayName(value: I18nText | unknown): string {
   return '';
 }
 
+/** 收货地址快照取值（下单时写入 {name, phone, detail, lat, lng}，容错历史脏数据） */
+function addressText(value: unknown): { name: string; phone: string; detail: string } | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.detail !== 'string') return null;
+  return {
+    name: typeof v.name === 'string' ? v.name : '',
+    phone: typeof v.phone === 'string' ? v.phone : '',
+    detail: v.detail,
+  };
+}
+
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const t = useTranslations('common');
@@ -60,6 +73,9 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const { toast } = useToast();
 
   const { data: order, isLoading, error, refetch } = useOrderDetail(id);
+  // 发货仓库映射（方案A：仓库数量少，一次列表前端映射 id → name）
+  const { data: warehouseRes } = useWarehouses();
+  const warehouse = warehouseRes?.data?.find((w) => w.id === order?.warehouseId);
   const cancelMutation = useCancelOrder();
   const confirmMutation = useConfirmOrder();
   const pickMutation = usePickOrder();
@@ -246,13 +262,136 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         </Card>
       </div>
 
-      {order.remark && (
+      {/* 备注卡常显：顾客下单备注与 admin 编辑备注共用 remark 字段，空时显「无备注」避免误读为无此功能 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.orders.remarkLabel')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm whitespace-pre-wrap">
+            {order.remark || <span className="text-muted-foreground">{t('admin.orders.noRemark')}</span>}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* 下单人 / 收货地址 / 发货仓库 / 骑手 联系卡（2026-11-14：四列响应式） */}
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>{t('admin.orders.remarkLabel')}</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.orders.customerLabel')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {order.customer ? (
+              <>
+                <p className="text-sm font-medium">{order.customer.name || '-'}</p>
+                <a
+                  href={`tel:${order.customer.phone}`}
+                  className="font-mono text-sm text-primary hover:underline"
+                >
+                  {order.customer.phone}
+                </a>
+                {order.deletedAt && (
+                  <p className="text-xs text-destructive">{t('admin.orders.customerDeleted')}</p>
+                )}
+              </>
+            ) : (
+              <p className="font-mono text-xs text-muted-foreground">{order.userId}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.orders.addressLabel')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {(() => {
+              const addr = addressText(order.deliveryAddress);
+              if (!addr) return <p className="text-sm text-muted-foreground">-</p>;
+              return (
+                <>
+                  <p className="text-sm font-medium">
+                    {addr.name}
+                    {addr.phone && (
+                      <a
+                        href={`tel:${addr.phone}`}
+                        className="ml-2 font-mono text-xs text-primary hover:underline"
+                      >
+                        {addr.phone}
+                      </a>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{addr.detail}</p>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.orders.warehouseLabel')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {warehouse ? (
+              <>
+                <p className="text-sm font-medium">
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">{warehouse.code}</span>
+                  {displayName(warehouse.name)}
+                </p>
+                <p className="text-sm text-muted-foreground">{warehouse.address}</p>
+              </>
+            ) : (
+              <p className="font-mono text-xs text-muted-foreground">{order.warehouseId}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.orders.riderLabel')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {order.rider ? (
+              <>
+                <p className="text-sm font-medium">{order.rider.riderName}</p>
+                <a
+                  href={`tel:${order.rider.phone}`}
+                  className="font-mono text-sm text-primary hover:underline"
+                >
+                  {order.rider.phone}
+                </a>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t('admin.orders.noRider')}</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 订单时间线（events 后端详情接口一直返回，2026-11-14 起渲染） */}
+      {order.events && order.events.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">{t('admin.orders.timelineTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{order.remark}</p>
+            <ol className="space-y-2">
+              {order.events.map((ev) => (
+                <li key={ev.id} className="flex items-baseline justify-between gap-4 border-b pb-2 last:border-0 last:pb-0">
+                  <div className="space-y-0.5">
+                    <p className="font-mono text-xs font-medium">{ev.eventType}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ev.fromStatus ? `${ev.fromStatus} → ` : ''}
+                      {ev.toStatus}
+                    </p>
+                  </div>
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">
+                    {formatDateTime(ev.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </CardContent>
         </Card>
       )}
@@ -309,9 +448,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
+              {/* 后端口径：totalAmount = 商品小计 + 配送费（下单时已含），故小计前端推导 totalAmount - deliveryFee */}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">{t('admin.orders.totalAmount')}</span>
-                <span className="font-mono">{formatCurrency(order.totalAmount)}</span>
+                <span className="text-muted-foreground">{t('admin.orders.itemsSubtotal')}</span>
+                <span className="font-mono">{formatCurrency(order.totalAmount - order.deliveryFee)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('admin.orders.deliveryFee')}</span>

@@ -595,7 +595,16 @@
       "oosAddEvidence": "Aumenta foto proba",
       "oosSuggestionPolicyNone": "Kliente nei hari substituisaun ba pedidu ida-ne'e — laiha sugerensa disponível",
       "oosSuggestionPolicySpecify": "Kliente limita substituisaun ba sasan balun de'it — de'it sasan iha lista mutin maka bele hili",
-      "oosAmountDelta": "Folanai produtu mamuk"
+      "oosAmountDelta": "Folanai produtu mamuk",
+      "customerLabel": "Kliente",
+      "customerDeleted": "Uzaín hamoos",
+      "addressLabel": "Endresu Entrega",
+      "riderLabel": "Kurir",
+      "noRider": "Seidauk iha kurir",
+      "timelineTitle": "Linha Tempu Pedidu",
+      "warehouseLabel": "Almoksen Entrega",
+      "itemsSubtotal": "Subtotál Sasan",
+      "noRemark": "Laiha nota"
     },
     "riders": {
       "title": "Rider",

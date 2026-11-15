@@ -595,7 +595,16 @@
       "oosAddEvidence": "添加取证照片",
       "oosSuggestionPolicyNone": "该订单客户已禁止替换 — 不可填替代建议",
       "oosSuggestionPolicySpecify": "客户仅允许白名单内商品替换 — 只能选择白名单内商品项",
-      "oosAmountDelta": "缺货金额"
+      "oosAmountDelta": "缺货金额",
+      "customerLabel": "下单人",
+      "customerDeleted": "用户已删除",
+      "addressLabel": "收货地址",
+      "riderLabel": "骑手",
+      "noRider": "尚未分配骑手",
+      "timelineTitle": "订单时间线",
+      "warehouseLabel": "发货仓库",
+      "itemsSubtotal": "商品小计",
+      "noRemark": "无备注"
     },
     "riders": {
       "title": "骑手管理",

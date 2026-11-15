@@ -71,6 +71,40 @@ export interface OrderDetail extends OrderListItem {
   allowedReplacementSkuIds?: string[] | null;
   remark: string | null;
   riderId: string | null;
+  /** 下单人账号信息（仅 admin 详情接口返回；client 恒 undefined） */
+  customer?: {
+    id: string;
+    phone: string;
+    name: string | null;
+    avatarUrl: string | null;
+  } | null;
+  /** 收货地址快照（下单时拷贝） */
+  deliveryAddress: {
+    name: string;
+    phone: string;
+    detail: string;
+    lat: number | null;
+    lng: number | null;
+  } | null;
+  /** 骑手详情（详情接口返回；列表无） */
+  rider?: {
+    id: string;
+    riderName: string;
+    phone: string;
+    rating: string;
+    totalDeliveries: number;
+    vehicleType: string;
+    avatarUrl: string | null;
+  } | null;
+  /** 订单事件时间线（详情接口返回） */
+  events?: Array<{
+    id: string;
+    eventType: string;
+    fromStatus: OrderStatus | null;
+    toStatus: OrderStatus;
+    metadata: unknown;
+    createdAt: string;
+  }>;
   discountAmount: number;
   confirmedAt: string | null;
   pickedAt: string | null;
@@ -78,6 +112,8 @@ export interface OrderDetail extends OrderListItem {
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** 软删标记（P27 批B1）：非 null = 用户已删除该订单 */
+  deletedAt?: string | null;
   /** 应用的促销（W7-ext-G-fix2）：null = 未用码 */
   promotion: {
     promotionId: string;

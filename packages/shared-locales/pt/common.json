@@ -595,7 +595,16 @@
       "oosAddEvidence": "Adicionar fotos de evidência",
       "oosSuggestionPolicyNone": "O cliente desativou substituições neste pedido — nenhuma sugestão disponível",
       "oosSuggestionPolicySpecify": "O cliente restringiu substituições a itens específicos — apenas itens da lista branca selecionáveis",
-      "oosAmountDelta": "Valor em falta"
+      "oosAmountDelta": "Valor em falta",
+      "customerLabel": "Cliente",
+      "customerDeleted": "Usuário excluído",
+      "addressLabel": "Endereço de Entrega",
+      "riderLabel": "Entregador",
+      "noRider": "Ainda sem entregador",
+      "timelineTitle": "Cronologia do Pedido",
+      "warehouseLabel": "Armazém de Expedição",
+      "itemsSubtotal": "Subtotal de Itens",
+      "noRemark": "Sem observação"
     },
     "riders": {
       "title": "Riders",

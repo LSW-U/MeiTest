@@ -595,7 +595,16 @@
       "oosAddEvidence": "Tambah foto bukti",
       "oosSuggestionPolicyNone": "Pelanggan melarang penggantian untuk pesanan ini — tidak ada saran tersedia",
       "oosSuggestionPolicySpecify": "Pelanggan membatasi penggantian ke item tertentu — hanya item dalam daftar putih yang dapat dipilih",
-      "oosAmountDelta": "Jumlah barang habis"
+      "oosAmountDelta": "Jumlah barang habis",
+      "customerLabel": "Pelanggan",
+      "customerDeleted": "Pengguna dihapus",
+      "addressLabel": "Alamat Pengiriman",
+      "riderLabel": "Kurir",
+      "noRider": "Belum ada kurir",
+      "timelineTitle": "Linha Waktu Pesanan",
+      "warehouseLabel": "Gudang Pengiriman",
+      "itemsSubtotal": "Subtotal Barang",
+      "noRemark": "Tidak ada catatan"
     },
     "riders": {
       "title": "Rider",

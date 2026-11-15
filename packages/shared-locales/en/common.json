@@ -598,7 +598,16 @@
       "oosAddEvidence": "Add photos",
       "oosSuggestionPolicyNone": "Customer disabled replacements for this order — no suggestion available",
       "oosSuggestionPolicySpecify": "Customer restricted replacements to specific items — only whitelisted items selectable",
-      "oosAmountDelta": "Out-of-stock amount"
+      "oosAmountDelta": "Out-of-stock amount",
+      "customerLabel": "Customer",
+      "customerDeleted": "User deleted",
+      "addressLabel": "Delivery Address",
+      "riderLabel": "Rider",
+      "noRider": "Not assigned yet",
+      "timelineTitle": "Order Timeline",
+      "warehouseLabel": "Fulfilling Warehouse",
+      "itemsSubtotal": "Items Subtotal",
+      "noRemark": "No remark"
     },
     "riders": {
       "title": "Riders",
