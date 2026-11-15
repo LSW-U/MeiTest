@@ -18,3 +18,6 @@ overrides:
   # vite@8.0.x launch-editor 3 advisory（2026-10-21 披露，audit:gate 6 条 fail）：vite@8 钉 8.1.6
   # （vitest@4/sentry server-utils 传递依赖，仅 dev 测试期；上游 8.1.6 修复。vitest@5.4.21 链另行挂账）
   'vite@8': 8.1.6
+  # decode-uri-component@0.2.2 高危 DoS（GHSA-qr28-fpjm-wq7f，2026-11 新披露）：minio>query-string@7
+  # 传递依赖（运行期）。query-string@10 已弃用该包但 minio 钉 ^7 无法随上游消减 → overrides 直升 0.5.1（semver-compat 大版本但 API 同名导出，query-string 仅用 decodeUriComponent 单函数）
+  'decode-uri-component@<0.5.0': '>=0.5.0 <1'

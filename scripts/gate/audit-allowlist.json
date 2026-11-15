@@ -1,5 +1,5 @@
 {
-  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 95 条存量（2026-10-19 新披露 7 条 vite/vitest/tinypool/esbuild 全构建测试期工具链，B 路线 patch/minor 升级零消减——修复版本均跨主版本，admin-web vitest2 链挂账另行立项）（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。2026-10-24 补录 10 条新披露（next×2 / zod / body-parser / multer / nodemailer×3 / fast-uri / @vitest/mocker，均生态新披露非依赖变更；next critical SVG RCE 为 admin-web self-host Image Optimization，dev/staging 无生产 SVG 用户上传面，跨主版本升级另行立项）。",
+  "_comment": "依赖审计基线（后端配置门禁修复 批1 P1-9，2026-10-11）。pnpm update 消减后余 95 条存量（2026-10-19 新披露 7 条 vite/vitest/tinypool/esbuild 全构建测试期工具链，B 路线 patch/minor 升级零消减——修复版本均跨主版本，admin-web vitest2 链挂账另行立项）（2 critical / 48 high / 36 moderate / 2 low，实测 pnpm audit --json）。主体：admin-web next@14（升级需跨主版本，另行立项）、admin-web 构建链（postcss/autoprefixer/tailwind/eslint 传递依赖，仅构建期）、@nestjs/cli + prism mock server 工具链（仅开发期）。已修：proxy-addr / multer / image-size / nodemailer / socket.io / engine.io / socket.io-parser / @nestjs/platform-express+socket.io 对齐（11.2.7）+ pnpm overrides。维护规则：上游发版消减后，先删 entry 再实跑 pnpm audit 验证该条消失，多余 entry 会掩盖同名新 advisory（key 含 advisory id）；新增 advisory 不在本表 → audit:gate exit 1。键形态 = 包名@advisory-id::GHSA 编号。2026-10-24 补录 10 条新披露（next×2 / zod / body-parser / multer / nodemailer×3 / fast-uri / @vitest/mocker，均生态新披露非依赖变更；next critical SVG RCE 为 admin-web self-host Image Optimization，dev/staging 无生产 SVG 用户上传面，跨主版本升级另行立项）。 2026-11-16：decode-uri-component@0.2.2（GHSA-qr28-fpjm-wq7f high，minio>query-string 传递）用 pnpm overrides 直升 0.5.1 消减（query-string 仅用 stringify，minio 冒烟通过）；同批删 7 条 stale、补录 8 条新披露（构建/测试期工具链为主）。",
   "entries": [
     {
       "key": "@faker-js/faker@1158500::GHSA-qxc2-j82w-r537",
@@ -94,20 +94,12 @@
       "reason": "high: eslint/minimatch/glob 家族传递依赖，仅 lint/构建期，不进运行时"
     },
     {
-      "key": "braces@1240992::GHSA-vfj7-8cjw-p6xm",
-      "reason": "high: tailwindcss>chokidar / eslint 链传递依赖，仅构建期"
-    },
-    {
       "key": "browserslist@1153171::GHSA-c83g-rgw3-j3cx",
       "reason": "high: admin-web 构建链（autoprefixer）传递依赖，仅构建期"
     },
     {
       "key": "browserslist@1153172::GHSA-73wf-gq98-2v4g",
       "reason": "high: admin-web 构建链（autoprefixer）传递依赖，仅构建期"
-    },
-    {
-      "key": "decode-uri-component@1147955::GHSA-vcc3-ghjq-m6fr",
-      "reason": "moderate: minio>query-string 传递依赖"
     },
     {
       "key": "esbuild@1102341::GHSA-67mh-4wv8-2f99",
@@ -204,14 +196,6 @@
     {
       "key": "lodash@1115806::GHSA-r5fr-rjxr-66jc",
       "reason": "high: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
-    },
-    {
-      "key": "lodash@1115810::GHSA-f23m-r3pf-42rh",
-      "reason": "moderate: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
-    },
-    {
-      "key": "lodash@1120370::GHSA-xxjr-mmjv-4gpg",
-      "reason": "moderate: prisma CLI 链传递依赖，仅开发期 [contract] prism mock server 工具链，仅 dev 联调"
     },
     {
       "key": "multer@1243083::GHSA-q7qp-rjg7-q26m",
@@ -346,10 +330,6 @@
       "reason": "moderate：尖括号本地部分致 domain 错配。同上"
     },
     {
-      "key": "postcss-selector-parser@1241232::GHSA-rj75-hqrm-r3gf",
-      "reason": "tailwindcss>postcss-nested 传递依赖，仅构建期"
-    },
-    {
       "key": "postcss@1117015::GHSA-qx2v-qp2m-jg93",
       "reason": "moderate: admin-web 构建链（next/autoprefixer 内嵌）传递依赖，仅构建期"
     },
@@ -376,10 +356,6 @@
     {
       "key": "source-map-js@1241209::GHSA-68fv-2mgg-jv7q",
       "reason": "high: admin-web 构建链（autoprefixer>postcss）传递依赖，仅构建期"
-    },
-    {
-      "key": "sprintf-js@1241202::GHSA-hp3w-g68c-fv3c",
-      "reason": "moderate: prism 工具链传递依赖，仅 dev 联调 [contract] prism mock server 工具链，仅 dev 联调"
     },
     {
       "key": "stream-json@1164823::GHSA-528h-pc64-c93x",
@@ -414,10 +390,6 @@
       "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期（launch-editor UNC/Windows）。修复 6.4.3+ 跨主版本，挂账 vitest 2→4 立项"
     },
     {
-      "key": "vite@1123525::GHSA-fx2h-pf6j-xcff",
-      "reason": "high: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），server.fs.deny bypass 仅 dev server 场景可达，生产不装 dev 依赖。修复 6.4.3+ 跨主版本，挂账 vitest 2→4 立项"
-    },
-    {
       "key": "vite@1242622::GHSA-698v-4r3x-3vcv",
       "reason": "moderate: admin-web 测试链 vite@5.4.21（vitest@2 传递依赖），仅 dev 测试期（launch-editor % 转义/Windows）。修复 6.4.4+ 跨主版本，挂账 vitest 2→4 立项（2026-10-21 新披露）"
     },
@@ -448,6 +420,38 @@
     {
       "key": "zod@1243066::GHSA-mrhx-c7xc-m3w5",
       "reason": "high：超大 constrained collections 校验内存耗尽。zod 3/4 均命中（api 契约层 + admin-web），升级需跨 minor 回归另行立项"
+    },
+    {
+      "key": "postcss-selector-parser@1243379::GHSA-rj75-hqrm-r3gf",
+      "reason": "moderate: PostCSS 平坦选择器解析二次复杂度 CPU 耗尽。admin-web 构建链（tailwindcss>postcss-nested）传递依赖，仅构建期，不进产物"
+    },
+    {
+      "key": "vite@1243432::GHSA-fx2h-pf6j-xcff",
+      "reason": "moderate: server.fs.deny Windows 备用路径绕过。vitest@2.1.9 传递依赖（admin-web 测试期），仅 dev 测试期不进产物；vitest2 链升级另行立项"
+    },
+    {
+      "key": "deepmerge@1243505::GHSA-gcqx-w48m-w2h4",
+      "reason": "low: mergeObject 原型污染（返回对象）。@meimart/api devDependencies 传递依赖，仅开发期"
+    },
+    {
+      "key": "qs@1243687::GHSA-6pq8-jhm2-2vcw",
+      "reason": "moderate: qs.stringify comma 格式对不可调用 toString 元素抛 TypeError（DoS）。prism mock server 工具链（@stoplight/json-schema-ref-parser>url）传递依赖，仅 dev 联调"
+    },
+    {
+      "key": "glob@1244013::GHSA-3g3m-2fjr-6pw4",
+      "reason": "moderate: AbortSignal 取消绕过致超时后文件系统遍历。eslint/glob 家族传递依赖（admin-web devDependencies），仅 lint/构建期"
+    },
+    {
+      "key": "lodash@1244531::GHSA-xxjr-mmjv-4gpg",
+      "reason": "moderate: _.unset/_.omit/_.pullAt 原型污染。prism mock server 工具链传递依赖，仅 dev 联调"
+    },
+    {
+      "key": "minimatch@1244623::GHSA-g3hv-75wg-m249",
+      "reason": "moderate: globparts 放大 DoS。eslint 家族传递依赖（admin-web devDependencies），仅 lint/构建期"
+    },
+    {
+      "key": "fast-xml-parser@1246029::GHSA-474x-hrwr-fgx4",
+      "reason": "low: 未终止 stop-node 标签二次 CPU 消耗。api-contract devDependencies 传递依赖，仅 dev 期"
     }
   ]
 }
