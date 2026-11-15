@@ -149,9 +149,9 @@ export const ReportIssueRequest = z.object({
 /**
  * P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）
  *
- * 决策 1 选 A（2026-08-11）：return 任务三步 PICKED_UP->DELIVERING->DELIVERED（本端点负责第一步）；
- * delivery 任务保持两步 PICKED_UP->DELIVERED（跳过 DELIVERING，走 deliver）。
- * 本端点仅 taskType=return 可调，打通原 DELIVERING 死状态。
+ * 20261116 拍板：所有任务类型统一三步 PICKED_UP->DELIVERING->DELIVERED（本端点负责第一步）；
+ * 原「仅 taskType=return 可调」限制（E-DISPATCH-020）已移除。
+ * 事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（return 任务）。
  */
 export const StartDeliveringRequest = z.object({
   note: z.string().max(200).optional(),

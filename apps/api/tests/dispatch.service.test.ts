@@ -1294,13 +1294,30 @@ describe('DispatchService', () => {
       );
     });
 
-    it('taskType=delivery → 拒绝 E-DISPATCH-020（delivery 走 deliverTask 不走 startDelivering）', async () => {
+    // 20261116 拍板：普通单也三步（E-DISPATCH-020 taskType 拦截移除）——
+    // delivery 任务 PICKED_UP -> DELIVERING 合法，refundId=null 不触 refund.update
+    it('taskType=delivery + PICKED_UP → DELIVERING（refundId=null 不写 refund.pickedAt）', async () => {
+      const txRefundUpdate = vi.fn().mockResolvedValue({});
       mockDb.deliveryTask.findUnique.mockResolvedValue(
         buildTask({ riderId: 'r1', status: 'PICKED_UP', taskType: 'delivery', refundId: null }),
       );
-      await expect(
-        service.startDelivering({ riderId: 'r1', taskId: 'task-1' }),
-      ).rejects.toThrow(/delivery task|invalid taskType/i);
+      mockHelpers.withTransaction.mockImplementation(async (fn) =>
+        fn({
+          deliveryTask: {
+            update: vi
+              .fn()
+              .mockResolvedValue(
+                buildTask({ riderId: 'r1', status: 'DELIVERING', taskType: 'delivery', refundId: null }),
+              ),
+          },
+          refund: { update: txRefundUpdate },
+        }),
+      );
+
+      const result = await service.startDelivering({ riderId: 'r1', taskId: 'task-1' });
+
+      expect(result.status).toBe('DELIVERING');
+      expect(txRefundUpdate).not.toHaveBeenCalled();
     });
 
     it('状态非 PICKED_UP → E-DISPATCH-004 cannot start delivering', async () => {

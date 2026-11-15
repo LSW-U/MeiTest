@@ -4549,15 +4549,15 @@ registry.registerPath({
   },
 });
 
-// P14 ④：return 任务开始配送（PICKED_UP -> DELIVERING），打通原 DELIVERING 死状态
+// P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）——20261116 起所有任务类型统一三步
 registry.registerPath({
   method: 'post',
   path: '/api/v1/rider/dispatch/tasks/{id}/start-delivering',
   tags: ['dispatch'],
   description:
-    'P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）。仅 taskType=return 任务可调，' +
-    '打通原 DELIVERING 死状态（return 三步 PICKED_UP->DELIVERING->DELIVERED；delivery 两步跳过 DELIVERING 走 deliver）。' +
-    '事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（前端 P14 时间轴 picked 步骤展示）。',
+    'P14 ④：骑手开始配送（PICKED_UP -> DELIVERING）。所有任务类型可调（20261116 拍板统一三步，' +
+    '原「仅 taskType=return」限制 E-DISPATCH-020 已移除）。' +
+    '事务内：deliveryTask.update(DELIVERING) + refund.update(pickedAt)（仅 return 任务）。',
   request: {
     params: z.object({ id: Id }),
     body: { content: { 'application/json': { schema: StartDeliveringRequest } } },

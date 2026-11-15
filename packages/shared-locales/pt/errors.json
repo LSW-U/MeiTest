@@ -71,7 +71,7 @@
   "E-DISPATCH-004": "Status da tarefa não permite esta ação",
   "E-DISPATCH-005": "Rider está offline ou ocupado com outra tarefa",
   "E-DISPATCH-006": "Tarefa é um pedido agendado, ainda não disponível para aceitação",
-  "E-DISPATCH-020": "Tipo de tarefa inválido para esta ação (tarefa de entrega não pode chamar operação exclusiva de retorno)",
+  "E-DISPATCH-020": "O status da tarefa não permite esta ação (apenas tarefas retiradas podem iniciar a entrega)",
   "E-DISPATCH-021": "Reembolso já possui tarefa de retorno",
   "E-DISPATCH-022": "Reembolso não é do tipo RETURN_REFUND",
   "E-DISPATCH-023": "Fotos de evidência inválidas (máx. 3, devem ser URLs enviadas por esta plataforma)",

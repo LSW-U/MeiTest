@@ -71,7 +71,7 @@
   "E-DISPATCH-004": "Task status does not allow this action",
   "E-DISPATCH-005": "Rider is offline or busy with another task",
   "E-DISPATCH-006": "Task is a scheduled order, not open for acceptance yet",
-  "E-DISPATCH-020": "Invalid task type for this action (delivery task cannot call return-only operation)",
+  "E-DISPATCH-020": "Task status does not allow this action (only picked-up tasks can start delivering)",
   "E-DISPATCH-021": "Refund already has a return task",
   "E-DISPATCH-022": "Refund is not RETURN_REFUND type",
   "E-DISPATCH-023": "Invalid evidence photos (max 3, must be URLs uploaded via this platform)",
