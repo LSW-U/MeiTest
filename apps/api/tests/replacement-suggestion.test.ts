@@ -228,6 +228,14 @@ describe('OrderService.decideSuggestion（批1 D5/D8/D1）', () => {
         ],
       }),
     );
+    // 口径统一（20261116 审查 P2-1）：重算 totalAmount = Σ subtotal + deliveryFee（与下单分支同口径）
+    // findMany 返回改写后两行：item-1 落单价 500×2=1000 + item-2 1400 = Σ 2400，
+    // + deliveryFee 500 = 2900；payableAmount = 2900 - discount 0 = 2900。旧实现 totalAmount=2400
+    // （漏运费）→ admin 详情「小计 = totalAmount - deliveryFee」推导会少算一次运费。
+    mockDb.orderItem.findMany.mockResolvedValue([
+      { subtotal: 1000 }, // item-1 改写后（unitPrice 500 × qty 2）
+      { subtotal: 1400 }, // item-2（替换行原值）
+    ]);
     const result = await service.decideSuggestion('order-1', 'item-1', 'u1', { accept: true });
     expect(result.suggestionStatus).toBe('ACCEPTED');
     expect(result.replacementItemId).toBe('item-2');
@@ -247,6 +255,20 @@ describe('OrderService.decideSuggestion（批1 D5/D8/D1）', () => {
     expect(mockDb.orderEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ eventType: 'REPLACED' }),
+      }),
+    );
+    // 口径统一（20261116 审查 P2-1）：重算 totalAmount = Σ subtotal + deliveryFee（与下单分支同口径）
+    // findMany 与真实重算一致返回改写后两行：item-1 落单价 500×2=1000 + item-2 1400 = Σ 2400，
+    // + deliveryFee 500 = 2900；payableAmount = 2900 - discount 0 = 2900。旧实现 totalAmount=2400
+    // （漏运费）→ admin 详情「小计 = totalAmount - deliveryFee」推导会少算一次运费。
+    mockDb.orderItem.findMany.mockResolvedValue([
+      { subtotal: 1000 }, // item-1 改写后（unitPrice 500 × qty 2）
+      { subtotal: 1400 }, // item-2（替换行原值）
+    ]);
+    expect(mockDb.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'order-1' },
+        data: expect.objectContaining({ totalAmount: 2900, payableAmount: 2900 }),
       }),
     );
     // 落单价==原价 → 差额 0，退款引擎不触发

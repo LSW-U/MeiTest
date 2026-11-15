@@ -86,6 +86,16 @@ export interface OrderWithRelations {
   remark: string | null;
   riderId: string | null;
   /**
+   * 下单人账号信息（admin-web 订单详情联系卡，2026-11-14）。
+   * 仅 adminGetOrderDetail include user 时有值；client 详情/列表接口不带（敏感信息不出 C 端）。
+   */
+  customer?: {
+    id: string;
+    phone: string;
+    name: string | null;
+    avatarUrl: string | null;
+  } | null;
+  /**
    * 骑手详情嵌套（P10 订单详情骑手联系卡 / P11 物流追踪 CourierCard 数据源）。
    * 仅详情接口（getOrderDetail / adminGetOrderDetail）include rider 时有值；
    * 列表接口（listUserOrders / listAllOrders）未 include -> null。
@@ -1552,6 +1562,8 @@ export class OrderService {
         items: { orderBy: { id: 'asc' } },
         events: { orderBy: { createdAt: 'asc' } },
         orderPromotions: true,
+        // admin 联系卡：下单人账号信息（client 端 getOrderDetail 不带，敏感信息不出 C 端）
+        user: { select: { id: true, phone: true, name: true, avatarUrl: true } },
         // P10/P11：嵌骑手详情（含 user.avatarUrl 平铺到 rider.avatarUrl），零迁移
         rider: {
           select: {
@@ -1607,6 +1619,8 @@ export class OrderService {
       deliveryAddress: unknown;
       remark: string | null;
       riderId: string | null;
+      // admin 详情接口 include user 时有值（client 不带）
+      user?: { id: string; phone: string; name: string | null; avatarUrl: string | null } | null;
       paymentMethod: PaymentMethodValue;
       paymentStatus: string;
       paidAt: Date | null;
@@ -1653,6 +1667,15 @@ export class OrderService {
       deliveryAddress: o.deliveryAddress,
       remark: o.remark,
       riderId: o.riderId,
+      // admin 联系卡（仅 adminGetOrderDetail include user 时非空；client 详情恒 undefined）
+      customer: o.user
+        ? {
+            id: o.user.id,
+            phone: o.user.phone,
+            name: o.user.name,
+            avatarUrl: o.user.avatarUrl,
+          }
+        : null,
       rider: o.rider
         ? {
             id: o.rider.id,
@@ -1863,10 +1886,14 @@ export class OrderService {
         },
       });
 
-      // 重算订单金额：totalAmount = Σ 新 subtotal；payableAmount = totalAmount + deliveryFee - discount
+      // 重算订单金额（口径统一 20261116 审查 P2-1）：totalAmount = Σ 新 subtotal + deliveryFee，
+      // 与下单分支（:386 totalAmount = itemsSubtotal + deliveryFee）同口径——
+      // 旧实现漏加 deliveryFee，导致 admin 详情页「小计 = totalAmount - deliveryFee」推导公式
+      // 对经历过替换的订单少算一次运费。payableAmount = totalAmount - discount（等价旧式）。
       const items = await tx.orderItem.findMany({ where: { orderId }, select: { subtotal: true } });
-      const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
-      const payableAmount = totalAmount + order.deliveryFee - order.discountAmount;
+      const itemsSubtotal = items.reduce((s, i) => s + i.subtotal, 0);
+      const totalAmount = itemsSubtotal + order.deliveryFee;
+      const payableAmount = totalAmount - order.discountAmount;
       await tx.order.update({ where: { id: orderId }, data: { totalAmount, payableAmount } });
 
       // D8 审计：OrderEvent(REPLACED)（项级替换不改订单状态，from = to = 当前状态）
