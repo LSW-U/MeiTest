@@ -71,7 +71,6 @@
   "E-DISPATCH-004": "Status tugas tidak mengizinkan aksi ini",
   "E-DISPATCH-005": "Rider sedang offline atau sibuk dengan tugas lain",
   "E-DISPATCH-006": "Tugas adalah pesanan terjadwal, belum bisa diterima",
-  "E-DISPATCH-020": "Status tugas tidak mengizinkan aksi ini (hanya tugas yang sudah diambil dapat memulai pengiriman)",
   "E-DISPATCH-021": "Refund sudah memiliki tugas return",
   "E-DISPATCH-022": "Refund bukan tipe RETURN_REFUND",
   "E-DISPATCH-023": "Foto bukti tidak valid (maksimal 3, harus URL yang diunggah lewat platform ini)",
