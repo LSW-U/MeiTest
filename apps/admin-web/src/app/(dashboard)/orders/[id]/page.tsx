@@ -66,6 +66,38 @@ function addressText(value: unknown): { name: string; phone: string; detail: str
   };
 }
 
+// 时间线枚举 i18n（20261116 复核报告遗留 P3）：eventType/status 显示映射表，
+// 未知值（后端新增枚举先行、前端 i18n 滞后）fallback 显示原始值，不比现状差
+const EVENT_LABEL_KEYS: Record<string, string> = {
+  CREATED: 'eventCreated',
+  PAYMENT_SUCCESS: 'eventPaymentSuccess',
+  PAYMENT_FAILED: 'eventPaymentFailed',
+  PAYMENT_TIMEOUT: 'eventPaymentTimeout',
+  CONFIRMED: 'eventConfirmed',
+  PICKED: 'eventPicked',
+  OUT_FOR_DELIVERY: 'eventOutForDelivery',
+  DELIVERED: 'eventDelivered',
+  CANCELLED: 'eventCancelled',
+  REFUND_REQUESTED: 'eventRefundRequested',
+  REFUNDED: 'eventRefunded',
+  ISSUE_REPORTED: 'eventIssueReported',
+  OUT_OF_STOCK_REPORTED: 'eventOosReported',
+  REPLACED: 'eventReplaced',
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  PENDING_PAYMENT: 'statusPendingPayment',
+  PENDING_CONFIRM: 'statusPendingConfirm',
+  CONFIRMED: 'statusConfirmed',
+  PICKED: 'statusPicked',
+  OUT_FOR_DELIVERY: 'statusOutForDelivery',
+  DELIVERED_PAID: 'statusDeliveredPaid',
+  DELIVERED: 'statusDelivered',
+  DELIVERED_UNPAID: 'statusDeliveredUnpaid',
+  COMPLETED: 'statusCompleted',
+  CANCELLED: 'statusCancelled',
+};
+
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const t = useTranslations('common');
@@ -380,10 +412,18 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
               {order.events.map((ev) => (
                 <li key={ev.id} className="flex items-baseline justify-between gap-4 border-b pb-2 last:border-0 last:pb-0">
                   <div className="space-y-0.5">
-                    <p className="font-mono text-xs font-medium">{ev.eventType}</p>
+                    <p className="text-xs font-medium">
+                      {EVENT_LABEL_KEYS[ev.eventType]
+                        ? t(`admin.orders.${EVENT_LABEL_KEYS[ev.eventType]}` as never)
+                        : ev.eventType}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {ev.fromStatus ? `${ev.fromStatus} → ` : ''}
-                      {ev.toStatus}
+                      {ev.fromStatus
+                        ? `${STATUS_LABEL_KEYS[ev.fromStatus] ? t(`admin.orders.${STATUS_LABEL_KEYS[ev.fromStatus]}` as never) : ev.fromStatus} → `
+                        : ''}
+                      {STATUS_LABEL_KEYS[ev.toStatus]
+                        ? t(`admin.orders.${STATUS_LABEL_KEYS[ev.toStatus]}` as never)
+                        : ev.toStatus}
                     </p>
                   </div>
                   <span className="whitespace-nowrap text-xs text-muted-foreground">
