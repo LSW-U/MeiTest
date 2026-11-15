@@ -60,6 +60,10 @@ export const DeliveryTask = z.object({
   estimatedArrival: IsoTimestamp.nullable().optional(),
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 透传，历史订单可能无 → 可选） */
   contactPhone: z.string().optional(),
+  /** 仓库名多语言包（en/id/pt/zh/tet，来自 warehouses.name jsonb；前端按 locale 自取，缺失/旧数据 → null） */
+  pickupTitleI18n: z.record(z.string()).nullable().optional(),
+  /** 收件人姓名（从 order.deliveryAddress.name 透传；历史订单可能无 → 可选） */
+  dropoffContactName: z.string().optional(),
   /**
    * 配送费（分，P0-1 修复 2026-08-25）
    * 从 order.deliveryFee 透传；骑手卡片展示真实配送费。历史订单可能无 → 可选。

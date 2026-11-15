@@ -9157,6 +9157,10 @@ export interface paths {
                                     /** Format: date-time */
                                     estimatedArrival?: string | null;
                                     contactPhone?: string;
+                                    pickupTitleI18n?: {
+                                        [key: string]: string;
+                                    } | null;
+                                    dropoffContactName?: string;
                                     deliveryFee?: number;
                                     baseFee?: number;
                                     distanceFee?: number;
@@ -27478,6 +27482,10 @@ export interface components {
             /** Format: date-time */
             estimatedArrival?: string | null;
             contactPhone?: string;
+            pickupTitleI18n?: {
+                [key: string]: string;
+            } | null;
+            dropoffContactName?: string;
             deliveryFee?: number;
             baseFee?: number;
             distanceFee?: number;
@@ -27551,6 +27559,10 @@ export interface components {
                     /** Format: date-time */
                     estimatedArrival?: string | null;
                     contactPhone?: string;
+                    pickupTitleI18n?: {
+                        [key: string]: string;
+                    } | null;
+                    dropoffContactName?: string;
                     deliveryFee?: number;
                     baseFee?: number;
                     distanceFee?: number;

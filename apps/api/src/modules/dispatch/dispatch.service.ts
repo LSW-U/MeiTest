@@ -106,6 +106,14 @@ export interface DeliveryTaskView {
   /** T6 联系拨号：客户电话（从 order.deliveryAddress.phone 取，历史订单可能无 → 可选） */
   contactPhone?: string;
   /**
+   * 仓库名多语言包（骑手任务视图富化 20261116 v2 §2.1）
+   * 来自 warehouses.name jsonb（en/id/pt/zh/tet 5 语）；前端按 locale 自取 + en fallback。
+   * warehouse 未 include name（旧查询路径）→ null。
+   */
+  pickupTitleI18n?: Record<string, string> | null;
+  /** 收件人姓名（从 order.deliveryAddress.name 透传，与 contactPhone 同源；历史订单可能无 → 可选） */
+  dropoffContactName?: string;
+  /**
    * 配送直线距离（km，P6 #7 2026-08-25）
    * pickup → dropoff 的 Haversine 距离；任一坐标缺失 → undefined（前端降级隐藏）。
    * 非实时路况距离，仅作展示/排序参考。
@@ -363,7 +371,7 @@ export class DispatchService {
     const include = {
       // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
       order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-      warehouse: { select: { code: true } },
+      warehouse: { select: { code: true, name: true } },
     };
 
     const visible: Awaited<ReturnType<typeof db.deliveryTask.findMany>> = [];
@@ -410,7 +418,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
     return { items: tasks.map((t) => this.toView(t)) };
@@ -498,7 +506,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
 
@@ -637,7 +645,7 @@ export class DispatchService {
         include: {
           // P0-1 修复：补 deliveryFee
           order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-          warehouse: { select: { code: true } },
+          warehouse: { select: { code: true, name: true } },
         },
       });
 
@@ -728,7 +736,7 @@ export class DispatchService {
         include: {
           // P0-1 修复：补 deliveryFee
           order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-          warehouse: { select: { code: true } },
+          warehouse: { select: { code: true, name: true } },
         },
       });
       logger.info({
@@ -801,7 +809,7 @@ export class DispatchService {
         include: {
           // P0-1 修复：补 deliveryFee
           order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-          warehouse: { select: { code: true } },
+          warehouse: { select: { code: true, name: true } },
         },
       });
 
@@ -930,7 +938,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
     if (!task) {
@@ -962,7 +970,7 @@ export class DispatchService {
         include: {
           // P0-1 修复：补 deliveryFee
           order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-          warehouse: { select: { code: true } },
+          warehouse: { select: { code: true, name: true } },
         },
       });
 
@@ -1052,7 +1060,7 @@ export class DispatchService {
               deliveryFeeBreakdown: true,
             },
           },
-          warehouse: { select: { code: true } },
+          warehouse: { select: { code: true, name: true } },
         },
       });
 
@@ -1184,7 +1192,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
     if (existing) {
@@ -1194,7 +1202,7 @@ export class DispatchService {
     const order = await db.order.findUnique({
       where: { id: orderId },
       include: {
-        warehouse: { select: { id: true, code: true, address: true, centerLat: true, centerLng: true } },
+        warehouse: { select: { id: true, code: true, name: true, address: true, centerLat: true, centerLng: true } },
       },
     });
     if (!order) {
@@ -1240,7 +1248,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
 
@@ -1304,7 +1312,7 @@ export class DispatchService {
             payableAmount: true,
             paymentMethod: true,
             warehouse: {
-              select: { id: true, code: true, address: true, centerLat: true, centerLng: true },
+              select: { id: true, code: true, name: true, address: true, centerLat: true, centerLng: true },
             },
           },
         },
@@ -1381,7 +1389,7 @@ export class DispatchService {
       include: {
         // P0-1 修复：补 deliveryFee
         order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
 
@@ -1447,7 +1455,7 @@ export class DispatchService {
       include: {
         order: { select: { orderNo: true, status: true, payableAmount: true, paymentMethod: true } },
         rider: { select: { id: true, riderName: true, phone: true } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
     const hasMore = tasks.length > limit;
@@ -1466,7 +1474,7 @@ export class DispatchService {
       include: {
         order: { select: { orderNo: true, status: true, payableAmount: true, paymentMethod: true } },
         rider: { select: { id: true, riderName: true, phone: true } },
-        warehouse: { select: { code: true } },
+        warehouse: { select: { code: true, name: true } },
       },
     });
     if (!task) {
@@ -2103,6 +2111,11 @@ export class DispatchService {
       // T6 联系拨号：从 order.deliveryAddress JSON 取 phone（下单时已存，历史订单可能无）
       contactPhone:
         ((t.order as any)?.deliveryAddress as { phone?: string } | null)?.phone ?? undefined,
+      // 骑手任务视图富化（20261116 v2 §2.1）：仓库名多语言包 + 收件人姓名
+      // warehouse 未 include name（旧查询路径）→ null；deliveryAddress.name 历史订单可能无 → undefined
+      pickupTitleI18n: ((t.warehouse as any)?.name as Record<string, string> | null) ?? null,
+      dropoffContactName:
+        ((t.order as any)?.deliveryAddress as { name?: string } | null)?.name ?? undefined,
       distanceKm: distanceKm ?? undefined,
       estimatedMinutes,
       itemsSummary,

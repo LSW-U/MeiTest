@@ -5346,6 +5346,13 @@ components:
           format: date-time
         contactPhone:
           type: string
+        pickupTitleI18n:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        dropoffContactName:
+          type: string
         deliveryFee:
           type: integer
           minimum: 0
@@ -5529,6 +5536,13 @@ components:
                     nullable: true
                     format: date-time
                   contactPhone:
+                    type: string
+                  pickupTitleI18n:
+                    type: object
+                    nullable: true
+                    additionalProperties:
+                      type: string
+                  dropoffContactName:
                     type: string
                   deliveryFee:
                     type: integer
@@ -23158,6 +23172,13 @@ paths:
                               nullable: true
                               format: date-time
                             contactPhone:
+                              type: string
+                            pickupTitleI18n:
+                              type: object
+                              nullable: true
+                              additionalProperties:
+                                type: string
+                            dropoffContactName:
                               type: string
                             deliveryFee:
                               type: integer
