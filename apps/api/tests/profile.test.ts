@@ -158,12 +158,16 @@ describe('parseProfileThresholds — 回退语义（G5）', () => {
 
 /** 模拟 RFM 单扫聚合 SQL 返回行 */
 function rfmRow(over: Partial<Record<string, unknown>> = {}) {
+  // last_at 相对 now 取值（绝化，防日历日漂移 flaky——原硬编码 2026-10-17 随真实日期
+  // 推移 R 越过 sleepingDays(30)，ACTIVE 断言在 Dili 2026-11-17 翻红 SLEEPING）。
+  // 固定 R=3 天（< sleepingDays 30），F=4 → lifecycle 断言恒 ACTIVE。
+  const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
   return [
     {
       f_count: 4n,
       m_total: 12300n,
       first_at: new Date('2026-09-01T02:00:00Z'),
-      last_at: new Date('2026-10-17T02:00:00Z'),
+      last_at: threeDaysAgo,
       discount_order_count: 2n,
       discount_total: 800n,
       ...over,
