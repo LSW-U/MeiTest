@@ -79,6 +79,19 @@ vi.mock('../src/modules/realtime/realtime.gateway', () => ({
   },
 }));
 
+// 方案 C 动态 ETA（2026-11-17）：位置读取 mock（listMyTasks 预取 rider:loc）
+const { mockFetchRiderLocations } = vi.hoisted(() => ({
+  mockFetchRiderLocations: vi.fn<(userIds: string[]) => Promise<{ locs: Map<string, { lat: number; lng: number; ts: number; orderId?: string }>; redisError: boolean }>>(),
+}));
+
+vi.mock('../src/modules/rider/rider-location.store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/rider/rider-location.store')>();
+  return {
+    ...actual,
+    fetchRiderLocations: mockFetchRiderLocations,
+  };
+});
+
 vi.mock('../src/shared/logger/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
@@ -151,6 +164,10 @@ describe('DispatchService', () => {
     mockSalesIncrement.mockReset();
     // 批C 对账分流：reset 台账写入 mock
     mockLedgerWrite.mockReset();
+    // 方案 C 动态 ETA：位置读取 mock 复位——默认「无位置」（liveEta 走 null 回退，
+    // 既有用例不感知该字段；专属用例单独覆盖 mock 返回值）
+    mockFetchRiderLocations.mockReset();
+    mockFetchRiderLocations.mockResolvedValue({ locs: new Map(), redisError: false });
     mockServer.to.mockClear();
     mockServer.emit.mockClear();
     // resolveRiderProfileId 默认返回 rider-profile-1（所有 dispatch 方法入口调）
@@ -348,6 +365,64 @@ describe('DispatchService', () => {
       mockDb.deliveryTask.findMany.mockResolvedValue([]);
       const result = await service.listMyTasks({ riderId: 'r1' });
       expect(result.items).toEqual([]);
+    });
+
+    it('方案 C 动态 ETA：进行中任务 + 新鲜位置 → liveEta 非空（ISO 时刻）', async () => {
+      // resolveRiderProfileId 返回 riderId='r1'；profile.userId='user-1' 是 rider:loc key 段
+      mockDb.riderProfile.findUnique
+        .mockResolvedValueOnce({ id: 'r1', preferredWarehouseIds: [], depositAmount: 100 })
+        .mockResolvedValueOnce({ id: 'r1', userId: 'user-1' });
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask({ status: 'ASSIGNED' })]);
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-11-17T10:00:00Z'));
+        mockFetchRiderLocations.mockResolvedValue({
+          locs: new Map([['user-1', { lat: -8.52, lng: 125.52, ts: Date.now() }]]),
+          redisError: false,
+        });
+        mockDb.deliveryTask.findMany.mockResolvedValue(
+          [buildTask({ status: 'ASSIGNED', riderId: 'r1' })],
+        );
+        const result = await service.listMyTasks({ riderId: 'r1' });
+        const eta = result.items[0]?.liveEta;
+        expect(eta).toBeTruthy();
+        // eta = now + 骑行分钟(20km/h) + ETA_BUFFER_MINUTES(5)，必晚于 now，早于 now+45+5+1min
+        const etaMs = new Date(eta as string).getTime();
+        expect(etaMs).toBeGreaterThan(Date.now());
+        expect(etaMs).toBeLessThanOrEqual(Date.now() + 51 * 60_000);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('方案 C：位置过期（>2min）→ liveEta null（前端回退静态死线）', async () => {
+      mockDb.riderProfile.findUnique
+        .mockResolvedValueOnce({ id: 'r1', preferredWarehouseIds: [], depositAmount: 100 })
+        .mockResolvedValueOnce({ id: 'r1', userId: 'user-1' });
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask({ status: 'DELIVERING' })]);
+      mockFetchRiderLocations.mockResolvedValue({
+        locs: new Map([
+          ['user-1', { lat: -8.52, lng: 125.52, ts: Date.now() - 3 * 60_000 }], // 3min 前
+        ]),
+        redisError: false,
+      });
+      const result = await service.listMyTasks({ riderId: 'r1' });
+      expect(result.items[0]?.liveEta).toBeNull();
+    });
+
+    it('方案 C：Redis 异常（空 Map）→ liveEta null；大厅任务（无 taskLocs）恒 null', async () => {
+      mockDb.riderProfile.findUnique
+        .mockResolvedValueOnce({ id: 'r1', preferredWarehouseIds: [], depositAmount: 100 })
+        .mockResolvedValueOnce({ id: 'r1', userId: 'user-1' });
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask({ status: 'DELIVERING' })]);
+      mockFetchRiderLocations.mockResolvedValue({ locs: new Map(), redisError: true });
+      const result = await service.listMyTasks({ riderId: 'r1' });
+      expect(result.items[0]?.liveEta).toBeNull();
+
+      // 大厅 PENDING_ASSIGN：toView 不带 taskLocs → liveEta 恒 null
+      mockDb.deliveryTask.findMany.mockResolvedValue([buildTask({ status: 'PENDING_ASSIGN' })]);
+      const pending = await service.listPendingTasks({ riderId: 'r1' });
+      expect(pending.items[0]?.liveEta).toBeNull();
     });
   });
 

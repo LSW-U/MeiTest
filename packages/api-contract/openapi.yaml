@@ -5383,6 +5383,9 @@ components:
           required:
             - totalQty
             - kinds
+        liveEta:
+          type: string
+          nullable: true
       required:
         - id
         - orderId
@@ -5574,6 +5577,9 @@ components:
                     required:
                       - totalQty
                       - kinds
+                  liveEta:
+                    type: string
+                    nullable: true
                   warehouseCode:
                     type: string
                   order:
@@ -23210,6 +23216,9 @@ paths:
                               required:
                                 - totalQty
                                 - kinds
+                            liveEta:
+                              type: string
+                              nullable: true
                             warehouseCode:
                               type: string
                             order:

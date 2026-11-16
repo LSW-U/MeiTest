@@ -9171,6 +9171,7 @@ export interface paths {
                                         totalQty: number;
                                         kinds: number;
                                     };
+                                    liveEta?: string | null;
                                     warehouseCode: string;
                                     order: {
                                         orderNo: string;
@@ -27496,6 +27497,7 @@ export interface components {
                 totalQty: number;
                 kinds: number;
             };
+            liveEta?: string | null;
         };
         AdminDeliveryTaskView: components["schemas"]["DeliveryTask"] & {
             warehouseCode: string;
@@ -27573,6 +27575,7 @@ export interface components {
                         totalQty: number;
                         kinds: number;
                     };
+                    liveEta?: string | null;
                     warehouseCode: string;
                     order: {
                         orderNo: string;

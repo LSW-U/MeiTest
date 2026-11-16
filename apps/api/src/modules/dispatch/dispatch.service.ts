@@ -25,7 +25,7 @@ import { writeReconciliationLedgerTx } from '../../shared/db/reconciliation-ledg
 import type { Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-import { DEFAULT_ETA_MINUTES } from './dispatch.config';
+import { DEFAULT_ETA_MINUTES, ETA_BUFFER_MINUTES } from './dispatch.config';
 import { haversineDistanceKm, estimateMinutesFromDistance, decimalToNumber } from '@meimart/shared-utils';
 import { redis } from '../../shared/cache';
 // 批2 v2 D8（20261012）：DeliveryTask 专属状态机（纯函数断言，与 Order 机独立）
@@ -34,6 +34,7 @@ import {
   fetchRiderLocations,
   bucketRiderLocReadMetrics,
   RIDER_LOC_FRESH_SEC,
+  type RiderLocValue,
 } from '../rider/rider-location.store';
 import { POINTS_PER_DELIVERY, calcTier } from '../rider/rider.service';
 import { DepositEligibilityService } from '../rider/deposit-eligibility.service';
@@ -138,6 +139,14 @@ export interface DeliveryTaskView {
    * totalQty = Σ OrderItem.quantity；kinds = 去重 SKU 数。order.items 未 include → undefined。
    */
   itemsSummary?: { totalQty: number; kinds: number };
+  /**
+   * 动态 ETA（ISO 时刻，实时动态 ETA 方案 C 2026-11-17）
+   * 读时计算自骑手最新位置（rider:loc Redis）→ 目标点（ASSIGNED=pickup / 取货后=dropoff）
+   * 的 Haversine 距离 ÷ 20km/h + ETA_BUFFER_MINUTES。非持久状态，每次读请求现算。
+   * 位置不新鲜（>RIDER_LOC_FRESH_SEC）/键缺失/Redis 异常/非进行中任务 → null
+   * （前端回退静态死线 estimatedArrival，不新增故障模式）。
+   */
+  liveEta?: string | null;
   /**
    * 替换品批2 工单化（2026-10-29 D20）：reportIssue 旁路建单回显工单号。
    * 仅 reportIssue 响应携带；其余端点 undefined（只增不改）。
@@ -421,7 +430,24 @@ export class DispatchService {
         warehouse: { select: { code: true, name: true } },
       },
     });
-    return { items: tasks.map((t) => this.toView(t)) };
+    // 动态 ETA（方案 C）：进行中任务的位置输入预取（单骑手 1 次 MGET，toView 逐任务消费）。
+    // Redis 异常/键缺失 → 空 Map → liveEta 全 null（前端回退静态死线，不新增故障模式）。
+    // key 用 RiderProfile.id（= delivery_tasks.rider_id）；rider:loc 写侧是 User.id（JWT sub），
+    // 两者不同源——经 profile.userId 换址。
+    const profile = await db.riderProfile.findUnique({
+      where: { id: riderId },
+      select: { userId: true },
+    });
+    const { locs } = profile
+      ? await fetchRiderLocations([profile.userId])
+      : { locs: new Map<string, RiderLocValue>() };
+    // Map 换址：riderProfileId → loc
+    const taskLocs = new Map<string, RiderLocValue>();
+    if (profile) {
+      const loc = locs.get(profile.userId);
+      if (loc) taskLocs.set(riderId, loc);
+    }
+    return { items: tasks.map((t) => this.toView(t, taskLocs)) };
   }
 
   /**
@@ -1978,6 +2004,44 @@ export class DispatchService {
     return Math.round(km * 100) / 100;
   }
 
+  /**
+   * 动态 ETA 时刻（ISO，实时动态 ETA 方案 C 2026-11-17，读时计算）
+   *
+   * MVP 公式：eta = now + haversine(rider最新位置 → 目标点) ÷ 20km/h + ETA_BUFFER_MINUTES
+   *   - 目标点按任务阶段：ASSIGNED → pickup 坐标（骑手→取货段）；
+   *     PICKED_UP/DELIVERING → dropoff 坐标（送达段）。其余状态（大厅/终态）非进行中 → null。
+   *   - 位置输入复用 fetchRiderLocations（MGET rider:loc:{userId}，R10 批B）；
+   *     新鲜度复用 RIDER_LOC_FRESH_SEC（2min）读时二次校验。
+   *
+   * 回退 null（调用方透传 null，前端回退静态死线 estimatedArrival——同
+   * riderPickupDistanceKm 的 null 回退语义，不新增故障模式）：
+   *   - 非进行中任务 / riderProfileId 缺失（任务无归属骑手）
+   *   - 位置键缺失 / 过期 / Redis 异常（fetchRiderLocations 返回空 Map）
+   *   - 任务坐标缺失（(0,0) 历史哨兵，同 toView hasCoords 拦截口径）或 haversine null
+   *
+   * 注意：本方法含一次 Redis MGET，toView 是逐任务同步转换——批量场景由调用方
+   * （listMyTasks）预取位置 Map 后经 taskLocs 传入，避免 N+1。
+   */
+  private liveEtaFor(
+    status: string,
+    riderProfileId: string | null | undefined,
+    taskLocs: Map<string, RiderLocValue>,
+    target: { lat: number; lng: number } | null,
+    now: number,
+  ): string | null {
+    if (status !== 'ASSIGNED' && status !== 'PICKED_UP' && status !== 'DELIVERING') return null;
+    if (!riderProfileId || !target) return null;
+    const loc = taskLocs.get(riderProfileId);
+    if (!loc) return null;
+    // 读时二次新鲜度校验（RIDER_LOC_FRESH_SEC 2min，同 riderPickupDistanceKm）
+    if (now - loc.ts > RIDER_LOC_FRESH_SEC * 1000) return null;
+    const km = haversineDistanceKm(target.lat, target.lng, loc.lat, loc.lng);
+    if (km == null) return null;
+    const minutes = estimateMinutesFromDistance(km, 20, DEFAULT_ETA_MINUTES);
+    if (minutes == null) return null;
+    return new Date(now + (minutes + ETA_BUFFER_MINUTES) * 60_000).toISOString();
+  }
+
   /** admin 视图转换（含 order + rider 关联） */
   private toAdminView(t: any): AdminDeliveryTaskView {
     return {
@@ -2039,8 +2103,11 @@ export class DispatchService {
 
   /** 转换为 API 视图（Decimal → number，Date → ISO 字符串） */
   // P0 修复：参数类型改为宽松类型，接受实际 Prisma 查询结果（warehouse 只含 code）
+  // liveEta（方案 C）：进行中任务 + taskLocs 含该骑手新鲜位置时现算，否则 null
   private toView(
     t: any,  // 宽松类型（运行时不会 crash，JS 不检查类型）
+    taskLocs?: Map<string, RiderLocValue>,
+    now?: number,
   ): DeliveryTaskView {
     // 批3（20261012）死代码删除：W7 itemsSummary 已随前端弃用移除
     // （前端仓 + @meimart/api-contract 契约均零引用，grep 证据见批3交付说明；:1952 依赖复核无下游计算）
@@ -2057,6 +2124,23 @@ export class DispatchService {
     // P3-8 修复：上限显式传 DEFAULT_ETA_MINUTES，与 estimatedArrival SLA 同源，避免配置漂移时两处静默不一致
     const estimatedMinutes =
       distanceKm != null ? estimateMinutesFromDistance(distanceKm, 20, DEFAULT_ETA_MINUTES) ?? undefined : undefined;
+
+    // 动态 ETA（方案 C）：目标点按阶段选段（ASSIGNED=取货段，取货后=送达段）。
+    // taskLocs 未传（大厅 PENDING_ASSIGN / 单任务端点等）→ null，前端回退静态死线。
+    const nowMs = now ?? Date.now();
+    const etaTarget =
+      t.status === 'ASSIGNED'
+        ? { lat: pLat, lng: pLng }
+        : t.status === 'PICKED_UP' || t.status === 'DELIVERING'
+          ? { lat: dLat, lng: dLng }
+          : null;
+    const liveEta = this.liveEtaFor(
+      t.status,
+      t.riderId,
+      taskLocs ?? new Map(),
+      etaTarget,
+      nowMs,
+    );
 
     // 商品摘要（骑手大厅卡片 20261115）：order.items 未 include → undefined（前端降级隐藏）
     const orderItems = (t.order as any)?.items as Array<{ skuId: string; quantity: number }> | undefined;
@@ -2119,6 +2203,7 @@ export class DispatchService {
       distanceKm: distanceKm ?? undefined,
       estimatedMinutes,
       itemsSummary,
+      liveEta: liveEta ?? null,
     };
   }
 }

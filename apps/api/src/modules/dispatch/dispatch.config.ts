@@ -18,3 +18,12 @@
 
 /** 预估送达时长（分钟），东帝汶骑手配送经验值 */
 export const DEFAULT_ETA_MINUTES = 45;
+
+/**
+ * 动态 ETA 缓冲（分钟，实时动态 ETA 方案 C，2026-11-17 立项）
+ *
+ * liveEta = now + haversine(rider最新位置 → 目标点) ÷ 20km/h + 本缓冲。
+ * 缓冲覆盖取货停留/找门牌/末端步行等非骑行时间（20km/h 口径只算纯骑行）。
+ * 与 DEFAULT_ETA_MINUTES 同文件管理（读时计算，无 migration）。
+ */
+export const ETA_BUFFER_MINUTES = 5;

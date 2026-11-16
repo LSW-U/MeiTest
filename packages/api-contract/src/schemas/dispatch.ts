@@ -111,6 +111,13 @@ export const DeliveryTask = z.object({
       kinds: z.number().int().nonnegative(),
     })
     .optional(),
+  /**
+   * 动态 ETA（ISO 时刻，实时动态 ETA 方案 C 2026-11-17，读时计算自骑手最新位置）。
+   * 位置不新鲜（>2min）/键缺失/Redis 异常/非进行中任务 → null，
+   * 前端回退静态死线 estimatedArrival（降级链保留）。字段仅 /rider/dispatch/my-tasks
+   * 进行中任务实时计算；大厅（PENDING_ASSIGN）无归属骑手恒 null。
+   */
+  liveEta: z.string().nullable().optional(),
 });
 
 // Why: taskId 走 URL path param（:id），body 不重复携带。
