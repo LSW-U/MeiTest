@@ -2017,12 +2017,16 @@ enum TicketStatus {
   CLOSED
 }
 
-/// 工单类型（D15：reportIssue 五枚举直接继承 + FEEDBACK 预留）
+/// 工单类型（D15：reportIssue 枚举直接继承 + FEEDBACK 预留；20261117 F3 立项 D1 加两返仓值）
 enum TicketType {
   CUSTOMER_UNREACHABLE
   CUSTOMER_REJECTED
   ADDRESS_NOT_FOUND
   TRAFFIC_ACCIDENT
+  // 已取消订单返仓（骑手端 reportIssue reason=ORDER_CANCELLED）
+  ORDER_CANCELLED
+  // 送达死线超时返仓（骑手端 reportIssue reason=DEADLINE_OVERDUE_RETURN）
+  DEADLINE_OVERDUE_RETURN
   OTHER
   FEEDBACK
 }

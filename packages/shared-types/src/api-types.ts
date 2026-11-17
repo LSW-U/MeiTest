@@ -9152,6 +9152,8 @@ export interface paths {
                                     /** Format: date-time */
                                     updatedAt: string;
                                     orderNo?: string;
+                                    /** @enum {string} */
+                                    orderStatus?: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
                                     /** Format: date-time */
                                     scheduledFor?: string | null;
                                     /** Format: date-time */
@@ -17092,7 +17094,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        reason: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "OTHER";
+                        reason: "CUSTOMER_UNREACHABLE" | "CUSTOMER_REJECTED" | "ADDRESS_NOT_FOUND" | "TRAFFIC_ACCIDENT" | "ORDER_CANCELLED" | "DEADLINE_OVERDUE_RETURN" | "OTHER";
                         note?: string;
                         evidenceUrls?: string[];
                     };
@@ -27478,6 +27480,8 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             orderNo?: string;
+            /** @enum {string} */
+            orderStatus?: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
             /** Format: date-time */
             scheduledFor?: string | null;
             /** Format: date-time */
@@ -27556,6 +27560,8 @@ export interface components {
                     /** Format: date-time */
                     updatedAt: string;
                     orderNo?: string;
+                    /** @enum {string} */
+                    orderStatus?: "PENDING_PAYMENT" | "PENDING_CONFIRM" | "CONFIRMED" | "PICKED" | "OUT_FOR_DELIVERY" | "DELIVERED_PAID" | "DELIVERED" | "DELIVERED_UNPAID" | "COMPLETED" | "CANCELLED";
                     /** Format: date-time */
                     scheduledFor?: string | null;
                     /** Format: date-time */

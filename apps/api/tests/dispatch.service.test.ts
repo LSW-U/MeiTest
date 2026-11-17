@@ -1659,4 +1659,42 @@ describe('DispatchService - reportIssue 旁路建工单', () => {
     expect(ticketSvc.createFromDeliveryIssue).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalledWith(expect.objectContaining({ event: 'ticketCreated' }));
   });
+
+  // ===== F3 已取消订单出口（20261117 立项 B4/B5）=====
+  it('B4 幂等重放：task FAILED + note 带 [ISSUE: 标记 → 200 返回既有视图，不写库不建单', async () => {
+    mockDb.deliveryTask.findUnique.mockResolvedValue(
+      buildTask({
+        riderId: 'r1',
+        status: 'FAILED',
+        orderId: 'order-1',
+        note: '[ISSUE:ORDER_CANCELLED] 客户取消，货在我手上',
+      }),
+    );
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'ORDER_CANCELLED' });
+    // 重放走既有视图（离线队列 200 出队），不再走 FAILED 写入流程
+    expect(result.status).toBe('FAILED');
+    expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+    expect(ticketSvc.createFromDeliveryIssue).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+    expect(mockServer.emit).not.toHaveBeenCalledWith('dispatch:issue-reported', expect.anything());
+  });
+
+  it('B5：已取消订单（CANCELLED）+ PICKED_UP 任务上报 ORDER_CANCELLED → 成功落 FAILED', async () => {
+    setupReportIssue();
+    mockDb.order.findUnique.mockResolvedValue({ status: 'CANCELLED', userId: 'user-customer-1' });
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'ORDER_CANCELLED', note: '订单取消，货已取' });
+    expect(result.status).toBe('FAILED');
+    expect(ticketSvc.createFromDeliveryIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceId: 'task-1', type: 'ORDER_CANCELLED' }),
+    );
+  });
+
+  it('B5：新枚举 DEADLINE_OVERDUE_RETURN（§4 超时返仓）→ 校验通过正常上报', async () => {
+    setupReportIssue();
+    const result = await service.reportIssue({ riderId: 'r1', taskId: 'task-1', reason: 'DEADLINE_OVERDUE_RETURN', note: '死线超时返仓' });
+    expect(result.status).toBe('FAILED');
+    expect(ticketSvc.createFromDeliveryIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceId: 'task-1', type: 'DEADLINE_OVERDUE_RETURN' }),
+    );
+  });
 });

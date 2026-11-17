@@ -47,6 +47,25 @@ import { TicketService } from '../ticket/ticket.service';
 /** evidenceUrls 数量上限（与契约 dispatch.ts 三 DTO max(3) 同源；服务端再校验一次防御直调） */
 export const MAX_EVIDENCE_URLS = 3;
 
+/**
+ * rider 查询链 order 关联的统一 select（F3 立项 B1 20261117）。
+ * 修复前 12 处各自内联 select 均不含 status → toView 的 orderStatus 恒 undefined
+ * （Prisma select 白名单：不在 select 读关联字段不报错只给 undefined，jest mock 全量
+ * 数据掩盖断链——live API 手验必做）。收口单源后新增查询路径直接引用本常量防再断。
+ */
+const ORDER_SELECT = {
+  orderNo: true,
+  scheduledFor: true,
+  payableAmount: true,
+  paymentMethod: true,
+  // F3：骑手端需要订单状态（CANCELLED → 卡片红 badge + 上报异常入口）
+  status: true,
+  deliveryAddress: true,
+  deliveryFee: true,
+  deliveryFeeBreakdown: true,
+  items: { select: { skuId: true, quantity: true } },
+} as const;
+
 /** DeliveryTask 列表项视图 */
 export interface DeliveryTaskView {
   id: string;
@@ -72,6 +91,12 @@ export interface DeliveryTaskView {
   updatedAt: string;
   /** 关联订单号（前端展示用） */
   orderNo?: string;
+  /**
+   * 关联订单状态（F3 已取消订单出口 20261117 立项 B1）。
+   * 骑手端据此在 CANCELLED 订单卡渲染「订单已取消」badge +「上报异常」入口。
+   * 旧数据/查询链未 select status → undefined，前端防御性可选，badge 不渲染。
+   */
+  orderStatus?: string;
   /**
    * 预约单开门时间（ISO，即时单 null；骑手大厅卡片-后端配合需求① 20261114/15）。
    * ⚠️ 语义 = 预约开门时间，不是送达 deadline，两者不能混用（即时单为 null）。
@@ -184,7 +209,8 @@ export interface DeliverTaskInput {
 export interface ReportIssueInput {
   riderId: string;
   taskId: string;
-  reason: 'CUSTOMER_UNREACHABLE' | 'CUSTOMER_REJECTED' | 'ADDRESS_NOT_FOUND' | 'TRAFFIC_ACCIDENT' | 'OTHER';
+  // F3/§4（20261117 立项 D1）：新增 ORDER_CANCELLED / DEADLINE_OVERDUE_RETURN（与契约 ReportIssueRequest 同步）
+  reason: 'CUSTOMER_UNREACHABLE' | 'CUSTOMER_REJECTED' | 'ADDRESS_NOT_FOUND' | 'TRAFFIC_ACCIDENT' | 'ORDER_CANCELLED' | 'DEADLINE_OVERDUE_RETURN' | 'OTHER';
   note?: string;
   /** 批2：取证照片 URL（≤3 张，服务端校验前缀+数量） */
   evidenceUrls?: string[];
@@ -379,7 +405,7 @@ export class DispatchService {
     };
     const include = {
       // P0-1 修复：补 deliveryFee，骑手卡片才能显示真实配送费（原 5 处 select 漏选 → toView 恒 undefined）
-      order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+      order: { select: ORDER_SELECT },
       warehouse: { select: { code: true, name: true } },
     };
 
@@ -426,7 +452,7 @@ export class DispatchService {
       orderBy: { updatedAt: 'desc' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -531,7 +557,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -670,7 +696,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+          order: { select: ORDER_SELECT },
           warehouse: { select: { code: true, name: true } },
         },
       });
@@ -761,7 +787,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+          order: { select: ORDER_SELECT },
           warehouse: { select: { code: true, name: true } },
         },
       });
@@ -834,7 +860,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+          order: { select: ORDER_SELECT },
           warehouse: { select: { code: true, name: true } },
         },
       });
@@ -963,7 +989,7 @@ export class DispatchService {
       where: { id: input.taskId },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -995,7 +1021,7 @@ export class DispatchService {
         },
         include: {
           // P0-1 修复：补 deliveryFee
-          order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+          order: { select: ORDER_SELECT },
           warehouse: { select: { code: true, name: true } },
         },
       });
@@ -1032,6 +1058,12 @@ export class DispatchService {
    *   - 写 OrderEvent(ISSUE_REPORTED) → 订单维度查得到异常记录
    *   - WS 推 'customer-service' room → 客服实时介入
    *   - Order.status 保持（需客服介入决定后续状态推进）
+   *
+   * B4 离线重放幂等（F3 立项 20261117）：弱网下骑手端 reportIssue 先入离线队列，
+   * 任务可能已被首次成功上报置 FAILED（或被订单取消联动置 FAILED）。重放时若直接
+   * 走状态守卫会抛 409 → 离线队列按 permanent 死信，用户操作丢失。故：任务已 FAILED
+   * 且 note 含 `[ISSUE:` 标记（reportIssue 成功路径写 note 的固定前缀，见下方事务）→
+   * 判定为「本端点此前已成功处理过」，直接返回既有视图（不重复写状态/事件/工单）。
    */
   async reportIssue(input: ReportIssueInput): Promise<DeliveryTaskView> {
     const evidenceUrls = this.validateEvidenceUrls(input.evidenceUrls);
@@ -1045,6 +1077,17 @@ export class DispatchService {
         code: 'E-DISPATCH-003',
         message: 'Task not assigned to this rider',
       });
+    }
+
+    // B4 幂等重放：任务已 FAILED 且 note 带 [ISSUE: 标记 → 此前 reportIssue 已成功，
+    // 直接返回既有视图（离线队列重放 200，条目正常出队）。riderId 归属校验已在上。
+    if (task.status === 'FAILED' && typeof task.note === 'string' && task.note.includes('[ISSUE:')) {
+      logger.info({
+        msg: 'DISPATCH_ISSUE_REPLAY_IDEMPOTENT',
+        taskId: input.taskId,
+        riderId,
+      });
+      return this.toView(task);
     }
 
     // V2-S2 修复：状态前置校验（仅这几个状态允许报异常）
@@ -1075,17 +1118,7 @@ export class DispatchService {
         include: {
           // P0-2 修复（2026-08-27 审查报告）：补 deliveryAddress/deliveryFee/deliveryFeeBreakdown，
           // 与其余 11 处 select 统一，否则 reportIssue 返回的 DeliveryTaskView 丢配送费/明细/联系电话
-          order: {
-            select: {
-              orderNo: true,
-              payableAmount: true,
-              paymentMethod: true,
-              status: true,
-              deliveryAddress: true,
-              deliveryFee: true,
-              deliveryFeeBreakdown: true,
-            },
-          },
+          order: { select: ORDER_SELECT },
           warehouse: { select: { code: true, name: true } },
         },
       });
@@ -1217,7 +1250,7 @@ export class DispatchService {
       where: { orderId, taskType: 'delivery' },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -1273,7 +1306,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -1414,7 +1447,7 @@ export class DispatchService {
       },
       include: {
         // P0-1 修复：补 deliveryFee
-        order: { select: { orderNo: true, scheduledFor: true, payableAmount: true, paymentMethod: true, deliveryAddress: true, deliveryFee: true, deliveryFeeBreakdown: true, items: { select: { skuId: true, quantity: true } } } },
+        order: { select: ORDER_SELECT },
         warehouse: { select: { code: true, name: true } },
       },
     });
@@ -2172,6 +2205,11 @@ export class DispatchService {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
       orderNo: (t.order as any)?.orderNo,
+      // F3 已取消订单出口（20261117 立项 B1）：透传订单状态，骑手端据 CANCELLED
+      // 渲染「订单已取消」badge + 上报异常入口。⚠️ 依赖查询链 select 带 status——
+      // rider 查询 12 处 order select 已统一走 ORDER_SELECT（grep 本文件核对），
+      // 新增查询路径漏 select 时该字段静默 undefined（Prisma select 白名单坑）。
+      orderStatus: (t.order as any)?.status,
       // 骑手大厅卡片后端配合需求①②（20261115）：透传预约开门时间 + 送达 deadline 锚点
       scheduledFor: (t.order as any)?.scheduledFor?.toISOString() ?? null,
       estimatedArrival: t.estimatedArrival?.toISOString() ?? null,

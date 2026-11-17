@@ -48,6 +48,24 @@ export const DeliveryTask = z.object({
   /** 关联业务订单号（MMxxx；骑手到店报单号展示用，20261115 契约补声明——toView 早已透传） */
   orderNo: z.string().optional(),
   /**
+   * 关联订单状态（F3 已取消订单出口 20261117 立项 B2）。
+   * 骑手端据此在 CANCELLED 订单卡渲染「订单已取消」badge +「上报异常」入口
+   * （reportIssue reason=ORDER_CANCELLED）。旧数据/契约滞后 → undefined，
+   * 前端防御性可选，badge 不渲染。
+   */
+  orderStatus: z.enum([
+    'PENDING_PAYMENT',
+    'PENDING_CONFIRM',
+    'CONFIRMED',
+    'PICKED',
+    'OUT_FOR_DELIVERY',
+    'DELIVERED_PAID',
+    'DELIVERED',
+    'DELIVERED_UNPAID',
+    'COMPLETED',
+    'CANCELLED',
+  ]).optional(),
+  /**
    * 预约单开门时间（ISO，即时单 null；骑手大厅卡片-后端配合需求① 20261115）。
    * 语义 = 预约开门时间，不是送达 deadline。前端已备「预约单」badge 防御性 UI。
    */
@@ -150,6 +168,10 @@ export const ReportIssueRequest = z.object({
     'CUSTOMER_REJECTED',
     'ADDRESS_NOT_FOUND',
     'TRAFFIC_ACCIDENT',
+    // F3 已取消订单出口（20261117 立项 D1 拍板）：订单已取消、货在骑手手上的返仓上报
+    'ORDER_CANCELLED',
+    // §4 死线超时出口（同 D1）：普通单送达死线超时，骑手返仓上报
+    'DEADLINE_OVERDUE_RETURN',
     'OTHER',
   ]),
   note: z.string().max(500).optional(),
