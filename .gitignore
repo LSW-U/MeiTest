@@ -17,6 +17,9 @@ coverage/
 .env.local
 .env.*.local
 !.env.example
+# R1/R3 卫生收口（20261121）：密钥备份/临时 SQL 备份防再犯（20261012/20261117 两次前科）
+.env.bak-*
+.tmp-backup-*.sql
 
 # logs
 *.log
