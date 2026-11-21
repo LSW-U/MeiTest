@@ -519,9 +519,13 @@ function CreateCategoryDialog({
   const [coldChain, setColdChain] = useState(false);
 
   // initialParentId 变化时同步（F5 "添加子分类" 预填）
+  // 体验小批 §三-4：补 open 依赖——Dialog 常驻不卸载，submit 后 parentId 已重置 null，
+  // 二次打开同 parent 时 initialParentId 同值，仅靠它不触发 effect；open 翻转 true 时重新预填
   useEffect(() => {
-    setParentId(initialParentId);
-  }, [initialParentId]);
+    if (open) {
+      setParentId(initialParentId);
+    }
+  }, [initialParentId, open]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

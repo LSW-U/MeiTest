@@ -57,6 +57,7 @@ import {
   type PaymentMethod,
 } from '@/hooks/api/use-payments';
 import { ApiError } from '@/lib/api';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { formatCurrency, formatCny } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -143,7 +144,12 @@ export default function PaymentsListPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'ALL'>('ALL');
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | 'ALL'>('ALL');
-  const [orderNoSearch, setOrderNoSearch] = useState('');
+  // 体验小批 P1-4：订单号搜索 300ms 防抖（输入框即时回显，查询参数用防抖值）
+  const {
+    immediateValue: orderNoSearch,
+    debouncedValue: orderNoSearchDebounced,
+    setImmediateValue: setOrderNoSearch,
+  } = useDebouncedSearch('', 300);
   const [detailTarget, setDetailTarget] = useState<PaymentIntentListItem | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<PaymentIntentListItem | null>(null);
   const [failTarget, setFailTarget] = useState<PaymentIntentListItem | null>(null);
@@ -162,7 +168,7 @@ export default function PaymentsListPage() {
   } = usePayments({
     status: statusFilter === 'ALL' ? undefined : statusFilter,
     method: methodFilter === 'ALL' ? undefined : methodFilter,
-    orderNo: orderNoSearch || undefined,
+    orderNo: orderNoSearchDebounced || undefined,
     limit: 20,
   });
   const confirmMutation = useConfirmReceipt();
@@ -655,7 +661,12 @@ function ReconciliationLedgerSection() {
   // 台账筛选
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<LedgerStatus | 'ALL'>('ALL');
-  const [orderNoSearch, setOrderNoSearch] = useState('');
+  // 体验小批 P1-4：台账区订单号搜索同样防抖（输入即时回显，查询参数用防抖值）
+  const {
+    immediateValue: orderNoSearch,
+    debouncedValue: orderNoSearchDebounced,
+    setImmediateValue: setOrderNoSearchImmediate,
+  } = useDebouncedSearch('', 300);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
@@ -668,10 +679,16 @@ function ReconciliationLedgerSection() {
     };
   }
 
+  /** 台账区订单号搜索：防抖 setter + 搜索词变化显式重置 page=1（D6，withPageReset 只包其它筛选） */
+  function setLedgerOrderNoSearch(v: string) {
+    setOrderNoSearchImmediate(v);
+    setPage(1);
+  }
+
   const { data, isPending, error, refetch } = useReconciliationLedger({
     method: methodFilter === 'ALL' ? undefined : methodFilter,
     status: statusFilter === 'ALL' ? undefined : statusFilter,
-    orderNo: orderNoSearch || undefined,
+    orderNo: orderNoSearchDebounced || undefined,
     // date input 值为 YYYY-MM-DD：from 取当日 0 点起（含），to 取当日末尾前（lt）
     dateFrom: dateFrom ? new Date(`${dateFrom}T00:00:00.000Z`).toISOString() : undefined,
     dateTo: dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : undefined,
@@ -795,7 +812,7 @@ function ReconciliationLedgerSection() {
             <Input
               placeholder={t('admin.payments.searchOrderNoPlaceholder')}
               value={orderNoSearch}
-              onChange={(e) => withPageReset(setOrderNoSearch)(e.target.value)}
+              onChange={(e) => setLedgerOrderNoSearch(e.target.value)}
               className="w-56"
             />
             <div className="flex items-center gap-2">

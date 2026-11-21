@@ -46,7 +46,23 @@ export default function LoginPage() {
         body: JSON.stringify(body),
         credentials: 'include', // 约束 6：收 httpOnly set-cookie（access + refresh + csrf）
       });
-      const data = await resp.json();
+      // 体验小批 P1-4（login 502）：先判 resp.ok + content-type，非 JSON（网关 502/504 HTML）
+      // 显示友好文案；4xx JSON 体维持原 data.error.message 路径
+      const contentType = resp.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        setError(t('login.serviceUnavailable'));
+        return;
+      }
+      let data: {
+        success?: boolean;
+        error?: { message?: string };
+      };
+      try {
+        data = await resp.json();
+      } catch {
+        setError(t('login.serviceUnavailable'));
+        return;
+      }
       if (!resp.ok || !data.success) {
         setError(data?.error?.message ?? `Login failed (HTTP ${resp.status})`);
         return;
@@ -60,7 +76,9 @@ export default function LoginPage() {
       // 跳 dashboard 内容页（/ 是 server component 永远 redirect /login，跳 /dashboard）
       window.location.href = '/dashboard';
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error');
+      // 体验小批 P1-4：网络层错误（fetch reject / DNS / 断网）也归入友好文案
+      setError(t('login.serviceUnavailable'));
+      void err;
     } finally {
       setSubmitting(false);
     }

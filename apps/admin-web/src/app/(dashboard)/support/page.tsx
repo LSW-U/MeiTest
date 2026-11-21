@@ -290,6 +290,10 @@ export default function SupportWorkbenchPage() {
     reviews: Array<Review | RiderReview>;
     reviewsPending: boolean;
     reviewsError: Error | null;
+    /** 体验小批 P1-5：三区块 retry 接真实 refetch（订单链路/人级点入两处调用各自传） */
+    onRetryTasks: () => void;
+    onRetryRefunds: () => void;
+    onRetryReviews: () => void;
   }) {
     return (
       <>
@@ -406,7 +410,7 @@ export default function SupportWorkbenchPage() {
               </div>
             )}
             {opts.tasksError && (
-              <ErrorState message={opts.tasksError.message} onRetry={() => {}} />
+              <ErrorState message={opts.tasksError.message} onRetry={() => opts.onRetryTasks()} />
             )}
             {!opts.tasksPending && !opts.tasksError && opts.tasks.length === 0 && (
               <EmptyState title={t('admin.support.tasksEmpty')} />
@@ -465,7 +469,7 @@ export default function SupportWorkbenchPage() {
               </div>
             )}
             {opts.refundsError && (
-              <ErrorState message={opts.refundsError.message} onRetry={() => {}} />
+              <ErrorState message={opts.refundsError.message} onRetry={() => opts.onRetryRefunds()} />
             )}
             {!opts.refundsPending && !opts.refundsError && opts.refunds.length === 0 && (
               <EmptyState title={t('admin.support.refundsEmpty')} />
@@ -503,7 +507,7 @@ export default function SupportWorkbenchPage() {
               </div>
             )}
             {opts.reviewsError && (
-              <ErrorState message={opts.reviewsError.message} onRetry={() => {}} />
+              <ErrorState message={opts.reviewsError.message} onRetry={() => opts.onRetryReviews()} />
             )}
             {!opts.reviewsPending && !opts.reviewsError && opts.reviews.length === 0 && (
               <EmptyState title={t('admin.support.reviewsEmpty')} />
@@ -938,6 +942,12 @@ export default function SupportWorkbenchPage() {
                     reviews: allReviews,
                     reviewsPending: customerReviewsQuery.isPending || riderReviewsQuery.isPending,
                     reviewsError: customerReviewsQuery.error ?? riderReviewsQuery.error,
+                    onRetryTasks: () => tasksQuery.refetch(),
+                    onRetryRefunds: () => refundsQuery.refetch(),
+                    onRetryReviews: () => {
+                      void customerReviewsQuery.refetch();
+                      void riderReviewsQuery.refetch();
+                    },
                   })}
                   {backToUserNode()}
                 </>
@@ -965,6 +975,12 @@ export default function SupportWorkbenchPage() {
                 reviewsPending:
                   pickedCustomerReviewsQuery.isPending || pickedRiderReviewsQuery.isPending,
                 reviewsError: pickedCustomerReviewsQuery.error ?? pickedRiderReviewsQuery.error,
+                onRetryTasks: () => pickedOrderTasksQuery.refetch(),
+                onRetryRefunds: () => pickedOrderRefundsQuery.refetch(),
+                onRetryReviews: () => {
+                  void pickedCustomerReviewsQuery.refetch();
+                  void pickedRiderReviewsQuery.refetch();
+                },
               })}
               {backToUserNode()}
             </>
