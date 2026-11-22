@@ -32,7 +32,6 @@ import type { RequestUser } from '../auth/strategies/jwt.strategy';
 import type { DeviceType } from '@meimart/api-contract';
 import type { OrderStatusValue } from './order.types';
 
-import { RefundService } from '../refund/refund.service';
 import { OutOfStockService, OUT_OF_STOCK_REASONS } from './out-of-stock.service';
 
 interface RequestWithUser {
@@ -94,7 +93,6 @@ const UpdateOutOfStockRuleRequest = z
 export class AdminOrderController {
   constructor(
     @Inject(OrderService) private readonly orderService: OrderService,
-    @Inject(RefundService) private readonly refundService: RefundService,
     @Inject(OutOfStockService) private readonly outOfStockService: OutOfStockService,
   ) {}
 
@@ -180,9 +178,13 @@ export class AdminOrderController {
   /**
    * admin 取消订单
    *
-   * W5 升级（W4 P0-2 → W5）：
-   * - paymentStatus=UNPAID → 直接取消
-   * - paymentStatus=PAID → 自动创建 Refund(COMPLETED，admin 发起 = 商家同意) + 取消订单
+   * W5 升级（W4 P0-2 → W5）：paymentStatus=PAID → 自动退款 + 取消订单
+   *
+   * D11（方案v2-订单取消资金链收口 20261121）：删除两步走（createRefund 自开事务 →
+   * reviewRefund 另开事务，两事务间有「已退款但未取消」窗口）——PAID 分支收敛到
+   * cancelOrderInternal 同一通路（事务内建退款单 + 完成 + 订单 CANCELLED 原子提交，
+   * 方案 §批1 第 4 条）。UNPAID/PAID 统一走 cancelOrderInternal，PAID 退款由其内部
+   * paymentStatus 检测触发（无需在此区分）。
    */
   @Post(':id/cancel')
   @Audit({ resource: 'Order', resourceIdParam: 'id' })
@@ -209,48 +211,16 @@ export class AdminOrderController {
       );
     }
 
-    // PAID 订单 → 自动退款（admin 发起 = 商家同意，直接 COMPLETED）
-    let refundId: string | undefined;
-    if (order.paymentStatus === 'PAID') {
-      const refund = await this.refundService.createRefund({
-        orderId: id,
-        userId: order.userId,
-        reason: 'OTHER',
-        reasonDetail: `Admin cancelled: ${body.reason}`,
-      });
-      refundId = refund.id;
-      // 接单后状态（CONFIRMED+）refund 是 PENDING，admin 发起 = 直接通过
-      if (refund.status === 'PENDING') {
-        await this.refundService.reviewRefund(
-          refund.id,
-          req.user.sub,
-          'APPROVE',
-          `Auto-approved: admin cancel (${body.reason})`,
-        );
-      }
-    }
-
-    // P1 修复：refund 写入成功后 cancelOrderInternal 失败时记录异常（风险极低，人工介入兜底）
-    try {
-      await this.orderService.cancelOrderInternal(id, {
-        operatorId: req.user.sub,
-        deviceType: req.user.deviceType as DeviceType,
-        perspective,
-        reason: body.reason,
-      });
-    } catch (err) {
-      // refund 已写入但订单取消失败 → 记录异常，需人工介入或脚本修复
-      if (refundId) {
-        console.error({
-          msg: 'ADMIN_CANCEL_REFUND_SUCCESS_ORDER_CANCEL_FAILED',
-          orderId: id,
-          refundId,
-          error: err instanceof Error ? err.message : String(err),
-          action: 'Manual intervention required: refund COMPLETED but order not cancelled',
-        });
-      }
-      throw err;
-    }
+    // D11：同事务通路（PAID 单事务内建+完成退款；UNPAID 单行为不变）
+    // 审查 P2-1（调度拍板 20261122：保留审计身份）：refundReviewerId=admin sub →
+    // Refund.reviewedBy 留操作人（旧两步走 reviewRefund 的审计语义在新通路保留）
+    await this.orderService.cancelOrderInternal(id, {
+      operatorId: req.user.sub,
+      deviceType: req.user.deviceType as DeviceType,
+      perspective,
+      reason: body.reason,
+      refundReviewerId: req.user.sub,
+    });
     const cancelled = await this.orderService.adminGetOrderDetail(id);
     return { success: true as const, data: { id: cancelled.id, status: cancelled.status } };
   }

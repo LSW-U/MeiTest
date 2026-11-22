@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreateRefundRequest } from '@meimart/api-contract';
 
-const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDispatchService, mockHelpers, mockSettlementAdjustment } = vi.hoisted(() => ({
+const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDispatchService, mockHelpers, mockSettlementAdjustment, mockNotify } = vi.hoisted(() => ({
   mockDb: {
     order: {
       findUnique: vi.fn(),
@@ -97,6 +97,8 @@ const { mockDb, mockLogger, mockModuleRef, mockOrderService, mockStorage, mockDi
   mockSettlementAdjustment: {
     applyRefundSettlementAdjustment: vi.fn().mockResolvedValue(undefined),
   },
+  // D13（批1 资金闭环）：cancelOrderInTx 通知门面 mock
+  mockNotify: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({
@@ -202,6 +204,8 @@ describe('RefundService', () => {
     // D8：reset 负向调整接线 mock
     mockSettlementAdjustment.applyRefundSettlementAdjustment.mockReset();
     mockSettlementAdjustment.applyRefundSettlementAdjustment.mockResolvedValue(undefined);
+    // D13（批1 资金闭环）：reset 通知 mock
+    mockNotify.mockReset();
   });
 
   describe('createRefund', () => {
@@ -1422,5 +1426,85 @@ describe('RefundService', () => {
       expect(mockDb.refund.create).toHaveBeenCalledTimes(1);
       expect(mockDb.refund.updateMany).not.toHaveBeenCalled();
     });
+  });
+});
+
+// D13（方案v2-订单取消资金链收口 批1 20261121）：cancelOrderInTx 补 orderCancelled 通知挂点，
+// 与 order.service.cancelOrderInternal 通知版同构（两版同构断言，消除单向漂移）。
+describe('RefundService.cancelOrderInTx - orderCancelled 通知挂点（批1 D13）', () => {
+  const newServiceWithNotify = () =>
+    new RefundService(mockModuleRef as never, mockStorage as never, {
+      notify: mockNotify,
+    } as never);
+  let service: RefundService;
+  const notifyOrder = {
+    ...baseOrder,
+    orderNo: 'MM2026112101000001',
+    // autoApprove 仅 PENDING_PAYMENT/PENDING_CONFIRM 才进 cancelOrderInTx
+    status: 'PENDING_CONFIRM',
+    paymentStatus: 'UNPAID',
+  };
+
+  beforeEach(() => {
+    service = newServiceWithNotify();
+    mockDb.order.findUnique.mockResolvedValue(notifyOrder);
+    mockDb.order.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.deliveryTask.updateMany.mockResolvedValue({ count: 0 });
+    mockDb.orderEvent.create.mockResolvedValue({});
+    mockHelpers.withTransaction.mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(mockDb),
+    );
+  });
+
+  it('D13-1：cancelOrderInTx 翻转成功 → 发 orderCancelled 通知（userId/type/data/params 与 order 版同构）', async () => {
+    // 走 createRefund autoApprove 通路（内部调 cancelOrderInTx）
+    mockDb.refund.findFirst.mockResolvedValue(null);
+    mockDb.refund.create.mockResolvedValue(baseRefund);
+    mockDb.refund.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.order.findUnique
+      .mockResolvedValueOnce(notifyOrder) // createRefund 外壳读订单
+      .mockResolvedValue(notifyOrder); // cancelOrderInTx 重读
+
+    await service.createRefund({
+      orderId: 'order-1',
+      userId: 'user-1',
+      reason: 'QUALITY_ISSUE',
+      reasonDetail: 'damaged',
+    });
+
+    expect(mockNotify).toHaveBeenCalledTimes(1);
+    // autoApprove 通路 cancelOrderInTx 用固定 reason='REFUND_AUTO_APPROVED'（ctx.reason）
+    expect(mockNotify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'orderCancelled',
+        userId: 'user-1',
+        type: 'ORDER_UPDATE',
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          orderNo: 'MM2026112101000001',
+          reason: 'REFUND_AUTO_APPROVED',
+        }),
+        params: expect.objectContaining({
+          orderNo: 'MM2026112101000001',
+          reason: 'REFUND_AUTO_APPROVED',
+        }),
+      }),
+    );
+  });
+
+  it('D13-2：notificationEvents 未注入（undefined）→ 不发通知不抛错（向后兼容）', async () => {
+    const bareService = new RefundService(mockModuleRef as never, mockStorage as never);
+    mockDb.refund.findFirst.mockResolvedValue(null);
+    mockDb.refund.create.mockResolvedValue(baseRefund);
+    mockDb.refund.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      bareService.createRefund({
+        orderId: 'order-1',
+        userId: 'user-1',
+        reason: 'QUALITY_ISSUE',
+        reasonDetail: 'damaged',
+      }),
+    ).resolves.toBeDefined();
   });
 });

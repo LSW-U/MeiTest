@@ -12,7 +12,7 @@
  *   PENDING → CANCELLED（客户撤回）
  *   APPROVED → FAILED（第三方退款失败，mock 不触发）
  */
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Inject, Optional } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import {
   db,
@@ -99,7 +99,105 @@ export class RefundService {
   constructor(
     @Inject(ModuleRef) private readonly moduleRef: ModuleRef,
     @Inject(StorageService) private readonly storage: StorageService,
+    // D13（方案v2-订单取消资金链收口 20261121）：cancelOrderInTx 补 orderCancelled 通知挂点。
+    // NotificationEventService 注入（显式 token，tsx 无 decorator metadata 同款）；
+    // @Optional 兜底单测直 new（notify 内部全链 try/catch 失败容忍）
+    @Optional() @Inject('NotificationEventServiceToken')
+    private readonly notificationEvents?: {
+      notify: (input: {
+        event: string;
+        userId: string;
+        type: string;
+        data?: Record<string, unknown>;
+        params?: Record<string, string>;
+      }) => Promise<void>;
+    } | null,
   ) {}
+
+  /**
+   * D10（方案v2-订单取消资金链收口 20261121）：事务内建退款单公共通路
+   *
+   * 供两处建单复用，防「cancelOrderInternal 直建」与「createRefund 外壳」字段填充漂移：
+   *   - createRefund 本体（本文件，用户/客服售后申请链）
+   *   - order.service cancelOrderInternal（已付单取消同事务退款链，D9）
+   *
+   * 只做 tx.refund.create + 字段填充（含 RefundItem 子表）；advisory lock、in-flight
+   * dedup（E-REFUND-002）、E-REFUND-001 校验留在 createRefund 外壳（语义属申请入口），
+   * 取消链侧由「赢者唯一」守卫 + COMPLETED 前置校验保证不重复建单。
+   */
+  async createRefundInTx(
+    tx: Tx,
+    input: {
+      orderId: string;
+      userId: string;
+      /** 整单退款金额（分）；取消链传 payableAmount */
+      amount: number;
+      reason: string;
+      reasonDetail?: string;
+      /** 部分退款商品列表（不传 = 整单无子表行，同 admin 先例） */
+      items?: { orderItemId: string; refundQty: number }[];
+      photos?: string[];
+      refundType?: 'REFUND_ONLY' | 'RETURN_REFUND';
+      refundMethod: string;
+    },
+    orderItems: { id: string; skuId: string; productName: unknown; unitPrice: number }[],
+  ): Promise<Prisma.RefundGetPayload<{ include: { items: true } }>> {
+    return tx.refund.create({
+      data: {
+        orderId: input.orderId,
+        userId: input.userId,
+        amount: input.amount,
+        reason: input.reason,
+        reasonDetail: input.reasonDetail ?? null,
+        photos: input.photos ?? [],
+        refundType: input.refundType ?? 'REFUND_ONLY',
+        status: 'PENDING',
+        refundMethod: input.refundMethod,
+        items:
+          input.items && input.items.length > 0
+            ? {
+                create: input.items.map((ri) => {
+                  const oi = orderItems.find((x) => x.id === ri.orderItemId);
+                  if (!oi) {
+                    throw new ConflictException({
+                      code: 'E-REFUND-008',
+                      message: `OrderItem not found in this order: ${ri.orderItemId}`,
+                    });
+                  }
+                  return {
+                    orderItemId: ri.orderItemId,
+                    skuId: oi.skuId,
+                    productName: oi.productName as Prisma.InputJsonValue,
+                    unitPrice: oi.unitPrice,
+                    refundQty: ri.refundQty,
+                    subtotal: oi.unitPrice * ri.refundQty,
+                  };
+                }),
+              }
+            : undefined,
+      },
+      include: { items: true },
+    });
+  }
+
+  /**
+   * D9（方案v2-订单取消资金链收口 20261121）：completeRefundTx 的 public 包装
+   *
+   * order.service cancelOrderInternal 注入 RefundService 后在事务内调用（已付单取消
+   * 同事务收口：建单 → 完成 → 订单 CANCELLED 原子提交）。此前 completeRefundTx 是
+   * private 且无公开包装（v1 D4「经公开方法接线」假设不成立，二次核实订正）。
+   */
+  async completeRefundInTx(
+    tx: Tx,
+    refundId: string,
+    opts: {
+      reviewerId?: string | null;
+      reviewNote?: string | null;
+      restock?: boolean;
+    } = {},
+  ): Promise<Prisma.RefundGetPayload<{ include: { items: true } }>> {
+    return this.completeRefundTx(tx, refundId, opts);
+  }
 
   /**
    * 客户申请退款
@@ -166,7 +264,6 @@ export class RefundService {
 
     // P13 金额分叉：有 items 按选中商品算部分退款 / 无 items 整单全额（向后兼容）
     let amount: number;
-    let refundItemsData: { orderItemId: string; refundQty: number; subtotal: number }[] = [];
 
     if (input.items && input.items.length > 0) {
       // P2-2（审查 2026-09-07）：整单退款（无 RefundItem）不落逐行痕迹，部分退款累计校验
@@ -218,7 +315,6 @@ export class RefundService {
         }
         const subtotal = oi.unitPrice * ri.refundQty;
         amount += subtotal;
-        refundItemsData.push({ orderItemId: ri.orderItemId, refundQty: ri.refundQty, subtotal });
       }
     } else {
       amount = order.payableAmount;
@@ -292,36 +388,22 @@ export class RefundService {
         });
       }
 
-      const created = await tx.refund.create({
-        data: {
+      // D10：建单走公共 createRefundInTx（字段填充单点，防两版建单漂移）
+      const created = await this.createRefundInTx(
+        tx,
+        {
           orderId: input.orderId,
           userId: input.userId,
           amount,
           reason: input.reason,
-          reasonDetail: input.reasonDetail ?? null,
-          photos: input.photos ?? [],
-          refundType: input.refundType ?? 'REFUND_ONLY',
-          status: 'PENDING',
+          reasonDetail: input.reasonDetail,
+          photos: input.photos,
+          refundType: input.refundType,
           refundMethod,
-          items:
-            input.items && input.items.length > 0
-              ? {
-                  create: refundItemsData.map((ri) => {
-                    const oi = order.items.find((x) => x.id === ri.orderItemId)!;
-                    return {
-                      orderItemId: ri.orderItemId,
-                      skuId: oi.skuId,
-                      productName: oi.productName as Prisma.InputJsonValue,
-                      unitPrice: oi.unitPrice,
-                      refundQty: ri.refundQty,
-                      subtotal: ri.subtotal,
-                    };
-                  }),
-                }
-              : undefined,
+          items: input.items,
         },
-        include: { items: true },
-      });
+        order.items,
+      );
 
       if (autoApprove) {
         // P1-5（方案v2 20261011）：订单取消收进同一事务——退款 COMPLETED 与订单 CANCELLED
@@ -375,10 +457,17 @@ export class RefundService {
    *
    * P0 修复保留：接单前退款必须同步取消订单 + 释放库存
    *
-   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 order.service.ts cancelOrderInternal（:711 起，
-   * 守卫 :739）是刻意保留的平行实现——本方法接收外部 tx 供退款同事务收口，order.service 版
-   * 自开事务供取消链路复用。两版逻辑（守卫/releaseStock/OrderEvent/关任务/清 riderId）必须
-   * 保持同构，任何一侧加列/改口径时另一侧同步改，漂移风险见审查报告 P3-1。
+   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 order.service.ts cancelOrderInternal（:788 起，
+   * 守卫 :837）是刻意保留的平行实现——本方法接收外部 tx 供退款同事务收口，order.service 版
+   * 自开事务供取消链路复用。两版逻辑（守卫/releaseStock/OrderEvent/关任务/清 riderId/
+   * orderCancelled 通知）必须保持同构，任何一侧加列/改口径时另一侧同步改，漂移风险见审查
+   * 报告 P3-1；通知挂点为 D13（20261121）补齐。
+   *
+   * 上报点①拍板 20261122（与 order.service.cancelOrderInternal PAID 分支豁免对齐，两版同构）：
+   * 缺货链退款归 out-of-stock-refund triggerRefundEngine，取消通路不代发——本方法唯一调用方
+   * 是 createRefund autoApprove（建退款单在先），不存在「取消时另建退款单」窗口，故无需
+   * reason='OUT_OF_STOCK' 豁免；此注释仅登记两版同构约定：order 版 PAID 分支的豁免
+   * （见 order.service.ts 批1 PAID 分支注释）不适用于本版。
    */
   private async cancelOrderInTx(
     tx: Tx,
@@ -469,6 +558,20 @@ export class RefundService {
       fromStatus: order.status,
       reason: ctx.reason,
     });
+
+    // D13（方案v2-订单取消资金链收口 20261121）：补 orderCancelled 通知挂点，消除两版取消
+    // 逻辑的单向漂移（order.service cancelOrderInternal 事务后通知挂点，:987 起附近，本版此前没有）。对齐 order 版同款
+    // 挂点：站内信 + PUSH（ORDER_UPDATE，data.orderId+orderNo+reason）。通知属事务外副作用，
+    // 本方法自身已在事务内——失败容忍交给 notify 内部 try/catch（绝不炸退款主流程）。
+    if (this.notificationEvents) {
+      await this.notificationEvents.notify({
+        event: 'orderCancelled',
+        userId: order.userId,
+        type: 'ORDER_UPDATE',
+        data: { orderId, orderNo: order.orderNo, reason: ctx.reason },
+        params: { orderNo: order.orderNo, reason: ctx.reason },
+      });
+    }
   }
 
   /**

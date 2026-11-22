@@ -668,6 +668,9 @@ export class OutOfStockService {
       deviceType: ctx.deviceType,
       perspective: ctx.perspective,
       reason: 'OUT_OF_STOCK',
+      // 批1 审查 P1-2 修复（上报点①拍板 20261122）：跳过取消通路 PAID 自动退款——
+      // 缺货链退款归 triggerRefundEngine（本服务 commit 后触发），取消通路不代发
+      skipPaidRefund: true,
     });
 
     logger.info({

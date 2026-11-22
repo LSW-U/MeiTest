@@ -27,7 +27,7 @@
  *      a. 释放库存（releaseStock 对每个 OrderItem）
  *      b. 更新 Order.status=CANCELLED + cancelledAt + cancelReason
  *      c. 写 OrderEvent(CANCELLED)
- *   3. （预付场景）W5 接入 RefundService：触发 refund，标 PaymentIntent.REFUNDED
+ *   3. （预付场景）PAID 单取消 → 事务内同事务退款（批1 D9/D10 收口，标 PaymentIntent.REFUNDED）
  */
 import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException, Optional } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
@@ -55,6 +55,10 @@ import { PricingService } from '../pricing/pricing.service';
 import { resolveOrderEffectiveRate, buildOrderRateFields } from '../rate/rate.service';
 import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
 import { OutOfStockRefundService } from './out-of-stock-refund.service';
+// 批1 D9/D10（方案v2-订单取消资金链收口 20261121）：已付单取消同事务退款。
+// refund.service 不注入 OrderService（P1-5 已删），无循环依赖；refund.module 经
+// forwardRef 互引，DI 用显式 @Inject（tsx 无 decorator metadata 纪律）
+import { RefundService } from '../refund/refund.service';
 import {
   enqueueOrderTimeout,
   cancelOrderTimeout,
@@ -227,6 +231,10 @@ export class OrderService {
     // @Optional 兜底单测直 new 不传（out-of-stock.service 同款）
     @Optional() @Inject(OutOfStockRefundService)
     private readonly oosRefundEngine?: OutOfStockRefundService | null,
+    // 批1 D9/D10（20261121）：已付单取消同事务退款通路（createRefundInTx + completeRefundInTx）。
+    // @Optional 兜底单测直 new 不传（不注入 → PAID 单取消不建退款单，既有取消行为不变）
+    @Optional() @Inject(RefundService)
+    private readonly refundService?: RefundService | null,
   ) {}
 
   /**
@@ -747,6 +755,21 @@ export class OrderService {
       return { cancelled: false, fromStatus: order.status };
     }
 
+    // D14①（方案v2-订单取消资金链收口 20261121）：已付款单（paymentStatus=PAID）跳过超时取消。
+    // 竞态窗口链路：支付回调先翻 PaymentIntent PAID → markPaidTx 另一事务翻订单 paymentStatus/状态
+    // → postMarkPaidEffects 才删超时 job——两步之间存在空窗，超时 job 此刻触发读到「订单仍在
+    // PENDING_CONFIRM 且已付款」的中间态。不变式=已付必有退款单：此处跳过（回调赢，订单正常流转），
+    // 即便空窗内取消真翻转成功，批1 PAID 检测分支（D14②兜底，cancelOrderInternal 内）也会同事务补建
+    // 退款单（取消赢）。跳过路径不依赖此预检精度——cancelOrderInternal 事务内终态守卫 + PAID 补退款双兜底。
+    if (order.paymentStatus === 'PAID') {
+      logger.info({
+        msg: 'ORDER_TIMEOUT_SKIP_PAID',
+        orderId,
+        paymentStatus: order.paymentStatus,
+      });
+      return { cancelled: false, fromStatus: order.status };
+    }
+
     await this.cancelOrderInternal(orderId, {
       operatorId: ctx.operatorId,
       deviceType: 'system', // V2-S5 修复：用 'system' 表达 BullMQ 自动操作（不再混淆 admin_web）
@@ -765,16 +788,17 @@ export class OrderService {
    *   - Order.status=CANCELLED + cancelledAt + cancelReason
    *   - 写 OrderEvent(CANCELLED)
    *
-   * 预付场景已支付的订单取消：W5 接入 RefundService 触发退款（这里留 TODO）
+   * 预付场景已支付的订单取消：事务内同事务退款（批1 D9/D10 已实施，见下方 PAID 分支）
    *
    * P1-6（方案v2-后端资金越权并发修复 20261011）：读后判断幂等存在并发窗口——
    * 两笔并发取消都可能读到非终态快照、都释放库存。改 updateMany WHERE status
    * 条件守卫（同文件 markPaid P2-1 先例 / 方案 :758/:883 先例）：count=0 说明
    * 并发赢家已翻 CANCELLED/COMPLETED → 直接幂等 return，不再重复释放库存。
    *
-   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 refund.service.ts cancelOrderInTx 是
-   * 刻意保留的平行实现（后者接收外部 tx 供退款同事务收口）——两版逻辑必须保持同构，
-   * 任何一侧加列/改口径时另一侧同步改。
+   * ⚠️ P3-1（审查 20261012）互引锚点：本方法与 refund.service.ts cancelOrderInTx（:472 起，
+   * 守卫 :503）是刻意保留的平行实现（后者接收外部 tx 供退款同事务收口）——两版逻辑（守卫/
+   * releaseStock/OrderEvent/关任务/清 riderId/orderCancelled 通知）必须保持同构，任何一侧
+   * 加列/改口径时另一侧同步改，漂移风险见审查报告 P3-1；通知挂点为 D13（20261121）补齐。
    */
   async cancelOrderInternal(
     orderId: string,
@@ -783,6 +807,21 @@ export class OrderService {
       deviceType?: ContractDeviceType;
       perspective?: string;
       reason: string;
+      /**
+       * 批1 审查 P1-2 修复（上报点①拍板 20261122，a 案）：跳过 PAID 自动退款。
+       * 仅服务端缺货通路显式传 true（out-of-stock.service 全缺取消 + rejudge 全缺两处）——
+       * 缺货链退款归 triggerRefundEngine（合并账/免审上限/SYSTEM 标记/dispute 语义），
+       * 取消通路不代发。⚠️ 不按 reason 字符串判定：用户取消 reason 是自由字符串
+       * （契约 CancelOrderRequest z.string()），客户端传 'OUT_OF_STOCK' 即可绕过退款
+       * → 资金卡死回归（审查实证）。内部字段，非契约。
+       */
+      skipPaidRefund?: boolean;
+      /**
+       * 批1 审查 P2-1（调度拍板 20261122：保留审计身份）：PAID 自动退款 COMPLETED 时
+       * 写入 Refund.reviewedBy 的操作人。仅 admin-order.controller 传 admin sub；
+       * 用户链/系统链不传 = null（autoApprove 先例语义）。内部字段，非契约。
+       */
+      refundReviewerId?: string;
     },
   ): Promise<void> {
     // 事务外查 order（broadcast 用，事务内再查一次校验一致性）
@@ -872,6 +911,61 @@ export class OrderService {
           msg: 'ORDER_CANCELLED_TASKS_CLOSED',
           orderId,
           closedTasks: cancelledTasks.count,
+        });
+      }
+
+      // 批1 D9/D10/D12（方案v2-订单取消资金链收口 20261121）：已付单取消 → 同事务建退款单
+      // 并完成（原 TODO「W5 接入 RefundService」收口）。此前用户取消已付 CONFIRMED 单
+      // （isUserCancellable 含 CONFIRMED）只释放库存不退款 + CANCELLED 单不可再申请退款
+      // （E-REFUND-001）→ 资金卡死实锤。不变式：赢者唯一（上方守卫）+ 已付必有退款单。
+      //   - 输家（count=0 幂等 return）不建退款单（A4 双倍退款防线）
+      //   - amount = payableAmount 整单（D12，明细跟随 createRefundInTx 现状，同 admin 先例）
+      //   - refundMethod 反查 PaymentIntent.method（orderId @unique），兜底 'COD'（admin 先例）
+      //   - completeRefundInTx 单点收口（销量回滚守卫 + Settlement 负向调整同事务）
+      //
+      // 上报点①拍板 20261122（审查 P1-2 修复，a 案）：缺货链退款归 triggerRefundEngine，
+      // 取消通路不代发——豁免改 ctx.skipPaidRefund 显式 flag，仅服务端缺货两调用点
+      // （out-of-stock.service cancelIfFullyOutOfStock / order.service rejudgeFullyOutOfStock）
+      // 传 true。⚠️ 不按 reason 字符串判定：用户取消 reason 是自由字符串（契约
+      // CancelOrderRequest z.string()），客户端传 'OUT_OF_STOCK' 即绕过退款 → 资金卡死
+      // 回归（审查实证）。否则取消通路先整单全退（reviewedBy=null），commit 后退款引擎
+      // 被防超额守卫（Σ COMPLETED + amount > payable）拦下 → SYSTEM 标记退款单消失 →
+      // dispute 异议链（refund.service:1064 要求 SYSTEM）失联 + 金额口径从「缺货项差额
+      // ≤$50 免审」变成整单 payable（e2e 实证 20261122）。
+      // 缺货单退款完全由批3 引擎通路负责（合并账/免审上限/直退收口语义原样）。
+      // 审查 P2-1（调度拍板：保留审计身份）：refundReviewerId 由 admin-order.controller
+      // 传 admin sub，写入 Refund.reviewedBy；用户链/系统链不传 = null（autoApprove 先例）。
+      const refundExempt = ctx.skipPaidRefund === true;
+      if (order.paymentStatus === 'PAID' && !refundExempt && this.refundService) {
+        const paymentIntent = await tx.paymentIntent.findUnique({
+          where: { orderId },
+          select: { method: true },
+        });
+        const created = await this.refundService.createRefundInTx(
+          tx,
+          {
+            orderId,
+            userId: order.userId,
+            amount: order.payableAmount,
+            reason: ctx.reason,
+            refundMethod: paymentIntent?.method ?? 'COD',
+          },
+          order.items,
+        );
+        await this.refundService.completeRefundInTx(tx, created.id, {
+          // 审查 P2-1（调度拍板 20261122：保留审计身份）：admin 通路传 operatorId 即
+          // admin sub（admin-order.controller 设置），写 Refund.reviewedBy；
+          // 用户链/系统链 ctx 无 refundReviewerId → null（autoApprove 先例语义）
+          reviewerId: ctx.refundReviewerId ?? null,
+          reviewNote: ctx.refundReviewerId ? `Admin cancelled: ${ctx.reason}` : null,
+        });
+        logger.info({
+          msg: 'ORDER_CANCELLED_PAID_REFUND_COMPLETED',
+          orderId,
+          orderNo: order.orderNo,
+          refundId: created.id,
+          amount: order.payableAmount,
+          refundMethod: paymentIntent?.method ?? 'COD',
         });
       }
 
@@ -2018,6 +2112,9 @@ export class OrderService {
         deviceType: 'system' as ContractDeviceType,
         perspective: 'system',
         reason: 'OUT_OF_STOCK',
+        // 批1 审查 P1-2 修复（上报点①拍板 20261122）：缺货链退款归引擎（下方
+        // processOutOfStockRefund），取消通路不代发——同 out-of-stock.service 先例
+        skipPaidRefund: true,
       });
       // 全缺退款走引擎（fullShortage=true，规则判定 fullShortage 开关）
       if (this.oosRefundEngine) {
@@ -2097,7 +2194,16 @@ export class OrderService {
    * 决策窗口/幂等已由 processor 校验（此处不重查状态，单次补偿纪律：失败仅告警）。
    */
   async decideSuggestionTimeoutRefund(orderId: string, itemId: string): Promise<void> {
-    const refunded = await this.triggerDeclinedRefund({ id: orderId, warehouseId: '' }, itemId);
+    // P1-G（批2 20261122）：传真实 warehouseId——空串会让引擎 resolveRule 命不中
+    // 仓库级规则（回退全局/默认）。读不到订单（异常防御）时落 null 走引擎默认链。
+    const orderRow = await db.order.findUnique({
+      where: { id: orderId },
+      select: { warehouseId: true },
+    });
+    const refunded = await this.triggerDeclinedRefund(
+      { id: orderId, warehouseId: orderRow?.warehouseId ?? '' },
+      itemId,
+    );
     // P1-2 修复：超时自动拒绝同样触发全缺重判（豁免取消的单，拒绝后可能真全缺 → 取消+退款）
     await this.rejudgeFullyOutOfStock(orderId, 'system');
     // 推送超时通知（事务外，notify 吞错）

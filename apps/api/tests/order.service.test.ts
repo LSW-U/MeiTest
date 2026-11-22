@@ -1161,6 +1161,122 @@ describe('OrderService.createOrder', () => {
     expect(result.fromStatus).toBe('PENDING_PAYMENT');
   });
 
+  // ===== 批2（D14①，方案v2-订单取消资金链收口 20261121）：竞态收口 =====
+  // 不变式：赢者唯一 + 已付必有退款单。竞态窗口：支付回调先翻 PaymentIntent PAID
+  // → markPaidTx 另事务翻订单 → postMarkPaidEffects 才删超时 job，两步间空窗内
+  // 超时 job 可能触发。D14① 预检跳过（回调赢）+ D14② cancelOrderInternal PAID
+  // 分支同事务补退款（取消赢兜底），两态合取下不存在「取消但无退款」中间态。
+
+  it('批2-B1：cancelIfPending 已付单（paymentStatus=PAID）→ 预检跳过不取消（回调赢）', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_CONFIRM',
+      paymentStatus: 'PAID', // 回调已翻订单付款态（markPaidTx 已提交）
+      scheduledFor: null,
+    });
+    const result = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+    expect(result).toEqual({ cancelled: false, fromStatus: 'PENDING_CONFIRM' });
+    // 不进取消事务（跳过守卫）
+    expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it('批2-B1：cancelIfPending 预检读时未付（PENDING）但事务内已 PAID（空窗竞态）→ cancelOrderInternal PAID 分支同事务补退款（D14② 兜底，取消赢）', async () => {
+    // 预检快照：超时 job 触发瞬间读到 PENDING（回调 markPaidTx 尚未提交）
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_CONFIRM',
+      paymentStatus: 'PENDING',
+      scheduledFor: null,
+      userId: 'user-1',
+      orderNo: 'MM20261122010000001',
+    });
+    // 事务内重读：回调已提交，paymentStatus=PAID（竞态空窗内的真实中间态）
+    const tx = {
+      order: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'order-1',
+          orderNo: 'MM20261122010000001',
+          userId: 'user-1',
+          warehouseId: 'wh-1',
+          status: 'PENDING_CONFIRM',
+          paymentStatus: 'PAID',
+          payableAmount: 8800,
+          riderId: null,
+          items: [{ skuId: 'sku-1', quantity: 2 }],
+        }),
+        update: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      deliveryTask: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      paymentIntent: { findUnique: vi.fn().mockResolvedValue({ method: 'WECHAT' }) },
+    };
+    mockHelpers.withTransaction.mockImplementation(async (fn: (t: unknown) => Promise<unknown>) => fn(tx));
+    const mockRefund = {
+      createRefundInTx: vi.fn().mockResolvedValue({ id: 'refund-1' }),
+      completeRefundInTx: vi.fn().mockResolvedValue({ id: 'refund-1', status: 'COMPLETED' }),
+    };
+    const raceService = new OrderService(
+      {} as never, {} as never, {} as never, null, null, {} as never, {} as never,
+      null, null, null, null,
+      mockRefund as never,
+    );
+
+    const result = await raceService.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+
+    // 取消赢：订单翻转，但同事务补建并完成退款单——「取消但无退款」中间态不存在
+    expect(result.cancelled).toBe(true);
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({ orderId: 'order-1', amount: 8800, refundMethod: 'WECHAT' }),
+      [{ skuId: 'sku-1', quantity: 2 }],
+    );
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledTimes(1);
+  });
+
+  it('批2-B2：cancelIfPending 语义不变——非 PAID 预检照常取消（UNPAID 单）', async () => {
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'PENDING_PAYMENT',
+      paymentStatus: 'PENDING',
+      scheduledFor: null,
+    });
+    mockHelpers.withTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'order-1',
+            status: 'PENDING_PAYMENT',
+            orderNo: 'MM1',
+            warehouseId: 'wh-1',
+            riderId: null,
+            items: [],
+          }),
+          update: vi.fn().mockResolvedValue({}),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        },
+        orderEvent: { create: vi.fn().mockResolvedValue({}) },
+        deliveryTask: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      };
+      return fn(tx);
+    });
+    const result = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+    expect(result.cancelled).toBe(true);
+  });
+
+  it('批2-B1（终态二选一总断言）：回调赢=跳过无取消，取消赢=必有退款单，无「取消+无退款」态', async () => {
+    // 情形一：回调赢（预检见 PAID）→ 不取消
+    mockDb.order.findUnique.mockResolvedValueOnce({
+      id: 'order-1', status: 'PENDING_CONFIRM', paymentStatus: 'PAID', scheduledFor: null,
+    });
+    const skip = await service.cancelIfPending('order-1', { reason: 'ORDER_TIMEOUT_15MIN' });
+    expect(skip.cancelled).toBe(false);
+    // 情形二：取消赢（空窗翻转成功）→ D14② 兜底必有退款单（前例已证 createRefundInTx=1）
+    // 两情形合取：不存在「cancelled=true 且无退款单」路径
+    expect(mockHelpers.withTransaction).not.toHaveBeenCalled();
+  });
+
   // ===== A2.5（P1-6，方案v2 20261011）：并发取消只释放一次库存 =====
   // 两笔并发取消（用户取消 + 超时 job）都可能读到非终态快照。P1-6 后以
   // updateMany WHERE status notIn(终态) 作乐观锁守卫：只有赢家（count=1）走
@@ -1801,6 +1917,207 @@ describe('OrderService.deleteOrder / deleteOrders (P27 批B1 软删)', () => {
     await service.getOrderCounts('user-1');
     expect(mockDb.order.groupBy).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) }),
+    );
+  });
+});
+
+// ============================================================================
+// 批1（方案v2-订单取消资金链收口 20261121）：已付单取消 → 同事务建退款单并完成
+//   A2: PAID 单取消 → createRefundInTx(amount=payableAmount) + completeRefundInTx 同事务
+//   A3: 未支付单取消 → 不建退款单（行为不变）
+//   A4: 并发输家（翻转 count=0）→ 幂等 return 不建退款单
+//   A6: order 侧 orderCancelled 通知维持（两版同构）
+// ============================================================================
+describe('OrderService.cancelOrderInternal - 已付单同事务退款（批1 资金闭环）', () => {
+  let service: OrderService;
+  let mockRefund: {
+    createRefundInTx: ReturnType<typeof vi.fn>;
+    completeRefundInTx: ReturnType<typeof vi.fn>;
+  };
+  let mockNotify: ReturnType<typeof vi.fn>;
+
+  /** 构造 cancelOrderInternal 事务 mock（tx 内重读 order + 守卫翻转 + 联动） */
+  function setupTx(opts: { paymentStatus: string; flipCount: number; payableAmount?: number }) {
+    const tx = {
+      order: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'order-1',
+          orderNo: 'MM20261122010000001',
+          userId: 'user-1',
+          warehouseId: 'wh-1',
+          status: 'CONFIRMED',
+          paymentStatus: opts.paymentStatus,
+          payableAmount: opts.payableAmount ?? 8800,
+          riderId: null,
+          items: [{ skuId: 'sku-1', quantity: 2 }],
+        }),
+        update: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: opts.flipCount }),
+      },
+      orderEvent: { create: vi.fn().mockResolvedValue({}) },
+      deliveryTask: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      paymentIntent: { findUnique: vi.fn().mockResolvedValue({ method: 'WECHAT' }) },
+    };
+    mockHelpers.withTransaction.mockImplementation(async (fn: (t: unknown) => Promise<unknown>) => fn(tx));
+    return tx;
+  }
+
+  beforeEach(() => {
+    Object.values(mockDb).forEach((table) => {
+      Object.values(table).forEach((fn) => fn.mockReset());
+    });
+    Object.values(mockHelpers).forEach((fn) => fn.mockReset());
+    // 事务外 broadcast/notify 快照查询（cancelOrderInternal 事务外 findUnique）
+    mockDb.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      status: 'CONFIRMED',
+      userId: 'user-1',
+      orderNo: 'MM20261122010000001',
+    });
+    mockRefund = {
+      createRefundInTx: vi.fn().mockResolvedValue({ id: 'refund-1' }),
+      completeRefundInTx: vi.fn().mockResolvedValue({ id: 'refund-1', status: 'COMPLETED' }),
+    };
+    mockNotify = vi.fn().mockResolvedValue(undefined);
+    service = new OrderService(
+      {} as never, // orderNoService
+      {} as never, // paymentService
+      {} as never, // timeoutQueue
+      null, // dispatchService
+      null, // cartService
+      {} as never, // promotionService
+      {} as never, // pricingService
+      null, // realtime
+      null, // notifyFactory
+      { notify: mockNotify } as never, // notificationEvents（A6 断言用）
+      null, // oosRefundEngine
+      mockRefund as never, // refundService（批1 D9/D10 注入）
+    );
+  });
+
+  it('批1-A2：PAID 单用户取消 → 同事务建退款单并完成（amount=payableAmount + order CANCELLED 原子）', async () => {
+    const tx = setupTx({ paymentStatus: 'PAID' });
+
+    await service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'USER_CANCEL' });
+
+    // 同事务建退款单：整单 amount=payableAmount，refundMethod 反查 PaymentIntent
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        orderId: 'order-1',
+        userId: 'user-1',
+        amount: 8800,
+        reason: 'USER_CANCEL',
+        refundMethod: 'WECHAT',
+      }),
+      [{ skuId: 'sku-1', quantity: 2 }], // order.items（D10 公共建单通路第三参）
+    );
+    // 同事务完成退款（COMPLETED）
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledWith(
+      tx,
+      'refund-1',
+      expect.objectContaining({ reviewerId: null }),
+    );
+    // 订单翻转 CANCELLED
+    expect(tx.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'CANCELLED' }) }),
+    );
+    // 原子序：先翻转订单，后建退款单（同事务内）
+    const flipOrder = tx.order.updateMany.mock.invocationCallOrder[0];
+    const refundOrder = mockRefund.createRefundInTx.mock.invocationCallOrder[0];
+    expect(flipOrder).toBeLessThan(refundOrder);
+    // A6：order 侧 orderCancelled 通知维持
+    expect(mockNotify).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'orderCancelled', userId: 'user-1' }),
+    );
+  });
+
+  it('批1-A9：用户链 reviewedBy=null（ctx 不传 refundReviewerId → completeRefundInTx reviewerId:null）', async () => {
+    const tx = setupTx({ paymentStatus: 'PAID' });
+
+    await service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'USER_CANCEL' });
+
+    // 审查 P2-1（调度拍板：保留审计身份）——用户链无 refundReviewerId → null（autoApprove 先例）
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledWith(
+      tx,
+      'refund-1',
+      expect.objectContaining({ reviewerId: null }),
+    );
+  });
+
+  it('批1-A10：admin 链（ctx.refundReviewerId=admin sub）→ reviewedBy=admin sub + reviewNote 留痕', async () => {
+    const tx = setupTx({ paymentStatus: 'PAID' });
+
+    await service.cancelOrderInternal('order-1', {
+      deviceType: 'admin_web',
+      reason: 'CUSTOMER_REQUEST',
+      operatorId: 'admin-1',
+      refundReviewerId: 'admin-1', // admin-order.controller 传入（审查 P2-1）
+    });
+
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledWith(
+      tx,
+      'refund-1',
+      expect.objectContaining({ reviewerId: 'admin-1', reviewNote: 'Admin cancelled: CUSTOMER_REQUEST' }),
+    );
+  });
+
+  it('批1-A3：未支付单（paymentStatus=PENDING）取消 → 不建退款单（行为不变）', async () => {
+    setupTx({ paymentStatus: 'PENDING' });
+
+    await service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'USER_CANCEL' });
+
+    expect(mockRefund.createRefundInTx).not.toHaveBeenCalled();
+    expect(mockRefund.completeRefundInTx).not.toHaveBeenCalled();
+  });
+
+  it('批1-A4：并发输家（翻转 count=0）→ 幂等 return，不建退款单（双倍退款防线）', async () => {
+    const tx = setupTx({ paymentStatus: 'PAID', flipCount: 0 });
+
+    await expect(
+      service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'USER_CANCEL' }),
+    ).resolves.toBeUndefined();
+
+    expect(mockRefund.createRefundInTx).not.toHaveBeenCalled();
+    expect(mockRefund.completeRefundInTx).not.toHaveBeenCalled();
+    expect(mockHelpers.releaseStock).not.toHaveBeenCalled();
+  });
+
+  // 上报点①拍板 20261122（审查 P1-2 修复，a 案）：豁免改 ctx.skipPaidRefund 显式 flag，
+  // 仅服务端缺货两调用点传 true；reason 字符串不参与豁免判定——用户传 reason='OUT_OF_STOCK'
+  // 照常退款（堵「自由字符串绕过 → 资金卡死」回归口子，审查实证）。
+  it('批1-A8：服务端缺货通路（skipPaidRefund=true）的 PAID 单取消 → 豁免自动退款，不建退款单', async () => {
+    setupTx({ paymentStatus: 'PAID' });
+
+    await service.cancelOrderInternal('order-1', {
+      deviceType: 'admin_web',
+      reason: 'OUT_OF_STOCK',
+      skipPaidRefund: true, // out-of-stock.service / rejudge 服务端两调用点传值
+    });
+
+    expect(mockRefund.createRefundInTx).not.toHaveBeenCalled();
+    expect(mockRefund.completeRefundInTx).not.toHaveBeenCalled();
+    // 取消本身照常完成（翻转 + 事件 + 通知）
+    expect(mockNotify).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'orderCancelled' }),
+    );
+  });
+
+  it('批1-A8b：用户 PAID 单传 reason=\'OUT_OF_STOCK\'（无 flag）→ 照常建退款单（堵字符串绕过）', async () => {
+    const tx = setupTx({ paymentStatus: 'PAID' });
+
+    await service.cancelOrderInternal('order-1', { deviceType: 'client_app', reason: 'OUT_OF_STOCK' });
+
+    // reason 字符串不参与豁免判定：缺 flag → 照常同事务退款
+    expect(mockRefund.createRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledTimes(1);
+    expect(mockRefund.completeRefundInTx).toHaveBeenCalledWith(
+      tx,
+      'refund-1',
+      expect.objectContaining({ reviewerId: null }),
     );
   });
 });
