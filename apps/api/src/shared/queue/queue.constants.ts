@@ -39,6 +39,12 @@ export const COLLABORATIVE_QUEUE = 'collaborative';
  */
 export const SUGGESTION_TIMEOUT_QUEUE = 'suggestion-timeout';
 /**
+ * 替换建议超时退款重试队列（批3 P1-E，20261122）
+ * decideSuggestionTimeoutRefund 退款失败 → 按需入队（非 repeat），BullMQ attempts:3
+ * 指数退避自动重试；3 次全败 → 死信结构化日志 + Sentry 告警（无 DLQ 表，零 migration）
+ */
+export const SUGGESTION_REFUND_RETRY_QUEUE = 'suggestion-refund-retry';
+/**
  * 工单超时升级扫描队列（替换品批3，2026-10-30 D18）
  * 每 5min 扫超时未达标工单（firstRespDue/resolveDue 已过且非 RESOLVED/CLOSED）
  * → escalated=true + WS 推 customer-service room + PUSH

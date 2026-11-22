@@ -539,3 +539,158 @@ describe('decideSuggestionTimeoutRefund warehouseId（批2 P1-G）', () => {
   });
 });
 
+// ===================== 批3 P1-E（20261122）：退款失败 → BullMQ 重试补偿 =====================
+
+describe('decideSuggestionTimeoutRefund 退款失败重试（批3 P1-E）', () => {
+  let service: OrderService;
+  const refundEngine = { processOutOfStockRefund: vi.fn() };
+  const retryQueue = { add: vi.fn() };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // clearAllMocks 不清 Once 队列（批2 P1-G 教训）——重置 + 重设默认实现
+    mockDb.order.findUnique.mockReset();
+    refundEngine.processOutOfStockRefund.mockReset().mockResolvedValue({
+      triggered: true, refundId: 'r-1', amount: 100, mode: 'direct',
+    });
+    retryQueue.add.mockReset().mockResolvedValue({});
+    service = new OrderService(
+      {} as never, {} as never, {} as never, null, null,
+      {} as never, {} as never, null, null, null,
+      refundEngine as never,
+      null, // refundService
+      retryQueue as never, // suggestionRefundRetryQueue
+    );
+  });
+
+  // 批3 P2-1 修复（20261122）：仅「引擎异常」才入队；triggered=false 是正常业务终态不入队
+  it('退款失败（引擎抛错）→ 重试任务入队（attempts:3 + exponential 5s，order-timeout 先例）', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    refundEngine.processOutOfStockRefund.mockRejectedValue(new Error('db down'));
+
+    await service.decideSuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(retryQueue.add).toHaveBeenCalledTimes(1);
+    expect(retryQueue.add).toHaveBeenCalledWith(
+      'refund-declined',
+      { orderId: 'order-1', itemId: 'item-1' },
+      expect.objectContaining({
+        jobId: 'suggestion-refund-retry:order-1:item-1',
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5_000 },
+      }),
+    );
+  });
+
+  it('triggered=false（规则关闭/阈值未达）→ 正常终态不入队重试', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    refundEngine.processOutOfStockRefund.mockResolvedValue({
+      triggered: false, refundId: null, amount: 0, mode: 'none',
+    });
+
+    await service.decideSuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(retryQueue.add).not.toHaveBeenCalled();
+  });
+
+  it('退款成功 → 不入队重试', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: 1 }));
+
+    await service.decideSuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(retryQueue.add).not.toHaveBeenCalled();
+  });
+
+  it('入队失败（Redis 不可用）→ 仅告警不阻断主流程', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    refundEngine.processOutOfStockRefund.mockRejectedValue(new Error('db down'));
+    retryQueue.add.mockRejectedValue(new Error('redis down'));
+
+    await expect(service.decideSuggestionTimeoutRefund('order-1', 'item-1')).resolves.toBeUndefined();
+    const { logger } = await import('../src/shared/logger/logger');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'SUGGESTION_REFUND_RETRY_ENQUEUE_FAILED' }),
+    );
+  });
+});
+
+// ===================== 批3 P1-E：retrySuggestionTimeoutRefund 重试消费端 =====================
+
+describe('retrySuggestionTimeoutRefund（批3 P1-E 重试消费端）', () => {
+  let service: OrderService;
+  const refundEngine = { processOutOfStockRefund: vi.fn() };
+  const notificationEvents = { notify: vi.fn() };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDb.order.findUnique.mockReset();
+    mockDb.notification.findFirst.mockReset();
+    refundEngine.processOutOfStockRefund.mockReset().mockResolvedValue({
+      triggered: true, refundId: 'r-1', amount: 100, mode: 'direct',
+    });
+    notificationEvents.notify.mockReset().mockResolvedValue(undefined);
+    service = new OrderService(
+      {} as never, {} as never, {} as never, null, null,
+      {} as never, {} as never, null, null,
+      notificationEvents as never,
+      refundEngine as never,
+      null,
+      null, // 无重试队列（消费端不再入队）
+    );
+  });
+
+  it('重试成功 → 退款落地 + dedup 探针无旧行 → 发通知', async () => {
+    // 第 1 次 findUnique：重试预读 warehouseId；第 2 次：notify dedup 读 order
+    mockDb.order.findUnique
+      .mockResolvedValueOnce({ warehouseId: 'wh-1' })
+      .mockResolvedValueOnce({ userId: 'u-1', orderNo: 'MM01' });
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: 1 }));
+    mockDb.notification.findFirst.mockResolvedValue(null); // 无历史通知 → 发
+
+    const outcome = await service.retrySuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(outcome).toEqual({ status: 'refunded' });
+    expect(notificationEvents.notify).toHaveBeenCalledTimes(1);
+    expect(notificationEvents.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'outOfStockAutoRefunded', userId: 'u-1' }),
+    );
+  });
+
+  it('重试成功但通知已存在（dedup 探针命中）→ 跳过发送，不重复触达', async () => {
+    mockDb.order.findUnique
+      .mockResolvedValueOnce({ warehouseId: 'wh-1' })
+      .mockResolvedValueOnce({ userId: 'u-1', orderNo: 'MM01' });
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: 1 }));
+    mockDb.notification.findFirst.mockResolvedValue({ id: 'n-1' }); // 已有通知行
+
+    const outcome = await service.retrySuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(outcome).toEqual({ status: 'refunded' });
+    expect(notificationEvents.notify).not.toHaveBeenCalled();
+  });
+
+  it('引擎抛错 → status=failed（processor 判死信），不抛出', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    mockDb.orderItem.findUnique.mockRejectedValue(new Error('db down'));
+
+    const outcome = await service.retrySuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(outcome.status).toBe('failed');
+    expect(outcome.error).toContain('db down');
+    const { logger } = await import('../src/shared/logger/logger');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'SUGGESTION_REFUND_RETRY_RUN_FAILED' }),
+    );
+  });
+
+  it('item 不缺（已被退款/重判链清掉）→ skipped，不发通知', async () => {
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-1' });
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: null }));
+
+    const outcome = await service.retrySuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(outcome).toEqual({ status: 'skipped' });
+    expect(notificationEvents.notify).not.toHaveBeenCalled();
+  });
+});

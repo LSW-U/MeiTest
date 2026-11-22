@@ -108,6 +108,8 @@ vi.mock('../src/modules/upload/orphan-cleanup.processor', () => ({
 // @nestjs/bullmq 整体替身：registerQueue 无 forRoot 时会建无密码默认连接（NOAUTH），
 // getQueueToken/InjectQueue 用确定性字符串 token 保 useExisting 透传一致；
 // WorkerHost 基类给空类（真 processor 已全部用哑类替身，见下）
+// 批3 兼容（工作区改动，随批3/后续 commit 收口）：批3 suggestion-refund-retry.processor
+// 用 @Processor 装饰器，替身需补空操作导出否则 DI 冒烟在装配即抛错
 vi.mock('@nestjs/bullmq', () => {
   const queueToken = (name: string) => `BullQueue_${name}`;
   const makeQueueProvider = (name: string) => ({
@@ -136,6 +138,8 @@ vi.mock('@nestjs/bullmq', () => {
       };
     },
     WorkerHost: class {},
+    // 批3 兼容：空操作类装饰器（@Processor(queueName, opts) 不建真实 Worker 连接）
+    Processor: () => () => {},
   };
 });
 

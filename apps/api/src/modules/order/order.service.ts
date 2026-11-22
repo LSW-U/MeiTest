@@ -48,9 +48,9 @@ import { toPrismaDeviceType } from './order.types';
 import type { PaymentService } from '../payment/payment.service';
 import { PromotionService } from '../promotion/promotion.service';
 import { OrderStatus } from '@meimart/api-contract';
-import { InjectQueue } from '@nestjs/bullmq';
+import { InjectQueue, getQueueToken } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
-import { ORDER_TIMEOUT_QUEUE } from '../../shared/queue';
+import { ORDER_TIMEOUT_QUEUE, SUGGESTION_REFUND_RETRY_QUEUE } from '../../shared/queue';
 import { PricingService } from '../pricing/pricing.service';
 import { resolveOrderEffectiveRate, buildOrderRateFields } from '../rate/rate.service';
 import { isPaymentMethodOrderable } from '../payment/payment-methods.config';
@@ -64,6 +64,9 @@ import {
   cancelOrderTimeout,
   type OrderTimeoutJobData,
 } from './order-timeout.helper';
+// 批3 P1-E（20261122）：超时退款失败重试入队（helper 拆分照抄 order-timeout.helper 先例）
+import { enqueueSuggestionRefundRetry } from './suggestion-refund-retry.helper';
+import type { SuggestionRefundRetryJobData } from './suggestion-refund-retry.processor';
 
 /** DispatchService 接口（避免直接 import DispatchService 形成强耦合 + 循环 import） */
 interface DispatchServiceLike {
@@ -235,6 +238,9 @@ export class OrderService {
     // @Optional 兜底单测直 new 不传（不注入 → PAID 单取消不建退款单，既有取消行为不变）
     @Optional() @Inject(RefundService)
     private readonly refundService?: RefundService | null,
+    // 批3 P1-E（20261122）：超时退款失败重试队列（@Optional 兜底单测直 new 不传）
+    @Optional() @Inject(getQueueToken(SUGGESTION_REFUND_RETRY_QUEUE))
+    private readonly suggestionRefundRetryQueue?: Queue<SuggestionRefundRetryJobData> | null,
   ) {}
 
   /**
@@ -2154,6 +2160,9 @@ export class OrderService {
   private async triggerDeclinedRefund(
     order: { id: string; warehouseId: string },
     itemId: string,
+    // 批3 P1-E：重试链需要区分「引擎异常」与「不可退」——主链吞错返回 0（既有纪律），
+    // 重试链传 throwOnError 让异常上抛供 processor 判死信
+    opts?: { throwOnError?: boolean },
   ): Promise<number> {
     if (!this.oosRefundEngine) return 0;
     try {
@@ -2176,6 +2185,16 @@ export class OrderService {
         fullShortage: false,
         warehouseId: order.warehouseId,
       });
+      if (!result.triggered) {
+        // 批3 P2-1：规则关闭/阈值未达/防超额 = 正常业务终态，不是失败——
+        // 记日志供排查，重试链据此判 skipped（不补偿不判死信）
+        logger.info({
+          msg: 'SUGGESTION_DECLINED_REFUND_NOT_TRIGGERED',
+          orderId: order.id,
+          itemId,
+          mode: result.mode,
+        });
+      }
       return result.triggered ? result.amount : 0;
     } catch (e) {
       logger.error({
@@ -2184,6 +2203,8 @@ export class OrderService {
         itemId,
         error: (e as Error).message,
       });
+      // 批3 P1-E：重试链要求异常上抛（判死信），主链维持吞错返回 0
+      if (opts?.throwOnError) throw e;
       return 0;
     }
   }
@@ -2200,10 +2221,24 @@ export class OrderService {
       where: { id: orderId },
       select: { warehouseId: true },
     });
-    const refunded = await this.triggerDeclinedRefund(
-      { id: orderId, warehouseId: orderRow?.warehouseId ?? '' },
-      itemId,
-    );
+    // 批3 P2-1 + P1-E（20261122）：入队前区分「引擎异常」与「triggered=false」。
+    // throwOnError=true 走 trial——只有异常（db down 等真失败）才补偿入队；
+    // triggered=false（规则关闭/阈值未达）是正常业务终态， trial 返回 0 但无异常 → 不入队。
+    let refundFailed = false;
+    try {
+      await this.triggerDeclinedRefund(
+        { id: orderId, warehouseId: orderRow?.warehouseId ?? '' },
+        itemId,
+        { throwOnError: true },
+      );
+    } catch {
+      // triggerDeclinedRefund 内部已 error 日志；此处标记补偿
+      refundFailed = true;
+    }
+    if (refundFailed) {
+      // 批3 P1-E：真失败 → 入 BullMQ 重试队列补偿（attempts:3 + exponential 5s，order-timeout.helper 先例）
+      await enqueueSuggestionRefundRetry(this.suggestionRefundRetryQueue, orderId, itemId);
+    }
     // P1-2 修复：超时自动拒绝同样触发全缺重判（豁免取消的单，拒绝后可能真全缺 → 取消+退款）
     await this.rejudgeFullyOutOfStock(orderId, 'system');
     // 推送超时通知（事务外，notify 吞错）
@@ -2226,6 +2261,112 @@ export class OrderService {
         // 吞错
       }
     }
-    logger.info({ msg: 'SUGGESTION_TIMEOUT_DECLINED', orderId, itemId, refundedAmount: refunded });
+    logger.info({
+      msg: 'SUGGESTION_TIMEOUT_DECLINED',
+      orderId,
+      itemId,
+      refunded: !refundFailed, // P2-1：trial 语义——异常=失败待补偿；无异常（成功或规则关闭）= 无需补偿
+    });
   }
+
+  /**
+   * 批3 P1-E（20261122）：超时退款重试消费端入口（suggestion-refund-retry.processor 调用）。
+   *
+   * 重跑 triggerDeclinedRefund；退款单次性由引擎内部守卫保证（合并账 inFlight 追加 /
+   * D14 已完成不叠加 / 防超额），outOfStock 已清（item 不缺）→ skipped 不触发。
+   *
+   * 返回 outcome 供 processor 判死信；通知防重（硬要求）：成功路径的
+   * outOfStockAutoRefunded 通知以 Notification 落库为探针（notifyOutOfStock 先例，
+   * data.orderId 精确匹配 + data.itemId item 级区分），已存在则跳过——重试多次成功也只发一条。
+   */
+  async retrySuggestionTimeoutRefund(orderId: string, itemId: string): Promise<SuggestionRefundOutcome> {
+    const orderRow = await db.order.findUnique({
+      where: { id: orderId },
+      select: { warehouseId: true },
+    });
+    let triggered = false;
+    let error: string | undefined;
+    try {
+      const refunded = await this.triggerDeclinedRefund(
+        { id: orderId, warehouseId: orderRow?.warehouseId ?? '' },
+        itemId,
+        { throwOnError: true },
+      );
+      triggered = refunded > 0;
+    } catch (e) {
+      error = (e as Error).message;
+      logger.error({
+        msg: 'SUGGESTION_REFUND_RETRY_RUN_FAILED',
+        orderId,
+        itemId,
+        error,
+      });
+    }
+    if (triggered) {
+      // 成功 → dedup 探针通知（已存在则跳过；不存在才发）
+      await this.notifyRefundRetryDedup(orderId, itemId);
+      return { status: 'refunded' };
+    }
+    if (error) {
+      // 引擎链异常（db down 等）→ failed（processor 末次判死信）
+      return { status: 'failed', error };
+    }
+    // 引擎未触发且无异常：item 不缺（已被退款/重判链清掉）→ 无需补偿
+    logger.info({ msg: 'SUGGESTION_REFUND_RETRY_SKIPPED', orderId, itemId, reason: 'not refundable' });
+    return { status: 'skipped' };
+  }
+
+  /**
+   * 重试成功通知（dedup 探针版，批3 硬要求）。
+   * 对齐 notifyOutOfStock（out-of-stock.service.ts）先例：以「Notification 行是否落库」
+   * 为成功探针——data.orderId 精确匹配 + data.itemId item 级区分（P3-1 修复：
+   * 仅匹配本 item 的退款通知行，同单其他 item 的登记类/取消类通知不误命中）；
+   * 已存在 = 之前已成功发出 → 跳过，杜绝重试链重复触达。
+   */
+  private async notifyRefundRetryDedup(orderId: string, itemId: string): Promise<void> {
+    if (!this.notificationEvents) return;
+    try {
+      const order = await db.order.findUnique({
+        where: { id: orderId },
+        select: { userId: true, orderNo: true },
+      });
+      if (!order?.userId) return;
+      // 探针：同用户 + data.orderId 命中 + data.itemId item 级区分（P3-1：同单其他 item
+      // 的登记类通知不带该 itemId，不会假阳性命中）
+      const existing = await db.notification.findFirst({
+        where: {
+          userId: order.userId,
+          data: { path: ['orderId'], equals: orderId },
+          AND: [{ data: { path: ['itemId'], equals: itemId } }],
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (existing) {
+        logger.info({ msg: 'SUGGESTION_REFUND_NOTIFY_DEDUP_SKIP', orderId, itemId });
+        return;
+      }
+      await this.notificationEvents.notify({
+        event: 'outOfStockAutoRefunded',
+        userId: order.userId,
+        type: 'ORDER_UPDATE',
+        data: { orderId, orderNo: order.orderNo, itemId },
+        params: { orderNo: order.orderNo ?? '' },
+      });
+    } catch (e) {
+      // 通知失败不回滚退款（notify 吞错纪律）
+      logger.warn({
+        msg: 'SUGGESTION_REFUND_NOTIFY_FAILED',
+        orderId,
+        itemId,
+        error: (e as Error).message,
+      });
+    }
+  }
+}
+
+/** 重试 outcome（processor 据此判死信） */
+export interface SuggestionRefundOutcome {
+  status: 'refunded' | 'skipped' | 'failed';
+  error?: string;
 }

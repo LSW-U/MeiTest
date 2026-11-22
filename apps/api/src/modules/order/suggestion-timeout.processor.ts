@@ -111,12 +111,23 @@ export class SuggestionTimeoutProcessor extends WorkerHost {
         }
         if (reportedAt > deadline) continue;
 
-        // 4. 自动拒绝（D7）：置 DECLINED + 退款链 + 推送（decideSuggestion 幂等守卫兜底并发：
-        //    非粗 PENDING 抛 E-OOS-011，逐项 try/catch 吞掉即可）
-        await db.orderItem.update({
-          where: { id: c.id },
+        // 4. 自动拒绝（D7）：置 DECLINED + 退款链 + 推送。
+        // P1-D（批3 20261122）：update 改条件翻转——仅当仍为 PENDING 才置 DECLINED，
+        // 用户决策抢先（ACCEPTED/DECLINED）时 count=0 → 跳过本项（不计 expired），
+        // 杜绝超时扫描覆盖用户决策。
+        const flipped = await db.orderItem.updateMany({
+          where: { id: c.id, suggestionStatus: 'PENDING' },
           data: { suggestionStatus: 'DECLINED', suggestionDecidedAt: new Date() },
         });
+        if (flipped.count === 0) {
+          logger.info({
+            msg: 'SUGGESTION_TIMEOUT_RACE_LOST',
+            itemId: c.id,
+            orderId: c.orderId,
+            hint: 'suggestion no longer PENDING (user decided first); skipped',
+          });
+          continue;
+        }
         if (this.orderService) {
           await this.orderService.decideSuggestionTimeoutRefund(c.orderId, c.id);
         }

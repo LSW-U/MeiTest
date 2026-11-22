@@ -16,13 +16,14 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { mockDb, mockOrderServiceDecide } = vi.hoisted(() => ({
+const { mockDb, mockOrderServiceDecide, mockOrderServiceRetry } = vi.hoisted(() => ({
   mockDb: {
     systemConfig: { findUnique: vi.fn() },
-    orderItem: { findMany: vi.fn(), update: vi.fn() },
+    orderItem: { findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderEvent: { findFirst: vi.fn() },
   },
   mockOrderServiceDecide: vi.fn(),
+  mockOrderServiceRetry: vi.fn(),
 }));
 
 vi.mock('../src/shared/db', () => ({ db: mockDb }));
@@ -53,8 +54,11 @@ describe('SuggestionTimeoutProcessor（P2-1/P2-2 修复回归）', () => {
     vi.clearAllMocks();
     processor = new SuggestionTimeoutProcessor({
       decideSuggestionTimeoutRefund: mockOrderServiceDecide,
+      retrySuggestionTimeoutRefund: mockOrderServiceRetry,
     } as never);
     mockDb.systemConfig.findUnique.mockResolvedValue(null); // 无配置 → 默认 24h
+    // P1-D（批3）：条件翻转默认成功
+    mockDb.orderItem.updateMany.mockResolvedValue({ count: 1 });
     mockDb.orderItem.update.mockResolvedValue({});
     mockOrderServiceDecide.mockResolvedValue(undefined);
   });
@@ -81,10 +85,13 @@ describe('SuggestionTimeoutProcessor（P2-1/P2-2 修复回归）', () => {
     const result = await processor.process(makeJob());
 
     expect(result).toEqual({ expired: 1, dryRun: false });
-    // 只有 item-A 被置 DECLINED
-    expect(mockDb.orderItem.update).toHaveBeenCalledTimes(1);
-    expect(mockDb.orderItem.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'item-A' }, data: expect.objectContaining({ suggestionStatus: 'DECLINED' }) }),
+    // 只有 item-A 被置 DECLINED（P1-D：update 改 updateMany 条件翻转）
+    expect(mockDb.orderItem.updateMany).toHaveBeenCalledTimes(1);
+    expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'item-A', suggestionStatus: 'PENDING' },
+        data: expect.objectContaining({ suggestionStatus: 'DECLINED' }),
+      }),
     );
     expect(mockOrderServiceDecide).toHaveBeenCalledTimes(1);
     expect(mockOrderServiceDecide).toHaveBeenCalledWith('order-1', 'item-A');
@@ -140,6 +147,23 @@ describe('SuggestionTimeoutProcessor（P2-1/P2-2 修复回归）', () => {
     const result = await processor.process(makeJob('other-job'));
     expect(result).toEqual({ expired: 0, dryRun: false });
     expect(mockDb.orderItem.findMany).not.toHaveBeenCalled();
+  });
+
+  // 批3 P1-D：条件翻转——用户决策抢先（count=0）→ 跳过不计 expired，不触发退款
+  it('用户决策抢先（updateMany count=0）→ 跳过该项不计 expired，不触发退款', async () => {
+    const now = Date.now();
+    mockDb.orderItem.findMany.mockResolvedValue([buildPendingItem('item-R', 'order-1')]);
+    mockDb.orderEvent.findFirst.mockResolvedValue({ createdAt: new Date(now - 25 * 3600_000), metadata: {} });
+    mockDb.orderItem.updateMany.mockResolvedValue({ count: 0 }); // 决策链已翻转状态
+
+    const result = await processor.process(makeJob());
+
+    expect(result).toEqual({ expired: 0, dryRun: false });
+    expect(mockOrderServiceDecide).not.toHaveBeenCalled();
+    const { logger } = await import('../src/shared/logger/logger');
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'SUGGESTION_TIMEOUT_RACE_LOST', itemId: 'item-R' }),
+    );
   });
 
   it('dryRun → 跳过扫描', async () => {

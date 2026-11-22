@@ -34,7 +34,9 @@ import { RiderOutOfStockController } from './rider-out-of-stock.controller';
 // 替换品批1（2026-10-29 D7）：PENDING 建议超时扫描（scheduler 注册 + processor 消费）
 import { SuggestionTimeoutScheduler } from './suggestion-timeout.scheduler';
 import { SuggestionTimeoutProcessor } from './suggestion-timeout.processor';
-import { SUGGESTION_TIMEOUT_QUEUE } from '../../shared/queue';
+// 批3 P1-E（20261122）：超时退款失败重试
+import { SuggestionRefundRetryProcessor } from './suggestion-refund-retry.processor';
+import { SUGGESTION_TIMEOUT_QUEUE, SUGGESTION_REFUND_RETRY_QUEUE } from '../../shared/queue';
 // 批1：evidenceUrls 前缀校验需 StorageService（isOwnUrl 语义，同 dispatch.module 先例）
 import { StorageModule } from '../../shared/storage/storage.module';
 
@@ -53,6 +55,8 @@ import { StorageModule } from '../../shared/storage/storage.module';
     BullModule.registerQueue({ name: ORDER_TIMEOUT_QUEUE }),
     // 替换品批1（D7）：PENDING 建议超时扫描队列
     BullModule.registerQueue({ name: SUGGESTION_TIMEOUT_QUEUE }),
+    // 批3 P1-E（20261122）：超时退款失败重试队列
+    BullModule.registerQueue({ name: SUGGESTION_REFUND_RETRY_QUEUE }),
   ],
   controllers: [OrderController, AdminOrderController, RiderOutOfStockController],
   providers: [
@@ -66,6 +70,8 @@ import { StorageModule } from '../../shared/storage/storage.module';
     // 替换品批1（D7 2026-10-29）：PENDING 建议超时扫描
     SuggestionTimeoutScheduler,
     SuggestionTimeoutProcessor,
+    // 批3 P1-E（20261122）：超时退款失败重试
+    SuggestionRefundRetryProcessor,
     // Notify 策略（W4-REVIEW P0-3）
     EmailNotifyStrategy,
     SmsNotifyStrategy,
@@ -80,6 +86,7 @@ import { StorageModule } from '../../shared/storage/storage.module';
     { provide: 'NotificationEventServiceToken', useExisting: NotificationEventService },
     // 替换品批1（D7）：processor 取 OrderService（退款链 + 推送）的显式 token
     { provide: 'SUGGESTION_TIMEOUT_ORDER_SERVICE', useExisting: OrderService },
+    { provide: 'SUGGESTION_REFUND_RETRY_ORDER_SERVICE', useExisting: OrderService },
   ],
   exports: [OrderService, OrderNoService],
 })
