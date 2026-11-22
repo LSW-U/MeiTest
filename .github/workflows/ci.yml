@@ -82,7 +82,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Audit for high/critical vulnerabilities (allowlist-aware)
         # P1-9：audit:gate = pnpm audit --json → scripts/gate/audit-check.mjs 过滤
-        # 存量记账（scripts/gate/audit-allowlist.json，88 条：admin-web next 大版本升级另行立项 +
+        # 存量记账（scripts/gate/audit-allowlist.json，以 entries 实际数量为准：
+        # admin-web next 大版本升级另行立项 +
         # 构建/开发期工具链传递依赖）不拦截；新增 advisory 未登记 → exit 1 硬门
         run: pnpm audit:gate
 
