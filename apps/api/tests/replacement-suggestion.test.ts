@@ -17,6 +17,7 @@ const { mockDb } = vi.hoisted(() => ({
     order: { findUnique: vi.fn(), update: vi.fn() },
     orderItem: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderEvent: { create: vi.fn() },
+    notification: { findFirst: vi.fn() },
     sku: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -90,6 +91,8 @@ describe('OutOfStockService 替换策略校验（批1 D9/D13）', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new OutOfStockService(null, { cancelOrderInternal: vi.fn() } as never);
+    // 批2 P1-F：写路径改条件翻转 updateMany，默认翻转成功
+    mockDb.orderItem.updateMany.mockResolvedValue({ count: 1 });
     mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ suggestionItemId: null }));
     mockDb.orderItem.update.mockResolvedValue({});
     mockDb.orderItem.findMany.mockResolvedValue([p({ outOfStockQty: 1 })]);
@@ -140,7 +143,7 @@ describe('OutOfStockService 替换策略校验（批1 D9/D13）', () => {
     });
     expect(result.suggestionPending).toBe(true);
     // update data 含 suggestionStatus PENDING
-    expect(mockDb.orderItem.update).toHaveBeenCalledWith(
+    expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ suggestionStatus: 'PENDING' }),
       }),
@@ -160,7 +163,7 @@ describe('OutOfStockService 替换策略校验（批1 D9/D13）', () => {
     mockDb.order.findUnique.mockResolvedValue(buildOrder());
     const result = await service.adminReportItemOutOfStock('order-1', 'item-1', baseInput);
     expect(result.suggestionPending).toBe(false);
-    expect(mockDb.orderItem.update).toHaveBeenCalledWith(
+    expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
       expect.not.objectContaining({
         data: expect.objectContaining({ suggestionStatus: expect.anything() }),
       }),
@@ -485,3 +488,54 @@ describe('P1-2 全缺豁免与决策后重判（2026-10-29）', () => {
     );
   });
 });
+
+// ===================== 批2 P1-G（20261122）：超时退款 warehouseId 真值传递 =====================
+
+describe('decideSuggestionTimeoutRefund warehouseId（批2 P1-G）', () => {
+  let service: OrderService;
+  const refundEngine = { processOutOfStockRefund: vi.fn() };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // clearAllMocks 不清 Once 队列——前面 describe 残留的 order.findUnique
+    // mockResolvedValueOnce 会先被消费，污染本 describe；mockReset 连队列一起清
+    mockDb.order.findUnique.mockReset();
+    refundEngine.processOutOfStockRefund.mockReset().mockResolvedValue({
+      triggered: true, refundId: 'r-1', amount: 100, mode: 'direct',
+    });
+    service = new OrderService(
+      {} as never, {} as never, {} as never, null, null,
+      {} as never, {} as never, null, null, null,
+      refundEngine as never,
+    );
+  });
+
+  it('超时退款传真实 order.warehouseId（不再传空串）→ 引擎命中仓库级规则', async () => {
+    // decideSuggestionTimeoutRefund 预读 warehouseId
+    mockDb.order.findUnique.mockResolvedValue({ warehouseId: 'wh-9' });
+    // triggerDeclinedRefund 事务外重读 item
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: 1 }));
+
+    await service.decideSuggestionTimeoutRefund('order-1', 'item-1');
+
+    expect(mockDb.order.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'order-1' } }),
+    );
+    expect(refundEngine.processOutOfStockRefund).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 'order-1', warehouseId: 'wh-9', fullShortage: false }),
+    );
+  });
+
+  it('订单读不到（防御）→ warehouseId 落空串走引擎默认链，不抛错', async () => {
+    mockDb.order.findUnique.mockResolvedValue(null);
+    mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ outOfStockQty: 1 }));
+
+    await expect(
+      service.decideSuggestionTimeoutRefund('order-gone', 'item-1'),
+    ).resolves.toBeUndefined();
+    expect(refundEngine.processOutOfStockRefund).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 'order-gone', warehouseId: '' }),
+    );
+  });
+});
+

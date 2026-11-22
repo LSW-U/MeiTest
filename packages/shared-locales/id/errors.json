@@ -205,6 +205,7 @@
   "E-OOS-009": "Kebijakan pesanan NONE tidak mengizinkan saran penggantian",
   "E-OOS-010": "SKU pengganti yang disarankan tidak ada dalam whitelist pesanan",
   "E-OOS-011": "Saran penggantian sudah diputuskan",
+  "E-OOS-012": "Pesanan ini tidak ditugaskan kepada Anda, tidak dapat melaporkan kehabisan stok",
   "E-TICKET-001": "Tiket tidak ditemukan",
   "E-TICKET-002": "Perpindahan status tiket tidak diizinkan",
   "E-TICKET-003": "Tiket sudah berada pada status ini"

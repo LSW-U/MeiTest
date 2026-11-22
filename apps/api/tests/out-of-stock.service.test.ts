@@ -20,8 +20,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { mockDb } = vi.hoisted(() => ({
   mockDb: {
     order: { findUnique: vi.fn() },
-    orderItem: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    orderItem: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     orderEvent: { create: vi.fn() },
+    riderProfile: { findUnique: vi.fn() },
+    deliveryTask: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -76,6 +78,8 @@ describe('OutOfStockService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // P1-F：写路径改条件翻转 updateMany；默认 count=1（翻转成功），并发用例单独 mock count=0
+    mockDb.orderItem.updateMany.mockResolvedValue({ count: 1 });
     service = new OutOfStockService(null, { cancelOrderInternal: vi.fn() } as never);
   });
 
@@ -102,7 +106,6 @@ describe('OutOfStockService', () => {
         .mockResolvedValueOnce(buildOrder({ status: 'PICKED' })) // 预读
         .mockResolvedValueOnce(buildOrder({ status: 'PICKED' })); // 全缺判定重读
       mockDb.orderItem.findUnique.mockResolvedValue(buildItem());
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
       const result = await service.adminReportItemOutOfStock('order-1', 'item-1', baseInput);
       expect(result.orderCancelled).toBe(false);
@@ -187,16 +190,15 @@ describe('OutOfStockService', () => {
         .mockResolvedValueOnce(buildOrder()) // 预读
         .mockResolvedValueOnce(buildOrder()); // 全缺判定重读（单项 qty=3 登记缺 2 → 非全缺）
       mockDb.orderItem.findUnique.mockResolvedValue(buildItem());
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
 
       const cancelFn = vi.fn();
       const svc = new OutOfStockService(null, { cancelOrderInternal: cancelFn } as never);
       const result = await svc.adminReportItemOutOfStock('order-1', 'item-1', baseInput);
 
-      expect(mockDb.orderItem.update).toHaveBeenCalledWith(
+      expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'item-1' },
+          where: { id: 'item-1', outOfStockQty: null },
           data: expect.objectContaining({ outOfStockQty: 2, outOfStockReason: 'DAMAGED' }),
         }),
       );
@@ -217,7 +219,6 @@ describe('OutOfStockService', () => {
         buildOrder({ items: [buildItem({ outOfStockQty: 3 })] }),
       );
       mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ quantity: 3 }));
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
 
       const cancelFn = vi.fn().mockResolvedValue(undefined);
@@ -246,7 +247,6 @@ describe('OutOfStockService', () => {
           }),
         );
       mockDb.orderItem.findUnique.mockResolvedValue(buildItem({ quantity: 3 }));
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
 
       const cancelFn = vi.fn();
@@ -270,15 +270,16 @@ describe('OutOfStockService', () => {
     it('订单非 OUT_FOR_DELIVERY → E-OOS-001', async () => {
       mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'PICKED' }));
       await expect(
-        service.riderReportOutOfStock('order-1', riderInput),
+        service.riderReportOutOfStock('order-1', riderInput, 'rp-1'),
       ).rejects.toMatchObject({ response: { code: 'E-OOS-001' } });
     });
 
     it('骑手段全缺请求（累计缺 ≥ 总量）→ E-OOS-004（D12）', async () => {
       mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
       mockDb.orderItem.findMany.mockResolvedValue([buildItem({ quantity: 3 })]);
       await expect(
-        service.riderReportOutOfStock('order-1', { ...riderInput, outOfStockQty: 3 }),
+        service.riderReportOutOfStock('order-1', { ...riderInput, outOfStockQty: 3 }, 'rp-1'),
       ).rejects.toMatchObject({ response: { code: 'E-OOS-004' } });
     });
 
@@ -286,17 +287,17 @@ describe('OutOfStockService', () => {
       mockDb.order.findUnique
         .mockResolvedValueOnce(buildOrder({ status: 'OUT_FOR_DELIVERY' })) // 预读
         .mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' })); // 事件读状态
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
       mockDb.orderItem.findMany.mockResolvedValue([
         buildItem(),
         buildItem({ id: 'item-2', quantity: 2 }),
       ]);
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
 
-      const result = await service.riderReportOutOfStock('order-1', riderInput);
-      expect(mockDb.orderItem.update).toHaveBeenCalledWith(
+      const result = await service.riderReportOutOfStock('order-1', riderInput, 'rp-1');
+      expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'item-1' },
+          where: { id: 'item-1', outOfStockQty: null },
           data: expect.objectContaining({ outOfStockQty: 1 }),
         }),
       );
@@ -305,13 +306,14 @@ describe('OutOfStockService', () => {
 
     it('已有部分登记后本次覆盖剩余全部 → E-OOS-004', async () => {
       mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
       mockDb.orderItem.findMany.mockResolvedValue([
         buildItem({ outOfStockQty: 2 }),
         buildItem({ id: 'item-2', quantity: 1 }),
       ]);
       // 累计已缺 2 + 本次 2 ≥ 总量 4 → 拒
       await expect(
-        service.riderReportOutOfStock('order-1', { ...riderInput, outOfStockQty: 2 }),
+        service.riderReportOutOfStock('order-1', { ...riderInput, outOfStockQty: 2 }, 'rp-1'),
       ).rejects.toMatchObject({ response: { code: 'E-OOS-004' } });
     });
   });
@@ -335,7 +337,6 @@ describe('OutOfStockService', () => {
         .mockResolvedValueOnce(buildOrder()) // 预读
         .mockResolvedValueOnce(buildOrder()); // 全缺判定重读
       mockDb.orderItem.findUnique.mockResolvedValue(buildItem());
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
     };
 
@@ -361,8 +362,8 @@ describe('OutOfStockService', () => {
 
     it('rider 登记 happy path：同样触发 outOfStock 推送', async () => {
       mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
       mockDb.orderItem.findMany.mockResolvedValue([buildItem(), buildItem({ id: 'item-2' })]);
-      mockDb.orderItem.update.mockResolvedValue({});
       mockDb.orderEvent.create.mockResolvedValue({});
       mockDb.notification = { findFirst: vi.fn().mockResolvedValue({ id: 'n1' }) };
       const notify = vi.fn().mockResolvedValue(undefined);
@@ -372,7 +373,7 @@ describe('OutOfStockService', () => {
         riderUserId: 'rider-u1',
         outOfStockQty: 1,
         reason: 'DAMAGED',
-      });
+      }, 'rp-1');
 
       expect(notify).toHaveBeenCalledTimes(1);
       expect(notify).toHaveBeenCalledWith(
@@ -480,6 +481,136 @@ describe('OutOfStockService', () => {
     it('notificationEvents 未注入（单测直 new 两参）→ 不触发推送不抛错', async () => {
       happyAdminMocks();
       const result = await service.adminReportItemOutOfStock('order-1', 'item-1', baseInput);
+      expect(result.orderCancelled).toBe(false);
+    });
+  });
+
+  // ============================================================
+  // 批2 守卫收口（20261122）：P0-C 越权归属 + P1-F 并发条件翻转
+  // ============================================================
+  describe('P0-C 骑手越权归属校验（E-OOS-012）', () => {
+    const riderInput = {
+      riderUserId: 'rider-u1',
+      outOfStockQty: 1,
+      reason: 'DAMAGED' as const,
+    };
+
+    it('非本单骑手（deliveryTask 无该骑手记录）→ ForbiddenException E-OOS-012', async () => {
+      mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.deliveryTask.findFirst.mockResolvedValue(null); // 无归属记录
+      await expect(
+        service.riderReportOutOfStock('order-1', riderInput, 'rp-1'),
+      ).rejects.toMatchObject({ response: { code: 'E-OOS-012' } });
+    });
+
+    it('未传 riderProfileId（防御直调）→ ForbiddenException E-OOS-012', async () => {
+      mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      await expect(
+        service.riderReportOutOfStock('order-1', riderInput),
+      ).rejects.toMatchObject({ response: { code: 'E-OOS-012' } });
+    });
+
+    it('deliveryTask.findFirst 以 {orderId, riderId} 查询（riderId=RiderProfile.id）', async () => {
+      mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.deliveryTask.findFirst.mockResolvedValue(null);
+      await service.riderReportOutOfStock('order-1', riderInput, 'rp-1').catch(() => undefined);
+      expect(mockDb.deliveryTask.findFirst).toHaveBeenCalledWith({
+        where: { orderId: 'order-1', riderId: 'rp-1' },
+        select: { id: true },
+      });
+    });
+
+    it('本单骑手（任务归属命中）→ 通过归属校验继续走登记链', async () => {
+      mockDb.order.findUnique
+        .mockResolvedValueOnce(buildOrder({ status: 'OUT_FOR_DELIVERY' })) // 预读
+        .mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' })); // 事件读状态
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1', orderId: 'order-1', riderId: 'rp-1' });
+      mockDb.orderItem.findMany.mockResolvedValue([buildItem(), buildItem({ id: 'item-2' })]);
+      mockDb.orderEvent.create.mockResolvedValue({});
+
+      const result = await service.riderReportOutOfStock('order-1', riderInput, 'rp-1');
+      expect(result.orderCancelled).toBe(false);
+    });
+  });
+
+  describe('P1-F 并发登记条件翻转（updateMany where outOfStockQty:null，count=0 → E-OOS-003）', () => {
+    it('admin 链：事务内 updateMany 条件翻转，并发赢家已登记（count=0）→ E-OOS-003', async () => {
+      // 事务外幂等读放行（尚未登记），事务内条件翻转撞并发赢家
+      mockDb.order.findUnique
+        .mockResolvedValueOnce(buildOrder()) // 预读
+        .mockResolvedValue(buildOrder()); // writeReportEvent / 全缺判定（本例走不到）
+      mockDb.orderItem.findUnique.mockResolvedValue(buildItem()); // 事务外幂等读：未登记
+      mockDb.orderItem.updateMany.mockResolvedValue({ count: 0 }); // 并发赢家已翻转
+
+      await expect(
+        service.adminReportItemOutOfStock('order-1', 'item-1', baseInput),
+      ).rejects.toMatchObject({ response: { code: 'E-OOS-003' } });
+      // 条件翻转：where 必须带 outOfStockQty:null（防覆盖并发赢家登记）
+      expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'item-1', outOfStockQty: null },
+        }),
+      );
+      // 无裸 update：写路径仅条件翻转 updateMany，裸 update 未被调
+      expect(mockDb.orderItem.update).not.toHaveBeenCalled();
+    });
+
+    it('admin 链：条件翻转成功（count=1）→ 登记照常（事件 + 返回）', async () => {
+      mockDb.order.findUnique
+        .mockResolvedValueOnce(buildOrder()) // 预读
+        .mockResolvedValue(buildOrder()); // 事件读状态 + 全缺判定重读
+      mockDb.orderItem.findUnique.mockResolvedValue(buildItem());
+      mockDb.orderItem.updateMany.mockResolvedValue({ count: 1 });
+      mockDb.orderEvent.create.mockResolvedValue({});
+
+      const result = await service.adminReportItemOutOfStock('order-1', 'item-1', baseInput);
+      expect(result.itemId).toBe('item-1');
+      expect(mockDb.orderEvent.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ eventType: 'OUT_OF_STOCK_REPORTED' }),
+        }),
+      );
+    });
+
+    it('rider 链：事务内 updateMany 条件翻转，count=0 → E-OOS-003', async () => {
+      mockDb.order.findUnique.mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' }));
+      mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'rp-1' });
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
+      // 事务外找目标项：首项未登记 → 放行；事务内条件翻转撞并发赢家
+      mockDb.orderItem.findMany.mockResolvedValue([buildItem(), buildItem({ id: 'item-2' })]);
+      mockDb.orderItem.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.riderReportOutOfStock('order-1', {
+          riderUserId: 'rider-u1',
+          outOfStockQty: 1,
+          reason: 'DAMAGED',
+        }, 'rp-1'),
+      ).rejects.toMatchObject({ response: { code: 'E-OOS-003' } });
+      expect(mockDb.orderItem.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'item-1', outOfStockQty: null },
+        }),
+      );
+      expect(mockDb.orderItem.update).not.toHaveBeenCalled();
+    });
+
+    it('rider 链：条件翻转成功（count=1）→ 登记照常返回', async () => {
+      mockDb.order.findUnique
+        .mockResolvedValueOnce(buildOrder({ status: 'OUT_FOR_DELIVERY' })) // 预读
+        .mockResolvedValue(buildOrder({ status: 'OUT_FOR_DELIVERY' })); // 事件读状态
+      mockDb.riderProfile.findUnique.mockResolvedValue({ id: 'rp-1' });
+      mockDb.deliveryTask.findFirst.mockResolvedValue({ id: 'task-1' });
+      mockDb.orderItem.findMany.mockResolvedValue([buildItem()]);
+      mockDb.orderItem.updateMany.mockResolvedValue({ count: 1 });
+      mockDb.orderEvent.create.mockResolvedValue({});
+
+      const result = await service.riderReportOutOfStock('order-1', {
+        riderUserId: 'rider-u1',
+        outOfStockQty: 1,
+        reason: 'DAMAGED',
+      }, 'rp-1');
+      expect(result.itemId).toBe('item-1');
       expect(result.orderCancelled).toBe(false);
     });
   });

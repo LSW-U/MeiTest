@@ -8,6 +8,7 @@
  */
 import { Controller, Post, Param, ParseUUIDPipe, Body, Req, Inject, UnauthorizedException } from '@nestjs/common';
 import { z } from 'zod';
+import { db } from '../../shared/db';
 import { OutOfStockService, OUT_OF_STOCK_REASONS } from './out-of-stock.service';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -47,14 +48,36 @@ export class RiderOutOfStockController {
         message: 'auth required',
       });
     }
-    const result = await this.outOfStockService.riderReportOutOfStock(id, {
-      riderUserId: user.sub,
-      outOfStockQty: body.outOfStockQty,
-      reason: body.reason,
-      note: body.note ?? null,
-      evidenceUrls: body.evidenceUrls,
-      suggestionItemId: body.suggestionItemId ?? null,
-    });
+    const result = await this.outOfStockService.riderReportOutOfStock(
+      id,
+      {
+        riderUserId: user.sub,
+        outOfStockQty: body.outOfStockQty,
+        reason: body.reason,
+        note: body.note ?? null,
+        evidenceUrls: body.evidenceUrls,
+        suggestionItemId: body.suggestionItemId ?? null,
+      },
+      // P0-C（批2 20261122）：越权归属校验需 RiderProfile.id 维度（delivery_tasks.rider_id
+      // 外键引用 RiderProfile.id）；JWT sub 是 User.id，此处 resolve（dispatch.service.ts
+      // resolveRiderProfileId 同款语义），无 profile → E-RIDER-001
+      await this.resolveRiderProfileId(user.sub),
+    );
     return { success: true as const, data: result };
+  }
+
+  /** JWT sub（User.id）→ RiderProfile.id（dispatch.service.ts resolveRiderProfileId 同款） */
+  private async resolveRiderProfileId(userId: string): Promise<string> {
+    const profile = await db.riderProfile.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!profile) {
+      throw new UnauthorizedException({
+        code: 'E-RIDER-001',
+        message: 'Rider profile not found (please apply first)',
+      });
+    }
+    return profile.id;
   }
 }

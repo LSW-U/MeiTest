@@ -10,9 +10,13 @@
  *   6. review：不存在 → NotFoundException + E-SETTLE-002
  *   7. markPaid：APPROVED → PAID + payoutReference + paidAt
  *   8. markPaid：非 APPROVED → BadRequestException + E-SETTLE-003
- *   9. getAvailableBalance：netAmount 总和 - 已 PAID 提现总和
+ *   9. getAvailableBalance：netAmount 总和 − 在途+已 PAID 提现总和（P0-B 口径）
  *
- * 决策依据：W2-M-MANIFEST-W3.md §6 W3 测试补强
+ * 批1 P0-B（2026-11-21）：余额口径纳入在途（PENDING/APPROVED/PAID）；
+ *   review(APPROVE) 事务内复核余额，不足自动 REJECT 附 E-SETTLE-001 语义。
+ *   场景 10-14 为 P0-B 新增。
+ *
+ * 决策依据：W2-M-MANIFEST-W3.md §6 W3 测试补强 + 方案v2-提现与新增模块守卫收口 §三批1
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
@@ -44,6 +48,8 @@ vi.mock('../src/shared/db', () => {
   };
   return {
     db,
+    // wrUpdate 单独导出（P0-B review 事务内自动 REJECT 走 withdrawalRequest.update）
+    wrUpdate,
     withTransaction: vi.fn(
       (fn: (tx: unknown) => Promise<unknown>) => db.$transaction(fn),
     ),
@@ -65,6 +71,8 @@ const wrUpdateMany = db.withdrawalRequest.updateMany as unknown as ReturnType<ty
 const wrCount = db.withdrawalRequest.count as unknown as ReturnType<typeof vi.fn>;
 const wrAggregate = db.withdrawalRequest.aggregate as unknown as ReturnType<typeof vi.fn>;
 const executeRawMock = db.$executeRaw as unknown as ReturnType<typeof vi.fn>;
+// P0-B：review 事务内自动 REJECT 用 withdrawalRequest.update（非 updateMany）
+const wrUpdate = (db.withdrawalRequest.update as unknown as ReturnType<typeof vi.fn>);
 
 function mockRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -90,6 +98,8 @@ describe('WithdrawalService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // mockClear 不清 Once 队列/实现：P0-B review 分支 findUnique 调用次数不定，逐测试重置防泄漏
+    wrFindUnique.mockReset();
     service = new WithdrawalService(null);
   });
 
@@ -317,6 +327,181 @@ describe('WithdrawalService', () => {
     });
   });
 
+  describe('getAvailableBalance（P0-B 口径：settled − 在途+PAID）', () => {
+    it('settled 5000，无提现 → 5000', async () => {
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 5000 } });
+      wrAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+
+      const balance = await service.getAvailableBalance('MERCHANT', 'shop-1');
+      expect(balance).toBe(5000);
+      // P0-B：扣减侧必须纳入 PENDING/APPROVED/PAID（不再只算 PAID）
+      expect(wrAggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            requesterType: 'MERCHANT',
+            requesterId: 'shop-1',
+            status: { in: ['PENDING', 'APPROVED', 'PAID'] },
+          }),
+        }),
+      );
+    });
+
+    it('PENDING/APPROVED 单占用额度：settled 5000，在途 3000 → 2000', async () => {
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 5000 } });
+      // computeAvailableBalance 内部一次 aggregate 汇总在途+PAID（mock 直接返回总和）
+      wrAggregate.mockResolvedValue({ _sum: { amount: 3000 } });
+
+      const balance = await service.getAvailableBalance('MERCHANT', 'shop-1');
+      expect(balance).toBe(2000);
+    });
+
+    it('create 前 create 一笔 PENDING 后余额减少（占额度口径同源）', async () => {
+      // 第一笔：settled 5000，无提现 → create 3000 成功
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 5000 } });
+      wrAggregate
+        .mockResolvedValueOnce({ _sum: { amount: 0 } }) // create 1 扣减侧
+        .mockResolvedValueOnce({ _sum: { amount: 3000 } }); // create 2 扣减侧（3000 已 PENDING）
+      wrCreate.mockResolvedValue(mockRow());
+
+      await service.create(
+        {
+          requesterType: 'MERCHANT',
+          requesterId: 'shop-1',
+          amount: 3000,
+          payoutAccount: {} as never,
+        },
+        'user-1',
+      );
+
+      // 第二笔 3000：在途 3000 已占额度，可用 2000 → 拒
+      await expect(
+        service.create(
+          {
+            requesterType: 'MERCHANT',
+            requesterId: 'shop-1',
+            amount: 3000,
+            payoutAccount: {} as never,
+          },
+          'user-1',
+        ),
+      ).rejects.toMatchObject({ response: { code: 'E-SETTLE-001' } });
+    });
+
+    it('展示与扣减同口径：getAvailableBalance 与 create 走同一 computeAvailableBalance（aggregate where 一致）', async () => {
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 5000 } });
+      wrAggregate.mockResolvedValue({ _sum: { amount: 1000 } });
+
+      await service.getAvailableBalance('MERCHANT', 'shop-1');
+      const displayCall = wrAggregate.mock.calls.at(-1)![0];
+
+      wrCreate.mockResolvedValue(mockRow());
+      await service.create(
+        {
+          requesterType: 'MERCHANT',
+          requesterId: 'shop-1',
+          amount: 1000,
+          payoutAccount: {} as never,
+        },
+        'user-1',
+      );
+      const deductCall = wrAggregate.mock.calls.at(-1)![0];
+
+      // 同一函数产出：扣减侧 aggregate 的 where 与展示侧完全一致
+      expect(deductCall.where).toEqual(displayCall.where);
+    });
+  });
+
+  describe('review 余额复核（P0-B）', () => {
+    it('APPROVE 时余额不足 → 自动 REJECTED + rejectReason 含 E-SETTLE-001 语义', async () => {
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'PENDING' })) // 快速失败读
+        .mockResolvedValueOnce(
+          mockRow({
+            status: 'REJECTED',
+            rejectReason: 'E-SETTLE-001: insufficient balance (available 500, requested 1000)',
+          }),
+        );
+      // 事务内复核：settled 500 − 在途 0 = 500 < amount 1000
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 500 } });
+      wrAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      // 自动 REJECT 走条件翻转 updateMany（review2-fix-3 同款，非裸 update）
+      wrUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.review(
+        'wr-1',
+        { action: 'APPROVE' } as never,
+        'admin-1',
+      );
+
+      expect(result.status).toBe('REJECTED');
+      expect(result.rejectReason).toContain('E-SETTLE-001');
+      // 条件翻转：where 必须带 status:'PENDING'（P2-1）
+      expect(wrUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'wr-1', status: 'PENDING' },
+          data: expect.objectContaining({ status: 'REJECTED' }),
+        }),
+      );
+    });
+
+    it('P2-1 并发已翻转时自动 REJECT 不覆盖：count=0 → 跳过自动 REJECT，走既有 Conflict 语义', async () => {
+      wrFindUnique.mockResolvedValueOnce(mockRow({ status: 'PENDING' })); // 快速失败读
+      // 余额不足，命中自动 REJECT 分支
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 500 } });
+      wrAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      // 条件翻转失败：并发赢家（另一 admin）已改 status
+      wrUpdateMany.mockResolvedValue({ count: 0 });
+
+      // 自动 REJECT 跳过（不覆盖赢家结果）→ 落到正常翻转路径再次 count=0 →
+      // review2-fix-3 既有语义：ConflictException，而非把 APPROVED 覆盖回 REJECTED
+      await expect(
+        service.review('wr-1', { action: 'APPROVE' } as never, 'admin-A'),
+      ).rejects.toMatchObject({ response: { code: 'E-SETTLE-003' } });
+
+      // 两次 updateMany（自动 REJECT + 正常翻转）均带 status:'PENDING' 条件，
+      // 无裸 update 覆盖并发赢家结果
+      expect(wrUpdateMany).toHaveBeenCalledTimes(2);
+      expect(wrUpdateMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ where: { id: 'wr-1', status: 'PENDING' } }),
+      );
+    });
+
+    it('APPROVE 时余额充足 → 正常 APPROVED（updateMany 翻转）', async () => {
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'PENDING' }))
+        .mockResolvedValueOnce(mockRow({ status: 'APPROVED', reviewedBy: 'admin-1' }));
+      settlementAggregate.mockResolvedValue({ _sum: { netAmount: 5000 } });
+      wrAggregate.mockResolvedValue({ _sum: { amount: 0 } });
+      wrUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.review(
+        'wr-1',
+        { action: 'APPROVE' } as never,
+        'admin-1',
+      );
+
+      expect(result.status).toBe('APPROVED');
+      expect(wrUpdateMany).toHaveBeenCalled();
+    });
+
+    it('REJECT action 不做余额复核', async () => {
+      wrFindUnique
+        .mockResolvedValueOnce(mockRow({ status: 'PENDING' }))
+        .mockResolvedValueOnce(mockRow({ status: 'REJECTED', rejectReason: 'suspicious' }));
+      wrUpdateMany.mockResolvedValue({ count: 1 });
+
+      await service.review(
+        'wr-1',
+        { action: 'REJECT', rejectReason: 'suspicious' } as never,
+        'admin-1',
+      );
+
+      // REJECT 分支无余额复核（settlement aggregate 不被调用）
+      expect(settlementAggregate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('list / detail', () => {
     it('list 分页', async () => {
       wrFindMany.mockResolvedValue([mockRow()]);
@@ -333,6 +518,8 @@ describe('WithdrawalService', () => {
     });
 
     it('detail 找不到 → NotFoundException', async () => {
+      // mockReset 清掉前面 review 测试遗留的 Once 队列（clearAllMocks 不清 once 实现）
+      wrFindUnique.mockReset();
       wrFindUnique.mockResolvedValue(null);
       await expect(service.detail('nope')).rejects.toMatchObject({
         response: { code: 'E-SETTLE-002' },

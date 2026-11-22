@@ -18,7 +18,7 @@
  * 批2（2026-10-24，D16）：登记事务 commit 后同步直推 outOfStock 事件（不进 BullMQ、
  * 不经 E3 频控闸 D8）；推送失败不回滚登记，告警 + 单次补偿重试。
  */
-import { Inject, Injectable, NotFoundException, ConflictException, BadRequestException, Optional } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Optional } from '@nestjs/common';
 import { Prisma } from '../../prisma/client';
 import { db, withTransaction, type Tx } from '../../shared/db';
 import { logger } from '../../shared/logger/logger';
@@ -147,8 +147,10 @@ export class OutOfStockService {
       // 替换品批1（D6）：登记带建议项且策略允许 → 置 PENDING 锁定（不直退）；
       // ACCEPTED/DECLINED 决策后再走差额/全额退款。NONE/SPECIFY 非法已在上方拦截。
       const suggestionPending = Boolean(input.suggestionItemId) && (await this.policyAllowsSuggestion(orderId));
-      await tx.orderItem.update({
-        where: { id: itemId },
+      // P1-F（批2 20261122）：幂等读移入事务 + 条件翻转（review2-fix-3 同款）——
+      // where 带 outOfStockQty:null，count=0 说明并发赢家（另一 staff）已登记 → E-OOS-003
+      const flipped = await tx.orderItem.updateMany({
+        where: { id: itemId, outOfStockQty: null },
         data: {
           outOfStockQty: input.outOfStockQty,
           outOfStockReason: input.reason,
@@ -158,6 +160,12 @@ export class OutOfStockService {
           ...(suggestionPending ? { suggestionStatus: 'PENDING' as const } : {}),
         },
       });
+      if (flipped.count === 0) {
+        throw new ConflictException({
+          code: 'E-OOS-003',
+          message: `Item ${itemId} already reported out of stock (concurrent registration detected)`,
+        });
+      }
 
       await this.writeReportEvent(
         orderId,
@@ -217,6 +225,7 @@ export class OutOfStockService {
   async riderReportOutOfStock(
     orderId: string,
     input: RiderOutOfStockInput,
+    riderProfileId?: string | null,
   ): Promise<OutOfStockReportResult> {
     const preOrder = await db.order.findUnique({
       where: { id: orderId },
@@ -230,6 +239,27 @@ export class OutOfStockService {
       throw new ConflictException({
         code: 'E-OOS-001',
         message: `Rider out-of-stock reporting window is OUT_FOR_DELIVERY, order status is ${preOrder.status}`,
+      });
+    }
+
+    // P0-C（批2 20261122）：越权归属校验——骑手须持有本单配送任务。controller 传入的
+    // riderProfileId 是 RiderProfile.id（JWT sub → riderProfile 表 resolve，见 controller），
+    // delivery_tasks.rider_id 外键即此维度。未传 → E-OOS-012（controller 已判 user，
+    // 此处防御直调）；查无任务归属 → E-OOS-012（批2 决策：005 已被证据 URL 校验占用，新码续号 012）
+    if (!riderProfileId) {
+      throw new ForbiddenException({
+        code: 'E-OOS-012',
+        message: 'riderProfileId is required for rider out-of-stock reporting',
+      });
+    }
+    const task = await db.deliveryTask.findFirst({
+      where: { orderId, riderId: riderProfileId },
+      select: { id: true },
+    });
+    if (!task) {
+      throw new ForbiddenException({
+        code: 'E-OOS-012',
+        message: 'This order is not assigned to this rider',
       });
     }
 
@@ -286,8 +316,10 @@ export class OutOfStockService {
     const result = await withTransaction(async (tx: Tx) => {
       // 替换品批1（D6）：登记带建议项且策略允许 → 置 PENDING 锁定（同 admin 链）
       const suggestionPending = Boolean(input.suggestionItemId) && (await this.policyAllowsSuggestion(orderId));
-      await tx.orderItem.update({
-        where: { id: targetId },
+      // P1-F（批2 20261122）：事务内条件翻转（review2-fix-3 同款）——where 带
+      // outOfStockQty:null，count=0 说明并发赢家已登记本项 → E-OOS-003，不覆盖
+      const flipped = await tx.orderItem.updateMany({
+        where: { id: targetId, outOfStockQty: null },
         data: {
           outOfStockQty: input.outOfStockQty,
           outOfStockReason: input.reason,
@@ -297,6 +329,12 @@ export class OutOfStockService {
           ...(suggestionPending ? { suggestionStatus: 'PENDING' as const } : {}),
         },
       });
+      if (flipped.count === 0) {
+        throw new ConflictException({
+          code: 'E-OOS-003',
+          message: `Item ${targetId} already reported out of stock (concurrent registration detected)`,
+        });
+      }
 
       await this.writeReportEvent(
         orderId,

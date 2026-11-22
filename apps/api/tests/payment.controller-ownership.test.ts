@@ -18,6 +18,7 @@ const { mockPaymentService, mockOrderService } = vi.hoisted(() => ({
   },
   mockOrderService: {
     getOrderForOwnership: vi.fn(),
+    markPaid: vi.fn(),
   },
 }));
 
@@ -31,6 +32,7 @@ vi.mock('../src/modules/payment/payment.service', () => ({
 vi.mock('../src/modules/order/order.service', () => ({
   OrderService: class {
     getOrderForOwnership = mockOrderService.getOrderForOwnership;
+    markPaid = mockOrderService.markPaid;
   },
 }));
 
@@ -127,6 +129,50 @@ describe('PaymentController - 归属校验（P1-2）', () => {
       const err = await controller.uploadReceipt('order-1', body, reqWith()).catch((e: HttpException) => e);
       expect(err.getResponse()).toMatchObject({ code: 'E-AUTH-002' });
       expect(mockPaymentService.uploadReceipt).not.toHaveBeenCalled();
+    });
+  });
+
+  // 批2 P1-C（20261122）：confirmPaid 越权确认收口——登录 + 本人，404 防枚举
+  describe('confirmPaid（批2 P1-C）', () => {
+    const paidIntent = { ...intentView, status: 'PAID' };
+
+    it('本人订单 PAID → markPaid 成功，operatorId 传本人 sub', async () => {
+      mockOrderService.getOrderForOwnership.mockResolvedValue({ userId: 'u-1' });
+      mockPaymentService.getIntentByOrder.mockResolvedValue(paidIntent);
+      mockOrderService.markPaid.mockResolvedValue(undefined);
+
+      const result = await controller.confirmPaid('order-1', reqWith('u-1'));
+
+      expect(result).toEqual({ success: true, data: { orderId: 'order-1', status: 'CONFIRMED' } });
+      expect(mockOrderService.markPaid).toHaveBeenCalledWith(
+        'order-1',
+        expect.objectContaining({ operatorId: 'u-1', metadata: { intentId: 'intent-1', source: 'client_confirm' } }),
+      );
+    });
+
+    it('他人订单 → 404 E-ORDER-004（防枚举），不读 intent 不调 markPaid', async () => {
+      mockOrderService.getOrderForOwnership.mockResolvedValue({ userId: 'other' });
+
+      const err = await controller.confirmPaid('order-1', reqWith('u-1')).catch((e: HttpException) => e);
+      expect(err).toBeInstanceOf(HttpException);
+      expect(err.getResponse()).toMatchObject({ code: 'E-ORDER-004' });
+      expect(mockPaymentService.getIntentByOrder).not.toHaveBeenCalled();
+      expect(mockOrderService.markPaid).not.toHaveBeenCalled();
+    });
+
+    it('订单不存在 → 404 E-ORDER-004 同码（防枚举）', async () => {
+      mockOrderService.getOrderForOwnership.mockResolvedValue(null);
+
+      const err = await controller.confirmPaid('order-404', reqWith('u-1')).catch((e: HttpException) => e);
+      expect(err.getResponse()).toMatchObject({ code: 'E-ORDER-004' });
+      expect(mockOrderService.markPaid).not.toHaveBeenCalled();
+    });
+
+    it('未登录 → E-AUTH-002', async () => {
+      const err = await controller.confirmPaid('order-1', reqWith()).catch((e: HttpException) => e);
+      expect(err.getResponse()).toMatchObject({ code: 'E-AUTH-002' });
+      expect(mockOrderService.getOrderForOwnership).not.toHaveBeenCalled();
+      expect(mockOrderService.markPaid).not.toHaveBeenCalled();
     });
   });
 });

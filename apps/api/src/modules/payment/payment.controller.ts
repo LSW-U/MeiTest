@@ -120,6 +120,16 @@ export class PaymentController {
   @Post(':orderId/confirm')
   @Audit({ resource: 'PaymentIntent' })
   async confirmPaid(@Param('orderId') orderId: string, @Req() req: RequestWithUser) {
+    // P1-C（批2 20261122）：确认支付必须登录 + 本人——否则任意登录用户可替他人
+    // 确认 PAID（越权触发 markPaid 资金状态机）。归属校验对齐 uploadReceipt 先例：
+    // 404 E-ORDER-004 防枚举（不暴露他人订单存在性）
+    if (!req.user) {
+      throw new HttpException({ code: 'E-AUTH-002', message: 'auth required' }, HttpStatus.UNAUTHORIZED);
+    }
+    const order = await this.orderService.getOrderForOwnership(orderId);
+    if (!order || order.userId !== req.user.sub) {
+      throw new HttpException({ code: 'E-ORDER-004', message: 'Order not found' }, HttpStatus.NOT_FOUND);
+    }
     const intent = await this.paymentService.getIntentByOrder(orderId);
     if (intent.status !== 'PAID') {
       throw new HttpException(
@@ -131,7 +141,7 @@ export class PaymentController {
       );
     }
     await this.orderService.markPaid(orderId, {
-      operatorId: req.user?.sub,
+      operatorId: req.user.sub, // P1-C：上方已守卫非空
       deviceType: req.user?.deviceType as DeviceType | undefined,
       metadata: { intentId: intent.id, source: 'client_confirm' },
     });
