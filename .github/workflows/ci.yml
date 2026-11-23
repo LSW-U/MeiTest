@@ -16,6 +16,41 @@ jobs:
     name: Typecheck + Test + Coverage + e2e
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # e2e 空转修复（2026-11-23）：此前 CI 无 services，e2e-guard 探活 /health 不通 →
+    # 7 个 e2e-*.test.ts 100% skip（SKIP ≠ 通过）。现起 postgres+redis 真容器，
+    # 并在 e2e 步骤前 migrate deploy + seed + 起 API dev server，e2e 真跑。
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meimart_ci
+        ports:
+          - '5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres -d meimart_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - '6379:6379'
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # e2e 用（API dev server 读 .env 之外由 workflow 显式注入，避免依赖 repo secrets）
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/meimart_ci?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-only-access-secret-at-least-32-chars
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-at-least-32-chars
+      # e2e sms:ip/sms:phone 桶豁免（rate-limit.guard 既有开关，NODE_ENV 非 production 才生效；
+      # CI 无固定 IP，20 次/小时桶一轮 e2e 必打满自毒化）。仅 CI env，不进生产清单
+      E2E_RATELIMIT_BYPASS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,9 +70,14 @@ jobs:
         # D3 baseline（实测 69.3/66.55/62/69.53 下浮 1pt）：statements 68 / branches 65 / functions 61 / lines 68
         # 70 为目标值，提升后逐步上调 thresholds
         run: pnpm --filter @meimart/api exec vitest run --coverage --exclude '**/e2e-*.test.ts'
-      - name: e2e（API 离线时由 e2e-guard 显式打印 skip 计数后跳过，不算红）
-        # test:e2e 内置 --reporter=verbose：e2e-guard 的 SKIP suite #n 计数行在 CI 默认输出可见
-        run: pnpm --filter @meimart/api run test:e2e
+      - name: e2e（CI 起 postgres+redis services 后真跑；upload-thumbnail 无 OSS env 时由内部守卫自 skip，不算红）
+        # test:e2e 内置 --reporter=verbose：真实执行计数在 verbose 输出可见
+        run: |
+          pnpm --filter @meimart/api exec prisma migrate deploy
+          pnpm --filter @meimart/api db:seed
+          pnpm --filter @meimart/api dev &   # 后台起 API（PORT 默认 3000）
+          node -e "const t=Date.now();(function p(){fetch('http://localhost:3000/health').then(r=>{if(r.ok){console.log('API up');process.exit(0)}throw 0}).catch(()=>{if(Date.now()-t>60000){console.error('API 未就绪超时');process.exit(1)}setTimeout(p,1000)})})()"
+          pnpm --filter @meimart/api run test:e2e
 
   contract:
     name: Contract Consistency (zod → OpenAPI → TS types)

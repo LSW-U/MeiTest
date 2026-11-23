@@ -422,6 +422,10 @@
       "reason": "high：超大 constrained collections 校验内存耗尽。zod 3/4 均命中（api 契约层 + admin-web），升级需跨 minor 回归另行立项"
     },
     {
+      "key": "next@1248082::GHSA-pc58-hwjq-p385",
+      "reason": "moderate：self-hosted Next.js 转发 fetched responses 时跨客户端响应注入。admin-web 自托管 Node server 但无服务端转发面（全仓 0 route.ts/0 middleware/0 rewrites，42/42 页面 use client，lib/api.ts fetch 仅客户端消费）；staging compose 未部署 admin-web。修复 >=15.5.29 跨主版本，随 next 14→15/16 升级另行立项（2026-11-23 补录）"
+    },
+    {
       "key": "postcss-selector-parser@1243379::GHSA-rj75-hqrm-r3gf",
       "reason": "moderate: PostCSS 平坦选择器解析二次复杂度 CPU 耗尽。admin-web 构建链（tailwindcss>postcss-nested）传递依赖，仅构建期，不进产物"
     },
