@@ -46,6 +46,9 @@ jobs:
       # e2e 用（API dev server 读 .env 之外由 workflow 显式注入，避免依赖 repo secrets）
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/meimart_ci?schema=public
       REDIS_URL: redis://localhost:6379
+      # 必须显式 development：mock-login 路由仅在 NODE_ENV=development/test 注册，
+      # 不设则 e2e 全链 401/Cannot POST（本地 dev script 靠 tsx watch 场景默认值掩盖）
+      NODE_ENV: development
       JWT_ACCESS_SECRET: ci-only-access-secret-at-least-32-chars
       JWT_REFRESH_SECRET: ci-only-refresh-secret-at-least-32-chars
       # e2e sms:ip/sms:phone 桶豁免（rate-limit.guard 既有开关，NODE_ENV 非 production 才生效；
