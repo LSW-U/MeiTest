@@ -137,14 +137,14 @@ describe('RateLimitGuard e2e 频控豁免（批A2-3 审查 P2-1 方案 a）', ()
       { key: 'sms:ip:${ip}:1h', limit: 20, window: 3600 },
       { key: 'sms:ip:${ip}:24h', limit: 20, window: 86400 },
       { key: 'sms:phone:${body.phone}:60s', limit: 1, window: 60 },
-      { key: 'register:ip:${ip}:1h', limit: 5, window: 3600 }, // 非 sms 维度不豁免
+      { key: 'register:ip:${ip}:1h', limit: 5, window: 3600 }, // e2e 空转修复（2026-11-23）后也豁免
     ]);
     const g = new FreshGuard(reflector);
     await expect(g.canActivate(context as never)).resolves.toBe(true);
     const calledKeys = evalMock.mock.calls.map((c) => c[2] as string); // ioredis eval 签名 arg0=script arg1=numKeys arg2=key（带 ratelimit: 前缀）
     expect(calledKeys.some((k) => k.includes('sms:ip:'))).toBe(false);
     expect(calledKeys.some((k) => k.includes('sms:phone:'))).toBe(false);
-    expect(calledKeys.some((k) => k.includes('register:ip:'))).toBe(true); // 恰 evalReturns 一段
+    expect(calledKeys.some((k) => k.includes('register:ip:'))).toBe(false); // bypass 名单含 register:ip
   });
 
   it('bypass 开 + sms 段本应超限 → 仍放行（跳过即不判 blocked）', async () => {

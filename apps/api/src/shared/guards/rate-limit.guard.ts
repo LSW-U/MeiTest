@@ -37,7 +37,7 @@ import { normalizePhoneE164 } from '@meimart/api-contract';
  * 误配 E2E_RATELIMIT_BYPASS=true 也不生效（体检建议「忽略 flag」路线，不额外抛错
  * 避免误伤 CI）。dev/test 行为不变。
  */
-const E2E_RATELIMIT_BYPASS_KEYS = ['sms:ip:', 'sms:phone:'];
+const E2E_RATELIMIT_BYPASS_KEYS = ['sms:ip:', 'sms:phone:', 'register:ip:'];
 
 /** e2e 豁免开关（env 每次现读，测试切换无需重置缓存；prod 恒 false——P2-1）。
  * export 仅测试消费（批1A spec），行为纯函数无副作用 */

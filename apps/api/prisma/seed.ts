@@ -130,11 +130,17 @@ async function main() {
   });
   console.log(`  ✅ super_admin: ${admin.email} (phone: ${admin.phone})`);
 
-  // ===== 1b. customer（联调用测试账号，W5-prepare） =====
+  // ===== 1b. customer ×2（联调用测试账号，W5-prepare） =====
+  // id 显式钉死：e2e-admin-notification 等测试通过 mock-login userId 精确取这两个
+  // customer（upsert 不指定 id 时每次新库生成随机 UUID，测试硬编码 id 会 miss →
+  // 2026-11-23 CI e2e 空转修复后暴露，10 红根因）。两个 id 恒定，无其他消费方。
+  const CUSTOMER1_ID = '68530da1-3e8c-4d1b-8e40-ad74428985e4'; // +67077777778
+  const CUSTOMER2_ID = 'de6dc362-8f63-404a-a935-88f2c37a33f6'; // +67088888888
   const customer = await prisma.user.upsert({
     where: { phone: '+67088888888' },
     update: { password: SEED_PASSWORD_HASH },
     create: {
+      id: CUSTOMER2_ID,
       phone: '+67088888888',
       email: 'customer@meimart.dev',
       password: SEED_PASSWORD_HASH,
@@ -145,7 +151,23 @@ async function main() {
       emailVerified: true,
     },
   });
+  const customer2 = await prisma.user.upsert({
+    where: { phone: '+67077777778' },
+    update: { password: SEED_PASSWORD_HASH },
+    create: {
+      id: CUSTOMER1_ID,
+      phone: '+67077777778',
+      email: 'customer2@meimart.dev',
+      password: SEED_PASSWORD_HASH,
+      name: 'Test Customer 2',
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      phoneVerified: true,
+      emailVerified: true,
+    },
+  });
   console.log(`  ✅ customer: ${customer.email} (phone: ${customer.phone})`);
+  console.log(`  ✅ customer2: ${customer2.email} (phone: ${customer2.phone})`);
 
   // ===== 2. shop（单一商家） =====
   const shop = await prisma.shop.upsert({
